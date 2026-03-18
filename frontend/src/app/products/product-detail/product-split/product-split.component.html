@@ -1,0 +1,81 @@
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span class="mb-0" i18n="@@i18n.products.refactorReferences">refactor product references</span>
+
+      </div>
+      <div class="card-body p-0">
+        <!-- Product Suggestions -->
+        @if (productSuggestions.length > 0) {
+          <div class="p-3 border-bottom">
+            <div class="mb-2">
+              <small class="text-muted fw-semibold">
+                  <span i18n="@@i18n.products.aiProductSuggestions">AI product suggestions</span>
+                  <span class="notranslate">:</span>
+              </small>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              @for (suggestion of productSuggestions; track suggestion) {
+                <span
+                  class="badge bg-primary d-flex align-items-center gap-1 suggestion-badge"
+                  (click)="createProductFromSuggestion(suggestion)" tabindex="0" (keydown.enter)="createProductFromSuggestion(suggestion)">
+                  {{ suggestion }}
+                  <i style="font-size: 14px;">add</i>
+                </span>
+              }
+            </div>
+          </div>
+        }
+
+        @if (splitItems$ | async; as splitItems) {
+          <div>
+            @if (splitItems.length === 0) {
+              <div class="text-center py-4">
+                <p class="text-muted" i18n="@@i18n.products.noReferences">no project references found for this product</p>
+              </div>
+            }
+            @if (splitItems.length > 0) {
+              <table class="table table-hover mb-0 w-100">
+                <thead>
+                  <tr>
+                    <th class="col-5" i18n="@@i18n.products.itemText">item text</th>
+                    <th class="col-3" i18n="@@i18n.common.project">project</th>
+                    <th class="col-4" i18n="@@i18n.products.newProduct">new product</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of splitItems; track item) {
+                    <tr>
+                      <td class="text-truncate" [innerHTML]="item.text | safe:'html'"></td>
+                      <td class="text-truncate">{{ item.project_name }}</td>
+                      <td>
+                        <search-input
+                          class="p-0 flex-fill"
+                          only="Product"
+                          [has_icon]="false"
+                          [minSearch]="1"
+                          [query]="getSelectedProductName(item)"
+                          (itemSelected)="onProductSelected(item, $event)">
+                        </search-input>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+        } @else {
+          <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden" i18n="@@i18n.common.loading">loading</span>
+            </div>
+          </div>
+        }
+
+      </div>
+    </div>
+  </div>
+</div>
+</div>

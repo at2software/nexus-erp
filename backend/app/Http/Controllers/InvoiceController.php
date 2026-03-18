@@ -1,0 +1,160 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Enums\InvoiceItemType;
+use App\Helpers\NLog;
+use App\Models\File;
+use App\Models\Invoice;
+use App\Models\Param;
+use App\Services\CashFlowService;
+use App\Services\InvoiceStatisticsService;
+use App\Traits\ControllerHasPermissionsTrait;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
+use Illuminate\Mail\Mailables\Attachment;
+use Illuminate\Support\Facades\Mail;
+
+class InvoiceController extends Controller {
+    use ControllerHasPermissionsTrait;
+
+    public function _index(Request $r) {
+        $query = Invoice::select()->whereRequest()->withRequest();
+        if (@$r->input('onlyUnpaid') == 'true') {
+            $query = $query->where('paid_at', null);
+        }
+        if (@$r->input('onlyPaid') == 'true') {
+            $query = $query->where('paid_at', 'is not', null);
+        }
+        // $query->whereNull('cancellation_invoice_id');
+        $query->with('cancelledBy', 'cancelles');
+        $query->latest();
+        return $query;
+    }
+    public function index(Request $r) {
+        $query = $this->_index($r)->oldest('due_at');
+        $query = $query->with(['company', 'reminders']);
+
+        $replies = $query->paginate(25)->withQueryString();
+        $replies->appends(request()->input())->links();
+        $replies->getCollection();
+        return $replies;
+    }
+    public function indexInvoiceItems(Invoice $_) {
+        return $_->indexedItems()->get();
+    }
+    public function probe(Request $request) {
+        return ['count'=>$this->_index($request)->count()];
+    }
+    public function show(Invoice $invoice) {
+        return $invoice->load('company');
+    }
+    public function showPdf(Invoice $_) {
+        return File::stream($_->file_dir, $_->name);
+    }
+    public function update(Request $request, Invoice $invoice) {
+        if ($request->filled('paid')) {
+            NLog::info('paid');
+            $invoice->paid_at = $request->boolean('paid') ? now() : null;
+        }
+        $invoice->applyAndSave($request);
+        return $invoice;
+    }
+    public function updateValues(Invoice $_) {
+        $_->net             = null;
+        $_->gross           = null;
+        $_->gross_remaining = null;
+        return $_->save();
+    }
+    public function updateCancel(Invoice $_) {
+        return $_->cancel();
+    }
+    public function updateRedo(Invoice $_) {
+        $currentInvoiceNo = Param::get('INVOICE_NO_CURRENT')->value;
+        $invoiceNumber    = Invoice::getCurrentInvoiceNumber(-1)['value'];
+
+        if ($_->name !== $invoiceNumber) {
+            return response('Can only redo the latest invoice', 403);
+        }
+
+        $updatePayload = ['invoice_id' => null];
+        if ($firstItem = $_->invoiceItems()->first()) {
+            if ($firstItem->project?->is_time_based) {
+                // revert to prepared support item instead
+                $updatePayload['type'] = InvoiceItemType::PreparedSupport;
+            }
+        }
+        $_->invoiceItems()->update($updatePayload);
+        $_->delete();
+
+        $invoiceNoParam        = Param::get('INVOICE_NO_CURRENT');
+        $invoiceNoParam->value = $currentInvoiceNo - 1;
+        $invoiceNoParam->save();
+        return response([
+            'status'             => 'Successfully redone',
+            'item'               => $firstItem,
+            'INVOICE_NO_CURRENT' => $invoiceNoParam->value,
+        ], 200);
+    }
+    public function sendMail(Invoice $_) {
+        if (env('NEXUS_DEBUG', false)) {
+            return;
+        }
+        return $_->sendMail();
+    }
+    public function sendReminder(Invoice $_) {
+        if (env('NEXUS_DEBUG', false)) {
+            return;
+        }
+        return $_->sendReminder();
+    }
+    public function sendToDatev(Invoice $_) {
+        if (env('NEXUS_DEBUG', false)) {
+            return;
+        }
+        Invoice::disablePropagation();
+        if ($mailTo = Param::get('DATEV_MAIL_OUTGOING')->value) {
+            Mail::send([], [], fn ($message) => $message->to($mailTo)
+                ->subject($_->name)
+                ->text($_->name)
+                ->attach(Attachment::fromStorage($_->file_dir))
+            );
+
+            $_->setFlag(Invoice::FLAG_SENT_TO_DATEV);
+            $_->save();
+            return $_;
+        }
+        Invoice::enablePropagation();
+    }
+    public function showCashFlow() {
+        return CashFlowService::getCashFlowData();
+    }
+    public function uploadBankCsv(Request $request) {
+        if (! $request->hasFile('file')) {
+            return response(['error' => 'No file uploaded'], 400);
+        }
+
+        $result = CashFlowService::importBankCsv($request->file('file'));
+
+        if (isset($result['error'])) {
+            return response(['error' => $result['error']], 400);
+        }
+        return response($result, 200);
+    }
+    public static function getPdf($object) {
+        $template = file_get_contents('../resources/letter.html');
+        $content  = '';
+        $template = str_replace('{{content}}', $content, $template);
+        $pdf      = Pdf::loadHTML($template);
+        return $pdf->stream();
+    }
+    public function getCustomerStats() {
+        return InvoiceStatisticsService::getCustomerStats();
+    }
+    public function indexMonthlyRevenueRanges() {
+        return InvoiceStatisticsService::getMonthlyRevenueRanges();
+    }
+    public function indexMonthlySpiralRevenue() {
+        return InvoiceStatisticsService::getMonthlySpiralRevenue();
+    }
+}

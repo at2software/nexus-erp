@@ -1,0 +1,189 @@
+<div class="row">
+  <div class="col-3">
+    <div class="card mb-3">
+      <div class="card-header" i18n="@@i18n.common.leaveAllowances">leave allowances</div>
+      <ul class="list-group">
+        @for (grant of grants; track grant.id) {
+          <li class="list-group-item pointer d-flex" (click)="onGrantSelect(grant)" (keyup.enter)="onGrantSelect(grant)" tabindex="0" [class.bg-primary-4]="grant.id === currentGrant?.id">
+            <div class="text-truncate flex-fill">{{grant.name}}</div>
+            <div class="text-nowrap">
+              <span class="badge bg-dark-grey">
+                {{grant.var.total}} h
+              </span>
+            </div>
+          </li>
+        }
+      </ul>
+    </div>
+
+    @if (holidays) {
+      <div class="alert alert-dark" role="alert" i18n="@@i18n.profile.holidaysLoaded">holidays loaded</div>
+    }
+  </div>
+  <div class="col-6">
+    @if (!currentGrant) {
+      <div class="card">
+        <empty-state [card]="false" title="Please select a leave allowance pool on the left" class="calendar" i18n-title="@@i18n.profile.infoSelectLeaveAllowance"></empty-state>
+      </div>
+    }
+    @if (openRequests.length) {
+      <div class="card mb-3">
+        <div class="card-header" i18n="@@i18n.common.pendingTimeOffRequest">pending time off requests</div>
+        <div class="card-body">
+          <ul class="list-group">
+            @for (r of openRequests; track r.id) {
+              <li class="list-group-item d-flex" [nx]="r">
+                <span class="me-3">{{r.started_at | date}} - {{r.ended_at | date}}</span>
+                <span class="flex-fill me-3">{{r.comment}}</span>
+                <span>{{r.amount}}h</span>
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+    }
+    @if (currentGrant) {
+      <div class="card">
+        <div class="card-header">
+          <span i18n="@@i18n.common.newTimeOffRequest">new time off request</span>
+          <div class="chart-title">-{{totalDeduction}} h</div>
+        </div>
+        <div class="card-body">
+          <ul class="list-group">
+            <li class="list-group-item">
+              <div class="input-group">
+                <div class="input-group-prepend col-3">
+                  <span class="input-group-text" i18n="@@i18n.common.name">name</span>
+                </div>
+                <input type="text" disabled class="form-control" [value]="global!.user!.name">
+              </div>
+            </li>
+            <li class="list-group-item">
+              <div class="input-group">
+                <div class="input-group-prepend col-3">
+                  <span class="input-group-text" i18n="@@i18n.profile.holidayPeriod">holiday period</span>
+                </div>
+                <input type="text" class="form-control" ngxDaterangepickerMd [(ngModel)]="holidayPeriod" [alwaysShowCalendars]="true" (datesUpdated)="onDatesUpdated()" [locale]="{applyLabel: 'ok', format: 'DD.MM.YYYY'}">
+              </div>
+            </li>
+            <li class="list-group-item">
+              <div class="input-group">
+                <div class="input-group-prepend col-3">
+                  <span class="input-group-text" i18n="@@i18n.common.comment">comment</span>
+                </div>
+                <input type="text" class="form-control" [(ngModel)]="comment">
+              </div>
+            </li>
+          </ul>
+        </div>
+        @if (dayList.length > 0) {
+          <div class="card-header" i18n="@@i18n.common.timeOffOverview">time off overview</div>
+        }
+        @if (dayList.length > 0) {
+          <div class="card-body">
+            <ul class="list-group">
+              @for (day of dayList; track day) {
+                <li class="list-group-item d-flex align-items-center">
+                  <div class="me-3">{{ day.day }}</div>
+                  <div class="flex-fill me-3" [class.text-orange]="day.mult === 0" [class.text-danger]="isDurationExceeded(day)">
+                    {{ day.specialName }}
+                    @if (isDurationExceeded(day)) {
+                      <span class="text-danger small d-block" i18n="@@i18n.profile.vacationHoursExceeded">
+                                urlaubsstunden größer, als an diesem tag gearbeitet wird
+                            </span>
+                    }
+                    @if (day.mult === 0 && day.specialDescription !== undefined) {
+                      <span>
+                        <i class="cursor-info" [ngbTooltip]="day.specialDescription">info</i>
+                        <i class="cursor-pointer text-danger" (click)="removePotentialHoliday(day)" (keyup.enter)="removePotentialHoliday(day)" tabindex="0">backspace</i>
+                      </span>
+                    }
+                  </div>
+                  @if (day.mult === 0) {
+                    <div class="me-3" [class.text-dark-grey]="day.mult === 0">
+                      {{ day.mult * day.duration }}h
+                    </div>
+                  }
+                  @if (day.mult !== 0) {
+                    <div class="me-3">
+                      <input
+                        type="number"
+                        class="form-control form-control-sm text-end"
+                        style="width: 80px;"
+                        [(ngModel)]="day.duration"
+                        (ngModelChange)="onDurationChanged(day)"
+                        [class.is-invalid]="isDurationExceeded(day)"
+                        min="0"
+                        suffix="h">
+                      </div>
+                    }
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+          <div class="card-footer mt-3">
+            <button class="btn btn-fancy btn-fancy-be" (click)="onGrantRequested()" [disabled]="!isFormValid()" i18n="@@i18n.common.requestTimeOff">request time off</button>
+          </div>
+        </div>
+      }
+    </div>
+    <div class="col-3">
+      @if (currentGrant) {
+        <div class="card">
+          <div class="card-header hstack gap-2">
+            <div i18n="@@i18n.common.timeOffHistory">time off history</div>
+            <div class="flex-fill"></div>
+            <div class="chart-title">{{currentGrant.remainingHours() | number:'1.1-1'}} h</div>
+          </div>
+          @if (currentGrant.vacations.length > 0) {
+            <ul class="list-group">
+              @for (vacation of currentGrant.vacations; track vacation.id) {
+                <li class="list-group-item"
+                  [nx]="vacation"
+                  [class.text-decoration-line-through]="[2,4].contains(vacation.state)"
+                  [class.text-dark-grey]="vacation.state === 2"
+                  [class.text-primary]="vacation.state === 0"
+                  (actionsResolved)="reload(global.user!)">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div class="flex-fill">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-muted small">{{vacation.started_at | date:'dd.MM.yyyy'}} - {{vacation.ended_at | date:'dd.MM.yyyy'}}</span>
+                        <div class="d-flex align-items-center gap-2">
+                          <span class="text-nowrap">{{vacation.amount}}<span class="small text-muted"> h</span></span>
+                          <i [ngbTooltip]="vacation.getStateTooltip()"
+                          [class]="vacation.getStateClass()">{{vacation.getStateIcon()}}</i>
+                        </div>
+                      </div>
+                      @if (vacation.comment) {
+                        <div class="text-truncate">{{vacation.comment}}</div>
+                      }
+                    </div>
+                  </div>
+                </li>
+              }
+              <li class="list-group-item">
+                <div class="d-flex justify-content-between small">
+                  <span i18n="@@i18n.vacation.initialAllowance">initial allowance (yearly)</span>
+                  <span class="text-nowrap">+{{currentGrant.amount}}<span class="small text-muted"> h</span></span>
+                </div>
+              </li>
+            </ul>
+          }
+          @if (currentGrant.vacations.length === 0) {
+            <ul class="list-group">
+              <li class="list-group-item">
+                <empty-state title="No time off history" class="shrug" i18n-title="@@i18n.profile.noTimeOffHistory"></empty-state>
+                <!-- Debug: {{currentGrant.vacations.length}} vacations found -->
+              </li>
+              <li class="list-group-item">
+                <div class="d-flex justify-content-between small">
+                  <span i18n="@@i18n.vacation.initialAllowance">initial allowance (yearly)</span>
+                  <span class="text-nowrap">+{{currentGrant.amount}}<span class="small text-muted"> h</span></span>
+                </div>
+              </li>
+            </ul>
+          }
+        </div>
+      }
+    </div>

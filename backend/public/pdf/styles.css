@@ -1,0 +1,162 @@
+@font-face {
+  font-family: "SourceSans";
+  font-weight: 300;
+  src: url('SourceSansPro-Regular.ttf') format("truetype");
+  font-weight: normal;
+}
+body {
+  font-family: SourceSans, sans-serif;
+  font-size: 11.5pt;
+}
+@page {
+  margin: 20mm 20mm 29.96426772pt 25mm;
+}
+@page :first {
+  margin: 125mm 20mm 29.96426772pt 25mm;
+}
+.content {
+  font-size: 11.5pt;
+  line-height: 1.2;
+}
+.content > * {
+  margin: 0;
+  padding: 0;
+}
+.address {
+  position: absolute;
+  top: -80mm;
+  left: -5mm;
+  width: 80mm;
+  height: 45mm;
+  padding-left: 5mm;
+  font-size: 10pt;
+  padding-bottom: 0.5cm;
+  border-bottom: 1px black solid;
+  border-top: 1px black solid;
+}
+.address .address-sender {
+  font-size: 7.5px;
+}
+.information {
+  font-size: 10pt;
+  position: absolute;
+  top: -80mm;
+  right: 0;
+  width: 80mm;
+  padding-left: 5mm;
+}
+.information .document-title {
+  font-size: 16pt;
+  font-weight: bold;
+  text-align: right;
+}
+.header {
+  font-size: 8pt;
+  position: absolute;
+  top: -115mm;
+  left: -5mm;
+  width: 180mm;
+}
+.header table {
+  table-layout: fixed;
+  width: 100%;
+}
+.header td {
+  padding: 0;
+  vertical-align: top;
+}
+.header td:not(:last-child) {
+  padding-right: 5mm;
+}
+.logo {
+  position: absolute;
+  top: -115mm;
+  right: -10mm;
+  width: 25mm;
+  height: 25mm;
+}
+.placeAndDay {
+  font-weight: bold;
+  text-align: right;
+  font-size: 12pt;
+}
+.overlay {
+  opacity: 0.2;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: -125mm -20mm -29.96426772pt -25mm;
+  background-size: cover;
+}
+.footer {
+  position: fixed;
+  background-color: #444444;
+  bottom: -29.96426772pt;
+  padding: 1.40859mm 20mm;
+  right: -20mm;
+  left: -25mm;
+  font-size: 10pt;
+  text-align: right;
+}
+.footer .page-number:before {
+  content: "Page " counter(page);
+}
+.text-muted {
+  color: #999;
+}
+.smaller {
+  font-size: smaller;
+}
+.nowrap {
+  white-space: nowrap;
+}
+.valign-bottom {
+  vertical-align: bottom;
+}
+.text-start {
+  text-align: left;
+}
+.text-end {
+  text-align: right;
+}
+table.content-table {
+  font-size: 10pt;
+  width: 100%;
+  line-height: 1.2;
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+table.content-table th,
+table.content-table td {
+  padding: 0.75mm 1mm;
+  margin: 0;
+}
+table.content-table th {
+  border-bottom: 1px black solid;
+}
+table.content-table td.group-header {
+  padding: 0.25cm 0;
+}
+table.content-table tbody tr td {
+  border-bottom: 1px black dotted !important;
+}
+table.content-table tfoot tr.net-row td,
+table.content-table tfoot tr.gross-row td {
+  padding: 1mm 0 !important;
+}
+table.content-table tfoot tr.net-row td {
+  font-weight: bold;
+  border-top: 1px black solid;
+}
+table.content-table tfoot tr.gross-row td {
+  font-weight: bold;
+  border-bottom: 1px black solid;
+}
+.font-dejavu {
+  font-family: 'DejaVu Sans';
+  line-height: 1;
+  align-items: center;
+  align-content: baseline;
+}

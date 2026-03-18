@@ -1,0 +1,20 @@
+@if (parent.current) {
+  <app-header>
+    <div class="logo" style="background-image: url(assets/images/product.jpg);"></div>
+    <h1>{{parent.current.name}}</h1>
+    <ul class="nav">
+      <header-link-item hotkey="CTRL+ALT+1" routerLink="." title="settings"></header-link-item>
+      <header-link-item hotkey="CTRL+ALT+2" routerLink="/products/stats" i18n-title="@@i18n.common.statistics" title="statistics"></header-link-item>
+    </ul>
+  </app-header>
+}
+<router-outlet></router-outlet>
+
+<toolbar>
+  <button type="button mb-3" class="btn btn-primary ms-3 capitalize" (click)="onGroupCreate()" ngbTooltip="CTRL+ALT+G" hotkey="CTRL+ALT+G">
+    <i>add</i><span i18n="@@i18n.common.productGroup">product group</span>
+  </button>
+  <button type="button mb-3" class="btn btn-primary ms-3 capitalize" (click)="onProductCreate()" ngbTooltip="CTRL+ALT+N" hotkey="CTRL+ALT+N">
+    <i>add</i><span i18n="@@i18n.common.product">product</span>
+  </button>
+</toolbar>

@@ -1,0 +1,40 @@
+<div class="card card-chart mb-3">
+
+  <div class="card-header gap-2">
+    <n>hr</n>
+    <span class="flex-fill text-truncate" i18n="@@i18n.widget-hr-team">team status</span>
+    @if (value) {
+      <div class="chart-title">{{(value ? value : 0) | short}}h</div>
+    }
+  </div>
+
+  @if (data) {
+    <ul-compact>
+      @for (user of data; track user.id) {
+        <li class="d-flex cursor-default" [class.compact]="!user.current_focus && !user.is_sick && !user.is_on_vacation" [class.text-muted]="!user.current_focus">
+          <avatar [object]="user" class="me-2"></avatar>
+          <div class="flex-fill">{{user.name}}</div>
+          @if (!user.is_sick && !user.is_on_vacation) {
+            @if (user.current_focus?.class==='Project') {
+              <avatar [object]="user.current_focus" class="ms-2"></avatar>
+            }
+            @if (user.current_focus?.class==='Company') {
+              <avatar [object]="user.current_focus" class="ms-2"></avatar>
+            }
+          }
+          @if (user.is_sick) {
+            <div class="avatar avatar-sm bg-dark text-teal" style="border:1px black solid; padding:13px;">
+              <i ngbTooltip="sick until: {{user.is_sick | date}}">health_and_safety</i>
+            </div>
+          }
+          @if (user.is_on_vacation && !user.is_sick) {
+            <div class="avatar avatar-sm bg-dark text-cyan" style="border:1px black solid; padding:13px;">
+              <i ngbTooltip="vacation until: {{user.is_on_vacation | date}}">beach_access</i>
+            </div>
+          }
+        </li>
+      }
+    </ul-compact>
+  }
+  <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+</div>

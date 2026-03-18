@@ -1,0 +1,481 @@
+<toolbar>
+    <button
+        type="button"
+        class="btn"
+        [class.btn-outline-primary]="!hideCompleted"
+        [class.btn-primary]="hideCompleted"
+        (click)="hideCompleted = !hideCompleted; render()"
+        [title]="hideCompleted ? 'Show completed milestones' : 'Hide completed milestones'"
+    >
+        <i>{{ hideCompleted ? 'visibility_off' : 'visibility' }}</i>
+        {{ hideCompleted ? 'Show completed' : 'Hide completed' }}
+    </button>
+</toolbar>
+
+<div class="gantt-wrapper" (mousemove)="onMouseMove($event)" (mouseup)="onMouseUp()">
+    <svg #svgContainer [attr.width]="svgWidth" [attr.height]="svgHeight" class="gantt-svg" (mousedown)="onBackgroundMouseDown($event)">
+        <!-- Row backgrounds and headers -->
+        <g class="row-backgrounds">
+            @for (row of visibleRows; track $index; let rowIndex = $index) {
+                @if (row.type === 'header' && showProjectHeaders) {
+                    <g class="header-row">
+                        <rect
+                            x="0"
+                            [attr.y]="getRowY(rowIndex)"
+                            [attr.width]="svgWidth"
+                            [attr.height]="HEADER_ROW_HEIGHT"
+                            fill="rgb(16, 24, 24)"
+                        />
+                    </g>
+                } @else if (row.type === 'milestone') {
+                    <!-- Grid row background -->
+                    <rect
+                        x="0"
+                        [attr.y]="getRowY(rowIndex)"
+                        [attr.width]="svgWidth"
+                        [attr.height]="MILESTONE_ROW_HEIGHT"
+                        fill="var(--bs-body-bg)"
+                    />
+                } @else if (row.type === 'task') {
+                    <!-- Task row background -->
+                    <rect
+                        x="0"
+                        [attr.y]="getRowY(rowIndex)"
+                        [attr.width]="svgWidth"
+                        [attr.height]="TASK_HEIGHT"
+                        fill="var(--bs-body-bg)"
+                        opacity="0.5"
+                    />
+                }
+            }
+        </g>
+
+        <!-- Weekend backgrounds - Render after row backgrounds (Day mode only) -->
+        @if (viewMode === 'Day') {
+            <g class="weekend-backgrounds">
+                @for (unit of timelineUnits; track unit.date) {
+                    @if (unit.isWeekend) {
+                        <rect
+                            [attr.x]="unit.x"
+                            [attr.y]="TIMELINE_HEADER_HEIGHT"
+                            [attr.width]="UNIT_WIDTH"
+                            [attr.height]="svgHeight - TIMELINE_HEADER_HEIGHT"
+                            fill="#0009"
+                            opacity="0.5"
+                        />
+                    }
+                }
+            </g>
+        }
+
+        <!-- Grid lines - Render after backgrounds -->
+        <g class="grid-lines">
+            @for (unit of timelineUnits; track unit.date) {
+                <line
+                    [attr.x1]="unit.x"
+                    [attr.y1]="TIMELINE_HEADER_HEIGHT"
+                    [attr.x2]="unit.x"
+                    [attr.y2]="svgHeight"
+                    [attr.stroke]="GRID_COLOR"
+                    stroke-width="1"
+                />
+            }
+        </g>
+
+        <!-- Header row duration bars -->
+        @for (row of visibleRows; track $index; let rowIndex = $index) {
+            @if (row.type === 'header' && showProjectHeaders) {
+                @if (getProjectDurationBar(row.project!); as durationBar) {
+                    <g class="duration-bar">
+                        <rect
+                            [attr.x]="durationBar.x"
+                            [attr.y]="getRowY(rowIndex) + 10"
+                            [attr.width]="durationBar.width"
+                            height="5"
+                            fill="var(--bs-primary)"
+                            rx="2"
+                        />
+                    </g>
+                }
+            }
+        }
+
+        <!-- Header row content (sticky labels and buttons) -->
+        @for (row of visibleRows; track $index; let rowIndex = $index) {
+            @if (row.type === 'header' && showProjectHeaders) {
+                <foreignObject
+                    x="0"
+                    [attr.y]="getRowY(rowIndex)"
+                    width="100%"
+                    [attr.height]="HEADER_ROW_HEIGHT"
+                    style="overflow: visible;"
+                >
+                    <div xmlns="http://www.w3.org/1999/xhtml" class="header-content-wrapper">
+                        <div class="project-label" [style.left.px]="viewportLeft + 16" style="text-shadow: 0 0 3px #000" (click)="navigateToProject(row.project!)" (keydown.enter)="navigateToProject(row.project!)" (keydown.space)="navigateToProject(row.project!)" tabindex="0" role="button">
+                            {{ row.project?.name }}
+                        </div>
+                        <div class="header-add-button" [style.left.px]="viewportRight - 50" ngbDropdown #dropdown="ngbDropdown" placement="bottom-end" (openChange)="onDropdownOpenChange()">
+                            <button class="btn-add" ngbDropdownToggle type="button">
+                                <i>add</i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+                                <button class="dropdown-item" type="button" (click)="onAddMilestoneClick(row.project!, dropdown)">
+                                    <i class="me-2">schedule</i>
+                                    Add Milestone
+                                </button>
+                                <button class="dropdown-item" type="button" (click)="onAddTaskClick(row.project!, dropdown)">
+                                    <i class="me-2">task</i>
+                                    Add Task
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </foreignObject>
+            }
+        }
+
+        <!-- Dependencies -->
+        <g class="dependencies">
+            @for (dep of dependencies; track dep) {
+                <path
+                    [attr.d]="getDependencyPath(dep)"
+                    stroke="#666"
+                    stroke-width="2"
+                    fill="none"
+                    marker-end="url(#arrowhead)"
+                />
+            }
+        </g>
+
+        <!-- Dependency drawing feedback -->
+        @if (drawingDependency && dependencyFromMilestone && dependencyDrawingPath) {
+            <path
+                [attr.d]="dependencyDrawingPath"
+                [attr.stroke]="dependencyToMilestone && dependencyToMilestone.project_id === dependencyFromMilestone.project_id ? '#0d6efd' : '#dc3545'"
+                stroke-width="2"
+                fill="none"
+                stroke-dasharray="5,5"
+                opacity="0.7"
+            />
+        }
+
+        <!-- Milestones -->
+        <g class="milestones">
+            @for (rendered of renderedMilestones; track rendered.milestone.id) {
+                <g class="milestone-bar"
+                   [class.dependency-target]="drawingDependency && dependencyToMilestone?.id === rendered.milestone.id && dependencyToMilestone?.project_id === dependencyFromMilestone?.project_id"
+                   [class.dependency-invalid]="drawingDependency && dependencyToMilestone?.id === rendered.milestone.id && dependencyToMilestone?.project_id !== dependencyFromMilestone?.project_id"
+                   [nx]="rendered.milestone"
+                   context="milestone"
+                   (mousedown)="onMilestoneMouseDown($event, rendered)">
+                    <!-- Bar -->
+                    <rect
+                        [attr.x]="rendered.x"
+                        [attr.y]="rendered.y + 8"
+                        [attr.width]="rendered.width"
+                        height="32"
+                        [attr.fill]="getMilestoneColor(rendered.milestone)"
+                        rx="4"
+                        [attr.stroke]="isMilestoneOverdue(rendered.milestone) ? '#dc3545' : '#000'"
+                        [attr.stroke-width]="isMilestoneOverdue(rendered.milestone) ? '2' : '1'"
+                        class="milestone-rect"
+                    />
+
+                    <!-- Progress -->
+                    @if (rendered.milestone.progress && rendered.milestone.progress > 0) {
+                        <rect
+                            [attr.x]="rendered.x"
+                            [attr.y]="rendered.y + 8"
+                            [attr.width]="rendered.width * rendered.milestone.progress"
+                            height="32"
+                            [attr.fill]="getMilestoneProgressColor(rendered.milestone)"
+                            rx="4"
+                        />
+                    }
+
+                    <!-- Label with assignee icon/avatar -->
+                    <g class="milestone-label-group">
+                        @if (rendered.milestone.user_id) {
+                            <!-- Avatar background circle -->
+                            <circle
+                                [attr.cx]="rendered.x + 16"
+                                [attr.cy]="rendered.y + 24"
+                                r="10"
+                                fill="#000"
+                                opacity="0.3"
+                            />
+                            <!-- Avatar in front of label -->
+                            <clipPath [attr.id]="'label-avatar-clip-' + rendered.milestone.id">
+                                <circle [attr.cx]="rendered.x + 16" [attr.cy]="rendered.y + 24" r="9" />
+                            </clipPath>
+                            <image
+                                [attr.x]="rendered.x + 6"
+                                [attr.y]="rendered.y + 15"
+                                width="18"
+                                height="18"
+                                [attr.href]="getAvatarUrl(rendered.milestone.user_id)"
+                                [attr.clip-path]="'url(#label-avatar-clip-' + rendered.milestone.id + ')'"
+                                class="label-avatar"
+                            >
+                                <title i18n="@@i18n.common.assigned_user">assigned user</title>
+                            </image>
+                        } @else {
+                            <!-- Unassigned icon background circle -->
+                            <circle
+                                [attr.cx]="rendered.x + 16"
+                                [attr.cy]="rendered.y + 24"
+                                r="10"
+                                fill="#000"
+                                opacity="0.3"
+                            />
+                            <!-- Unassigned icon -->
+                            <text
+                                [attr.x]="rendered.x + 16"
+                                [attr.y]="rendered.y + 29"
+                                fill="#fff"
+                                font-family="Material Icons"
+                                font-size="16"
+                                text-anchor="middle"
+                                opacity="0.8"
+                                class="unassigned-icon"
+                            >
+                                person_off
+                                <title i18n="@@i18n.common.unassigned">unassigned</title>
+                            </text>
+                        }
+
+                        @if (rendered.milestone.invoice_items.length) {
+                            <!-- Invoice icon -->
+                            <text
+                                [attr.x]="rendered.x + 32"
+                                [attr.y]="rendered.y + 31"
+                                fill="#fff"
+                                font-family="NxIcons"
+                                font-size="14"
+                                text-anchor="start"
+                            >invoice</text>
+                        }
+
+                        <!-- Label text -->
+                        <text
+                            [attr.x]="rendered.x + (rendered.milestone.invoice_items.length ? 50 : 32)"
+                            [attr.y]="rendered.y + 28"
+                            text-anchor="start"
+                            [attr.fill]="getMilestoneLabelColor(rendered.milestone)"
+                            font-size="12"
+                            font-weight="500"
+                            class="milestone-label"
+                        ><title>requires {{ rendered.milestone.computed_workload_percent | number:'1.0-0' }}% of assignee's daily workload</title>{{ decodeHtmlEntities(rendered.milestone.name) }}@if (rendered.milestone.computed_workload_percent) {<tspan class="workload-percent" fill="#666" font-size="10" dx="8">{{ rendered.milestone.computed_workload_percent | number:'1.0-0' }}%</tspan>}</text>
+                    </g>
+
+                    <!-- Resize handles -->
+                    <!-- Left: Dependency drawing handle -->
+                    <circle
+                        [attr.cx]="rendered.x"
+                        [attr.cy]="rendered.y + 24"
+                        r="5"
+                        fill="#0d6efd"
+                        class="dependency-point left"
+                        (mousedown)="onResizeMouseDown($event, rendered, 'left')"
+                    />
+                    <!-- Right: Resize handle -->
+                    <rect
+                        [attr.x]="rendered.x + rendered.width + 5"
+                        [attr.y]="rendered.y + 13"
+                        width="5"
+                        height="22"
+                        fill="#999"
+                        class="resize-handle right"
+                        (mousedown)="onResizeMouseDown($event, rendered, 'right')"
+                    />
+                </g>
+            }
+        </g>
+
+        <!-- Tasks -->
+        <g class="tasks">
+            @for (row of visibleRows; track $index; let rowIndex = $index) {
+                @if (row.type === 'task' && !isTaskDisappearing(row.data.id)) {
+                    <foreignObject
+                        [attr.x]="getTaskX(row)"
+                        [attr.y]="getRowY(rowIndex)"
+                        [attr.width]="getTaskWidth(row)"
+                        [attr.height]="TASK_HEIGHT"
+                        style="overflow: visible;"
+                        (contextmenu)="onTaskContextMenu($event, row.data)"
+                    >
+                        <div xmlns="http://www.w3.org/1999/xhtml" class="task-content-wrapper">
+                            <div class="task-label" [class.completing]="isTaskCompleting(row.data.id)">
+                                <input
+                                    type="checkbox"
+                                    class="task-checkbox"
+                                    [checked]="row.data.state === 1"
+                                    (change)="onTaskCheckboxChange(row.data, $event)"
+                                >
+                                <span class="task-name">{{ row.data.name }}</span>
+                            </div>
+                        </div>
+                    </foreignObject>
+                }
+            }
+        </g>
+
+        <!-- Today indicator -->
+        <line
+            [attr.x1]="getTodayX()"
+            [attr.y1]="TIMELINE_HEADER_HEIGHT"
+            [attr.x2]="getTodayX()"
+            [attr.y2]="svgHeight"
+            stroke="var(--bs-teal)"
+            stroke-width="2"
+            opacity="0.7"
+        />
+
+        <!-- Project deadline markers -->
+        @for (deadline of getProjectDeadlines(); track deadline.project.id) {
+            <line
+                [attr.x1]="deadline.x"
+                [attr.y1]="deadline.yStart"
+                [attr.x2]="deadline.x"
+                [attr.y2]="deadline.yEnd"
+                stroke="var(--bs-danger)"
+                stroke-width="3"
+                opacity="0.8"
+                stroke-dasharray="5,3"
+            >
+                <title>{{ deadline.project.name }} - Deadline: {{ deadline.project.due_at }}</title>
+            </line>
+        }
+
+        <!-- Timeline header (rendered last for proper z-order) -->
+        <g class="timeline-header" [attr.transform]="'translate(0, ' + scrollY + ')'">
+            <!-- Background for sticky header -->
+            <rect
+                x="0"
+                y="0"
+                [attr.width]="svgWidth"
+                [attr.height]="TIMELINE_HEADER_HEIGHT"
+                fill="var(--bs-body-bg)"
+            />
+
+            <!-- Group labels (top row) -->
+            @if (timelineGroups.length > 0) {
+                <g class="group-labels">
+                    @for (group of timelineGroups; track group.x) {
+                        <rect
+                            [attr.x]="group.x"
+                            y="0"
+                            [attr.width]="group.width"
+                            height="30"
+                            fill="var(--bs-body-bg)"
+                        />
+                        <text
+                            [attr.x]="group.x + group.width / 2"
+                            y="20"
+                            text-anchor="middle"
+                            fill="#ccc"
+                            font-size="20"
+                            font-family="Michroma"
+                        >{{ group.label }}</text>
+                    }
+                </g>
+            }
+
+            <!-- Unit labels (bottom row) -->
+            <g class="unit-labels">
+                @for (unit of timelineUnits; track unit.date) {
+                    <rect
+                        [attr.x]="unit.x"
+                        [attr.y]="timelineGroups.length > 0 ? 30 : 0"
+                        [attr.width]="UNIT_WIDTH"
+                        [attr.height]="timelineGroups.length > 0 ? 30 : 60"
+                        fill="var(--bs-body-bg)"
+                    />
+                    <!-- Workload indicator bar for unit -->
+                    @if (workloadUser && unit.workloadPercent !== undefined && unit.workloadPercent >= 0) {
+                        <rect
+                            [attr.x]="unit.x + 2"
+                            [attr.y]="timelineGroups.length > 0 ? 56 : 56"
+                            [attr.width]="UNIT_WIDTH - 4"
+                            height="3"
+                            [attr.fill]="getWorkloadColor(unit.workloadPercent)"
+                            rx="1"
+                            opacity="0.8"
+                        />
+                    }
+                    <text
+                        [attr.x]="unit.x + UNIT_WIDTH / 2"
+                        [attr.y]="timelineGroups.length > 0 ? 50 : 35"
+                        text-anchor="middle"
+                        [attr.fill]="viewMode === 'Year' ? '#ccc' : '#999'"
+                        [attr.font-size]="viewMode === 'Year' ? 20 : 11"
+                        [attr.font-family]="viewMode === 'Year' ? 'Michroma' : ''"
+                    >{{ unit.label }}</text>
+                }
+            </g>
+        </g>
+
+        <!-- Arrow marker for dependencies -->
+        <defs>
+            <marker
+                id="arrowhead"
+                markerWidth="10"
+                markerHeight="10"
+                refX="9"
+                refY="3"
+                orient="auto"
+            >
+                <polygon points="0 0, 10 3, 0 6" fill="#666" />
+            </marker>
+        </defs>
+
+        <!-- Area selection rectangle -->
+        @if (areaSelecting) {
+            <rect
+                [attr.x]="Math.min(areaSelectStart.x, areaSelectEnd.x)"
+                [attr.y]="Math.min(areaSelectStart.y, areaSelectEnd.y)"
+                [attr.width]="Math.abs(areaSelectEnd.x - areaSelectStart.x)"
+                [attr.height]="Math.abs(areaSelectEnd.y - areaSelectStart.y)"
+                fill="rgba(var(--bs-primary-rgb), 0.2)"
+                stroke="var(--bs-primary)"
+                stroke-width="2"
+                stroke-dasharray="5,5"
+                pointer-events="none"
+            />
+        }
+
+        <!-- Off-screen indicators (chevrons) -->
+        <g class="off-screen-indicators" [attr.transform]="'translate(0, ' + scrollY + ')'">
+            @for (indicator of getOffScreenIndicators(); track indicator.rowIndex) {
+                <!-- Left chevron -->
+                @if (indicator.hasLeft) {
+                    <text
+                        [attr.x]="viewportLeft + 20"
+                        [attr.y]="indicator.y"
+                        text-anchor="middle"
+                        dominant-baseline="middle"
+                        [attr.fill]="indicator.isOverdue ? '#dc3545' : '#999'"
+                        font-family="Material Icons"
+                        font-size="24"
+                        class="off-screen-chevron"
+                        pointer-events="none"
+                    >chevron_left</text>
+                }
+                <!-- Right chevron -->
+                @if (indicator.hasRight) {
+                    <text
+                        [attr.x]="viewportRight - 20"
+                        [attr.y]="indicator.y"
+                        text-anchor="middle"
+                        dominant-baseline="middle"
+                        [attr.fill]="indicator.isOverdue ? '#dc3545' : '#999'"
+                        font-family="Material Icons"
+                        font-size="24"
+                        class="off-screen-chevron"
+                        pointer-events="none"
+                    >chevron_right</text>
+                }
+            }
+        </g>
+    </svg>
+</div>

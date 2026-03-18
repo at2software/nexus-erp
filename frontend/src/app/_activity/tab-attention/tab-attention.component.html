@@ -1,0 +1,79 @@
+<activity-tab icon="history" [componentType]="componentType">
+  <div class="container">
+    <scrollbar>
+
+      @if (groupedItems.length) {
+        @for (group of groupedItems; track group.date) {
+          <div class="header">{{group.displayDate}}</div>
+          <ul class="list-group">
+          @for (_ of group.items; track _.id) {
+            @if (_.class === 'Comment') {
+              <li class="list-group-item hstack align-items-start gap-2 py-2" ngbTooltip="{{_.created_at | date}}: new comment" [nx]="_" [tables]="newItems">
+                <div>
+                  @if (_.user) {
+                    <avatar [object]="_.user"></avatar>
+                  }
+                  @if (!_.user) {
+                    <div class="badge badge-icon text-grey">
+                      <i>chat</i>
+                    </div>
+                  }
+                </div>
+                <div class="flex-fill" [innerHTML]="_.text | safe:'html'"></div>
+                @if (_.parent) {
+                  <div>
+                    @if (_.parent) {
+                      <avatar [object]="_.parent"></avatar>
+                    }
+                  </div>
+                }
+              </li>
+            }
+            @if (_.class === 'Invoice') {
+              <li roles="invoicing" ngbTooltip="{{_.created_at | date}}: new invoice" class="list-group-item py-1 hstack align-items-start gap-2" [nx]="_" [tables]="newItems">
+                <div>
+                  <div class="badge badge-icon text-green">
+                    <n>invoice</n>
+                  </div>
+                </div>
+                <div class="flex-fill text-truncate">{{_.name}}</div>
+                <div class="text-end text-muted">{{_.gross | mshort}}</div>
+                <div>
+                  <avatar [object]="_"></avatar>
+                </div>
+              </li>
+            }
+            @if (_.class === 'Company') {
+              <li class="list-group-item py-1 hstack align-items-start gap-2" ngbTooltip="{{_.created_at | date}}: new company" [nx]="_" [tables]="newItems">
+                <div>
+                  <div class="badge badge-icon text-yellow">
+                    <n>customers</n>
+                  </div>
+                </div>
+                <div class="flex-fill">{{_.name}}</div>
+                <div>
+                  <avatar [object]="_"></avatar>
+                </div>
+              </li>
+            }
+            @if (_.class === 'Project') {
+              <li class="list-group-item py-1 hstack align-items-start gap-2" ngbTooltip="{{_.created_at | date}}: new project" [nx]="_" [tables]="newItems">
+                <div>
+                  <div class="badge badge-icon text-yellow">
+                    <n>project</n>
+                  </div>
+                </div>
+                <div class="flex-fill">{{_.name}}</div>
+                <div>
+                  <avatar [object]="_"></avatar>
+                </div>
+              </li>
+            }
+          }
+          </ul>
+        }
+      }
+
+    </scrollbar>
+  </div>
+</activity-tab>

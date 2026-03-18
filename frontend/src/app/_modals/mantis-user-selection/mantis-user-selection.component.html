@@ -1,0 +1,71 @@
+<div class="modal d-block" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title" i18n="@@i18n.mantis.select_user">select MantisBT user</span>
+        <button type="button" class="btn-close" (click)="decline()" tabindex="0" (keydown.enter)="decline()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        @if (isRootInstance()) {
+          <div class="alert alert-info mb-3" role="alert">
+            <i class="bi bi-info-circle me-2"></i>
+            <span i18n="@@i18n.mantis.root_instance_info">Showing global users. For project-specific users, add a MantisBT plugin link to this project.</span>
+          </div>
+        }
+        <div class="mb-3">
+          <input type="text"
+                 class="form-control"
+                 [(ngModel)]="searchTerm"
+                 placeholder="Search users..."
+                 i18n-placeholder="@@i18n.git.search_users">
+        </div>
+        <div class="user-list" style="max-height: 400px; overflow-y: auto;">
+          @if (getMantisUsers().length === 0) {
+            <div class="text-center text-muted py-4">
+              <p i18n="@@i18n.common.noUsersFound">no users found</p>
+            </div>
+          }
+          @for (u of getMantisUsers(); track u.id) {
+            <div class="card mb-2 user-card"
+                 [class.border-primary]="isSelected(u.id)"
+                 [class.selected]="isSelected(u.id)"
+                 (click)="selectUser(u.id)" tabindex="0" (keydown.enter)="selectUser(u.id)"
+                 style="cursor: pointer;">
+              <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="flex-shrink-0">
+                    <span>{{u.name}}</span>
+                  </div>
+                  @if (u.var?.data?.real_name && u.var.data.real_name !== u.name) {
+                    <div class="text-muted text-truncate flex-shrink-1" style="min-width: 0;">
+                      <small class="text-truncate d-block">{{u.var.data.real_name}}</small>
+                    </div>
+                  }
+                  @if (u.var?.data?.email) {
+                    <div class="text-muted text-truncate flex-shrink-1" style="min-width: 0;">
+                      <small class="text-truncate d-block">{{u.var.data.email}}</small>
+                    </div>
+                  }
+                  <div class="ms-auto flex-shrink-0">
+                    @if (isSelected(u.id)) {
+                      <i class="bi bi-check-circle-fill text-primary"></i>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" (click)="decline()" tabindex="0" (keydown.enter)="decline()" i18n="@@i18n.common.cancel">cancel</button>
+        <button type="button"
+                class="btn btn-primary"
+                (click)="accept()" tabindex="0" (keydown.enter)="accept()"
+                [disabled]="!selectedUserId"
+                hotkey="CTRL+ENTER"
+                i18n="@@i18n.common.ok">ok</button>
+      </div>
+    </div>
+  </div>
+</div>

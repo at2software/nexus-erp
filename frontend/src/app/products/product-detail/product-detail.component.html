@@ -1,0 +1,13 @@
+@if (parent.current) {
+  <app-header>
+    <div class="logo" style="background-image: url(assets/images/product.jpg);"></div>
+    <h1>{{parent.current.name}}</h1>
+    <ul class="nav">
+      <header-link-item hotkey="CTRL+ALT+1" routerLink="." title="settings"></header-link-item>
+      <header-link-item hotkey="CTRL+ALT+2" routerLink="refactor" i18n-title="@@i18n.products.refactor" title="refactor"></header-link-item>
+      <header-link-item hotkey="CTRL+ALT+3" routerLink="/products/stats" i18n-title="@@i18n.common.statistics" title="statistics"></header-link-item>
+    </ul>
+  </app-header>
+}
+
+<router-outlet></router-outlet>

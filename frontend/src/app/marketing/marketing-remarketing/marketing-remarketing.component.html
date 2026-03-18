@@ -1,0 +1,49 @@
+
+<div class="card mb-3">
+  <div class="card-header" i18n="@@i18n.common.remarketing_intervals">remarketing intervals</div>
+
+  <ul class="list-group">
+    @for (item of observed; track item.id) {
+      <ng-container *ngTemplateOutlet="row; context: { $implicit: item }"></ng-container>
+    }
+  </ul>
+
+  <div class="card-header" i18n="@@i18n.marketing.suggested_for_remarketing">suggested for remarketing</div>
+  <ul class="list-group">
+    @for (item of suggested; track item.id) {
+      <ng-container *ngTemplateOutlet="row; context: { $implicit: item }"></ng-container>
+    }
+  </ul>
+
+</div>
+
+<ng-template #row let-item>
+  <li class="list-group-item" [nx]="item">
+    <div class="vstack">
+      <div class="hstack gap-2">
+        <avatar [object]="item"></avatar>
+        <div class="flex-fill text-truncate">{{item.name}}</div>
+        <div class="text-end" ngbTooltip="revenue last 12 months" i18n-ngbTooltip="@@i18n.marketing.revenue_last_12_months">{{item.var.revenue_12 | money}}</div>
+        <div class="text-end" style="width:10%;" ngbTooltip="last contact" i18n-ngbTooltip="@@i18n.marketing.last_contact">{{item.updated_at | date}}</div>
+        <div class="input-group" style="width:20%;">
+          <select class="form-select" [autosave]="item" [(ngModel)]="item.remarketing_interval">
+            <option value="1" i18n="@@i18n.common.daily">daily</option>
+            <option value="4" i18n="@@i18n.common.weekly">weekly</option>
+            <option value="5" i18n="@@i18n.marketing.everyTwoWeeks">every two weeks</option>
+            <option value="2" i18n="@@i18n.common.monthly">monthly</option>
+            <option value="6" i18n="@@i18n.marketing.everyTwoMonths">every two months</option>
+            <option value="7" i18n="@@i18n.marketing.everyThreeMonths">every three months</option>
+            <option value="8" i18n="@@i18n.marketing.everySixMonths">every six months</option>
+            <option value="3" i18n="@@i18n.common.yearly">yearly</option>
+          </select>
+          @if (item.remarketing_interval) {
+            <button type="button" class="btn btn-plain"><i class="text-primary pointer" (click)="item.update({remarketing_interval:null}).subscribe()" (keyup.enter)="item.update({remarketing_interval:null}).subscribe()" tabindex="0" i18n="@@i18n.common.clear">clear</i></button>
+          }
+        </div>
+      </div>
+      <div>
+        <progress-bar [progress]="item.remarketingProgress" style="primary" overStyle="danger" ngbTooltip="remarketing due in {{item.remarketingDays - item.lastUpdateDuration}} days" i18n-ngbTooltip="@@i18n.common.remarketing_due_in_days"></progress-bar>
+      </div>
+    </div>
+  </li>
+</ng-template>

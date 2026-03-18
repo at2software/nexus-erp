@@ -1,0 +1,77 @@
+<toolbar>
+    <button class="btn btn-primary" (click)="openCreateModal()">
+        <i>add</i>
+        <span i18n="@@i18n.uptime.addMonitor">add monitor</span>
+    </button>
+</toolbar>
+
+<div class="row mb-3">
+    <div class="col">
+        <div class="card">
+            @if (loading) {
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">
+                        <span i18n="@@i18n.common.loading">loading</span>
+                        <span class="notranslate">...</span>
+                    </span>
+                </div>
+            </div>
+            } @else if (monitors.length === 0) {
+            <empty-state [card]="false" class="projects" i18n-title="@@i18n.uptime.noMonitors" title="no uptime monitors yet">
+              <p class="text-muted small" i18n="@@i18n.uptime.noMonitorsBody">Click "add monitor" to start tracking the heartbeat of your services.</p>
+            </empty-state>
+            } @else {
+            <ul class="list-group list-group-flush">
+                @for (monitor of monitors; track monitor.id) {
+                <li class="list-group-item list-group-item-action hstack gap-2" [nx]="monitor" context="dashboard"
+                    (mouseenter)="loadChecksForMonitor(monitor)">
+                    <div [ngbTooltip]="'Status: ' + monitor.last_status">
+                        <i class="text-{{ monitor.statusColor }}">{{ monitor.statusIcon }}</i>
+                    </div>
+                    <div class="vstack flex-fill">
+                        <div>{{ monitor.name }}</div>
+                        <a [href]="monitor.url" target="_blank" class="text-info">
+                            {{ monitor.url }}
+                        </a>
+                    </div>
+                    <div class="avatars-stack">
+                        @for (project of monitor.projects; track project.id) {
+                        <avatar [object]="project" size="xs"></avatar>
+                        }
+                    </div>
+                    <div class="avatars-stack">
+                        @for (user of monitor.recipients; track user.id) {
+                        <avatar [object]="user" size="xs"></avatar>
+                        }
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">{{ getUptimePercentage(monitor) }}%</span>
+                        @if (getChecks(monitor).length > 0) {
+                        <div class="sparkline">
+                            @for (day of getSparklineData(monitor); track $index) {
+                            <div class="sparkline-bar"
+                                    [class.success]="day.color === 'success'"
+                                    [class.warning]="day.color === 'warning'"
+                                    [class.orange]="day.color === 'orange'"
+                                    [class.danger]="day.color === 'danger'"
+                                    [ngbTooltip]="day.day + ' (' + day.percentage.toFixed(1) + '%)'">
+                            </div>
+                            }
+                        </div>
+                        }
+                    </div>
+                    <div [ngbTooltip]="'Last Check Time'">
+                        @if (monitor.last_check_at) {
+                        {{ monitor.last_check_at | date:'short' }}
+                        } @else {
+                        <span class="text-muted" i18n="@@i18n.uptime.neverChecked">never</span>
+                        }
+                    </div>
+                </li>
+            }
+            </ul>
+            }
+        </div>
+    </div>
+</div>

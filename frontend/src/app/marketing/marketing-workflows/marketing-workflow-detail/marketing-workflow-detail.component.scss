@@ -1,0 +1,71 @@
+.workflow-timeline {
+    .day-badge {
+        min-width: 70px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .activity-card {
+        background: transparent;
+        border: 1px solid var(--bs-border-color);
+        border-radius: 4px;
+        padding: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+            background: rgba(var(--bs-primary-rgb), 0.1);
+            border-color: var(--bs-primary);
+        }
+
+        &.active {
+            background: rgba(var(--bs-primary-rgb), 0.2);
+            border-color: var(--bs-primary);
+        }
+    }
+
+    .branches {
+        position: relative;
+
+        .branch-column {
+            border-left: 2px solid var(--bs-border-color);
+            padding-left: 1rem;
+
+            &:first-child {
+                border-left: none;
+                padding-left: 0;
+            }
+        }
+    }
+}
+
+.modal {
+    z-index: 1055;
+}
+
+.modal-backdrop {
+    z-index: 1050;
+}
+
+.offcanvas {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1055;
+    background-color: var(--bs-body-bg);
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    transform: translateX(100%);
+    visibility: hidden;
+    
+    &.show {
+        transform: translateX(0);
+        visibility: visible;
+    }
+}
+
+.offcanvas-footer {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}

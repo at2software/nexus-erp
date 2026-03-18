@@ -1,0 +1,16 @@
+@use 'src/scss/var';
+
+:host {
+    //$w: calc(100vw - $m-modules - $m-activity);
+    display: block;
+    //position: absolute;
+    //left: $m-modules;
+    //width: $w;
+    //margin-left: calc(-0.5 * $w - (100% / 9 * 3) - 15px);
+    //margin-top: 1rem;
+}
+
+.gantt-container {
+    height: calc(100vh - 180px);
+    overflow: auto;
+}

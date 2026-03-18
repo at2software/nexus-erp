@@ -1,0 +1,15 @@
+<app-header>
+	<div class="logo" style="background-image: url(assets/images/hr.jpg);"></div>
+	<h1 i18n="@@i18n.common.humanRessources">human ressources</h1>
+	<ul class="nav">
+		<header-link-item title="contact" routerLink="/hr/{{srv.getUserId()}}/contact" i18n-title="@@i18n.common.contact"></header-link-item>
+		<header-link-item title="working time" routerLink="/hr/{{srv.getUserId()}}/working_time" i18n-title="@@i18n.common.workingTime"></header-link-item>
+		<header-link-item title="workload" routerLink="/hr/{{srv.getUserId()}}/workload" i18n-title="@@i18n.common.workload"></header-link-item>
+		<header-link-item title="vacation" routerLink="/hr/{{srv.getUserId()}}/vacation" roles="hr" i18n-title="@@i18n.common.vacation"></header-link-item>
+		<header-link-item title="employment" routerLink="/hr/{{srv.getUserId()}}/employment" roles="hr" i18n-title="@@i18n.common.employment"></header-link-item>
+		<header-link-item title="milestones" routerLink="/hr/{{srv.getUserId()}}/milestones" i18n-title="@@i18n.common.milestones"></header-link-item>
+		<header-link-item title="stats" routerLink="/hr/stats" [exact]="false" i18n-title="@@i18n.common.stats"></header-link-item>
+	</ul>
+</app-header>
+
+<router-outlet></router-outlet>

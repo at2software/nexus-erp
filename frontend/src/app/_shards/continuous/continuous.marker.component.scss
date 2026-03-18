@@ -1,0 +1,17 @@
+
+:host {
+  display: block;
+  i { font-size: 2rem; padding:1.25rem;}
+}
+.loader-container {
+  padding: 5px auto;
+  display: block;
+  text-align: center;
+  width: 100%;
+}
+.nexus-loader {
+  width: 30px;
+  height: 30px;
+  display: inline-block;
+  filter: drop-shadow(0 -1px 1px #fff2) drop-shadow(0 1px 1px #0009);
+}

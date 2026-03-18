@@ -1,0 +1,36 @@
+<div class="d null" [style.left.%]="100 * -min / (max - min)" [style.--null-position]="(100 * -min / (max - min)) + '%'">
+</div>
+@if (dx < 0) {
+  <div class="d offset offset-n" [style.width.%]="100 * -dx / (max - min)" [style.left.%]="100 * (dx - min) / (max - min)"></div>
+}
+@if (dx >= 0) {
+  <div class="d offset offset-p" [style.width.%]="100 * dx / (max - min)" [style.left.%]="100 * (-min) / (max - min)"></div>
+}
+@if (delta < 0) {
+  <div class="d offset change-n" [style.width.%]="100 * (-delta) / (max - min)" [style.left.%]="100 * (delta - min + dx) / (max - min)"></div>
+}
+@if (delta >= 0) {
+  <div class="d offset change-p" [style.width.%]="100 * delta / (max - min)" [style.left.%]="100 * (- min + dx) / (max - min)"></div>
+}
+<!-- For negative bars: delta label on the right -->
+@if (delta < 0) {
+  <div class="t text-end small" [class.text-danger]="delta<0" [class.text-success]="delta>=0">
+    @if (unit === 'money') {
+      <span>{{delta | money}}</span>
+    }
+    @if (unit === 'hours') {
+      <span>{{delta | number:'1.0-1'}}<span class="small text-muted"> h</span></span>
+    }
+  </div>
+}
+<!-- For positive bars: delta label on the left -->
+@if (delta >= 0) {
+  <div class="t small" [class.text-danger]="delta<0" [class.text-success]="delta>=0">
+    @if (unit === 'money') {
+      <span>{{delta | money}}</span>
+    }
+    @if (unit === 'hours') {
+      <span>{{delta | number:'1.0-1'}}<span class="small text-muted"> h</span></span>
+    }
+  </div>
+}

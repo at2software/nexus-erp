@@ -1,0 +1,43 @@
+
+	<div class="row" col-slider>
+		<div class="col-md-3">
+			<div class="card" style="overflow: visible;">
+				<div class="card-header" i18n="@@i18n.common.filters">filters</div>
+				<div class="card-body">
+					<div class="form-check form-switch mb-3">
+						<input class="form-check-input" type="checkbox" role="switch" value="1" (change)="reload()" [(ngModel)]="onlyUnpaid" id="cbRevenue">
+						<label class="form-check-label capitalize-first" for="cbRevenue" i18n="@@i18n.invoice.onlyUnpaid">only unpaid</label>
+					</div>
+					<div class="input-group mb-3">
+						<span class="input-group-text capitalize-first" id="basic-addon1" i18n="@@i18n.common.created_at">created at</span>
+						<input type="text" class="form-control" ngxDaterangepickerMd [(ngModel)]="selCreated"
+							[alwaysShowCalendars]="true" (datesUpdated)="reload()" [showCustomRangeLabel]="true"
+							[ranges]="ranges" [showClearButton]="true" [locale]="{applyLabel: 'ok', format: 'DD.MM.YYYY'}"
+							placeholder="custom date range" i18n-placeholder="@@i18n.common.customDateRange"/>
+					</div>
+					<div class="input-group mb-3">
+						<span class="input-group-text capitalize-first" id="basic-addon1" i18n="@@i18n.common.paidAt">paid at</span>
+						<input type="text" class="form-control" ngxDaterangepickerMd [(ngModel)]="selPaid"
+							[alwaysShowCalendars]="true" (datesUpdated)="reload()" [showCustomRangeLabel]="true"
+							[ranges]="ranges" [showClearButton]="true" [locale]="{applyLabel: 'ok', format: 'DD.MM.YYYY'}"
+							placeholder="custom date range" i18n-placeholder="@@i18n.common.customDateRange"/>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="col-md-9">
+			@if (hasLoaded && invoices.length === 0) {
+				<div class="card">
+					<empty-state [card]="false" class="invoices" i18n-title="@@i18n.invoices.noInvoicesYet" title="No invoices yet">
+						<p i18n="@@i18n.invoices.emptyStateDescription">Your financial story is yet to be written. Create your first invoice and set the engine of your business in motion.</p>
+					</empty-state>
+				</div>
+			}
+			@if (!hasLoaded || invoices.length > 0) {
+			<div class="card">
+				<invoices-table [invoices]="invoices"></invoices-table>
+				<continuous-marker [observer]="observer" (dataReceived)="onResult($event)"></continuous-marker>
+			</div>
+			}
+		</div>
+	</div>

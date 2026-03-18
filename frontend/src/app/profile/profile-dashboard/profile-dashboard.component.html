@@ -1,0 +1,72 @@
+
+<scrollbar>
+  <div class="row" style="height:100%">
+    <div class="col-md-3">
+      <profile-vacation-widget></profile-vacation-widget>
+
+      <div class="card mb-3">
+        <div class="card-header" i18n="@@i18n.common.tools">tools</div>
+        <ul class="list-group">
+          <li class="list-group-item list-group-item-action text-primary pointer" routerLink="/profile/sick-note">
+            <i class="me-2">health_and_safety</i>
+            <span i18n="@@i18n.common.sickNote">sick note</span>
+          </li>
+          <li class="list-group-item list-group-item-action text-primary pointer" routerLink="/profile/vacation-request">
+            <i class="me-2">beach_access</i>
+            <span i18n="@@i18n.common.timeOffRequest">time off request</span>
+          </li>
+          <li class="list-group-item list-group-item-action text-primary pointer" routerLink="/profile/travel-expenses">
+            <i class="me-2">flight</i>
+            <span i18n="@@i18n.profile.travelExpenses">travel expenses</span>
+          </li>
+          <li class="list-group-item list-group-item-action text-primary pointer" routerLink="/profile/vcard">
+            <i class="me-2">badge</i>
+            <span i18n="@@i18n.profile.myCard">my card</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header">
+          <i class="me-1">share_location</i>
+          <span i18n="@@i18n.liveSharing.title">live sharing</span>
+        </div>
+        <div class="card-body">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="liveSharingToggle"
+              [checked]="liveSharingEnabled"
+              (change)="toggleLiveSharing($event)">
+            <label class="form-check-label" for="liveSharingToggle" i18n="@@i18n.liveSharing.enableTab">enable live sharing tab</label>
+          </div>
+          <small class="text-muted d-block mt-2" i18n="@@i18n.liveSharing.description">shows the live sharing tab in the activity panel to see where colleagues are</small>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        @if (user) {
+          <div class="card-body">
+            <div class="input-group">
+              <span class="input-group-text col-3" id="color" i18n="@@i18n.common.color">color</span>
+              <input type="text" class="form-control"
+                [style.background]="user.color"
+                [(colorPicker)]="user.color"
+                [cpSaveClickOutside]="true"
+                (colorPickerSelect)="saveColor($event)"
+                [(ngModel)]="user.color">
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+      <div class="col-md-6">
+        @if (global.user) {
+          <hr-workload [user]="global.user" [title]="workloadTitle"></hr-workload>
+        }
+      </div>
+      <div class="col-md-3">
+        @if (global.user) {
+          <hr-workload-heatmap [user]="global.user"></hr-workload-heatmap>
+        }
+      </div>
+    </div>
+  </scrollbar>

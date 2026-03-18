@@ -1,0 +1,35 @@
+<div class="card card-chart mb-3">
+
+    <div class="card-header gap-2">
+        <n>hr</n>
+        <span i18n="@@i18n.common.birthdaysAndJubilees">birthdays and jubilees</span>
+    </div>
+
+    <widget-options [options]="getOptions()" (updated)="_onUpdate($event)"
+        (deleted)="onDelete($event)"></widget-options>
+
+    @if (jubilees.length) {
+    <ul class="list-group">
+        @for (j of jubilees; track $index) {
+        <li class="list-group-item hstack gap-2" [class.today]="isToday(j)">
+            <div class="text-nowrap">
+                <img [src]="env.envApi + j.path + '/icon'" class="avatar avatar-sm" alt="">
+            </div>
+            <div class="flex-fill text-truncate">
+                {{j.name}}
+            </div>
+            <span class="label text-muted text-nowrap">{{j.next | date}}</span>
+            @if (j.type === 0) {
+            <i class="cursor-default" [ngbTooltip]="j.label">cake</i>
+            }
+            @if (j.type === 1) {
+            <i class="cursor-default" [ngbTooltip]="j.label">celebration</i>
+            }
+        </li>
+        }
+    </ul>
+    } @else {
+    <div class="card-body py-1 text-muted" i18n="@@i18n.common.noUpcomingBirthdaysOrJubilees">no upcoming birthdays or
+        jubilees</div>
+    }
+</div>

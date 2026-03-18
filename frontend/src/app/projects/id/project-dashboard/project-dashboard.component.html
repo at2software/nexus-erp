@@ -1,0 +1,293 @@
+<ng-template #descriptionCard>
+    <div class="card mb-3">
+        <div class="card-header rounded-bottom" i18n="@@i18n.common.description">description</div>
+        <rte [object]="parent.current" key="description" [compact]="true"></rte>
+    </div>
+</ng-template>
+
+@if (parent.current) {
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-3">
+            <div class="card-header">
+                <span i18n="@@i18n.common.information">information</span>
+                <div class="card-header-actions">
+                    
+                    @if (parent.current.project_manager) {
+                    <avatar [object]="parent.current.project_manager" [size]="'sm'"></avatar>
+                    } 
+
+                </div>
+            </div>
+            <ul class="list-group">
+
+                <project-default-product [project]="parent.current"></project-default-product>
+
+                @if (!parent.current.is_internal && parent.current.company.requires_po) {
+                <li class="hstack gap-2 py-1 px-2" roles="project_manager">
+                    <div class="input-group">
+                        <div class="input-group-text input-group-text-darker">
+                            <i i18n-ngbTooltip="@@i18n.project.purchaseOrderNumber"
+                                ngbTooltip="PO#">confirmation_number</i>
+                        </div>
+                        <input type="text" class="form-control" tabindex="1" [autosave]="parent.current"
+                            [(ngModel)]="parent.current.po_number">
+                    </div>
+                </li>
+                }
+                <!-- Reminder -->
+                <li class="hstack gap-2 py-1 px-2" roles="project_manager">
+                    <div class="input-group">
+                        <div class="input-group-text input-group-text-darker">
+                            <i i18n-ngbTooltip="@@i18n.common.reminder" ngbTooltip="reminder">notifications_active</i>
+                        </div>
+                        <input class="form-control flex-fill" (click)="reminder.toggle()" tabindex="0" (keydown.enter)="reminder.toggle()" container="body"
+                            (dateSelect)="updateDate('remind_at', $event)" placeholder="yyyy-mm-dd"
+                            [(ngModel)]="parent.current.remind_at" ngbDatepicker #reminder="ngbDatepicker">
+                        <button class="btn text-primary" (click)="reminder.toggle()" tabindex="0" (keydown.enter)="reminder.toggle()" type="button"><i>calendar_month</i></button>
+                    </div>
+                </li>
+                <!-- Deadline -->
+                <li class="hstack gap-2 py-1 px-2" roles="project_manager">
+                    <div class="input-group">
+                        <div class="input-group-text input-group-text-darker">
+                            <i i18n-ngbTooltip="@@i18n.common.deadline" ngbTooltip="deadline">circle_notifications</i>
+                        </div>
+                        <input class="form-control flex-fill" (click)="deadline.toggle()" tabindex="0" (keydown.enter)="deadline.toggle()" container="body"
+                            (dateSelect)="updateDate('due_at', $event)" placeholder="yyyy-mm-dd"
+                            [(ngModel)]="parent.current.due_at" ngbDatepicker #deadline="ngbDatepicker">
+                        <button class="btn text-primary" (click)="deadline.toggle()" tabindex="0" (keydown.enter)="deadline.toggle()"
+                            type="button"><i>calendar_month</i></button>
+                    </div>
+                </li>
+                <li class="hstack gap-2 py-1 px-2" noroles="project_manager">
+                    <div class="input-group">
+                        <div class="input-group-text input-group-text-darker">
+                            <i i18n-ngbTooltip="@@i18n.common.deadline" ngbTooltip="deadline">circle_notifications</i>
+                        </div>
+                        <div class="input-group-text input-group-text-plain">{{parent.current.due_at|date}}</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <project-team-planning [entity]="parent.current"></project-team-planning>
+
+        @if (!parent.current.is_internal) {
+        <div class="card mb-3">
+            <div class="card-header hstack gap-2 pe-0">
+                <span class="flex-fill" i18n="@@i18n.common.companyContacts" [collapsible]="company">company contacts</span>
+                <div roles="project_manager">
+                    <div ngbDropdown>
+                        <button class="btn btn-plain dropdown-toggle-simple" ngbDropdownToggle>
+                            <i class="text-primary">add</i>
+                        </button>
+                        <ul class="autoposition" ngbDropdownMenu style="text-transform: none;"
+                            aria-labelledby="addButton">
+                            @for (group of allAvailableContacts; track group.company.id) {
+                                @if (allAvailableContacts.length > 1) {
+                                <li>
+                                    {{group.company.name}}
+                                </li>
+                                }
+                                @for (x of group.employees; track x.id) {
+                                <li>
+                                    <a class="dropdown-item pointer d-flex px-3 py-2 cursor-pointer"
+                                        (click)="addCompanyContact(x)" tabindex="0" (keydown.enter)="addCompanyContact(x)">
+                                        <div class="avatar me-3 avatar-sm">
+                                            <img class="avatar-img" src="{{group.company.icon}}" alt="">
+                                        </div>
+                                        <span>{{x.name}}</span>
+                                    </a>
+                                </li>
+                                }
+                                @if (allAvailableContacts.length > 1 && !$last) {
+                                <li><hr class="dropdown-divider"></li>
+                                }
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <ul class="list-group" #company>
+                @for (c of contacts; track c.id) {
+                <list-group-item-contact [nx]="c" [tables]="contacts" [contact]="c.assignee" [showQuickContact]="true"
+                    [subject]="parent.current.name" (actionsResolved)="onAssignmentActions()"
+                    [imageUrl]="c.assignee.icon" [mantisInstance]="getMantisInstance()" [gitInstance]="getGitInstance()" [mattermostInstance]="getMattermostInstance()">
+                </list-group-item-contact>
+                }
+            </ul>
+        </div>
+        }
+
+        <project-uptime-card [project]="parent.current"></project-uptime-card>
+
+        <div class="card mb-3">
+            <div class="card-header pe-0">
+                <span i18n="@@i18n.common.plugins">plugins</span>
+                <div class="card-header-actions hstack gap-2 align-items-center">
+                    <a [href]="p.url" target="_blank" *nxFor="let p of parent.current.plugin_links">
+                        <n [ngbTooltip]="p.url" class="text-{{factory.instanceFor(p)?.getStateCss()}}"> {{factory.instanceFor(p)?.icon()}}</n>
+                    </a>
+                    <div ngbDropdown>
+                        <button class="btn btn-plain dropdown-toggle-simple" ngbDropdownToggle>
+                            <i class="text-primary">add</i>
+                        </button>
+                        <div ngbDropdownMenu style="text-transform: none;">
+                            @for (p of factory.getPluginEncryptions(); track $index) {
+                            <button class="dropdown-item pointer hstack gap-2 text-nowrap px-2" (click)="onNewPluginLink(factory.instanceFor(p)!)" tabindex="0" (keydown.enter)="onNewPluginLink(factory.instanceFor(p)!)" style="text-transform: none;">
+                                <div>
+                                    <n [ngbTooltip]="factory.instanceFor(p)?.state"
+                                        class="text-{{factory.instanceFor(p)?.getStateCss()}}">
+                                        {{factory.instanceFor(p)?.icon()}}</n>
+                                </div>
+                                @if (p?.value?.url) {
+                                <div class="flex-fill hstack gap-2">
+                                    <span i18n="@@i18n.projects.linkTo">link to</span> <span
+                                        class="font-monospace small text-muted">{{p.value.url}}</span>
+                                </div>
+                                }
+                            </button>
+                            @if (instanceFor(p)?.createBlankFor) {
+                            <button class="dropdown-item pointer hstack gap-2 text-nowrap px-2" (click)="createBlank(p)" tabindex="0" (keydown.enter)="createBlank(p)"
+                                style="text-transform: none;">
+                                <div>
+                                    <n [ngbTooltip]="factory.instanceFor(p)?.state"
+                                        class="text-{{factory.instanceFor(p)?.getStateCss()}}">
+                                        {{factory.instanceFor(p)?.icon()}}</n>
+                                </div>
+                                @if (p?.value?.url) {
+                                <div class="flex-fill hstack gap-2">
+                                    <span class="text-info" i18n="@@i18n.common.createNew">create new</span> <span
+                                        class="font-monospace small text-muted">{{p.value.url}}</span>
+                                </div>
+                                }
+                            </button>
+                            }
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (parent.current.state.isPrepared()) {
+    <div class="col-md-9">
+        <project-planning>
+            <ng-container *ngTemplateOutlet="descriptionCard"></ng-container>
+        </project-planning>
+    </div>
+    }
+
+    @if (!parent.current.state.isPrepared()) {
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header" i18n="@@i18n.common.timeline">timeline</div>
+            @if (chartOptions) {
+                <div class="position-relative">
+                    <div echarts [options]="chartOptions" [style.height.px]="chartHeight"></div>
+                    <!-- Avatar overlay for heatmap rows -->
+                    @if (timelineUsers.length > 0) {
+                        <div class="position-absolute" style="left: 20px; top: 140px; width: 30px;">
+                            @for (user of timelineUsers; track user.id) {
+                                <div class="d-flex align-items-center justify-content-center" [style.height.px]="20">
+                                    <avatar [object]="user" [size]="'xs'"></avatar>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        
+        <!-- InvoiceItem duration -->
+        @if (!parent.current.is_time_based && !parent.current.is_internal) {
+        <ng-template #featureItemContent let-item="item">
+            <div class="d-flex">
+                @if (item.milestones && item.milestones.length > 0) {
+                <div class="me-2 d-flex gap-1 align-items-center">
+                    @for (m of item.milestones; track m.id) {
+                    <div class="d-flex align-items-center gap-1">
+                        <i class="cursor-default"
+                           [ngbTooltip]="'Milestone: ' + m.name + (m.progress ? ' (' + (m.progress | number:'1.0-0') + '%)' : '')"
+                           [class.text-muted]="m.state === 0"
+                           [class.text-primary]="m.state === 1"
+                           [class.text-success]="m.state === 2">
+                            @if (m.state === 0) {radio_button_unchecked}
+                            @if (m.state === 1) {schedule}
+                            @if (m.state === 2) {check_circle}
+                        </i>
+                        @if (m.user) {
+                        <avatar [object]="m.user" [size]="'xs'"></avatar>
+                        }
+                    </div>
+                    }
+                </div>
+                }
+                <div class="flex-fill me-2 text-truncate" [innerHTML]="item.text | safe:'html'" [class]="getItemTextColor(item)"></div>
+                @if (item.progress && item.pt > 0) {
+                <div class="text-end me-2 text-nowrap" [class]="getProgressColorClass(item)"
+                    [ngbTooltip]="(item.fociSum | number: '1.1-1') + 'h / ' + (item.pt * 8 | number:'1.1-1') + 'h'">
+                    {{item.progress * 100 | number: '1.0-0'}}%
+                </div>
+                }
+            </div>
+            @if (item.qty > 0) {
+                @if (getUserContributions(item).length > 0) {
+                <div class="progress" [style.height.px]="3">
+                    @for (contribution of getUserContributions(item); track contribution.user?.id) {
+                    <div class="progress-bar"
+                         [style.width.%]="contribution.percentage"
+                         [style.background-color]="contribution.color"
+                         [ngbTooltip]="(contribution.user?.name || 'Unknown') + ': ' + (contribution.hours | number: '1.1-1') + 'h'">
+                    </div>
+                    }
+                </div>
+                } @else if (item.progress) {
+                <div class="progress" [style.height.px]="3">
+                    <div class="progress-bar bg-primary"
+                         [style.width.%]="item.progress * 100"
+                         [ngbTooltip]="(item.progress * 100 | number: '1.0-0') + '%'">
+                    </div>
+                </div>
+                }
+            }
+        </ng-template>
+
+        <div class="card mb-3">
+            <div class="card-header gap-2">
+                <span i18n="@@i18n.common.features" class="flex-fill text-truncate">features</span>
+                <div class="chart-title"
+                    ngbTooltip="foci with invoice item relationship" i18n-ngbTooltip="@@i18n.projects.fociWithInvoiceItemRelationship"
+                    [class.text-warning]="getUnfocusedProgress() > .1 && getUnfocusedProgress() <= .2"
+                    [class.text-danger]="getUnfocusedProgress() > .2">
+                    {{getFocusedProgress() | percent: '1.1-1'}}
+                </div>
+            </div>
+            <ul class="list-group">
+                @for (i of focusItems; track i.id) {
+                @if (i.milestones && i.milestones.length > 0) {
+                <li class="list-group-item" [class.text-muted]="allMilestonesDone(i)" [nx]="i.milestones.first()!">
+                    <ng-container *ngTemplateOutlet="featureItemContent; context: {item: i}"></ng-container>
+                </li>
+                } @else {
+                <li class="list-group-item" [class.text-muted]="allMilestonesDone(i)">
+                    <ng-container *ngTemplateOutlet="featureItemContent; context: {item: i}"></ng-container>
+                </li>
+                }
+                }
+            </ul>
+        </div>
+        }
+        <media-preview [parent]="parent.current"></media-preview>
+        <ng-container *ngTemplateOutlet="descriptionCard"></ng-container>
+    </div>
+    @if (!parent.current.state.isPrepared()) {
+    <div class="col-md-3">
+        <project-info [project]="parent.current"></project-info>
+    </div>
+    }
+    }
+</div>
+}

@@ -1,0 +1,18 @@
+<router-outlet></router-outlet>
+
+<activity-tab icon="payments">
+    <actions-invoice-latest></actions-invoice-latest>
+</activity-tab>
+
+<app-header>
+    <div class="logo" style="background-image: url(assets/images/invoice.jpg);"></div>
+    <h1 i18n="@@i18n.common.invoices">invoices</h1>
+    <ul class="nav">
+        <header-link-item hotkey="CTRL+ALT+1" routerLink="." title="dashboard" i18n-title="@@i18n.common.dashboard" icon="dashboard"></header-link-item>
+        <header-link-item hotkey="CTRL+ALT+2" routerLink="standing" title="standing orders" i18n-title="@@i18n.common.standingOrders" icon="repeat"></header-link-item>
+        <header-link-item hotkey="CTRL+ALT+3" routerLink="expenses" title="expenses" i18n-title="@@i18n.common.expenses" icon="toll"></header-link-item>
+        <header-link-item hotkey="CTRL+ALT+4" routerLink="cashflow" title="cash flow" i18n-title="@@i18n.common.cashFlow" icon="multiline_chart"></header-link-item>
+        <header-link-item hotkey="CTRL+ALT+5" routerLink="stats" title="statistics" i18n-title="@@i18n.common.statistics" icon="bar_chart"></header-link-item>
+        <header-link-item hotkey="CTRL+ALT+6" routerLink="cashregisters" title="cash registers" i18n-title="@@i18n.common.cashRegisters" icon="bar_chart"></header-link-item>
+    </ul>
+</app-header>

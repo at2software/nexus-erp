@@ -1,0 +1,178 @@
+@use "var" as *;
+@use "colors";
+
+.ng-content {
+    padding-left: $header-logo-size + $grid-width;
+}
+
+:host {
+    display: block;
+    cursor: default;
+    position: fixed;
+    z-index: 3;
+    padding: 0;
+    top: 0;
+    left: $m-modules;
+    right: $m-activity;
+    height: $header-height - .5 * $grid-width;
+    background-color: colors.$bg-body;
+    transition: box-shadow 0.3s ease;
+    will-change: box-shadow;
+    
+    // Mobile: Remove left positioning since navigation is hidden/overlay
+    @media (max-width: 768px) {
+        left: 0;
+    }
+
+    .slit {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        position: absolute;
+        bottom: -24px;
+        left: -1rem;
+        right: -1rem;
+        height: 12px;
+        overflow: hidden;
+        pointer-events: none;
+
+        &:before {
+            content: '';
+            position: absolute;
+            height: 6px;
+            width: 100%;
+            top: -3px;
+            background: linear-gradient(to right, transparent, #0006 1rem, #0006 calc(100% - 1rem), transparent);
+            filter: blur(3px);
+        }
+    }
+
+    &.scrolled .slit {
+        opacity: 1;
+    }
+
+    .container {
+        height: 100%;
+    }
+
+    ::ng-deep {
+        .logo {
+            width: $header-logo-size;
+            height: $header-logo-size;
+            float: left;
+            margin-left: -$header-logo-size - $grid-width;
+            top: $grid-width;
+            position: absolute;
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            border: 1px black solid;
+            border-radius: 5px;
+            box-shadow: shadow();
+        }
+
+        .h1,
+        h1 {
+            font-size: $header-font-size;
+            line-height: 1.35;
+            padding: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+
+            .h1-small {
+                font-family: 'SourceSans', Arial, Helvetica, sans-serif !important;
+                font-size: 12px;
+                text-shadow: none;
+            }
+        }
+
+        .nav {
+            line-height: 1;
+            position: absolute;
+            margin-top: -(.2 * $header-font-size);
+            margin-left: -(.25 * $grid-width);
+
+            .nav-link {
+                padding: 0 (.25 * $grid-width);
+                font-size: $nav-font-size * 0.8 !important;
+                color: #cccccc;
+                pointer-events: all;
+
+                &.active {
+                    color: var(--color-primary-0);
+                }
+            }
+
+            // Mobile: Convert to Bootstrap dropdown
+            @media (max-width: 768px) {
+                position: relative;
+                margin-top: -5px;
+                margin-left: 0;
+
+                .nav-item,
+                .nav-link {
+                    display: none !important;
+                }
+
+                &.mobile-dropdown {
+                    .mobile-nav-dropdown {
+                        display: block !important;
+                    }
+                    
+                    .dropdown-toggle {
+                        display: block !important;
+                        background-color: transparent;
+                        border: none;
+                        color: #cccccc;
+                        padding: 0.5rem 0;
+                        font-size: $nav-font-size * 0.8 !important;
+                        
+                        &:focus {
+                            box-shadow: none;
+                        }
+
+                        &::after {
+                            margin-left: 0.5rem;
+                        }
+                    }
+
+                    .dropdown-menu {
+                        .dropdown-item {
+                            color: #cccccc;
+                            font-size: $nav-font-size * 0.85 !important;
+                            padding: 0.5rem 1rem;
+                            
+                            &:hover,
+                            &:focus {
+                                background-color: rgba(var(--bs-primary-rgb), 0.2);
+                                color: #cccccc;
+                            }
+
+                            &.active {
+                                background-color: rgba(var(--bs-primary-rgb), 0.3);
+                                color: var(--color-primary-0);
+                            }
+                        }
+                    }
+                }
+            }
+
+            &.nav-right {
+                margin-top: -1rem;
+                left: auto;
+                right: 12rem;
+            }
+        }
+    }
+}
+
+.toolbar {
+    margin-top: -5px;
+    white-space: nowrap;
+}
+
+::ng-deep {
+    body:not(.activity-hidden):not(.activity-collapsed) #activity-burger {
+        display: none;
+    }
+}

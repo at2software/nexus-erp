@@ -1,0 +1,114 @@
+<toolbar>
+  <button type="button" class="btn btn-primary me-3" (click)="onAddProject()" ngbTooltip="CTRL+ALT+N" placement="bottom" hotkey="CTRL+ALT+N">
+    <i>add</i>
+    <span i18n="@@i18n.common.project">project</span>
+  </button>
+</toolbar>
+
+<scrollbar>
+  <div class="row">
+    <div class="col-md-3">
+      <div class="sticky-side">
+        <project-state-filter cookieId="customers/project-states" (filterChanged)="reload()"></project-state-filter>
+      </div>
+    </div>
+    <div class="col-md-9">
+
+      @if (projects.length > 0) {
+        <div class="card mb-3">
+          <div class="card-header">
+            <div i18n="@@i18n.common.projects">projects</div>
+          </div>
+          <ng-container *ngTemplateOutlet="projectList; context: { $implicit: projects, parentId: '' }"></ng-container>
+        </div>
+      }
+
+      @if (coParticipatedProjects.length > 0) {
+        <div class="card mb-3">
+          <div class="card-header">
+            <div i18n="@@i18n.projects.coParticipatedProjects">co-participated projects</div>
+          </div>
+          <ng-container *ngTemplateOutlet="projectList; context: { $implicit: coParticipatedProjects, parentId: '' }"></ng-container>
+        </div>
+      }
+
+      @if (projects.length === 0 && coParticipatedProjects.length === 0) {
+        <div class="card">
+          <empty-state [card]="false" class="projects" title="no projects yet..." i18n-title="@@i18n.projects.noProjectsYet"></empty-state>
+        </div>
+      }
+    </div>
+  </div>
+</scrollbar>
+
+<ng-template #projectList let-items let-parentId="parentId">
+  <ul class="list-group">
+    @for (item of items; track item.id) {
+      <li
+        class="list-group-item {{item.markerClass()}}"
+        [class.text-danger]="item.var.has_circular_dependency">
+        <!-- Wrapper for drop zone ON project -->
+        <div cdkDropList
+          [id]="'drop-' + item.id"
+          [cdkDropListData]="[item]"
+          [cdkDropListConnectedTo]="getConnectedDropLists()"
+          (cdkDropListDropped)="onDropOnProject($event, item)"
+          cdkDropListSortingDisabled
+          class="drop-zone-wrapper"
+          [attr.data-project-id]="item.id">
+          <div class="hstack gap-2 align-items-center position-relative project-row"
+            [nx]="item"
+            cdkDrag
+            [cdkDragData]="item"
+            (cdkDragStarted)="onDragStarted()"
+            (cdkDragEnded)="onDragEnded()"
+            cdkDragHandle>
+            @if (item.var.has_circular_dependency) {
+              <div>
+                <i class="text-danger" ngbTooltip="Circular dependency detected. Please break the dependency chain." i18n-ngbTooltip="@@i18n.projects.circularDependency">error</i>
+              </div>
+            }
+            @if (item.var.subprojects.length) {
+              <div class="collapse-toggle" (click)="toggleCollapse(item); $event.stopPropagation()" (keyup.enter)="toggleCollapse(item); $event.stopPropagation()" tabindex="0">
+                <i>{{isCollapsed(item) ? 'chevron_right' : 'expand_more'}}</i>
+              </div>
+            }
+            @if (!item.var.subprojects.length) {
+              <div class="collapse-toggle-spacer"></div>
+            }
+            <div><project [project]="item"></project></div>
+            <div class="flex-fill text-truncate" cdkDragHandle>
+                {{item.name}}
+            </div>
+            <div class="avatars-stack">
+              @for (a of item.assigned_users; track $index) {
+                <avatar [object]="a"></avatar>
+              }
+            </div>
+            <div class="avatars-stack">
+              @for (a of item.connection_projects; track $index) {
+                <avatar [object]="a.other_company"></avatar>
+              }
+            </div>
+            <div class="col-date text-muted text-smaller" ngbTooltip="created at: {{item.created_at | date}}, started at: {{item.started_at | date}}">
+              {{item.created_at | date}}
+            </div>
+            <div class="col-net text-end" roles="invoicing">
+              @if (item.var.subprojects.length) {
+                <span class="badge bg-primary text-black" ngbTooltip="base net: {{item.net | mshort}}">{{item.var.total | mshort}}</span>
+              }
+              @if (!item.var.subprojects.length) {
+                <span>{{item.var.total | mshort}}</span>
+              }
+            </div>
+          </div>
+        </div>
+        @if (item.var.subprojects.length && !isCollapsed(item)) {
+          <div class="ms-4 my-0">
+            <ng-container *ngTemplateOutlet="projectList; context: { $implicit: item.var.subprojects, parentId: item.id }"></ng-container>
+          </div>
+        }
+      </li>
+    }
+  </ul>
+</ng-template>

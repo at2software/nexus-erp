@@ -1,0 +1,41 @@
+<div class="modal d-block" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title" i18n="@@i18n.common.newSickNote">new sick note</span>
+      </div>
+      <div class="modal-body">
+        <ul class="list-group">
+          <li class="list-group-item">
+            <div class="input-group">
+              <div class="input-group-prepend col-3">
+                <span class="input-group-text" i18n="@@i18n.common.name">name</span>
+              </div>
+              <input type="text" disabled class="form-control" [value]="user.name">
+            </div>
+          </li>
+          <li class="list-group-item">
+            <div class="input-group">
+              <div class="input-group-prepend col-3">
+                <span class="input-group-text" i18n="@@i18n.profile.sickPeriod">sick period</span>
+              </div>
+              <input type="text" class="form-control" ngxDaterangepickerMd [(ngModel)]="sickPeriod" [alwaysShowCalendars]="true" [locale]="{applyLabel: 'ok', format: 'YYYY-MM-DD'}">
+            </div>
+          </li>
+          <li class="list-group-item">
+            <div class="form-check form-switch">
+              <div class="input-group-prepend col-3">
+                <input class="form-check-input" type="checkbox" role="switch" id="eSickNote" [(ngModel)]="hasESickNote">
+              </div>
+              <label class="form-check-label" for="eSickNote" i18n="@@i18n.profile.hasElectronicSickNote">has electronic sick note</label>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" (click)="decline()" i18n="@@i18n.common.cancel">cancel</button>
+        <button type="button" class="btn btn-primary" (click)="onSendSickNote()" [disabled]="!sickPeriod" i18n="@@i18n.profile.sendSickNote">send sick note</button>
+      </div>
+    </div>
+  </div>
+</div>

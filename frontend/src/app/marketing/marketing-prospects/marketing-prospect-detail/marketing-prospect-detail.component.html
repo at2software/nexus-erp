@@ -1,0 +1,215 @@
+<div>
+    @if (prospect && !prospect.company_contact_id) {
+    <toolbar>
+        <button type="button" class="btn btn-primary" (click)="convertProspect()" i18n-ngbTooltip="@@i18n.marketing.convertToContact" ngbTooltip="convert to contact">
+            <i>swap_horizontal_circle</i>
+        </button>
+        <button type="button" class="btn btn-primary" (click)="linkToContact()" i18n-ngbTooltip="@@i18n.marketing.linkToContact" ngbTooltip="link to contact">
+            <i>link</i>
+        </button>
+    </toolbar>
+    }
+
+    @if (isLoading) {
+    <div class="card">
+        <div class="card-body text-center p-4">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden" i18n="@@i18n.common.loading">loading</span>
+            </div>
+        </div>
+    </div>
+    }
+
+    @if (!isLoading && prospect) {
+    <div class="card mb-3">
+        <div class="card-header hstack gap-2 align-items-center">
+            @if (prospect.marketing_initiative) {
+                <span class="small text-secondary">{{prospect.marketing_initiative.name}}</span>
+            }
+
+            <div class="flex-fill fw-bold">{{prospect.name}}</div>
+
+            @if (prospect.company_contact) {
+                <span class="text-success" i18n-ngbTooltip="@@i18n.marketing.linked" ngbTooltip="linked">
+                    <i class="text-white">link</i>
+                </span>
+             }
+            <span class="small {{getStatusBadgeClass(prospect.status)}}">
+                {{prospect.status}}
+            </span>
+            <i class="cursor-pointer text-primary" (click)="vcardCollapsed = !vcardCollapsed" ngbTooltip="toggle vCard view">{{vcardCollapsed ? 'expand_more' : 'expand_less'}}</i>
+        </div>
+    </div>
+
+    <!-- VCard Editor -->
+     <div [class.d-none]="vcardCollapsed">
+        @if (prospect.company_contact) {
+            <app-vcard [object]="prospect.company_contact.contact"></app-vcard>
+            <app-vcard [object]="prospect.company_contact"></app-vcard>
+            <app-vcard [object]="prospect.company_contact.company"></app-vcard>
+        } @else {
+            <app-vcard [object]="prospect"></app-vcard>
+        }
+    </div>
+
+    <!-- Notes -->
+    @if (prospect.notes) {
+    <div class="card mb-3">
+        <div class="card-header" i18n="@@i18n.common.notes">notes</div>
+        <div class="card-body">
+            <p class="small text-muted mb-0">{{prospect.notes}}</p>
+        </div>
+    </div>
+    }
+
+    @if (prospect.company_id && prospect.companyModel && !prospect.company_contact_id) {
+    <div class="card mb-3">
+        <div class="card-header" i18n="@@i18n.marketing.linked_company">linked company</div>
+        <div class="card-body">
+            <div class="d-flex align-items-center gap-2">
+                <span>{{prospect.companyModel.company_name}}</span>
+                <button class="btn btn-sm btn-plain text-danger ms-auto" (click)="unlinkCompany()">
+                    <i>link_off</i>
+                </button>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- Pending Activities -->
+    @if (prospect && getPendingActivities().length > 0) {
+    <div class="card mb-3">
+        <div class="card-header" i18n="@@i18n.marketing.pending_activities">pending activities</div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <tbody>
+                    @for (activity of getPendingActivities(); track activity.id) {
+                    <tr [nx]="activity"
+                        [tables]="getPendingActivities()"
+                        [nxContext]="{component: this}"
+                        (actionsResolved)="onActivityActionsResolved()"
+                        style="cursor: pointer;">
+
+                        <td class="text-end">
+                            <i class="{{isActivityOverdue(activity) ? 'text-danger' : 'text-dark'}}" ngbTooltip="{{activity.status}}">hourglass_empty</i>
+                        </td>
+
+                        <td class="text-center" style="width: 20px;">                            
+                            @if (activity.marketing_activity?.has_external_dependency) {
+                                <i class="text-warning" style="font-size: 1rem;" ngbTooltip="requires external action" i18n-ngbTooltip="@@i18n.marketing.requires_external_action">warning</i>
+                            }
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span>
+                                    {{activity.marketing_activity?.name}}
+                                </span>
+                                @if (activity.marketing_activity?.quick_action) {
+                                <button class="btn btn-plain text-primary ms-auto"
+                                    [disabled]="!canExecuteQuickAction(activity)"
+                                    [ngbTooltip]="canExecuteQuickAction(activity) ? activity.marketing_activity!.quick_action! : 'Missing contact data'"
+                                    (click)="executeQuickAction(activity); $event.stopPropagation()">
+                                    <i style="font-size: 1rem;">{{getQuickActionIcon(activity.marketing_activity!.quick_action!)}}</i>
+                                </button>
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            @if (activity.marketing_activity?.performance_metrics?.length) {
+                                <div class="d-flex flex-wrap gap-1">
+                                    @for (metric of activity.marketing_activity?.performance_metrics; track metric.id) {
+                                        <i
+                                           [style.color]="metric.getIconColor()"
+                                           style="font-size: 1rem;"
+                                           [ngbTooltip]="metric.name">
+                                            {{metric.getIcon()}}
+                                        </i>
+                                    }
+                                </div>
+                            } @else {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <small class="text-nowrap" [class.text-danger]="isActivityOverdue(activity)">
+                                {{activity.scheduled_at | date:'shortDate'}}
+                            </small>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    }
+
+    <!-- Completed Activities -->
+    @if (prospect && getCompletedActivities().length > 0) {
+    <div class="card mb-3">
+        <div class="card-header" i18n="@@i18n.marketing.recent_completed_activities">recent completed activities</div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <tbody>
+                    @for (activity of getCompletedActivities(); track activity.id) {
+                    <tr [nx]="activity"
+                        (actionsResolved)="onActivityActionsResolved()"
+                        style="cursor: pointer;">
+                        <td style="width: 40px;">
+                            @if (activity.status === 'completed') {
+                            <i class="text-success" style="font-size: 1.2rem;">check_circle</i>
+                            } @else if (activity.status === 'skipped') {
+                            <i class="text-warning" style="font-size: 1.2rem;">skip_next</i>
+                            }
+                        </td>
+
+                        <td class="text-center" style="width: 20px;">                            
+                            @if (activity.marketing_activity?.has_external_dependency) {
+                                <i class="text-warning" style="font-size: 1rem;" ngbTooltip="requires external action" i18n-ngbTooltip="@@i18n.marketing.requires_external_action">warning</i>
+                            }
+                        </td>
+
+                        <td>
+                            <div [class.text-secondary]="activity.marketing_activity?.has_external_dependency">
+                                {{activity.marketing_activity?.name}}
+                            </div>
+                            @if (activity.notes) {
+                            <small class="text-muted">{{activity.notes}}</small>
+                            }
+                        </td>
+                        <td>
+                            @if (activity.marketing_activity?.performance_metrics?.length) {
+                                <div class="d-flex flex-wrap gap-1">
+                                    @for (metric of activity.marketing_activity?.performance_metrics; track metric.id) {
+                                        <i
+                                           [style.color]="metric.getIconColor()"
+                                           style="font-size: 1rem;"
+                                           [ngbTooltip]="metric.name">
+                                            {{metric.getIcon()}}
+                                        </i>
+                                    }
+                                </div>
+                            } @else {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <small class="text-muted text-nowrap">{{activity.completed_at | date:'shortDate'}}</small>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    }
+    }
+
+    @if (!isLoading && !prospect) {
+    <div class="card">
+        <div class="card-body text-center text-muted">
+            <i class="mb-3" style="font-size: 2rem;">person_search</i>
+            <p i18n="@@i18n.marketing.select_prospect_to_view">select a prospect to view details and manage activities</p>
+        </div>
+    </div>
+    }
+</div>

@@ -1,0 +1,16 @@
+:host {
+    ::ng-deep .edit {
+        display: none !important;
+    }
+    &.is-editing:hover {
+        ::ng-deep .edit {
+            display: flex !important;
+        }
+        ::ng-deep .chart-title {
+            opacity: 0.1;
+        }
+    }
+}
+::ng-deep app-dashboard .d-none-container {
+    display: none !important;
+}

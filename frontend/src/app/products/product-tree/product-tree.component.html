@@ -1,0 +1,27 @@
+<div class="card-header d-flex align-items-center sticky-side">
+  <span class="me-auto" i18n="@@i18n.common.productGroups">product groups</span>
+  <div class="d-flex gap-2 ms-2">
+    <span class="cursor-pointer" (click)="toggleDeprecated()" (keyup.enter)="toggleDeprecated()" tabindex="0"
+          [ngbTooltip]="showDeprecated ? 'hide deprecated' : 'show deprecated'">
+      <i [class]="showDeprecated ? 'text-primary' : 'text-muted'">{{showDeprecated ? 'visibility' : 'visibility_off'}}</i>
+    </span>
+    <span class="cursor-pointer" (click)="onGroupCreate()" (keyup.enter)="onGroupCreate()" tabindex="0"
+          ngbTooltip="add product group" hotkey="CTRL+ALT+G">
+      <i class="text-muted">create_new_folder</i>
+    </span>
+  </div>
+</div>
+
+<scrollbar>
+  @if (isLoading) {
+    <div class="d-flex align-items-center justify-content-center p-3">
+      <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+    </div>
+  } @else {
+    <div class="tree-view py-1">
+      @for (x of groups; track x.id) {
+        <product-tree-list [group]="x" [showDeprecated]="showDeprecated" [depth]="0"></product-tree-list>
+      }
+    </div>
+  }
+</scrollbar>

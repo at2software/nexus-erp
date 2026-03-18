@@ -1,0 +1,117 @@
+.milestone-popup {
+    position: absolute;
+    z-index: 1000;
+    width: 320px;
+    max-width: 90vw;
+
+    .popup-content {
+        background: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: var(--bs-border-radius);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+    }
+
+    .popup-header {
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        h6 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .btn-close {
+            font-size: 0.75rem;
+            padding: 0.25rem;
+        }
+    }
+
+    .popup-body {
+        padding: 1rem;
+        max-height: 400px;
+        overflow-y: auto;
+
+        .form-label {
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--bs-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-control,
+        .form-control-sm {
+            font-size: 0.875rem;
+        }
+
+        // State buttons
+        .btn-group {
+            .btn {
+                border-color: var(--bs-border-color);
+
+                &.active {
+                    border-color: transparent;
+                }
+            }
+        }
+
+        // Progress section
+        .form-range {
+            &::-webkit-slider-thumb {
+                background: var(--bs-primary);
+            }
+
+            &::-moz-range-thumb {
+                background: var(--bs-primary);
+                border: none;
+            }
+        }
+
+        // Dropdown for assignee
+        .dropdown-toggle {
+            text-align: left;
+
+            &::after {
+                margin-left: auto;
+            }
+        }
+
+        .dropdown-item {
+            font-size: 0.875rem;
+
+            &.active {
+                background-color: var(--bs-primary);
+            }
+        }
+    }
+
+    .popup-footer {
+        padding: 0.75rem 1rem;
+
+        .btn {
+            font-size: 0.875rem;
+        }
+    }
+}
+
+// Dark mode adjustments
+:host-context(.dark) {
+    .milestone-popup {
+        .popup-content {
+            background: var(--bs-dark);
+            border-color: var(--bs-border-color-translucent);
+        }
+    }
+}
+
+// Responsive adjustments
+@media (max-width: 576px) {
+    .milestone-popup {
+        width: calc(100vw - 2rem);
+        left: 1rem !important;
+        right: 1rem !important;
+        transform: none !important;
+    }
+}

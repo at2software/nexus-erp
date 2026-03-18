@@ -1,0 +1,12 @@
+.quickContacts { display: none; }
+.role { display:block; }
+:host:hover {
+	.quickContacts { display: block; }
+    .content { display: none;}
+	.role { display:none; }
+}
+:host {
+    &.active {
+        color: var(--color-primary-0);
+    }
+}

@@ -1,0 +1,9 @@
+@if (pp && pp.length) {
+  <div class="header" i18n="@@i18n.common.quickLinks">quick links</div>
+  <ul class="list-group">
+    <li *nxFor="let _ of pp" class="list-group-item d-flex">
+      <project [project]="_" class="me-2"></project>
+      {{_.name}}
+    </li>
+  </ul>
+}

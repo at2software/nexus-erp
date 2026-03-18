@@ -1,0 +1,27 @@
+import { Observable } from 'rxjs';
+import { Project } from 'src/models/project/project.model';
+import { Injectable } from '@angular/core';
+import { Serializable } from '../serializable';
+import { Company } from 'src/models/company/company.model';
+import { Assignee } from './assignee.model';
+import { NexusHttpService } from '../http/http.nexus';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AssignmentService extends NexusHttpService<Assignee> {
+
+  override apiPath = 'assignees'
+  override TYPE = () => Assignee
+
+  assigneesFor = (obj:Company|Project):Observable<Assignee[]> => {
+    if (obj instanceof Company) return this.#company(obj!)
+    return  this.#project(obj!)
+  }
+  addToProject = (project:Project, data:{id:string, class:string}) => this.post(`projects/${project.id}/assignees`, data)
+  addToCompany = (company:Company, data:{id:string, class:string}) => this.post(`companies/${company.id}/assignees`, data)
+  setMainContact = (project:Project, assignmentId:string) => this.put(`projects/${project.id}/set-main-contact`, { assignment_id: assignmentId })
+
+  #company = (c:Serializable) => this.aget('companies/'+c.id+'/assignees')
+  #project = (c:Serializable) => this.aget('projects/'+c.id+'/assignees')
+}

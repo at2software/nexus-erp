@@ -1,0 +1,23 @@
+<div class="preview p-3" [class.compact]="compact && binding.length === 0">
+    
+    @if (binding.length === 0 && !compact) {
+    <empty-state (click)="open(content)" class="shrug" [card]="false" i18n-title="@@i18n.info.noDescriptionYet"
+        title="no description yet"></empty-state>
+    }
+    @if (binding.length === 0 && compact) {
+    <span class="badge bg-danger compact-warning" (click)="open(content)" (keyup.enter)="open(content)" tabindex="0" i18n="@@i18n.info.noDescriptionYet">no
+        description yet</span>
+    }
+    <button class="btn btn-fancy btn-fancy-te" (click)="open(content)"><i>edit</i></button>
+    <div [innerHTML]="binding | safe:'html'"></div>
+</div>
+
+<ng-template #content let-modal>
+    <div class="modal-body">
+        <angular-editor [config]="config" [(ngModel)]="binding"></angular-editor>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-primary" hotkey="CTRL+ENTER"
+            (click)="modal.close('Save click')" i18n="@@i18n.common.save">save</button>
+    </div>
+</ng-template>

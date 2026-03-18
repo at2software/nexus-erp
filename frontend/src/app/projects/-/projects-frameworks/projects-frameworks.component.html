@@ -1,0 +1,89 @@
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-3">
+      <div class="card sticky-side">
+        <div class="card-header hstack gap-2">
+          <i>verified</i>
+          <span i18n="@@i18n.projects.latestVersions">latest versions</span>
+        </div>
+        <div class="card-body">
+          <div class="form-label">
+            <span i18n="@@i18n.projects.versionsBehind">versions behind</span>: {{ versionsBehindFilter }}+
+          </div>
+          <input
+            type="range"
+            class="form-range"
+            min="0"
+            max="5"
+            step="1"
+            [(ngModel)]="versionsBehindFilter">
+          </div>
+          <ul class="list-group list-group-flush">
+            @for (latest of latestFrameworks; track latest.id) {
+              <li class="list-group-item"
+                [class.active]="selectedFrameworks.has(latest.name)"
+                [style.opacity]="selectedFrameworks.size > 0 && !selectedFrameworks.has(latest.name) ? '0.4' : '1'"
+                style="cursor: pointer;"
+                (click)="toggleFrameworkFilter(latest.name)" tabindex="0" (keydown.enter)="toggleFrameworkFilter(latest.name)">
+                <div class="hstack gap-2 justify-content-between align-items-center mb-1">
+                  <span class="badge text-black" [style.background-color]="colorFor(latest.name)">{{ latest.name }}</span>
+                  <span class="flex-fill"></span>
+                  <span class="badge">{{ latest.latest_version }}</span>
+                </div>
+                <div class="progress" style="height: 1px;">
+                  <div class="progress-bar bg-red" [style.width.%]="getVersionDistribution(latest).criticalBehind"></div>
+                  <div class="progress-bar bg-orange" [style.width.%]="getVersionDistribution(latest).moderateBehind"></div>
+                  <div class="progress-bar bg-yellow" [style.width.%]="getVersionDistribution(latest).minorBehind"></div>
+                  <div class="progress-bar bg-green" [style.width.%]="getVersionDistribution(latest).upToDate"></div>
+                </div>
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+      <div class="col-9">
+        <div class="card mb-3">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th></th>
+                <th i18n="@@i18n.common.name">name</th>
+                <th i18n="@@i18n.common.projects">projects</th>
+                <th class="text-end" i18n="@@i18n.projects.framework">framework</th>
+                <th class="text-end" i18n="@@i18n.common.version">version</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *nxFor="let framework of filteredFrameworks">
+                <td><avatar [object]="framework.projects[0].company"></avatar></td>
+                <td><a class="text-decoration-none text-white" [href]="framework.url" target="_blank">{{framework.name}}</a></td>
+                <td>
+                  <div ngbDropdown class="d-inline-block">
+                    <button class="btn btn-sm" ngbDropdownToggle>
+                      {{ framework.projects.length }} <span i18n="@@i18n.common.projects">projects</span>
+                    </button>
+                    <div ngbDropdownMenu>
+                      @for (project of framework.projects; track project.id) {
+                        <button ngbDropdownItem routerLink="/projects/{{project.id}}">
+                          {{ project.name }}
+                        </button>
+                      }
+                    </div>
+                  </div>
+                </td>
+                <td class="text-end"><span class="badge text-black" [style.background-color]="colorFor(framework.framework)">{{ framework.framework }}</span></td>
+                <td class="text-end">
+                  <span
+                    class="badge {{getDiffBackgroundColor(framework)}}"
+
+                    ngbTooltip="{{differenceFromLatestVersion(framework)}} versions behind">
+                    {{ framework.framework_version }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>

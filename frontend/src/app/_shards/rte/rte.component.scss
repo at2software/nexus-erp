@@ -1,0 +1,29 @@
+.preview {
+    position: relative;
+    min-height: 2rem;
+    button { position: absolute; top: -40px; right:0; }
+    &.compact {
+        height: 0;
+        min-height: 0;
+        padding: 0 !important;
+    }
+}
+:host:has(.preview.compact) {
+    display: block;
+    height: 0;
+}
+.compact-warning {
+    position: absolute;
+    top: -1.9rem;
+    right: 3.5rem;
+    cursor: pointer;
+}
+.image {
+    margin: 2rem 0;
+    background-image: url('../../../assets/images/empty_state.svg');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center center;
+    min-height: 10rem;
+    cursor: pointer;
+}

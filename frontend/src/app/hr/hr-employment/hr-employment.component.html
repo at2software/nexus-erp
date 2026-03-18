@@ -1,0 +1,174 @@
+
+<toolbar>
+  <button class="btn btn-primary" (click)="onNewEmployment()" ngbTooltip="CTRL+ALT+N" hotkey="CTRL+ALT+N"><i>add</i> new employment</button>
+  <button class="btn btn-plain text-primary" (click)="open(calculator)"><i>calculate</i></button>
+  @if (isAdmin) {
+    <button class="btn btn-outline-primary ms-auto" (click)="addUser()" i18n="@@i18n.user.addNewUser"><i>person_add</i> add new user</button>
+  }
+</toolbar>
+
+@if (user) {
+  @if (!employments.length) {
+    <div class="card mb-3">
+      <empty-state [card]="false" class="hr" i18n-title="@@i18n.hr.theUserHasNoEmployment" title="no employment record yet">
+        <p class="text-muted small" i18n="@@i18n.hr.noEmploymentBody">Click "new employment" to set up this user's working hours and start date.</p>
+      </empty-state>
+    </div>
+  }
+  @if (employments.length) {
+    <div class="row">
+      <div class="col-8">
+        <div class="card mb-3">
+          <div class="card-header d-flex">
+            <div class="flex-fill" i18n="@@i18n.common.employments">employments</div>
+            <div>
+              @for (r of roles; track r) {
+                <span class="badge ms-2">{{r}}</span>
+              }
+              @if (roles.length === 0) {
+                <span class="badge text-danger ms-2" i18n="@@i18n.hr.noRoleSpecified">no role specified</span>
+              }
+            </div>
+          </div>
+          <ul-compact>
+            <li class="list-group-item" *nxFor="let employment of employments">
+              <div class="d-flex">
+                <div class="flex-fill">{{employment.description}}</div>
+                <div>{{employment.hpw}} h / week</div>
+              </div>
+              <div class="d-flex">
+                <div class="small" [class.text-muted]="!employment.is_active" [class.text-success]="employment.is_active">
+                  <span i18n="@@i18n.common.since">since</span>: {{employment.started_at | date}}
+                </div>
+              </div>
+            </li>
+          </ul-compact>
+        </div>
+        @if (hasTimebasedEmployment()) {
+          <div class="card mb-3">
+            <div class="card-header">
+              monthly working balance
+              <div class="card-header-actions">
+                <button class="card-header-action btn text-primary"><i (click)="open(addPaidTime)" (keyup.enter)="open(addPaidTime)" tabindex="0">add</i></button>
+              </div>
+            </div>
+            <div class="card-body">
+              <ul class="list-group">
+                @for (p of getTbeMonths(); track p) {
+                  <li class="list-group-item d-flex bar-li bg-hover">
+                    <div class="bar-delta" [class.text-muted]="p.delta >= 0" [class.text-danger]="p.delta < 0" [style.left.%]="10 + getPerc(p.delta - this.minDelta)">{{p.delta | number: '1.1-2'}}h</div>
+                    <div class="bar-container bar-container-paid" [style.right.%]="90 - getPerc(p.lastDelta - this.minDelta)">
+                      @for (_ of p.paid; track _) {
+                        <div class="bar bar-paid" [style.width.%]="getPerc(_[0])" [ngbTooltip]="_[1] + ' ' + _[0] + 'h'"></div>
+                      }
+                    </div>
+                    <div class="bar-container bar-container-adds" [style.left.%]="10 + getPerc(p.lastDelta - this.minDelta - getSum(p.paid))">
+                      @for (_ of p.vacation; track _) {
+                        <div class="bar bar-vacation" [style.width.%]="getPerc(_[0])" [ngbTooltip]="_[1] + ' ' + _[0] + 'h'"></div>
+                      }
+                      @for (_ of p.worked; track _) {
+                        <div class="bar bar-worked" [style.width.%]="getPerc(_[0])" [ngbTooltip]="_[1] + ' ' + _[0] + 'h'"></div>
+                      }
+                      @for (_ of p.excluded; track _) {
+                        <div class="bar bar-excluded bg-striped" [style.width.%]="getPerc(_[0])" [ngbTooltip]="_[1] + ' ' + _[0] + 'h'"></div>
+                      }
+                    </div>
+                    <div class="text-muted me-2">{{p.month}}</div>
+                  </li>
+                }
+                <li>&nbsp;</li>
+              </ul>
+            </div>
+          </div>
+        }
+      </div>
+      <div class="col-4">
+        <div class="card sticky-side">
+          <div class="card-header" i18n="@@i18n.common.projects">projects</div>
+          <div class="card-body">
+            <ul class="list-group">
+              @for (p of projects; track p) {
+                <li class="list-group-item d-flex cursor-pointer"
+                  smartLink="/{{p.path}}"
+                  >
+                  <avatar [object]="p"></avatar>
+                  <div class="flex-fill text-truncate me-2">
+                    {{p.name}}
+                  </div>
+                  <span class="badge badge-dark">{{ p.duration | number: '1.1-1'}}h</span>
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+}
+
+
+<ng-template #calculator let-modal>
+  <div class="modal-header">
+    <span class="modal-title" i18n="@@i18n.hr.calculatorForRemainingTime">calculator for remaining time</span>
+  </div>
+  <div class="modal-body">
+    <div class="input-group">
+      <div class="input-group-prepend">
+        <span class="input-group-text" i18n="@@i18n.common.hoursNeeded">hours needed</span>
+      </div>
+      <input type="number" class="text-end form-control" [ngModel]="remOutput | number:'1.1-2'" disabled>
+    </div>
+    <div class="input-group">
+      <div class="input-group-prepend">
+        <span class="input-group-text" i18n="@@i18n.common.vacationEntitlement">vacation entitlement</span>
+      </div>
+      <input type="number" class="text-end form-control" [ngModel]="(-remOutput * factor) | number:'1.1-2'" disabled>
+    </div>
+    <div class="input-group">
+      <div class="input-group-prepend">
+        <span class="input-group-text" i18n="@@i18n.hr.overtimeMinusHours">overtime / minus hours</span>
+      </div>
+      <input type="number" class="text-end form-control" [ngModel]="getTbeMonths().last()?.delta | number:'1.1-2'" disabled>
+    </div>
+    <div class="input-group">
+      <div class="input-group-prepend">
+        <span class="input-group-text">= geplante Reststunden</span>
+      </div>
+      <input type="number" class="text-end form-control" suffix="h" [(ngModel)]="remInput" (change)="updateRem()">
+    </div>
+  </div>
+</ng-template>
+
+
+<ng-template #addPaidTime let-modal>
+  <div class="modal-header">
+    <span class="modal-title" i18n="@@i18n.hr.addPaidTime">add paid time</span>
+  </div>
+  <div class="modal-body">
+    <div class="input-group mb-2">
+      <div class="input-group-prepend">
+        <span class="input-group-text" i18n="@@i18n.common.date">date</span>
+      </div>
+      <input ngbDatepicker #d="ngbDatepicker" placeholder="yyyy-mm-dd" class="form-control" [displayMonths]="2" tabindex="-1" [startDate]="addTbeDate" [(ngModel)]="addTbeDate" [autoClose]="'outside'"/>
+      <button class="btn btn-outline-primary" (click)="d.toggle()" type="button"><i>calendar_month</i></button>
+    </div>
+    <div class="input-group mb-2">
+      <div class="input-group-prepend">
+        <span class="input-group-text" i18n="@@i18n.hr.paidHours">paid hours</span>
+      </div>
+      <input type="number" class="text-end form-control" suffix="h" tabindex="1" [(ngModel)]="addTbeAmount">
+    </div>
+    <div class="input-group mb-2">
+      <div class="input-group-prepend">
+        <span class="input-group-text">
+            <span class="notranslate">- </span>
+            <span i18n="@@i18n.common.vacation">vacation</span>
+        </span>
+      </div>
+      <input type="number" class="text-end form-control" [ngModel]="(addTbeAmount * factor) | number:'1.1-2'" disabled>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-primary text-end" (click)="addTbe()" i18n="@@i18n.common.add">add</button>
+  </div>
+</ng-template>

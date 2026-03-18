@@ -1,0 +1,41 @@
+<div class="row">
+    <div class="col-12">
+        <div class="card mb-3">
+            <div class="card-header" i18n="@@i18n.projects.pluginLinks">plugin links</div>
+            @if (pluginLinks.length > 0) {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;"></th>
+                                <th i18n="@@i18n.common.name">name</th>
+                                <th i18n="@@i18n.common.url">URL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (link of pluginLinks; track link.id) {
+                                <tr [nx]="link">
+                                    <td>
+                                        <n [ngbTooltip]="factory.instanceFor(link)?.state"
+                                           class="text-{{factory.instanceFor(link)?.getStateCss()}}">
+                                            {{factory.instanceFor(link)?.icon()}}
+                                        </n>
+                                    </td>
+                                    <td>{{link.name}}</td>
+                                    <td>
+                                        <a [href]="link.url" target="_blank" class="text-decoration-none">
+                                            <span class="font-monospace small">{{link.url}}</span>
+                                            <i class="ms-1">open_in_new</i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            } @else {
+                <empty-state [card]="false" class="settings" i18n-title="@@i18n.projects.noPluginLinksYet" title="no plugin links yet"></empty-state>
+            }
+        </div>
+    </div>
+</div>

@@ -1,0 +1,192 @@
+<toolbar>
+  <button type="button" class="btn btn-primary" (click)="onAddProject()" ngbTooltip="CTRL+ALT+N" placement="bottom" hotkey="CTRL+ALT+N">
+    <i>add</i>
+    <span i18n="@@i18n.common.project">project</span>
+  </button>
+</toolbar>
+<scrollbar>
+  <div class="row">
+    <div class="col-md-3">
+      @if (parent.current) {
+        <div class="card mb-3">
+          <div class="card-header">
+            <span i18n="@@i18n.common.contact">contact</span>
+            <div class="card-header-actions">
+              <button class="card-header-action btn text-primary" type="submit" routerLink="contacts" title="edit" i18n-title="@@i18n.common.edit">
+                <i>edit</i>
+              </button>
+            </div>
+          </div>
+          @if (parent.current.card) {
+            <div class="card-body">
+              <div [innerHTML]="parent.current.address | safe:'html'"></div>
+              @for (a of parent.current.url; track a) {
+                <div>
+                  <a [href]="a" target="_blank">{{a}}</a>
+                </div>
+              }
+              <div class="mt-2">
+                <company-locale-selector [company]="parent.current" (localeChanged)="reload()"></company-locale-selector>
+              </div>
+            </div>
+          }
+          @if (quickContacts.length) {
+            <div class="card-header">
+              <span i18n="@@i18n.common.favorites">favorites</span>
+            </div>
+            <list-group-item-contact *nxFor="let _ of quickContacts" [contact]="_" [role]="_.role" [showQuickContact]="true" routerLink="{{_.id}}">
+            </list-group-item-contact>
+          }
+          <div class="card-body">
+            <ng-container roles="financial">
+              <div class="hstack gap-2 pointer" (click)="showDefaultProduct = !showDefaultProduct" (keyup.enter)="showDefaultProduct = !showDefaultProduct" tabindex="0">
+                <div class="flex-fill text-muted" i18n="@@i18n.project.defaultProduct">default product</div>
+                <div class="text-truncate text-end" [ngbTooltip]="product?.name">{{product?.name ?? '-'}}</div>
+              </div>
+              @if (showDefaultProduct) {
+                <div class="py-2">
+                  <search-input class="p-0" only="Product" [has_icon]="true" [minSearch]="1" (itemSelected)="onProductSelect($event)" [query]="product ? product.name : ''" [selected]="product"></search-input>
+                </div>
+              }
+            </ng-container>
+            @if (parent.current.card) {
+              <div class="hstack gap-2 pointer" (click)="showLeadSource = !showLeadSource" (keyup.enter)="showLeadSource = !showLeadSource" tabindex="0">
+                <div class="flex-fill text-muted" i18n="@@i18n.projects.leadSource">lead source</div>
+                <div class="text-truncate text-end" [ngbTooltip]="parent.current.source?.name">{{parent.current.source?.name ?? '-'}}</div>
+              </div>
+              @if (showLeadSource) {
+                <div class="py-2">
+                  <search-input only="Contact,LeadSource,User" [selected]="parent.current.source" [has_icon]="true" [query]="parent.current.source?.name ?? ''" (itemSelected)="onLeadSourceSelected($event)"></search-input>
+                </div>
+              }
+            }
+            <div class="hstack gap-2 mt-2">
+              <ng-container roles="financial">
+                <button type="button"
+                        class="btn btn-sm flex-fill d-flex align-items-center justify-content-center"
+                        [class.btn-danger]="parent.current.is_deprecated"
+                        [class.text-muted]="!parent.current.is_deprecated"
+                        (click)="parent.current.update({is_deprecated: !parent.current.is_deprecated}).subscribe()"
+                        [ngbTooltip]="parent.current.is_deprecated ? 'Customer is deprecated and ignored for maintenance checks' : 'Customer is active for maintenance checks'"
+                        placement="bottom">
+                  <i>{{parent.current.is_deprecated ? 'block' : 'check_circle'}}</i>
+                </button>
+                <button type="button"
+                        class="btn btn-sm flex-fill d-flex align-items-center justify-content-center"
+                        [class.btn-warning]="parent.current.requires_po"
+                        [class.text-muted]="!parent.current.requires_po"
+                        (click)="parent.current.update({requires_po: !parent.current.requires_po}).subscribe()"
+                        [ngbTooltip]="parent.current.requires_po ? 'Customer requires purchase orders before invoicing' : 'No purchase order required'"
+                        placement="bottom">
+                  <i>{{parent.current.requires_po ? 'assignment' : 'assignment_turned_in'}}</i>
+                </button>
+                <button type="button"
+                        class="btn btn-sm flex-fill d-flex align-items-center justify-content-center"
+                        [class.btn-info]="parent.current.has_nda"
+                        [class.text-muted]="!parent.current.has_nda"
+                        (click)="parent.current.update({has_nda: !parent.current.has_nda}).subscribe()"
+                        [ngbTooltip]="parent.current.has_nda ? 'NDA is in place' : 'No NDA signed'"
+                        placement="bottom">
+                  <i>{{parent.current.has_nda ? 'gavel' : 'description'}}</i>
+                </button>
+                <button type="button"
+                        class="btn btn-sm flex-fill d-flex align-items-center justify-content-center"
+                        [class.btn-success]="parent.current.accepts_support"
+                        [class.text-muted]="!parent.current.accepts_support"
+                        (click)="parent.current.update({accepts_support: !parent.current.accepts_support}).subscribe()"
+                        [ngbTooltip]="parent.current.accepts_support ? 'Customer accepts support invoicing without prior notice' : 'Customer requires notification before support invoicing'"
+                        placement="bottom">
+                  <i>{{parent.current.accepts_support ? 'support_agent' : 'support'}}</i>
+                </button>
+              </ng-container>
+              <div ngbDropdown class="flex-fill">
+                <button type="button"
+                        class="btn btn-sm w-100 d-flex align-items-center justify-content-center gap-1 dropdown-toggle-simple"
+                        [class.btn-primary]="parent.current.remarketing_interval"
+                        [class.text-muted]="!parent.current.remarketing_interval"
+                        ngbDropdownToggle
+                        [ngbTooltip]="'Remarketing interval: ' + getIntervalText(parent.current.remarketing_interval)"
+                        placement="bottom">
+                  <n>marketing</n>
+                  <span class="small">{{getIntervalIcon(parent.current.remarketing_interval)}}</span>
+                </button>
+                <div ngbDropdownMenu>
+                  @for (key of getIntervalKeys(); track key) {
+                    <button type="button"
+                            ngbDropdownItem
+                            (click)="parent.current.update({remarketing_interval: key}).subscribe()">
+                      {{getIntervalText(key)}}
+                    </button>
+                  }
+                  @if (parent.current.remarketing_interval) {
+                    <div class="dropdown-divider"></div>
+                    <button type="button"
+                            ngbDropdownItem
+                            (click)="parent.current.update({remarketing_interval: null}).subscribe()">
+                      <i class="text-muted">clear</i>
+                    </button>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (parent.current) {
+      <div class="col-md-9">
+        @if (global.user?.hasRole('invoicing')) {
+          <div class="row">
+            <div class="col-lg-4">
+              <div class="card chart-card mb-3">
+                <div class="card-header">
+                  <span i18n="@@i18n.common.revenue">revenue</span>
+                  <span class="badge bg-lighter ms-2 py-1 px-1" ngbTooltip="accumulated revenue of the last 12 months" i18n="@@i18n.common.12m" i18n-ngbTooltip="@@i18n.invoice.revenue12m">12m</span>
+                </div>
+                <chart-card-range keyPath="{{parent.current.getParamPath('INVOICE_REVENUE_12M,INVOICE_DEG_12M')}}" [color]="['white','primary']"></chart-card-range>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="card chart-card mb-3">
+                <div class="card-header hstack gap-2">
+                    <span i18n="@@i18n.widget-prediction-bias" class="flex-fill text-truncate">prediction bias</span>
+                    @if (parent.current.getParam('STATS_PREDICTION_BIAS')) {
+                    <div class="chart-title">{{parent.current.getParam('STATS_PREDICTION_BIAS') | percent:"1.0-0"}}</div>
+                    }
+                </div>                
+                <chart-card-range keyPath="{{parent.current.getParamPath('STATS_PREDICTION_BIAS')}}" [color]="['white']" suffix="%"></chart-card-range>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="card chart-card mb-3">
+                <customer-quickstats [company]="parent.current"></customer-quickstats>
+              </div>
+            </div>
+          </div>
+        }
+        <div class="row">
+          <div class="col-8">
+            <media-preview [parent]="parent.current"></media-preview>
+            @if (parent.current.base_projects && parent.current.base_projects.length > 0) {
+              <div class="card mb-3">
+                <div class="card-header" i18n="@@i18n.common.activeProjects">active projects</div>
+                <projects-table [projects]="parent.current.base_projects"></projects-table>
+              </div>
+            }
+            @if (invoices && invoices.length > 0) {
+              <div class="card mb-3">
+                <div class="card-header" i18n="@@i18n.common.openInvoices">open invoices</div>
+                <invoices-table [invoices]="invoices"></invoices-table>
+              </div>
+            }
+          </div>
+          <div class="col-4">
+            <project-team-planning [entity]="parent.current"></project-team-planning>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</scrollbar>
+<router-outlet></router-outlet>

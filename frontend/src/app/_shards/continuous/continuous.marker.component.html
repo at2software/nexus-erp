@@ -1,0 +1,19 @@
+<toolbar>
+  @if (remainingPages>0) {
+    <div class="btn-group" role="group">
+      <button id="btnGroupDrop1" type="button" class="btn btn-plain"
+        [class.text-primary]="!autoloadRemaining"
+        [disabled]="autoloadRemaining || loaded"
+        i18n-ngbTooltip="@@i18n.info.loadAllRemainingPagesFromDatabase"
+        ngbTooltip="load all remaining pages from database"
+        (click)="loadRemaining()">
+        <i>sync</i>{{remainingPages}}
+      </button>
+    </div>
+  }
+</toolbar>
+<div class="loader-container" [class.d-none]="!active">
+  <img src="assets/nexus-loading/nexus_loading.webp" class="nexus-loader" alt="Loading..." />
+</div>
+<!-- <i class="text-muted user-select-none" [class.d-none]="!loaded" title="Everything loaded">verified</i> -->
+<i class="text-muted user-select-none" [class.d-none]="active || loaded" title="Waiting to start loader">hourglass_disabled</i>

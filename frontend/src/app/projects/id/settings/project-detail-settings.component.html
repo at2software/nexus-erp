@@ -1,0 +1,15 @@
+<div class="row">
+    <div class="col-3">
+        <div class="card">
+            <div class="card-header" i18n="@@i18n.common.settings">settings</div>
+            <ul class="list-group">
+                <li class="list-group-item pointer" i18n="@@i18n.common.general" routerLink="general" routerLinkActive="active">general</li>
+                <li class="list-group-item pointer" i18n="@@i18n.projects.participants" routerLink="participants" routerLinkActive="active">participants</li>
+                <li class="list-group-item pointer" i18n="@@i18n.projects.pluginLinks" routerLink="plugin-links" routerLinkActive="active">plugin links</li>
+            </ul>
+        </div>
+    </div>
+    <div class="col-9">
+        <router-outlet></router-outlet>
+    </div>
+</div>

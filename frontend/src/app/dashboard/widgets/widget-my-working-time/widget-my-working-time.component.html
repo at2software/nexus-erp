@@ -1,0 +1,29 @@
+<div class="card card-chart mb-3">
+
+  <div class="card-header gap-2">
+    <n>hr</n>
+    <span class="flex-fill text-truncate" i18n="@@i18n.widget-my-working-time">my working time</span>
+    @if (chartOptions) {
+      <div class="chart-title" [class.text-danger]="average < averageSoll * .9" [ngbTooltip]="'average working hours per week (required: '+averageSoll+' h)'">{{average | number:'1.1-1'}}<span class="text-lowercase text-muted fs-6">h</span></div>
+    }
+  </div>
+
+  <div class="card-body">
+    <div class="mb-1">
+      @if (!chartOptions) {
+        <div style="height:100px;"></div>
+      }
+      @if (chartOptions) {
+        <div echarts [options]="chartOptions"
+          [initOpts]="{height: 100}"
+          (chartInit)="onChartInit($event)"
+          style="height: 100px;"
+          >
+        </div>
+      }
+    </div>
+    <progress-bar class="mt-1" [progress]="workThisWeek / requiredWorkThisWeek" [style]="'primary'" [overStyle]="'warning'" [ngbTooltip]="'this week: '+workThisWeek+'/'+requiredWorkThisWeek+' h'"></progress-bar>
+  </div>
+
+  <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+</div>

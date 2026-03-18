@@ -1,0 +1,4 @@
+<img class="avatar avatar-{{size}} cursor-pointer" [ngbTooltip]="tooltip" [smartLink]="routerLink" [src]="src" alt="">
+@if (object?.badge) {
+  <div class="warning-badge {{object?.badge![0]}}" [ngbTooltip]="badgeTooltip" tooltipClass="badge-tooltip-multiline"></div>
+}

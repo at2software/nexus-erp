@@ -1,0 +1,30 @@
+@if (user) {
+  <div class="modal d-block" tabindex="-1" #modal>
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span class="modal-title" i18n="@@i18n.common.newTimeOff">new time off</span>
+        </div>
+        <div class="modal-body">
+          <div class="input-group mb-3 d-flex">
+            <span class="input-group-text" i18n="@@i18n.common.comment">comment</span>
+            <input class="form-control" type="text" [(ngModel)]="vacation.comment">
+          </div>
+          <div class="input-group mb-3 d-flex">
+            <span class="input-group-text" i18n="@@i18n.common.days">days</span>
+            <input class="form-control" type="number" [(ngModel)]="vacation.var.amount">
+            <span class="input-group-text">= {{vacation.var.amount * user.getAverageHpd()}}h</span>
+          </div>
+          <div class="input-group mb-3 d-flex">
+            <span class="input-group-text" i18n="@@i18n.common.date">date</span>
+            <input class="form-control flex-fill" container="body" (click)="d.open()" placeholder="yyyy-mm-dd" [(ngModel)]="vacation.var.date" ngbDatepicker #d="ngbDatepicker">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" (click)="decline()" data-bs-dismiss="modal" i18n="@@i18n.common.cancel">cancel</button>
+          <button type="button" class="btn btn-primary" (click)="accept()" hotkey="CTRL+ENTER" i18n="@@i18n.common.ok">ok</button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

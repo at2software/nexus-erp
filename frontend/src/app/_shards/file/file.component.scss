@@ -1,0 +1,50 @@
+.file-image {
+    cursor: pointer;
+    margin: 3px auto;
+    position: relative;  
+    overflow: hidden;
+    
+    .file-color {
+        background: #055468;
+        width: 175%;
+        height: 128.125%;
+        position: absolute;
+        bottom: 0;
+        right: 100%;
+        transform: rotateZ(-45deg);
+        transform-origin: top right;
+        //width: 85px;
+        left: -138%;
+        top: -25%;
+    }
+    &:hover .file-color::after {
+        content:''; position: absolute; top: 0;  right: 0; bottom: 0; left: 0;
+        background-color: var(--color-lighter);
+    }
+    &:after {
+        content: '';
+        display: block;
+        position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+        background-image: url('/assets/images/eselsohr.png');
+        background-position: top right;
+        background-size: 30%;
+        background-repeat: no-repeat;
+    }
+}
+.file-name {
+    font-size: 10px;
+    color: #ccc;
+    text-align: center;
+}
+.file-icon {  
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translateX(-50%) translateY(-35%);
+    ::ng-deep {
+        i {
+            font-size: 100% !important;
+            color: #fff;
+        }
+    }
+}

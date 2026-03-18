@@ -1,0 +1,30 @@
+<div class="card-header gap-2">
+    <span class="flex-fill text-truncate" i18n="@@i18n.common.info">info</span>
+    <div class="chart-title">{{company.getParam('INVOICE_REVENUE_ALL') | mshort}}</div>
+</div>
+<ul class="list-group">
+    <li class="list-group-item">
+        <div class="hstack gap-2">
+            <div class="flex-fill" i18n="@@i18n.widget-project-success">project success</div>
+            <div>{{projectSuccess | percent: '1.0-0'}}</div>
+        </div>
+        <progress-bar [progress]="projectSuccess" [style]="'teal'" overStyle="yellow" class="w-100"></progress-bar>
+    </li>
+    <li class="list-group-item">
+        <div class="hstack gap-2">
+            <div class="flex-fill" i18n="@@i18n.customers.averageOverduePayment">average overdue payment</div>
+            <div ngbTooltip="days payid after due date" i18n-ngbTooltip="@@i18n.customers.daysPayidAfterDueDate">
+                {{paymentOverdue | number: '1.0-0'}}<span class="text-muted small">d</span>
+            </div>
+        </div>
+        <progress-bar [progress]="paymentDurationPerc" [style]="paymentOverdueStyle" overStyle="orange" class="w-100"></progress-bar>
+    </li>
+    <li class="list-group-item">
+        <div class="hstack gap-2">
+            <div class="flex-fill" i18n="@@i18n.customers.desicionDuration">desicion duration</div>
+            <div ngbTooltip="days until project is either ordered or failed" i18n-ngbTooltip="@@i18n.customers.daysUntilProjectIsEither">
+                {{company.desicion_duration | number: '1.0-0'}}<span class="text-muted small">d</span>
+            </div>
+        </div>
+    </li>
+</ul>

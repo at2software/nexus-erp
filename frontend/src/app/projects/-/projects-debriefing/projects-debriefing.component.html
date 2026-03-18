@@ -1,0 +1,158 @@
+<toolbar>
+    <div class="hstack gap-2">
+        <span class="badge text-muted daterange-badge">
+            <input type="text" ngxDaterangepickerMd [(ngModel)]="period"
+                [alwaysShowCalendars]="true" (datesUpdated)="onDateRangeChanged()" [showCustomRangeLabel]="true"
+                [ranges]="ranges" [showClearButton]="true" [locale]="{applyLabel: 'ok', format: 'DD.MM.YYYY'}"
+                placeholder="select date range" i18n-placeholder="@@i18n.common.selectDateRange"/>
+        </span>
+
+        <div ngbDropdown>
+            <span class="badge cursor-pointer dropdown-toggle dropdown-toggle-simple" ngbDropdownToggle
+                  [style.background-color]="selectedCategory?.color" [class.text-muted]="!selectedCategoryId">
+                {{ selectedCategory?.name || 'all categories' }}
+            </span>
+            <div ngbDropdownMenu>
+                <button ngbDropdownItem (click)="toggleCategory(null)" i18n="@@i18n.debrief.allCategories">all categories</button>
+                @for (cat of categories; track cat.id) {
+                    <button ngbDropdownItem (click)="toggleCategory(cat.id)">
+                        <span class="category-dot d-inline-block me-1" [style.background-color]="cat.color"></span>
+                        {{ cat.name }}
+                    </button>
+                }
+            </div>
+        </div>
+
+        <div ngbDropdown>
+            <span class="badge cursor-pointer dropdown-toggle dropdown-toggle-simple" ngbDropdownToggle
+                  [class]="selectedSeverity ? getSeverityClass(selectedSeverity) : 'text-muted'">
+                {{ selectedSeverity || 'all severities' }}
+            </span>
+            <div ngbDropdownMenu>
+                <button ngbDropdownItem (click)="toggleSeverity(null)" i18n="@@i18n.debrief.allSeverities">all severities</button>
+                <button ngbDropdownItem (click)="toggleSeverity('low')" i18n="@@i18n.debrief.severityLow">low</button>
+                <button ngbDropdownItem (click)="toggleSeverity('medium')" i18n="@@i18n.debrief.severityMedium">medium</button>
+                <button ngbDropdownItem (click)="toggleSeverity('high')" i18n="@@i18n.debrief.severityHigh">high</button>
+                <button ngbDropdownItem (click)="toggleSeverity('critical')" i18n="@@i18n.debrief.severityCritical">critical</button>
+            </div>
+        </div>
+
+        <button class="btn btn-sm btn-link text-muted p-0" (click)="clearFilters()"
+                ngbTooltip="Clear Filters" i18n-ngbTooltip="@@i18n.common.clearFilters">
+            <i>filter_alt_off</i>
+        </button>
+    </div>
+</toolbar>
+
+@if (loading) {
+    <div class="d-flex align-items-center justify-content-center p-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">
+                <span i18n="@@i18n.common.loading">loading</span>
+                <span class="notranslate">...</span>
+            </span>
+        </div>
+    </div>
+}
+
+@if (!loading) {
+    <div class="container-fluid p-3">
+        <!-- Row 1: Radar charts + Top 5 lists -->
+        <div class="row">
+            <div class="col-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-header" i18n="@@i18n.debrief.problemDistribution">problem distribution</div>
+                    <div class="card-body">
+                        <debrief-radar-chart [categories]="categoryBreakdown" height="220px" [hideLegend]="true"></debrief-radar-chart>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-header" i18n="@@i18n.debrief.worstCustomers">worst customers</div>
+                    <ul class="list-group list-group-flush">
+                    </ul>
+                </div>
+            </div>
+
+            <div class="col-3 mb-3">
+                <div class="card h-100">
+                    <div class="card-header" i18n="@@i18n.debrief.topCustomers">top customers</div>
+                    <ul class="list-group list-group-flush">
+                    </ul>
+                </div>
+            </div>
+
+            <div class="col-3 mb-3">
+                @if (stats) {
+                    <div class="card h-100">
+                        <div class="card-header" i18n="@@i18n.common.summary">summary</div>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span i18n="@@i18n.debrief.totalDebriefs">total debriefs</span>
+                                <strong>{{ stats.total_debriefs }}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span i18n="@@i18n.common.completed">completed</span>
+                                <strong>{{ stats.completed_debriefs }}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span i18n="@@i18n.debrief.avgProblems">avg problems/debrief</span>
+                                <strong>{{ stats.avg_problems_per_debrief }}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span i18n="@@i18n.debrief.avgEffectiveness">avg solution rating</span>
+                                <strong>{{ stats.avg_solution_effectiveness }}/5</strong>
+                            </li>
+                        </ul>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Row 2: All problems / All positives for current category -->
+        <div class="row">
+            <div class="col-6 mb-3">
+                <div class="card">
+                    <div class="card-header" i18n="@@i18n.debrief.problems">problems</div>
+                    <ul class="list-group list-group-flush">
+                        @for (problem of displayProblems; track problem.id) {
+                            <li [nx]="problem" class="list-group-item d-flex align-items-center gap-2">
+                                <span class="text-muted small">{{ problem.usage_count }}x</span>
+                                <span class="flex-grow-1 text-truncate">{{ problem.title }}</span>
+                                @if (problem.severity) {
+                                    <span class="small" [class]="'text-' + (problem.severity === 'critical' ? 'red' : problem.severity === 'high' ? 'orange' : problem.severity === 'medium' ? 'cyan' : 'grey')">{{ problem.severity }}</span>
+                                }
+                                <span class="small" [style.color]="problem.var.category_color">{{problem.var.category_name}}</span>
+                            </li>
+                        }
+                        @if (displayProblems.length === 0) {
+                            <li class="list-group-item text-muted small" i18n="@@i18n.debrief.noProblems">no problems recorded yet</li>
+                        }
+                    </ul>
+                </div>
+            </div>
+
+            <div class="col-6 mb-3">
+                <div class="card">
+                    <div class="card-header" i18n="@@i18n.debrief.positives">positives</div>
+                    <ul class="list-group list-group-flush">
+                        @for (positive of displayPositives; track positive.title) {
+                            <li [nx]="positive" class="list-group-item d-flex align-items-center gap-2">
+                                <span class="text-muted small">{{ positive.var.count }}x</span>
+                                <span class="flex-grow-1 text-truncate">{{ positive.title }}</span>
+                                @if (positive.var.category_color) {
+                                    <span class="small" [style.color]="positive.var.category_color">{{ positive.var.category_name }}</span>
+                                }
+                            </li>
+                        }
+                        @if (displayPositives.length === 0) {
+                            <li class="list-group-item text-muted small" i18n="@@i18n.debrief.noPositives">no positives recorded yet</li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+}

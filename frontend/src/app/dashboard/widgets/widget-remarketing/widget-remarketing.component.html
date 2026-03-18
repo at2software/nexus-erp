@@ -1,0 +1,19 @@
+<div class="card card-chart mb-3">
+
+    <div class="card-header gap-2">
+        <n>marketing</n>
+        <span class="flex-fill text-truncate" i18n="@@i18n.common.remarketing">remarketing</span>
+    </div>
+
+    <!-- <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options> -->
+
+    <ul-compact>
+        <li class="list-group-item hstack gap-2 text-truncate" [class.compact]="item.remarketingProgress < .25 || indexExceedsSettings(i)" *nxFor="let item of observed; let i = index" ngbTooltip="remarketing due in {{item.remarketingDays - item.lastUpdateDuration}} days">
+            <avatar [object]="item"></avatar>
+            <div class="vstack">
+                <div class="flex-fill text-truncate">{{item.name}}</div>
+                <progress-bar [progress]="item.remarketingProgress" [style]="'purple'" [overStyle]="'danger'"></progress-bar>
+            </div>
+        </li>
+    </ul-compact>
+</div>

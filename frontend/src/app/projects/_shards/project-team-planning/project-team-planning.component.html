@@ -1,0 +1,70 @@
+@if (entity) {
+  <div class="card mb-3">
+    <div class="card-header hstack gap-2 pe-0">
+      <span class="flex-fill" i18n="@@i18n.common.assignees">assignees</span>
+      @if (isProject() && !asProject().is_time_based) {
+        <span class="small text-black badge badge-dark user-select-none bg-gradient"
+          [class.bg-warning]="asProject().getForecastSum() > asProject().getRemainingTime()"
+          [class.bg-danger]="asProject().getForecastSum() === 0 && asProject().getRemainingTime() < 0"
+          [class.bg-success]="asProject().getForecastSum() === 0 && asProject().getRemainingTime() >= 0"
+          >
+          <span ngbTooltip="forecasted remaining hours" i18n-ngbTooltip="@@i18n.projects.forecastedRemainingHours">{{asProject().getForecastSum() | number:'1.1-1'}}</span>
+          /
+          <span ngbTooltip="estimated: {{asProject().work_estimated}} invested: {{asProject().hours_invested}}">{{asProject().getRemainingTime() | number:'1.1-1'}}</span>
+        </span>
+      }
+      <div [roles]="isProject() ? 'project_manager' : 'admin'" class="card-header-actions">
+        <div ngbDropdown>
+          <button class="btn text-primary btn-plain dropdown-toggle-simple" ngbDropdownToggle><i class="text-primary">add</i></button>
+          <ul class="autoposition" ngbDropdownMenu style="text-transform: none;" aria-labelledby="addButton">
+            @for (x of canBeAssigned(); track x.id) {
+              <li>
+                <a class="dropdown-item pointer d-flex px-3 py-2 cursor-pointer" (click)="addUser(x)" (keyup.enter)="addUser(x)" tabindex="0">
+                  <avatar [object]="x"></avatar>
+                  <span>{{x.name}}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+    <ul class="list-group">
+      @for (c of assignees; track c.id) {
+        <li class="list-group-item hstack gap-2" [nx]="c" [tables]="assignees">
+          <div>
+            <avatar [object]="c.assignee"></avatar>
+          </div>
+          <div class="flex-fill">
+            {{c.assignee.name}}
+          </div>
+          <div class="d-flex gap-1">
+            @if (getMantisUserId(c) && getMantisInstance()) {
+              <a (click)="openMantisProfile(c, $event)" (keyup.enter)="openMantisProfile(c, $event)" tabindex="0" [ngbTooltip]="getMantisTooltip(c)" container="parent" placement="bottom" style="cursor: pointer;">
+                <n [class]="getMantisIconClass(c)" style="font-size: 0.7rem;">mantis</n>
+              </a>
+            }
+            @if (getGitUsername(c) && getGitInstance()) {
+              <a (click)="openGitProfile(c, $event)" (keyup.enter)="openGitProfile(c, $event)" tabindex="0" [ngbTooltip]="getGitTooltip(c)" container="parent" placement="bottom" style="cursor: pointer;">
+                <n [class]="getGitIconClass(c)" style="font-size: 0.7rem;">git</n>
+              </a>
+            }
+            @if (getMattermostUserId(c) && getMattermostInstance()) {
+              <a (click)="openMattermostProfile(c, $event)" (keyup.enter)="openMattermostProfile(c, $event)" tabindex="0" [ngbTooltip]="getMattermostTooltip(c)" container="parent" placement="bottom" style="cursor: pointer;">
+                <n [class]="getMattermostIconClass(c)" style="font-size: 0.7rem;">mattermost</n>
+              </a>
+            }
+          </div>
+          @if (!isProject() || !asProject().is_time_based) {
+            <div style="width:30%; min-width:30%;">
+              <input class="form-control text-end" suffix="h" ngbTooltip="planned hours" [(ngModel)]="c.hours_planned"
+                (blur)="c.hours_planned = roundHours(c.hours_planned)"
+                [autosave]="c" roles="hr" i18n-ngbTooltip="@@i18n.projects.plannedHours">
+              <span class="text-end d-block" ngbTooltip="planned hours" noroles="hr" i18n-ngbTooltip="@@i18n.projects.plannedHours">{{c.hours_planned | number:'1.0-1'}}h</span>
+            </div>
+          }
+        </li>
+      }
+      </ul>
+    </div>
+  }

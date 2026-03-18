@@ -1,0 +1,58 @@
+<app-header>
+    <div class="logo cursor-pointer" [style.background-image]="'url(' + service.current.icon + ')'" smartLink="/customers/{{service.current.company!.id}}">
+        <div ngbDropdown>
+            <div class="dropdown-toggle dropdown-toggle-simple bg-transparent" (click)="$event.stopPropagation()" tabindex="0" (keydown.enter)="$event.stopPropagation()" style="font-weight: normal;"
+                ngbDropdownToggle>
+                <project [project]="service.current" [noRouting]="true"></project>
+            </div>
+            <ul class="dropdown-menu" ngbDropdownMenu>
+                @for (state of global.getAllowedSucceedingProjectStatesFor(service.current); track state.id) {
+                <li class="cursor-pointer">
+                    <a class="dropdown-item hstack gap-2" (click)="setState($event, state.id)" (keyup.enter)="setState($event, state.id)" tabindex="0">
+                        <span i18n="@@i18n.project.changeTo">change to</span> <span class="font-monospace"
+                            [style.color]="state.color">{{state.name}}</span>
+                    </a>
+                </li>
+                }
+            </ul>
+        </div>
+    </div>
+    <div class="h1 d-flex align-items-end">
+        <div class="me-1 text-truncate">
+            {{service.current.name}}
+        </div>
+    </div>
+    @if (service.current.company.id) {
+    <ul class="nav">
+        <header-route-nav [context]="service.current" [routeConfig]="route.routeConfig" [onChange]="service.onChange"></header-route-nav>
+        @if (service.current.companys_active_projects.length) {
+        <li class="nav-item" ngbDropdown [autoClose]="true" placement="bottom-start" #dropdown="ngbDropdown">
+            <a class="nav-link text-secondary d-flex align-items-center" ngbDropdownToggle (mouseenter)="dropdown.open()">
+                <i>apps</i>
+            </a>
+            <ul class="dropdown-menu" ngbDropdownMenu (mouseleave)="dropdown.close()">
+                @for (p of service.current.companys_active_projects; track p.id) {
+                <li>
+                    <a class="dropdown-item hstack gap-2" [routerLink]="['/projects', p.id]">
+                        <project [project]="p" [noRouting]="true"></project>
+                        <span>{{p.name}}</span>
+                    </a>
+                </li>
+                }
+            </ul>
+        </li>
+        }
+    </ul>
+    }
+</app-header>
+
+<router-outlet></router-outlet>
+
+<ng-container>
+    <activity-tab class="list-group list-group-accent" icon="chat">
+        <app-tab-comments path="projects/{{service.current.id}}" [quickLinks]="service.current.company"
+            [projects]="service.current.companys_active_projects" [currentProject]="service.current">
+            <activity-projects [project]="service.current" [company]="service.current.company"></activity-projects>
+        </app-tab-comments>
+    </activity-tab>
+</ng-container>

@@ -1,0 +1,13 @@
+.drag_handle {
+    color: #999;
+    cursor: grab;
+}
+table {
+    border-collapse: collapse;
+    width:100%;
+}
+.text-description {
+    overflow: hidden;
+    word-break:break-all;
+    white-space: wrap;
+}

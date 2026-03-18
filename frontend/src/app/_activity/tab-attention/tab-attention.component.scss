@@ -1,0 +1,19 @@
+.scroll-container { bottom:0; }
+.badge-icon {
+    width: 24px; height: 24px;
+    text-align: center;
+    align-items: center;
+    overflow: hidden;
+    i { 
+        padding-top: 1px; 
+        margin-left: -2px;
+    }
+    n { 
+        font-size: 16px;   
+        margin-left: -2px;
+        margin-top: -3px;
+    }
+}
+avatar {
+    margin: -3px 0;
+}

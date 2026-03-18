@@ -1,0 +1,50 @@
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header hstack gap-2">
+        <div i18n="@@i18n.common.cashFlow">cash flow</div>
+        <div class="ms-auto">
+          <div class="btn btn-sm btn-outline-secondary"
+               dnd="invoices/cashflow/upload"
+               [dndAllowed]="['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel']"
+               (dndUploaded)="onCsvUploaded()">
+            <i class="me-1">upload_file</i>
+            <span i18n="@@i18n.invoices.uploadBankCsv">upload bank CSV</span>
+          </div>
+        </div>
+      </div>
+        @if (data && data.length === 0) {
+          <empty-state [card]="false" class="invoices" i18n-title="@@i18n.invoices.noCashflowYet" title="No cash flow data yet">
+            <p i18n="@@i18n.invoices.cashflowEmptyDescription">Upload a bank CSV export to visualize your cash flow and uncover the financial pulse of your business.</p>
+          </empty-state>
+        }
+        @if (data && data.length > 0) {
+          <table class="table w-100">
+            <thead>
+              <tr class="sticky-header">
+                <th></th>
+                @for (key of keys; track key) {
+                  <th class="text-{{color(key)}}" [ngbTooltip]="i18n(key)"><i>{{headerIconFor(key)}}</i></th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (day of data; track day) {
+                <tr>
+                  <td class="text-muted">{{day.day}}</td>
+                  @for (key of keys; track key) {
+                    <td class="text-{{color(key)}} text-end font-monospace">
+                      @for (data of (valuesFor(day, key)?.data ?? []); track data) {
+                        <div>{{data.value | mshort}}</div>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+        <continuous-marker [observer]="observer" (dataReceived)="onResult($event)"></continuous-marker>
+    </div>
+  </div>
+</div>

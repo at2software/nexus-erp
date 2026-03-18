@@ -1,0 +1,153 @@
+<div class="workload-heatmap card mb-3">
+    <div class="card-header">
+        <span i18n="@@i18n.hr.dailyWorkloadHeatmap">daily workload heatmap</span>
+    </div>
+
+    @if (data) {
+        <div class="heatmap-container card-body hstack gap-2">
+            <div class="heatmap-grid">
+                <div class="day-labels">
+                    @for (label of dayLabels; track label) {
+                        <div class="day-label">{{ label }}</div>
+                    }
+                </div>
+
+                <div class="weeks-container">
+                    <div class="month-labels">
+                        @for (week of weekColumns; track trackByWeek($index, week)) {
+                            <div class="month-label">
+                                @if (week.monthLabel) {
+                                    {{ week.monthLabel }}
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <div class="weeks-grid">
+                        @for (week of weekColumns; track trackByWeek($index, week)) {
+                            <div class="week-column">
+                                @for (day of week.days; track $index) {
+                                    <div
+                                        class="day-cell {{ getColorClass(day) }}"
+                                        [class.today]="isToday(day)"
+                                        [ngbPopover]="dayPopover"
+                                        [popoverContext]="{ day: day }"
+                                        triggers="click"
+                                        placement="bottom"
+                                        container="body"
+                                        tabindex="0"
+                                        (click)="selectDay(day)"
+                                        (keydown.enter)="selectDay(day)"
+                                        (keydown.space)="selectDay(day); $event.preventDefault()">
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="heatmap-legend mt-3 vstack gap-0">
+                <div class="legend-item">
+                    <div class="legend-box workload-green"></div>
+                    <span>&lt;50%</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box workload-yellow"></div>
+                    <span>&lt;75%</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box workload-orange"></div>
+                    <span>&lt;100%</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box workload-red"></div>
+                    <span>&lt;150%</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box workload-purple"></div>
+                    <span>&gt;150%</span>
+                </div>
+                <!-- <div class="legend-item">
+                    <div class="legend-box workload-break"></div>
+                    <span i18n="@@i18n.hr.off">Off</span>
+                </div> -->
+            </div>
+        </div>
+
+        @if (data.unconfigured_milestones.length > 0) {
+            <ul-compact class="list-group list-group-flush">
+                <li class="list-group-item header hstack gap-2">
+                    <span class="flex-fill text-truncate" i18n="@@i18n.hr.unconfiguredMilestones">unconfigured milestones</span>
+                    <span class="badge bg-danger rounded-pill ms-2">{{ data.unconfigured_milestones.length }}</span>
+                </li>
+                @for (milestone of data.unconfigured_milestones; track milestone.id) {
+                    <li class="list-group-item compact hstack gap-2 justify-content-between align-items-center" [nx]="milestone">
+                        <avatar [object]="milestone.project"></avatar>
+                        <div class="vstack gap-1 text-truncate">
+                            {{ milestone.name }}
+                        </div>
+                    </li>
+                }
+            </ul-compact>
+        }
+    } @else {
+        <div class="text-muted p-3">
+            <span i18n="@@i18n.common.loading">loading</span>
+            <span class="notranslate">...</span>
+        </div>
+    }
+</div>
+
+<ng-template #dayPopover let-day="day">
+    @if (day) {
+        <div class="day-popup">
+            <div class="popup-header">
+                <strong>{{ formatDate(day.date) }}</strong>
+            </div>
+
+            @if (day.is_break) {
+                <div class="popup-body text-muted">
+                    <i class="me-1">event_busy</i>
+                    {{ day.break_name || day.break_type }}
+                </div>
+            } @else {
+                <div class="popup-body">
+                    <div class="workload-summary mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>
+                                <span i18n="@@i18n.hr.totalWorkload">total workload</span>
+                                <span class="notranslate">:</span>
+                            </span>
+                            <strong [class.text-success]="day.total_percent < 75"
+                                    [class.text-warning]="day.total_percent >= 75 && day.total_percent < 100"
+                                    [class.text-danger]="day.total_percent >= 100">
+                                {{ day.total_percent | number:'1.0-1' }}%
+                            </strong>
+                        </div>
+                        <div class="d-flex justify-content-between text-muted small">
+                            <span>{{ day.total_hours | number:'1.1-1' }}h / {{ day.available_hours }}h</span>
+                        </div>
+                    </div>
+
+                    @if (day.elements.length > 0) {
+                        <hr class="my-2">
+                        <div class="elements-list">
+                            @for (element of day.elements; track trackByElement($index, element)) {
+                                <div class="element-item">
+                                    @if (element.project) {
+                                        <avatar [object]="element.project"></avatar>
+                                    }
+                                    {{ element.name }}
+                                    <span class="ms-auto" [class.text-cyan]="element.type === 'assignment'" [class.text-muted]="element.type !== 'assignment'">{{ element.hours | number:'1.1-1' }}h</span>
+                                </div>
+                            }
+                        </div>
+                    } @else {
+                        <div class="text-muted small" i18n="@@i18n.hr.noWorkScheduled">no work scheduled</div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</ng-template>

@@ -1,0 +1,33 @@
+.card-title code {
+  color: #e83e8c;
+  font-size: 0.9rem;
+}
+
+.font-monospace {
+  font-family: 'Courier New', monospace;
+}
+
+.material-icons {
+  vertical-align: middle;
+}
+
+.alert-heading .material-icons {
+  font-size: 1.2rem;
+}
+
+ngb-accordion {
+  .card {
+    border: none;
+    box-shadow: none;
+  }
+
+  .card-body .card {
+    border: 1px solid rgba(0,0,0,.125);
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  }
+}
+
+pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}

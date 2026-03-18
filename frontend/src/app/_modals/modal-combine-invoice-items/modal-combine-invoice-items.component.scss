@@ -1,0 +1,7 @@
+.list-group-item {
+    cursor: pointer;
+
+    &.active {
+        z-index: 0;
+    }
+}

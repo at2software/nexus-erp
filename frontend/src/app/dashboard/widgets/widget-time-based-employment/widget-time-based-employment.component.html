@@ -1,0 +1,27 @@
+<div class="card card-chart mb-3">
+
+  <div class="card-header gap-2">
+    <n>hr</n>
+    <span class="flex-fill text-truncate" i18n="@@i18n.hr.timeBasedEmployment">time based employment</span>
+  </div>
+
+  <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+
+  @if (employees.length) {
+    <div class="card-body">
+      <ul class="list-group">
+        @for (e of employees; track e.id) {
+          <li class="list-group-item d-flex cursor-pointer" routerLink="/hr/{{e.id}}/employment">
+            <div class="text-nowrap me-2">
+              <img [src]="env.envApi + e.path + '/icon'" class="avatar avatar-xs" alt="">
+            </div>
+            <div class="flex-fill">
+              {{e.name}}
+            </div>
+            <span class="label label-dark">{{e.duration | number : '1.1-1'}}h</span>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+</div>

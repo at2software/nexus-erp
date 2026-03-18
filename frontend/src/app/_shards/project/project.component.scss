@@ -1,0 +1,68 @@
+@use 'var' as *;
+
+$icon-width: 24px;
+$outline-width: 2px;
+
+:host {
+    display       : inline-block;
+    vertical-align: text-bottom;
+    position      : relative;
+    border-radius : 100%;
+    width         : $icon-width;
+    height        : $icon-width;
+    overflow: hidden;
+    >* { 
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        border-radius : 100%;
+    }
+    &.is-internal .outline {
+        border-style: dashed !important;
+    }
+    &.inactive {
+        i { 
+            color: var(--color-dark-grey) !important; 
+        }
+        .outline { border-color: var(--color-dark-grey) !important; }
+        .background { background-color: var(--color-dark-grey) !important; }
+    }
+}
+.icon {
+    i {
+        font-family: 'Material Icons Sharp' !important;
+        vertical-align: baseline;
+        width         : 100%;
+        text-align    : center;  
+        margin-top: 4px;
+        margin-left: .5px;
+    }
+}
+.background {
+    border-radius : 0;
+    opacity: .25;
+    &.bg-danger-darker {
+        opacity: 1;
+    }
+}
+.outline {
+    position: absolute;
+    left: 0; bottom: 0; width: $icon-width; height: $icon-width;
+    border-width: $outline-width;
+    border-style: solid;
+    border-radius : 100%;
+}
+.outline-limit { 
+    position: absolute;
+    top: -$outline-width; 
+    left: -$outline-width; 
+    right: -$outline-width; 
+    bottom: -$outline-width;
+}
+.outline-limit-height { 
+    overflow: hidden; 
+    position: absolute;
+    top: auto; 
+    left: 0; 
+    right: 0; 
+    bottom: 0;
+}

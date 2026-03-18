@@ -1,0 +1,506 @@
+openapi: 3.1.0
+info:
+  title: NEXUS Timetracker API
+  description: >
+    Endpoints for the NEXUS timetracker. All `/api/timetracker/*` routes
+    require a Bearer token obtained via `POST /api/login`.
+  version: "1.0.0"
+
+servers:
+  - url: "{baseUrl}/api"
+    variables:
+      baseUrl:
+        default: "http://localhost:8000"
+        description: NEXUS backend base URL
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    LatestFocus:
+      description: >
+        A lightweight snapshot of the most recent Focus entry recorded against a
+        target. Returned inline on Target objects so a client can display
+        "last active" information without a separate request.
+      type: [object, "null"]
+      properties:
+        started_at:
+          type: string
+          format: date-time
+          description: When the most recent session started
+        comment:
+          type: string
+          description: Comment left on the most recent session, may be empty
+
+    InvoiceItem:
+      description: >
+        A line item from a project invoice. Returned on non-time-based projects
+        so the timetracker client can let the user tag a session against a
+        specific deliverable.
+      type: object
+      properties:
+        id:
+          type: integer
+        text:
+          type: string
+          description: Display label for the invoice line item
+
+    Target:
+      description: >
+        A trackable entity — either a Project or a Company. Both types share a
+        common shape; project-only fields are present only when `is_project` is
+        `true`. Use the `target` field to determine which ID key to send in
+        subsequent requests (`project_id` or `company_id`).
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        color:
+          type: string
+          description: Hex colour string, e.g. "#89b4fa"
+        icon:
+          type: [string, "null"]
+        target:
+          type: string
+          enum: [project_id, company_id]
+        is_project:
+          type: boolean
+        is_subscribed:
+          type: boolean
+          description: Whether the authenticated user is assigned to this target
+        latest_focus:
+          $ref: "#/components/schemas/LatestFocus"
+        company_name:
+          type: string
+          description: Category label, e.g. "Support", "Organisational"
+        has_time_budget:
+          type: boolean
+        hours_planned:
+          type: [number, "null"]
+          format: float
+          description: Allocated hours from the user's assignment, if set
+        # project-only fields
+        progress:
+          type: integer
+          description: State progress level (projects only)
+        hours_invested:
+          type: number
+          format: float
+          description: Total hours invested (projects only)
+        work_estimated:
+          type: [number, "null"]
+          format: float
+        is_time_based:
+          type: integer
+          enum: [0, 1]
+        is_internal:
+          type: integer
+          enum: [0, 1]
+        needs_progress_bar:
+          type: boolean
+        due_at:
+          type: [string, "null"]
+          format: date-time
+        deadline_at:
+          type: [string, "null"]
+          format: date-time
+        items:
+          type: [array, "null"]
+          description: Invoice items — only present when the project is not time-based
+          items:
+            $ref: "#/components/schemas/InvoiceItem"
+        pluginLinks:
+          type: array
+          items: {}
+        state:
+          type: object
+        finished_state:
+          type: [object, "null"]
+        project_manager_id:
+          type: [integer, "null"]
+
+    Focus:
+      description: >
+        A recorded time entry. Represents a completed work session by a user
+        against a polymorphic parent — either a Project (`App\Models\Project`)
+        or a Company (`App\Models\Company`).
+
+
+        **Polymorphic parent relation**
+
+        Laravel's `morphTo` relation stores the parent as two columns:
+
+        | Column        | Type    | Values |
+        |---------------|---------|--------|
+        | `parent_type` | string  | `App\Models\Project` or `App\Models\Company` |
+        | `parent_id`   | integer | The `id` of the referenced Project or Company |
+
+        When creating a Focus via `POST /timetracker`, you do **not** set these
+        columns directly — instead pass `project_id` or `company_id` and the
+        backend resolves the polymorphic pair automatically.
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+          description: ID of the user who recorded this session
+        parent_id:
+          type: integer
+          description: >
+            Primary key of the parent model. Refers to either a Project or a
+            Company depending on `parent_type`.
+        parent_type:
+          type: string
+          description: >
+            Fully-qualified class name of the parent model.
+          enum:
+            - "App\\Models\\Project"
+            - "App\\Models\\Company"
+        started_at:
+          type: string
+          format: date-time
+          description: When the tracked session began (UTC)
+        duration:
+          type: number
+          format: float
+          description: Duration of the session in hours (fractional, e.g. 1.5 = 1h 30m)
+        comment:
+          type: [string, "null"]
+          description: Optional note left by the user for this session
+        is_unpaid:
+          type: boolean
+          description: >
+            When true, this entry is excluded from billable calculations.
+            Useful for internal or voluntary work tracked against a client.
+        invoice_item_id:
+          type: [integer, "null"]
+          description: >
+            Links this session to a specific InvoiceItem (deliverable) on a
+            non-time-based project. Null for time-based projects and companies.
+        invoiced_in_item_id:
+          type: [integer, "null"]
+          description: >
+            Set by the backend when this Focus has been billed — references the
+            InvoiceItem it was rolled up into. Read-only from the client's
+            perspective.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    FocusUpdateResult:
+      description: >
+        Response from `PUT /timetracker/current_focus`. Indicates whether the
+        user's active focus pointer was actually changed or was already correct.
+      type: object
+      properties:
+        message:
+          type: string
+          examples:
+            - "successfully updated"
+            - "nothing to update"
+        value:
+          type: boolean
+          description: "`true` if the focus was changed, `false` if it was already set to the same target"
+
+    ParentIdentifier:
+      description: >
+        Identifies the parent entity for a timetracker operation.
+        Exactly one of `project_id` or `company_id` must be provided —
+        never both, never neither.
+      type: object
+      properties:
+        project_id:
+          type: integer
+          description: ID of the target project
+        company_id:
+          type: integer
+          description: ID of the target company
+      oneOf:
+        - title: Project
+          required: [project_id]
+        - title: Company
+          required: [company_id]
+
+    Error:
+      description: Generic error response body.
+      type: object
+      properties:
+        message:
+          type: string
+
+paths:
+  /login:
+    post:
+      summary: Login and obtain an API token
+      security: []
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        "200":
+          description: >
+            Login successful. The `user.api_token` field contains the Bearer
+            token to use for all subsequent requests.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      email:
+                        type: string
+                      api_token:
+                        type: string
+                        description: "Use as `Authorization: Bearer <api_token>`"
+        "403":
+          description: Invalid credentials or missing fields
+
+  /timetracker:
+    get:
+      summary: List all trackable targets
+      description: >
+        Returns a sorted array of projects and companies the user has access to,
+        ordered by most recently focused. Filter client-side on `is_subscribed: true`
+        to show only the user's subscribed items.
+      tags: [Timetracker]
+      responses:
+        "200":
+          description: Array of target objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Target"
+
+    post:
+      summary: Record a completed time entry (Focus)
+      description: >
+        Creates a Focus (time entry) for the authenticated user.
+        After stopping a session, call this with the `started_at` timestamp
+        and computed `duration`, then call `PUT /timetracker/current_focus`
+        with an empty body to clear the active focus.
+      tags: [Timetracker]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ParentIdentifier"
+                - type: object
+                  required: [started_at, duration]
+                  properties:
+                    started_at:
+                      type: string
+                      format: date-time
+                      description: When the session started (ISO 8601)
+                    duration:
+                      type: number
+                      format: float
+                      description: Duration in hours
+                    comment:
+                      type: string
+                    is_unpaid:
+                      type: boolean
+                    item_focus_id:
+                      type: integer
+                      description: Invoice item ID to associate with this entry
+      responses:
+        "200":
+          description: The created Focus object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Focus"
+        "400":
+          description: Invalid parent or project is in finished state
+
+  /timetracker/recent-comments:
+    get:
+      summary: Get recent comments for a target
+      description: >
+        Returns up to 30 unique, non-empty comments the authenticated user has
+        previously recorded against the given target, ordered by most recent.
+        Useful for autocomplete in a comment field.
+      tags: [Timetracker]
+      parameters:
+        - name: project_id
+          in: query
+          description: >
+            The project to fetch comments for. Provide exactly one of
+            `project_id` or `company_id` — never both, never neither.
+          schema:
+            type: integer
+        - name: company_id
+          in: query
+          description: >
+            The company to fetch comments for. Provide exactly one of
+            `project_id` or `company_id` — never both, never neither.
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Array of comment strings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        "400":
+          description: No valid parent found
+
+  /timetracker/search:
+    post:
+      summary: Search for trackable targets
+      description: >
+        Searches projects by name and companies by vcard. Returns results in
+        the same format as `GET /timetracker`, sorted by most recently focused.
+      tags: [Timetracker]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [q]
+              properties:
+                q:
+                  type: string
+                  description: Search term
+      responses:
+        "200":
+          description: Matching target objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Target"
+
+  /timetracker/subscribe:
+    post:
+      summary: Subscribe to a project or company
+      description: Creates an assignment linking the authenticated user to the target.
+      tags: [Timetracker]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParentIdentifier"
+      responses:
+        "200":
+          description: The updated target object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Target"
+        "406":
+          description: Already subscribed
+
+  /timetracker/unsubscribe:
+    post:
+      summary: Unsubscribe from a project or company
+      description: Removes the authenticated user's assignment from the target.
+      tags: [Timetracker]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParentIdentifier"
+      responses:
+        "200":
+          description: The updated target object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Target"
+        "406":
+          description: No subscription found
+
+  /timetracker/current_focus:
+    put:
+      summary: Update the user's current focus
+      description: >
+        Sets what the authenticated user is actively working on. Call with a
+        `project_id` or `company_id` to start tracking a target, or with an
+        empty body to clear the focus. This is the primary endpoint a
+        timetracker client calls when the user switches tasks.
+      tags: [Timetracker]
+      requestBody:
+        required: false
+        description: >
+          Omit the body entirely to clear the current focus.
+          When provided, exactly one of `project_id` or `company_id` must be set.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParentIdentifier"
+      responses:
+        "200":
+          description: Result of the update
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FocusUpdateResult"
+
+  /timetracker/status:
+    post:
+      summary: Update presence status
+      description: >
+        Sets the authenticated user's presence status. Setting `offline` also
+        clears the current focus.
+      tags: [Timetracker]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [online, offline, away, dnd]
+      responses:
+        "200":
+          description: Status updated
+          content:
+            text/plain:
+              schema:
+                type: string
+                examples:
+                  - "successfully updated"

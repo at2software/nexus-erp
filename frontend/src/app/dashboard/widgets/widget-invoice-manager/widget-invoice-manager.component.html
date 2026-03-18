@@ -1,0 +1,55 @@
+<div class="card card-chart mb-3">
+
+  <div class="card-header gap-2">
+    <n>invoice</n>
+    <span class="flex-fill text-truncate" i18n="@@i18n.widget-invoice-manager">invoice manager</span>
+    <div class="chart-title" roles="invoicing">{{value ? (value | mshort) : (value | loading)}}</div>
+  </div>
+
+  @if (hasInvoicesModule) {
+  <chart-card-range type="rangeArea" [chartData]="chartData" [suffix]="' ' + global.currencySymbol()"
+    [color]="['cyan','cyan-teal','teal']" [seriesCount]="3" roles="invoicing"></chart-card-range>
+  }
+
+  <widget-options [options]="getOptions()" (updated)="_onUpdate($event)"
+    (deleted)="onDelete($event)"></widget-options>
+
+  @if (!getOptions()['chart-only']?.value) {
+  <ul-compact>
+    @for (group of groupedData; track group.company.id; let i = $index) {
+      <li class="list-group-item hstack gap-2 text-nowrap" [class.compact]="isCompactGroup(group)">
+        <div>
+          <avatar [object]="group.company"></avatar>
+        </div>
+        <div class="flex-fill text-truncate">{{group.company.name}}</div>
+        <div class="d-flex gap-1 align-items-center">
+          @for (item of group.items; track item.type) {
+            @if (item.type === 'timebased') {
+              <div ngbDropdown class="d-inline-flex" placement="bottom">
+                <button class="badge badge-invoice-type pointer" [class]="'bg-' + getColorForType(item.type)"
+                  [ngbTooltip]="getTooltipForType(item.type)" ngbDropdownToggle>
+                  {{item.value | mshort}}
+                </button>
+                <div ngbDropdownMenu>
+                  @for (project of getTimebasedProjects(group); track project.id) {
+                    <button ngbDropdownItem (click)="navigateToProjectSupport(project.id)" tabindex="0" (keydown.enter)="navigateToProjectSupport(project.id)" class="d-flex justify-content-between">
+                      <span>{{project.name}}</span>
+                      <span class="ms-3 text-muted">{{getProjectValue(project) | mshort}}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+            } @else {
+              <span class="badge badge-invoice-type pointer" [class]="'bg-' + getColorForType(item.type)"
+                [ngbTooltip]="getTooltipForType(item.type)" (click)="onBadgeClick(group, item, $event)" tabindex="0" (keydown.enter)="onBadgeClick(group, item, $event)">
+                {{item.value | mshort}}
+              </span>
+            }
+          }
+        </div>
+      </li>
+    }
+  </ul-compact>
+  }
+
+</div>

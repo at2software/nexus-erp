@@ -1,0 +1,19 @@
+@if (!user.public_key) {
+  <empty-state class="encryption" title="" [card]="false">
+    <div class="mb-3" i18n="@@i18n.encryption.noRsaKeypair">you do not have a RSA keypair yet</div>
+    <div class="mb-3 d-flex justify-content-center">
+      <div class="m-2">
+        <input class="d-none" #file (change)="onFileSelected($event)" type="file" id="fileinput" value="">
+        <button class="btn btn-primary" i18n="@@i18n.common.import" (click)="file.click()" [disabled]="isGenerating">import</button>
+      </div>
+      <div class="m-2">
+        <button class="btn btn-primary" i18n="@@i18n.common.create" (click)="createKeypair()" [disabled]="isGenerating">
+          @if (isGenerating) {
+            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+          }
+          <span>create</span>
+        </button>
+      </div>
+    </div>
+  </empty-state>
+}

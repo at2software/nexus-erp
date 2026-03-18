@@ -1,0 +1,15 @@
+<div class="modal d-block background" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" i18n="@@i18n.common.nexus_environment_error">NEXUS // environment error</span>
+            </div>
+            <div class="modal-body">
+                <span i18n="@@i18n.common.environment_error_message">The environment information seems to be corrupted. You are not logged out, but you cannot use NEXUS at the moment. Please report this to your system administrator and try again.</span>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" (click)="reload()" i18n="@@i18n.common.try_again">try again</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,21 @@
+.foci-table {
+    table-layout: fixed;
+}
+.row>div {
+    position: relative;
+    .flow-arrow:before {  
+        position: absolute;
+        top: 140px;
+        right: -19px;
+        background-color: var(--color-primary-4);
+        width: 40px;
+        height: 40px;
+        border-radius: 100%;
+        z-index: 1;
+        content: "arrow_forward";
+        font-family: "Material Icons Sharp" !important;
+        padding: 2px 9px;
+        font-size: 24px;  
+        box-shadow: 0 5px 5px #0009;
+    }
+}

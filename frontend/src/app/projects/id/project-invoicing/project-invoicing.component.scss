@@ -1,0 +1,6 @@
+// Ensure prefix card has reasonable minimum height relative to settings card
+@media (min-width: 768px) {
+    .prefix-card {
+        min-height: 200px; // Reduced height for better proportion
+    }
+}

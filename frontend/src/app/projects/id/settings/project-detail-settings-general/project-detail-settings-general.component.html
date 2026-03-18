@@ -1,0 +1,180 @@
+<div class="card mb-3 p-2">
+
+    <div roles="project_manager">
+        <input type="text" class="form-control-header" tabindex="1" [autosave]="parent.current"
+            [(ngModel)]="parent.current.name">
+    </div>
+
+    <div noroles="project_manager">
+        <div class="input-group">
+            <div class="input-group-text input-group-text-plain" i18n="@@i18n.common.title">title</div>
+            <div class="input-group-text input-group-text-plain">{{parent.current.name}}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header" i18n="@@i18n.common.general">general</div>
+    <ul class="list-group">
+        @if (global.user?.hasAnyRole(['admin', 'project_manager'])) {
+        <li class="input-group py-1 px-2">
+            <div class="input-group-text input-group-text-darker">
+                <i i18n-ngbTooltip="@@i18n.common.parent" ngbTooltip="parent">supervisor_account</i>
+            </div>
+            <div ngbDropdown class="form-control">
+                <div ngbDropdownToggle id="btnGroupDrop1" class="dropdown-toggle text-truncate cursor-pointer"
+                    style="font-weight: normal;" [class.text-primary]="parent.parent ? true : false">
+                    @if (parent.parent) {
+                    <span>{{parent.parent.name}}</span>
+                    }
+                    @if (!parent.parent) {
+                    <span i18n="@@i18n.project.noParentProject">no parent project</span>
+                    }
+                </div>
+                <ul ngbDropdownMenu class="dropdown-menu">
+                    @if (parent.parent) {
+                    <li class="cursor-pointer">
+                        <a class="dropdown-item text-primary border-bottom" smartLink="/projects/{{parent.parent.id}}">
+                            <i>link</i>
+                            {{parent.parent.name}}
+                        </a>
+                    </li>
+                    }
+                    @for (_ of parent.current.companys_base_projects; track _.id) {
+                    @if (_.id !== parent.current.id) {
+                    <li class="cursor-pointer">
+                        <a class="dropdown-item" (click)="parent.setParent(_)" (keyup.enter)="parent.setParent(_)" tabindex="0">{{_.name}}</a>
+                    </li>
+                    }
+                    }
+                    <li class="cursor-pointer">
+                        <a class="dropdown-item" (click)="parent.setParent(undefined)" tabindex="0" (keydown.enter)="parent.setParent(undefined)"
+                            i18n="@@i18n.project.noParentProject">no parent project</a>
+                    </li>
+                </ul>
+            </div>
+        </li>
+        }
+
+        <!-- next reminder -->
+        <li class="hstack gap-2 py-1 px-2" roles="project_manager">
+            <div class="input-group">
+                <div class="input-group-text input-group-text-darker">
+                    <i i18n-ngbTooltip="@@i18n.common.reminder" ngbTooltip="reminder">notifications_active</i>
+                </div>
+                <input class="form-control flex-fill" (click)="d.toggle()" tabindex="0" (keydown.enter)="d.toggle()" container="body"
+                    (dateSelect)="updateDate('remind_at', $event)" placeholder="yyyy-mm-dd"
+                    [(ngModel)]="parent.current.remind_at" ngbDatepicker #d="ngbDatepicker">
+                <button class="btn text-primary" (click)="d.toggle()" tabindex="0" (keydown.enter)="d.toggle()" type="button"><i>calendar_month</i></button>
+            </div>
+        </li>
+        <li class="hstack gap-2 py-1 px-2" noroles="project_manager">
+            <div class="input-group">
+                <div class="input-group-text input-group-text-plain">
+                    <i i18n-ngbTooltip="@@i18n.common.reminder" ngbTooltip="reminder">notifications_active</i>
+                </div>
+                <div class="input-group-text input-group-text-darker">{{parent.current.remind_at | date }}</div>
+            </div>
+        </li>
+
+        <!-- Deadline -->
+        <li class="hstack gap-2 py-1 px-2" roles="project_manager">
+            <div class="input-group">
+                <div class="input-group-text input-group-text-darker">
+                    <i i18n-ngbTooltip="@@i18n.common.deadline" ngbTooltip="deadline">circle_notifications</i>
+                </div>
+                <input class="form-control flex-fill" (click)="deadline.toggle()" tabindex="0" (keydown.enter)="deadline.toggle()" container="body"
+                    (dateSelect)="updateDate('due_at', $event)" placeholder="yyyy-mm-dd"
+                    [(ngModel)]="parent.current.due_at" ngbDatepicker #deadline="ngbDatepicker">
+                <button class="btn text-primary" (click)="deadline.toggle()" tabindex="0" (keydown.enter)="deadline.toggle()"
+                    type="button"><i>calendar_month</i></button>
+            </div>
+        </li>
+        <li class="hstack gap-2 py-1 px-2" noroles="project_manager">
+            <div class="input-group">
+                <div class="input-group-text input-group-text-darker">
+                    <i i18n-ngbTooltip="@@i18n.common.deadline" ngbTooltip="deadline">circle_notifications</i>
+                </div>
+                <div class="input-group-text input-group-text-plain">{{parent.current.due_at|date}}</div>
+            </div>
+        </li>
+
+        @if (!parent.current.is_time_based && !parent.current.is_internal) {
+        <li class="hstack gap-2 py-1 px-2" roles="invoicing">
+            <div class="input-group">
+                <div class="input-group-text input-group-text-darker">
+                    <i i18n-ngbTooltip="@@i18n.common.targetWage" ngbTooltip="targetWage">paid</i>
+                </div>
+                <input type="text" class="form-control" tabindex="1" [autosave]="parent.current"
+                    [(ngModel)]="parent.current.target_wage">
+            </div>
+        </li>
+        }
+
+        @if (!parent.current.is_internal) {
+        <li class="form-switch mx-3 hstack gap-2" roles="project_manager">
+            <input class="form-check-input me-3" type="checkbox" role="switch" value="1" (change)="onProjectUpdate()" [(ngModel)]="parent.current.is_time_based" id="is_time_based">
+            <div for="is_time_based" i18n="@@i18n.common.timeBased">time based</div>
+        </li>
+        }
+
+        <li class="form-switch mx-3 hstack gap-2" roles="project_manager">
+            <input class="form-check-input me-3" type="checkbox" role="switch" value="1"
+                (change)="onProjectUpdate()" [(ngModel)]="parent.current.is_internal" id="is_internal">
+            <div for="is_internal" i18n="@@i18n.project.internal">internal project</div>
+        </li>
+
+        <li class="d-flex m-3" noroles="project_manager">
+            @if (parent.current.is_internal) {
+            <span class="badge bg-primary" i18n="@@i18n.project.internal">internal project</span>
+            }
+            @if (parent.current.is_time_based) {
+            <span class="badge bg-primary" i18n="@@i18n.common.timebased">time-based</span>
+            }
+        </li>
+
+        @if (global.user?.hasRole('invoicing')) {
+        <li class="form-switch mx-3 hstack gap-2">
+            <input class="form-check-input me-3" type="checkbox" role="switch" value="1"
+                (change)="onIndividualWageToggle($event)" [checked]="parent.current.hasIndividualWage()"
+                id="has_individual_wage">
+            <div for="has_individual_wage" i18n="@@i18n.projects.individualWage">individual wage</div>
+        </li>
+        <li class="d-flex">
+            @if (parent.current.hasIndividualWage()) {
+            <div class="input-group p-2">
+                <input class="form-control flex-fill" [autosave]="parent.current"
+                    [(ngModel)]="parent.current.individual_wage" [suffix]="global.currencySymbol()">
+            </div>
+            }
+        </li>
+        }
+        <project-default-product [project]="parent.current"></project-default-product>
+    </ul>
+</div>
+
+@if (global.user?.hasRole('invoicing')) {
+<div class="card mb-3">
+    <div class="card-header">
+        <span i18n="@@i18n.invoice.paymentTerms">payment terms</span>
+    </div>
+    <ul class="list-group">
+        <li class="list-group-item list-group-item-action d-flex py-1">
+            <div class="text-muted me-2" ngbTooltip="payment duration" i18n-ngbTooltip="@@i18n.invoice.paymentDuration">
+                <i>timelapse</i></div>
+            <div (click)="onChangePaymentDuration()" (keyup.enter)="onChangePaymentDuration()" tabindex="0" class="pointer flex-fill">
+                @if (parent.current.getParam('INVOICE_PAYMENT_DURATION')) {
+                <span>{{parent.current.getParam('INVOICE_PAYMENT_DURATION')}} <span
+                        i18n="@@i18n.common.days">days</span></span>
+                }
+                @if (!parent.current.getParam('INVOICE_PAYMENT_DURATION')) {
+                <span class="text-muted" i18n="@@i18n.projects.useCompanyDefault">use company default</span>
+                }
+            </div>
+            @if (parent.current.getParam('INVOICE_PAYMENT_DURATION')) {
+            <div><i class="text-primary pointer" (click)="removePaymentDuration()" (keyup.enter)="removePaymentDuration()" tabindex="0">delete</i></div>
+            }
+        </li>
+    </ul>
+</div>
+}

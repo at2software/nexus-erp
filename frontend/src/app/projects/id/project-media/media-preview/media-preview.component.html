@@ -1,0 +1,21 @@
+@if (parent) {
+<div class="card mb-3" [dnd]="parent.getApiPathWithId() + '/media'" [dndAllowed]="['image/', 'application/pdf']"
+    (dndUploaded)="parent.refresh().subscribe()">
+    <div class="card-header" i18n="@@i18n.common.media">media</div>
+    @if (parent.files.length) {
+    <ul class="list-group">
+        @for (file of parent.files; track file.id) {
+        <li class="list-group-item hstack gap-2" [nx]="file" [tables]="parent.files">
+            <div>
+                <file [color]="file.colorCss" [size]="32" (click)="show(file)"><i>{{file.getIcon()}}</i></file>
+            </div>
+            <div class="vstack gap-0">
+                <span class="font-monospace">{{file.name}}</span>
+                <span class="font-monospace text-muted text-smaller" style="font-size: 10px;">{{file.created_at | date:'short'}}</span>
+            </div>
+        </li>
+        }
+    </ul>
+    }
+</div>
+}

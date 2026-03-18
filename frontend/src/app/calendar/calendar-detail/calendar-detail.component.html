@@ -1,0 +1,134 @@
+
+<app-header>
+  <div class="syn-image">
+    <div class="logo" style="background-image: url(assets/images/calendar.jpg);"></div>
+  </div>
+  <div class="d-flex align-items-center gap-3">
+    <button class="btn btn-plain text-primary" (click)="previousYear()" tabindex="0" (keydown.enter)="previousYear()">
+      <i>chevron_left</i>
+    </button>
+    <h1>{{year}}</h1>
+    <button class="btn btn-plain text-primary" (click)="nextYear()" tabindex="0" (keydown.enter)="nextYear()">
+      <i>chevron_right</i>
+    </button>
+  </div>
+  <ul class="nav">
+    @for (month of monthNames; track month; let i = $index) {
+      <header-link-item class="pointer" [active]="isActiveMenu(i)" [title]="month" (click)="selectMonth(i)" tabindex="0" (keydown.enter)="selectMonth(i)"></header-link-item>
+    }
+  </ul>
+</app-header>
+
+<toolbar style="position:relative;" class="gap-2">
+  <button class="btn btn-outline-primary" routerLink="/profile/vacation-request">
+    <i>beach_access</i> Vacation Request
+  </button>
+  <button #popupButton (click)="togglePopup()" tabindex="0" (keydown.enter)="togglePopup()" class="btn btn-primary"><i>calendar_month</i></button>
+  @if (isPopupOpen) {
+    <div class="popup shadow bg-transparent border-0 rounded" [ngStyle]="popupStyles" #popup>
+      <div class="month-picker">
+        <div class="input-group mb-2">
+          <div class="input-group-prepend">
+            <span class="input-group-text" i18n="@@i18n.common.year">year</span>
+          </div>
+          <select class="form-control form-select" [(ngModel)]="year" (ngModelChange)="updateYear($event)" (change)="update()">
+            @for (y of yearRange; track y) {
+              <option [value]="y" [class.text-primary]="isThisYear(y)">{{ y }}</option>
+            }
+          </select>
+        </div>
+        <div class="month-grid">
+          @for (month of monthNames; track month; let i = $index) {
+            <button class="btn btn-outline-primary mb-2" [class.text-primary]="isThisMonth(i)" (click)="selectMonth(i)" tabindex="0" (keydown.enter)="selectMonth(i)">
+              {{ month }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</toolbar>
+
+<div class="container">
+  <div class="row">
+    <div class="col text-center">
+      <div class="card calendar-container">
+        <table class="table table-bordered mt-3 calendar-table" #calendarTable>
+          <thead>
+            <tr>
+              @for (day of daysOfWeek; track day) {
+                <th>{{ day }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (week of calendar; track week; let weekIndex = $index) {
+              <tr
+                class="calendar-week"
+                [style.height]="getWeekHeight(weekIndex)">
+                @for (date of week; track date; let dayIndex = $index) {
+                  <td
+                    [class.text-muted]="date.getMonth() !== selectedMonth"
+                    [class.text-primary]="isToday(date)"
+                    class="calendar-cell align-top"
+                    [style.height]="getWeekHeight(weekIndex)"
+                    (click)="addNewCalendarEntry($event, date)" tabindex="0" (keydown.enter)="addNewCalendarEntry($event, date)">
+                    <div class="calendar-cell-content">
+                      <div class="date-number">{{ date.getDate() }}</div>
+                    </div>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        <!-- Event spans overlay - outside table -->
+        <div class="events-overlay">
+          @for (week of eventSpans; track week; let weekIndex = $index) {
+            <div
+              class="week-events-container"
+              [style.top]="getWeekTopPosition(weekIndex)"
+              [style.height]="getWeekHeight(weekIndex)">
+              <div class="event-spans-container">
+                @for (span of week; track span) {
+                  <div
+                    class="event-span"
+                                 [ngStyle]="{
+                                     'grid-column': (span.startDay + 1) + ' / ' + (span.endDay + 2),
+                                     'grid-row': span.row + 1
+                                 }"
+                    (click)="editCalendarEntry($event, span.calendarEntry)" tabindex="0" (keydown.enter)="editCalendarEntry($event, span.calendarEntry)"
+                    (mouseover)="hoveredEventId = span.calendarEntry.id" (focus)="hoveredEventId = span.calendarEntry.id"
+                    (mouseleave)="hoveredEventId = ''" (blur)="hoveredEventId = ''"
+                    [class]="'event-span ' + getEventTypeClass(span.calendarEntry)"
+                                 [ngClass]="{
+                                     'event-hovered': hoveredEventId === span.calendarEntry.id,
+                                     'event-non-editable': !span.calendarEntry.is_editable,
+                                     'single-day': span.startDay === span.endDay,
+                                     'multi-day': span.startDay !== span.endDay
+                                 }"
+                    [ngbTooltip]="span.calendarEntry.vcalendar_event.description">
+                    <div class="event-content">
+                      @if (span.calendarEntry.vcalendar_event.icon) {
+                        <i class="event-icon">
+                          {{span.calendarEntry.vcalendar_event.icon}}
+                        </i>
+                      }
+                      @if (span.calendarEntry.vcalendar_event.time) {
+                        <span class="time">
+                          {{span.calendarEntry.vcalendar_event.time}}
+                        </span>
+                      }
+                      <span class="event-title">{{span.calendarEntry.vcalendar_event.title}}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

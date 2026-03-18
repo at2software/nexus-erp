@@ -1,0 +1,48 @@
+@if (timeBased.length) {
+<div class="header hstack gap-2">
+    <i>schedule</i>
+    <span class="flex-fill" i18n="@@i18n.common.timeBased">time based</span>
+</div>
+<ul class="list-group">
+    @for (_ of timeBased; track _.id) {
+    <li class="list-group-item hstack gap-2 pointer" [routerLink]="['/projects', _.id, 'invoicing']">
+        <avatar [object]="_"></avatar>
+        <div class="flex-fill text-truncate">{{_.name}}</div>
+        <span class="text-muted small">{{_.uninvoiced_hours | number : '1.1-1'}}h</span>
+    </li>
+    }
+</ul>
+}
+
+@if (customerSupport.length) {
+<div class="header hstack gap-2">
+    <i>support_agent</i>
+    <span class="flex-fill" i18n="@@i18n.common.customerSupport">customer support</span>
+</div>
+<ul class="list-group">
+    @for (_ of customerSupport; track _.id) {
+    <li class="list-group-item hstack gap-2 pointer" [routerLink]="['/customers', _.id, 'billing']">
+        <avatar [object]="_"></avatar>
+        <div class="flex-fill text-truncate">{{_.name}}</div>
+        <span class="text-muted small">{{_.foci_unbilled_sum_duration | number : '1.1-1'}}h</span>
+    </li>
+    }
+</ul>
+}
+
+@if (preparedInvoices.length) {
+<div class="header hstack gap-2">
+    <n>invoice</n>
+    <span class="flex-fill" i18n="@@i18n.invoice.prepared">prepared</span>
+</div>
+<ul class="list-group">
+    @for (_ of preparedInvoices; track _.id) {
+    <li class="list-group-item hstack gap-2 pointer"
+        [routerLink]="_.class === 'Company' ? ['/customers', _.id, 'billing'] : ['/projects', _.id, 'invoicing']">
+        <avatar [object]="_"></avatar>
+        <div class="flex-fill text-truncate">{{_.name}}</div>
+        <span class="text-muted small">{{_.net_remaining | mshort}}</span>
+    </li>
+    }
+</ul>
+}

@@ -1,0 +1,17 @@
+@for (toast of toastService.toasts; track toast.id) {
+  <ngb-toast class="fs-6 align-items-top mb-2 {{toast.classname}}"
+    (hidden)="toastService.remove(toast)">
+    <div class="hstack gap-2">
+      @if (toast.icon) {
+        <i class="fs-4">{{toast.icon}}</i>
+      }
+      <div class="flex-fill">
+        @if (isTemplate(toast)) {
+          <ng-template [ngTemplateOutlet]="toast.textOrTpl"></ng-template>
+        } @else {
+          <div [innerHTML]="toast.textOrTpl | safe:'html'"></div>
+        }
+      </div>
+    </div>
+  </ngb-toast>
+}

@@ -1,0 +1,48 @@
+<div class="modal d-block" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title">{{item.name}}</span>
+      </div>
+      <div class="modal-body">
+        <div class="input-group mb-3 d-flex">
+          <span class="input-group-text" i18n="@@i18n.common.name">name</span>
+          <input class="form-control" [(ngModel)]="item.name">
+        </div>
+        <div class="input-group mb-3 d-flex">
+          <span class="input-group-text">Cost ({{global.currencySymbol()}})</span>
+          <input class="form-control" [(ngModel)]="item.price">
+          <select class="form-select" [(ngModel)]="item.repeat">
+            @for (key of item.getAllRepeatKeys(); track key) {
+              <option [style.color]="item.repeatColorFor(key)" value="{{key}}">
+                {{item.repeatStringFor(key)}}
+              </option>
+            }
+          </select>
+        </div>
+        <div class="input-group mb-3 d-flex">
+          <span class="input-group-text" i18n="@@i18n.common.category">category</span>
+          <select class="form-select" [(ngModel)]="item.category_id">
+            @for (cat of categories; track cat.id) {
+              <option value="{{cat.id}}" [style.color]="cat.color">
+                {{cat.name}}
+              </option>
+            }
+          </select>
+        </div>
+        <!-- <div class="input-group mb-3 d-flex">
+        <span class="input-group-text">Starts at</span>
+        <input class="form-control" #date [ngModel]="item.starts_at | date:'dd.MM.YYYY HH:mm'" #dateTime>
+      </div> -->
+      <!-- <div class="input-group mb-3 d-flex">
+      <span class="input-group-text">Standing order</span>
+      <search-input class="flex-fill" only="InvoiceItem" [has_icon]="true"></search-input>
+    </div> -->
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn" (click)="decline()" data-bs-dismiss="modal" i18n="@@i18n.common.cancel">cancel</button>
+    <button type="button" class="btn btn-primary" (click)="accept()" hotkey="CTRL+ENTER" i18n="@@i18n.common.ok">ok</button>
+  </div>
+</div>
+</div>
+</div>

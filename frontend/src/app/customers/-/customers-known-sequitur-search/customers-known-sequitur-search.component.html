@@ -1,0 +1,91 @@
+<div class="row">
+  @if (!number) {
+    <div class="col-3">
+      <div class="card">
+        <div class="card-header" i18n="@@i18n.common.contact">contact</div>
+        <div class="card-body">
+          <form>
+            <search-input only="Company,CompanyContact" (itemSelected)="onSearchResultSelect($event)"></search-input>
+          </form>
+        </div>
+      </div>
+    </div>
+  }
+  @if (number) {
+    <div class="col-3">
+      @if (noCustomerFound) {
+        <div class="card mb-3">
+          <div class="card-header">
+            <span i18n="@@i18n.common.contact">contact</span>
+          </div>
+          <div class="card-body">
+            <button type="button" class="btn btn-primary mb-3 capitalize" (click)="createCostumer()">
+              <i>add</i><span i18n="@@i18n.common.company">company</span>
+            </button>
+            <div class="mb-3">
+              <div class="form-label" i18n="@@i18n.customers.link_existing_company">link existing company</div>
+              <search-input only="Company" (itemSelected)="linkExistingCompany($event)" [query]="''" placeholder="Search companies..." i18n-placeholder="@@i18n.customers.searchCompanies"></search-input>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+  @if (!number) {
+    <div class="col-9">
+      <div class="card">
+        <div class="card-header">
+          <span>
+              <span i18n="@@i18n.customers.whatIsKnownSequitur">what is known sequitur</span>
+              <span class="notranslate">?</span>
+          </span>
+        </div>
+        <img src="assets/images/knownseq.png" class="card-img-top hero-image" alt="Known Sequitur Hero Image">
+        <div class="card-body">
+          <p i18n="@@i18n.knownseq.description">Known Sequitur is your comprehensive call management interface for handling customer interactions while on the phone. It provides everything you need during a call: add new projects and leads, update existing project information, capture additional contact details and employees, view important customer statistics, and identify missing information (like birthdays or lead sources) so you can ask the caller directly.</p>
+          <h6 i18n="@@i18n.knownseq.getting_started">getting started</h6>
+          <ul>
+            <li i18n="@@i18n.knownseq.search_contact">use the search field on the left to find and open an existing contact</li>
+            <li i18n="@@i18n.knownseq.start_tracking">once selected, you'll be taken to the customer's tracking dashboard</li>
+          </ul>
+          <h6 i18n="@@i18n.knownseq.phone_integration">phone client integration</h6>
+          <p>
+              <span i18n="@@i18n.customers.connectYourPhoneClientTo">connect your phone client to automatically open known sequitur when receiving calls</span>
+              <span class="notranslate">:</span>
+          </p>
+          <div class="bg-black p-3 rounded">
+            <code>{{getKnownSeqUrl()}}{{ '{' }}phoneNumber{{ '}' }}</code>
+          </div>
+          <small class="text-muted" i18n="@@i18n.knownseq.phone_integration_note">Replace {{ '{' }}phoneNumber{{ '}' }} with the actual caller's phone number. This will automatically look up the customer or allow you to create/link a new one.</small>
+        </div>
+      </div>
+    </div>
+  }
+  @if (number && noCustomerFound) {
+    <div class="col-9">
+      <div class="card">
+        <div class="card-header">
+          <span i18n="@@i18n.knownseq.caller_not_resolved">could not resolve caller</span>
+        </div>
+        <div class="card-body text-center">
+          <div class="mb-4">
+            <i style="font-size: 4rem; color: #6c757d;">phone_missed</i>
+          </div>
+          <span class="mb-3" i18n="@@i18n.knownseq.unknown_number">unknown phone number</span>
+          <p class="text-muted mb-4" i18n="@@i18n.knownseq.number_not_found">The phone number <strong>{{number}}</strong> could not be resolved to any existing customer in your database.</p>
+          <div class="mb-3">
+            <p>
+                <span i18n="@@i18n.customers.toProceedWithThisCall">to proceed with this call, you can either</span>
+                <span class="notranslate">:</span>
+            </p>
+            <ul class="list-unstyled">
+              <li class="mb-2"><i class="me-2">link</i><span i18n="@@i18n.knownseq.link_existing">link this number to an existing company</span></li>
+              <li><i class="me-2">add_business</i><span i18n="@@i18n.knownseq.create_new">create a new company for this caller</span></li>
+            </ul>
+          </div>
+          <p class="small text-muted" i18n="@@i18n.knownseq.use_left_panel">Use the options in the left panel to get started.</p>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,15 @@
+<div class="card card-chart mb-3">
+
+  <div class="card-header gap-2">
+    <n>invoice</n>
+    <span class="flex-fill text-truncate">{{getI18n()}}</span>
+    <div class="chart-title">{{ data?.revenue | mshort}}</div>
+  </div>
+
+  @if (data) {
+    <div class="card-body">
+      <progress-bar [progress]="data.revenue / data.expenses" [style]="'primary'"></progress-bar>
+    </div>
+  }
+  <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+</div>

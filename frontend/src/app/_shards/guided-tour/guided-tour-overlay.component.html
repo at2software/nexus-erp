@@ -1,0 +1,51 @@
+@if (currentSlide) {
+  <!-- Dark overlay panels (create hole around focused element) -->
+  @if (panels) {
+    <div class="gt-panel" [style]="panels.top"></div>
+    <div class="gt-panel" [style]="panels.bottom"></div>
+    <div class="gt-panel" [style]="panels.left"></div>
+    <div class="gt-panel" [style]="panels.right"></div>
+    <div class="gt-ring" [style]="panels.ring"></div>
+  } @else {
+    <!-- No focus element: full-screen dark overlay -->
+    <div class="gt-overlay-full"></div>
+  }
+
+  <!-- Info card: centered when no focus, when element is too wide, or element is too tall -->
+  <div class="gt-card"
+       [style]="panels ? panels.card : null"
+       [class.gt-card-centered]="!panels"
+       [class.gt-card-centered-h]="panels?.cardCentered">
+    @if (currentSlide.title) {
+      <div class="gt-card-header">{{ currentSlide.title }}</div>
+    }
+    <div class="gt-card-body">{{ currentSlide.content }}</div>
+
+    <div class="gt-card-footer">
+      <!-- Disable checkbox (bottom-left) -->
+      <label class="gt-disable-label">
+        <input type="checkbox"
+               [checked]="disableChecked"
+               (change)="onDisableChange($any($event.target).checked)">
+        <span i18n="@@i18n.guidedTour.disable">disable NEXUS guide</span>
+      </label>
+
+      <!-- Slide indicators + Next button (bottom-right) -->
+      <div class="gt-footer-right">
+        <!-- Dot indicators -->
+        <div class="gt-dots">
+          @for (dot of slideIndicators; track $index; let i = $index) {
+            <span class="gt-dot" [class.gt-dot-current]="i === 0"></span>
+          }
+        </div>
+        <button class="btn btn-primary btn-sm" (click)="onNext()">
+          @if ((queueLength$ | async) === 1) {
+            <span i18n="@@i18n.guidedTour.done">done</span>
+          } @else {
+            <span i18n="@@i18n.guidedTour.next">next</span>
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,16 @@
+<div class="d-flex flex-row justify-content-between header-container">
+
+  <input #searchInput
+    class="m-0 p-2 flex-fill"
+    type="text"
+    [placeholder]="text"
+    (focus)="onInputSelect()"
+    (input)="onInputChange()"/>
+
+  <table-header-sort-button
+  class="sort-button"
+    [key]="key"
+    [sortData]="sortData">
+  </table-header-sort-button>
+
+</div>

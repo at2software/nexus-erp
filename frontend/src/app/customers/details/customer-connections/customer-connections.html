@@ -1,0 +1,50 @@
+<scrollbar>
+  <div class="row">
+    <div class="col-md-3">
+      <div class="card sticky-side info-box-card">
+        <div class="card-header">
+          connections
+          <div class="card-header-actions">
+            <i class="text-primary cursor-pointer"
+              [ngbPopover]="popContent"
+              placement="end"
+              container="body"
+              [autoClose]="'outside'"
+              (shown)="onPopoverShown()"
+            popoverTitle="Add connection">add</i>
+
+            <ng-template #popContent>
+              <search-input #popSearch only="Company" (itemSelected)="onCompanySelect($event)">
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item hstack gap-2 pointer text-primary" (click)="createNewCompany(popSearch)" (keyup.enter)="createNewCompany(popSearch)" tabindex="0">
+                  <div><i>add</i></div>
+                  <div class="flex-fill">
+                    <span i18n="@@i18n.common.createNew">create new</span>
+                    @if (popSearch.query) {
+                      <span class="fw-bold">"{{popSearch.query}}"</span>
+                    }
+                  </div>
+                </div>
+              </search-input>
+            </ng-template>
+          </div>
+        </div>
+        @if (parent.current) {
+          <ul class="list-group">
+            @for (con of connections; track con.id) {
+              <li class="list-group-item d-flex text-nowrap" [nx]="con" [tables]="connections" (singleActionResolved)="singleActionResolved()">
+                <div class="me-3"><avatar [object]="con.otherCompany(parent.current)"></avatar></div>
+                <div class="text-truncate">{{con.otherCompany(parent.current)?.name}}</div>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+    <div class="col-md-9">
+      @if (parent.current && connections.length) {
+        <network-chart class="card chart" [root]="parent.current" [data]="connections" [focus]="parent.current"></network-chart>
+      }
+    </div>
+  </div>
+</scrollbar>

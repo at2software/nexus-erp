@@ -1,0 +1,55 @@
+@if (global.user) {
+  <activity-tab icon="security" [badge]="global.encryptionsValid ? undefined : '!'">
+    <div class="container">
+      @if (!global.user.public_key) {
+        <scrollbar>
+          @if (!global.user.public_key) {
+            <rsa-settings-empty [user]="global.user"></rsa-settings-empty>
+          }
+        </scrollbar>
+      }
+      @if (global.user.public_key) {
+        <scrollbar>
+          <rsa-settings [user]="global.user"></rsa-settings>
+          @if (project) {
+            <div class="header">{{project.name}}</div>
+            <ul class="list-group">
+              <li class="list-group-item d-flex" *nxFor="let p of project.plugin_links">
+                <div class="ms-1 me-2">
+                  <n [ngbTooltip]="factory.instanceFor(p)?.state" class="text-{{factory.instanceFor(p)?.getStateCss()}}">{{factory.instanceFor(p)?.icon()}}</n>
+                </div>
+                <div>
+                  {{factory.instanceFor(p)?.getName()}}
+                </div>
+              </li>
+            </ul>
+          }
+          <div class="header">
+            <span i18n="@@i18n.encryption.myTokens">my tokens</span>
+            <i class="float-end text-primary cursor-pointer" smartLink="/profile/plugins">chevron_right</i>
+          </div>
+          <ul class="list-group">
+            <li class="list-group-item d-flex" *nxFor="let p of factory.getPluginEncryptions()">
+              <div class="ms-1 me-2">
+                <n [ngbTooltip]="factory.instanceFor(p)?.state" class="text-{{factory.instanceFor(p)?.getStateCss()}}">{{factory.instanceFor(p)?.icon()}}</n>
+              </div>
+              @if (p.value.url) {
+                <div class="flex-fill">
+                  {{p.value.url}}
+                </div>
+              }
+              @if (project) {
+                <div>
+                  @if (factory.instanceFor(p)?.icon() === 'mattermost') {
+                    <i class="text-primary cursor-pointer" (click)="onNewPluginChannel(factory.instanceFor(p)!)" (keyup.enter)="onNewPluginChannel(factory.instanceFor(p)!)" tabindex="0" ngbTooltip="create new channel">add_comment</i>
+                  }
+                  <i class="text-primary cursor-pointer" (click)="onNewPluginLink(factory.instanceFor(p)!)" (keyup.enter)="onNewPluginLink(factory.instanceFor(p)!)" tabindex="0" ngbTooltip="link ID">add</i>
+                </div>
+              }
+            </li>
+          </ul>
+        </scrollbar>
+      }
+    </div>
+  </activity-tab>
+}

@@ -1,0 +1,13 @@
+.btn {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: smaller;
+    padding: 0 5px;
+    border: none;
+    &:not(.active) {
+        color: #666;
+    }
+    &.active {
+        background-color: var(--color-success);
+        color: black;
+    }
+}

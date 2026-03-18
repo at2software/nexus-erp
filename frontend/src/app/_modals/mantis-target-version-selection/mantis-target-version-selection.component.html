@@ -1,0 +1,20 @@
+<div class="modal d-block" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title" i18n="@@i18n.common.select_target_version">select target version</span>
+      </div>
+      <div class="modal-body">
+        <select class="form-control" [(ngModel)]="id">
+          @for (p of getMantisTargetVersions(); track p) {
+            <option i18n="@@i18n.common.placeholder">xxx</option>
+          }
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" (click)="decline()" data-bs-dismiss="modal" i18n="@@i18n.common.cancel">cancel</button>
+        <button type="button" class="btn btn-primary" (click)="accept()" hotkey="CTRL+ENTER" i18n="@@i18n.common.ok">ok</button>
+      </div>
+    </div>
+  </div>
+</div>

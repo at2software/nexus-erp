@@ -1,0 +1,131 @@
+<scrollbar #scroll>
+  <div class="row main">
+    <div class="col-md-3">
+      <div class="sticky-side card">
+        <div class="card-header" i18n="@@i18n.common.index">index</div>
+        <ul class="list-group">
+          <div class="list-group-item list-group-item-action pointer" [class.active]="tab===0" (click)="show(0)" (keyup.enter)="show(0)" tabindex="0" i18n="@@i18n.common.localization">localization</div>
+          <div class="list-group-item list-group-item-action pointer" [class.active]="tab===2" (click)="show(2)" (keyup.enter)="show(2)" tabindex="0" i18n="@@i18n.common.companyInformation">company information</div>
+          <div class="list-group-item list-group-item-action pointer" [class.active]="tab===1" (click)="show(1)" (keyup.enter)="show(1)" tabindex="0" i18n="@@i18n.common.vacation">vacation</div>
+          <div class="list-group-item list-group-item-action pointer" [class.active]="tab===3" (click)="show(3)" (keyup.enter)="show(3)" tabindex="0" i18n="@@i18n.common.sickNotes">sick notes</div>
+        </ul>
+      </div>
+    </div>
+    <div class="col-md-9">
+      <div [class.d-none]="tab!==0" class="row">
+        <div class="col-md-8">
+          <div class="card mb-3">
+            <div class="card-header" i18n="@@i18n.common.localization">localization</div>
+            <div class="card-body">
+              <input-settings-group id="SYS_LANGUAGE" [typeahead]="cLanguage">
+                  <span i18n="@@i18n.settings.systemLanguageIso">system language (ISO&nbsp;639-1)</span>
+                  <span class="notranslate"> 639-1)</span>
+              </input-settings-group>
+              <input-settings-group id="SYS_COUNTRY" [typeahead]="cCountry">
+                  <span i18n="@@i18n.settings.countryIso">country (ISO&nbsp;3166)</span>
+              </input-settings-group>
+              <input-settings-group id="SYS_CURRENCY" [typeahead]="cCurrency">
+                  <span i18n="@@i18n.settings.currencyIso">currency (ISO&nbsp;4217)</span>
+              </input-settings-group>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4"></div>
+      </div>
+      <div [class.d-none]="tab!==1" class="row">
+        <div class="col-md-8">
+          <div class="card mb-3">
+            <div class="card-header mb-3" i18n="@@i18n.common.vacation">vacation</div>
+            <div class="card-body">
+              <input-settings-group class="mb-3" id="VACATION_MAIL_SUBJECT" i18n="@@i18n.common.subject">subject</input-settings-group>
+            </div>
+            <div class="card-header mb-3" i18n="@@i18n.common.approved">approved</div>
+            <div class="card-body">
+              <text-param-editor key="params/VACATION_MAIL_APPROVED"></text-param-editor>
+            </div>
+            <div class="card-header mb-3" i18n="@@i18n.common.denied">denied</div>
+            <div class="card-body">
+              <text-param-editor key="params/VACATION_MAIL_DENIED"></text-param-editor>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card">
+            <div class="card-header" i18n="@@i18n.common.placeholders">placeholders</div>
+            <div class="card-body">
+              <div>
+                <code>[vacationDuration]</code>: <span i18n="@@i18n.profile.vacationDurationPlaceholderInfo">vacation duration (dd.mm.yyyy-dd.mm.yyyy)</span>
+              </div>
+              <div>
+                <code>[userName]</code>: <span i18n="@@i18n.profile.vacationUserNamePlaceholderInfo">name of the user that has sent the vacation request</span>
+              </div>
+              <div>
+                <code>[approverName]</code>: <span i18n="@@i18n.profile.vacationApproverNamePlaceholderInfo">name of the user that has approved the vacation request</span>
+              </div>
+              <div>
+                <code>[vacationLog]</code>: <span i18n="@@i18n.profile.vacationLogPlaceholderInfo">calculation of the deducted hours for the vacation request</span>
+              </div>
+              <div>
+                <code>[vacationDenyReason]</code>: <span i18n="@@i18n.profile.vacationDenyReasonPlaceholderInfo">reason given, why a vacation request has been denied</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div [class.d-none]="tab!==2" class="row">
+        <div class="col-md-8">
+          <div class="card mb-3">
+            <div class="card-header mb-3" i18n="@@i18n.common.companyInformation">company information</div>
+            <div class="card-body">
+              <div class="input-group mb-2">
+                <span class="input-group-text col-3" i18n="@@i18n.settings.myCompany">my company</span>
+                <search-input class="col-9" only="Company" (itemSelected)="onCompanyChanged($event)" [query]="me ? me.name : ''"></search-input>
+              </div>
+              @if (me) {
+                <input-settings-group class="mb-2" id="ME_COMPANY_OWNERS" i18n="@@i18n.common.companyOwners">company owners</input-settings-group>
+                <input-settings-group class="mb-2" id="ME_DEPARTMENT" i18n="@@i18n.common.department">department</input-settings-group>
+                <input-settings-group class="mb-2" id="ME_PHONE" i18n="@@i18n.common.phone">phone</input-settings-group>
+                <input-settings-group class="mb-2" id="ME_FAX" i18n="@@i18n.common.fax">fax</input-settings-group>
+                <input-settings-group class="mb-2" id="ME_EMAIL" i18n="@@i18n.common.email">email</input-settings-group>
+                <input-settings-group class="mb-2" id="ME_SWIFT" i18n="@@i18n.common.SWIFT">SWIFT</input-settings-group>
+                <input-settings-group class="mb-2" id="ME_DUNS" i18n="@@i18n.common.DUNS">DUNS</input-settings-group>
+                <input-settings-group class="mb-2" id="ME_IBAN" i18n="@@i18n.common.IBAN">IBAN</input-settings-group>
+                <input-settings-group class="mb-2" id="ME_BIC" i18n="@@i18n.common.BIC">BIC</input-settings-group>
+                <input-settings-group class="mb-2" id="ME_VATID" i18n="@@i18n.common.VATID">VAT-ID</input-settings-group>
+                <input-settings-group class="mb-2" id="ME_CREDITOR_ID" i18n="@@i18n.common.SepaCreditorIdentifier">sepa creditor identifier</input-settings-group>
+                <input-settings-group class="mb-2" id="ME_HREG_NO" i18n="@@i18n.common.hregNo">handelsregister nummer</input-settings-group>
+                <input-settings-group class="mb-2" id="ME_HREG_NAME" i18n="@@i18n.common.hregName">handelsregister name</input-settings-group>
+                <input-settings-group class="mb-2" id="ME_COUNTRY_SUBDIVISION_NAME" i18n="@@i18n.common.countrySubdivisionName">country subdividion name</input-settings-group>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4"></div>
+      </div>
+      <div [class.d-none]="tab!==3" class="row">
+        <div class="col-md-8">
+          <div class="card mb-3">
+            <div class="card-header mb-3" i18n="@@i18n.common.sickNotes">sick notes</div>
+            <div class="card-body">
+              <div class="mb-3 card card-info" i18n="@@i18n.common.sickNoteEmailSettingsInfo">these settings allow for an easy email popup to inform HR about sicknesses, so they can process it.</div>
+              <input-settings-group class="mb-2" id="SICKNOTE_EMAIL_RECEIPIENT" i18n="@@i18n.common.sickNoteEmailReceipient">email receipient</input-settings-group>
+              <input-settings-group class="mb-2" id="SICKNOTE_EMAIL_SUBJECT" i18n="@@i18n.common.subject">subject</input-settings-group>
+            </div>
+            <div class="card-header mb-3" i18n="@@i18n.common.text">text</div>
+            <div class="card-body">
+              <text-param-editor key="params/SICKNOTE_EMAIL_TEXT" style="min-height: 50px; display: block;"></text-param-editor>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card">
+            <div class="card-header" i18n="@@i18n.common.placeholders">placeholders</div>
+            <div class="card-body">
+              <code>[data]</code>: <span i18n="@@i18n.common.sickNoteDataPlaceholderInfo">the sick note information to be sent</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</scrollbar>

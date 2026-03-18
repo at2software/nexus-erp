@@ -1,0 +1,10 @@
+@for (user of getTeam(); track user.id) {
+  <div class="stats-user-row border-bottom py-1">
+    <hr-workload [user]="user" [onlyChart]="true" [chartHeight]="140"></hr-workload>
+  </div>
+}
+@if (getTeam().length === 0) {
+  <empty-state [card]="false" class="hr" i18n-title="@@i18n.hr.noTeamMembers" title="no team members">
+    <p class="text-muted small" i18n="@@i18n.hr.noTeamMembersBody">Workload charts will appear once team members with active employment are configured.</p>
+  </empty-state>
+}

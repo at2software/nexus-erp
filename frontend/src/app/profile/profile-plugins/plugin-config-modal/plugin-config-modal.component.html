@@ -1,0 +1,257 @@
+<div class="modal-header">
+  <h4 class="modal-title">{{plugin.displayName}} Configuration</h4>
+  <div class="ms-auto d-flex align-items-center gap-2">
+    @if (plugin.type === 'local_ai' && availableModels.length > 0) {
+      <span class="badge bg-success">
+        {{availableModels.length}} models available
+      </span>
+    }
+    @if (!isNewPlugin && plugin.value?.url?.length) {
+      <button type="button" class="btn btn-sm"
+        (click)="onLinkMyId()"
+        [class.btn-outline-success]="!plugin.my_id"
+        [class.btn-success]="plugin.my_id"
+        [title]="plugin.my_id ? 'ID Linked' : 'Link My ID'">
+        <i>{{plugin.my_id ? 'link' : 'link_off'}}</i>
+      </button>
+    }
+    <button type="button" class="btn-close" aria-label="Close" (click)="activeModal.dismiss()"></button>
+  </div>
+</div>
+
+<div class="modal-body">
+  <!-- Mattermost -->
+  @if (plugin.type === 'mattermost') {
+    <div class="row">
+      <div class="col-4">
+        <div class="form-floating mb-3">
+          <input type="url" class="form-control" id="url"
+            [(ngModel)]="plugin.value.url">
+            <label for="url" i18n="@@i18n.common.url">URL</label>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="form-floating mb-3">
+            <input type="text" class="form-control" id="team"
+              [(ngModel)]="plugin.value.team">
+              <label for="team" i18n="@@i18n.common.team">team</label>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="form-floating mb-3">
+              <input type="password" class="form-control" id="token"
+                [(ngModel)]="plugin.value.token">
+                <label for="token" i18n="@@i18n.common.token">token</label>
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="mb-2">Form: URL: <code>https://mydomain/</code> team: <code>at2</code> token: <code>xxxxxxx</code></div>
+              <a [href]="plugin.value.url + 'admin_console/user_management/users'" target="_blank"
+              i18n="@@i18n.info.linkToCreateToken">link to create token</a>
+            </div>
+          </div>
+        }
+
+        <!-- GitLab -->
+        @if (plugin.type === 'git') {
+          <div class="row">
+            <div class="col-6">
+              <div class="form-floating mb-3">
+                <input type="url" class="form-control" id="url" placeholder="https://your-git-domain.tld/"
+                  [(ngModel)]="plugin.value.url">
+                  <label for="url" i18n="@@i18n.common.url">URL</label>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="form-floating mb-3">
+                  <input type="password" class="form-control" id="token"
+                    [(ngModel)]="plugin.value.token">
+                    <label for="token" i18n="@@i18n.common.token">token</label>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="mb-2">Form: URL: <code>https://mydomain/</code> token: <code>xxxxxxx</code></div>
+                  <a href="https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html" target="_blank"
+                  i18n="@@i18n.info.howToCreateGitLabToken">how to create GitLab token</a>
+                </div>
+              </div>
+            }
+
+            <!-- MantisBT -->
+            @if (plugin.type === 'mantis') {
+              <div class="row">
+                <div class="col-4">
+                  <div class="form-floating mb-3">
+                    <input type="url" class="form-control" id="url" placeholder="https://mantis.mydomain/"
+                      [(ngModel)]="plugin.value.url">
+                      <label for="url" i18n="@@i18n.common.url">URL</label>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="form-floating mb-3">
+                      <input type="password" class="form-control" id="token"
+                        [(ngModel)]="plugin.value.token">
+                        <label for="token" i18n="@@i18n.common.token">token</label>
+                      </div>
+                    </div>
+                    <div class="col-4">
+                      <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="filterId" placeholder="123"
+                          [(ngModel)]="plugin.value.filterId">
+                          <label for="filterId" i18n="@@i18n.mantis.filterId">filter ID</label>
+                        </div>
+                      </div>
+                      <div class="col-12">
+                        <div class="mb-2">
+                          <button type="button" class="btn btn-sm btn-outline-primary me-2"
+                            [disabled]="isTestingConnection || !plugin.value?.url || !plugin.value?.token || isNewPlugin"
+                            (click)="onMantisConnectionTest()">
+                            @if (!isTestingConnection) {
+                              <span i18n="@@i18n.profile.testConnection">test connection</span>
+                            }
+                            @if (isTestingConnection) {
+                              <span class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                testing connection...
+                              </span>
+                            }
+                          </button>
+                          @if (isNewPlugin) {
+                            <div class="small text-muted mt-1">
+                              <i class="fas fa-info-circle me-1"></i>
+                              please save the plugin first before testing connection
+                            </div>
+                          }
+                        </div>
+                        <div class="mb-2">Form: URL: <code>https://mydomain/</code> token: <code>xxxxxxx</code> Filter ID: <code>123</code> (optional)</div>
+                        <div class="mb-2">
+                            <span i18n="@@i18n.profile.mantisbtMinimumRequiredVersion">MantisBT minimum required version</span>
+                            <span class="notranslate">: 2.26.0</span>
+                        </div>
+                        <div class="mb-2 small text-muted" i18n="@@i18n.profile.filterIdIsOptionalIf">Filter ID is optional - if specified, only issues matching that filter will be shown. If empty, shows assigned issues by default.</div>
+                        <a [href]="plugin.value.url + '/api_tokens_page.php'" target="_blank"
+                        i18n="@@i18n.info.howToCreateMantisToken">how to create mantis token</a>
+                        @if (!isNewPlugin && plugin.value?.url && plugin.value?.token) {
+                          <div class="mt-2">
+                            <small class="text-muted">connection status:
+                              <span class="badge"
+                                [class.bg-success]="getMantisConnectionStatus() === 'connected'"
+                                [class.bg-danger]="getMantisConnectionStatus() === 'connection fail'"
+                                [class.bg-warning]="getMantisConnectionStatus() === 'connecting'"
+                                [class.bg-secondary]="getMantisConnectionStatus() === 'idle' || getMantisConnectionStatus() === 'unknown'">
+                                {{getMantisConnectionStatus()}}
+                              </span>
+                            </small>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+
+                  <!-- Slack -->
+                  @if (plugin.type === 'slack') {
+                    <div class="row">
+                      <div class="col-6">
+                        <div class="form-floating mb-3">
+                          <input type="url" class="form-control" id="url" placeholder="https://myworkspace.slack.com/"
+                            [(ngModel)]="plugin.value.url">
+                            <label for="url" i18n="@@i18n.common.url">URL</label>
+                          </div>
+                        </div>
+                        <div class="col-6">
+                          <div class="form-floating mb-3">
+                            <input type="password" class="form-control" id="token"
+                              [(ngModel)]="plugin.value.token">
+                              <label for="token" i18n="@@i18n.common.token">token</label>
+                            </div>
+                          </div>
+                        </div>
+                      }
+
+                      <!-- LocalAI Proxy -->
+                      @if (plugin.type === 'local_ai') {
+                        <div class="row">
+                          <div class="col-3">
+                            <div class="form-floating mb-3">
+                              <input type="url" class="form-control" id="url"
+                                [(ngModel)]="plugin.value.url"
+                                placeholder="http://localhost:8080">
+                                <label for="url" i18n="@@i18n.common.url">URL</label>
+                              </div>
+                            </div>
+                            <div class="col-3">
+                              <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="login"
+                                  [(ngModel)]="plugin.value.login">
+                                  <label for="login" i18n="@@i18n.common.login">login</label>
+                                </div>
+                              </div>
+                              <div class="col-3">
+                                <div class="form-floating mb-3">
+                                  <input type="password" class="form-control" id="password"
+                                    [(ngModel)]="plugin.value.password">
+                                    <label for="password" i18n="@@i18n.common.password">password</label>
+                                  </div>
+                                </div>
+                                <div class="col-3">
+                                  <div class="form-floating mb-3">
+                                    <select class="form-select" id="model"
+                                      [(ngModel)]="plugin.value.model">
+                                      <option value="" disabled i18n="@@i18n.profile.selectModel">select model</option>
+                                      @for (model of availableModels; track model) {
+                                        <option [value]="model.id">
+                                          {{model.name || model.id}}
+                                        </option>
+                                      }
+                                    </select>
+                                    <label for="model" i18n="@@i18n.common.model">model</label>
+                                  </div>
+                                </div>
+                                <div class="col-12">
+                                  <div class="mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-2"
+                                      [disabled]="isLoadingModels || !plugin.value?.url || isNewPlugin"
+                                      (click)="onLocalAIConnectionTest()">
+                                      @if (!isLoadingModels) {
+                                        <span i18n="@@i18n.profile.testConnectionLoadModels">test connection & load models</span>
+                                      }
+                                      @if (isLoadingModels) {
+                                        <span class="d-flex align-items-center">
+                                          <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                          Loading Models...
+                                        </span>
+                                      }
+                                    </button>
+                                    @if (isNewPlugin) {
+                                      <div class="small text-muted mt-1">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Please save the plugin first before testing connection
+                                      </div>
+                                    }
+                                  </div>
+                                  <div class="mb-2">Form: URL: <code>http://localhost:8080</code> Login: <code>username</code> Password: <code>token</code></div>
+                                  <div class="small text-muted">
+                                    <p i18n="@@i18n.profile.localaiProxyUsesUsernameToken">LocalAI Proxy uses username + token authentication through a proxy service.</p>
+                                    <p>Health check endpoint: <code>/healthz</code> | Models endpoint: <code>/v1/models</code></p>
+                                  </div>
+                                </div>
+                              </div>
+                            }
+
+                            <!-- NEXUS (read-only) -->
+                            @if (plugin.type === 'nexus') {
+                              <div>
+                                <div class="card card-info" i18n="@@i18n.profile.nexusPluginConfigurationIsManaged">NEXUS plugin configuration is managed automatically.</div>
+                              </div>
+                            }
+                          </div>
+
+                          <div class="modal-footer">
+                            @if (!isNewPlugin) {
+                              <button type="button" class="btn btn-outline-danger"
+                              (click)="onDelete()" i18n="@@i18n.profile.deletePlugin">delete plugin</button>
+                            }
+                            <button type="button" class="btn btn-success"
+                            (click)="save()">{{isNewPlugin ? 'Create Plugin' : 'Save Changes'}}</button>
+                            <button type="button" class="btn btn-secondary" (click)="close()" i18n="@@i18n.common.cancel">cancel</button>
+                          </div>

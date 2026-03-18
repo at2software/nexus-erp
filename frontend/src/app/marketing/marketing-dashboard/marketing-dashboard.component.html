@@ -1,0 +1,130 @@
+<div class="row">
+    <div class="col-3">
+
+        <div class="card mb-3">
+            <div class="card-header" i18n="@@i18n.marketing.cold_calling">cold calling</div>
+            <ul class="list-group list-group-flush text-truncate">
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    (click)="navigateToSection('initiatives')" tabindex="0" (keydown.enter)="navigateToSection('initiatives')">
+                    <span>
+                        <i class="align-middle me-2">adjust</i>
+                        <span i18n="@@i18n.marketing.total_initiatives">total initiatives</span>
+                    </span>
+                    <span>
+                        <span class="me-2">{{stats.initiatives.total}}</span>
+                        <small class="text-muted">({{stats.initiatives.active}} <span
+                                i18n="@@i18n.common.active">active</span>)</small>
+                    </span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    (click)="navigateToSection('prospects')" tabindex="0" (keydown.enter)="navigateToSection('prospects')">
+                    <span>
+                        <i class="align-middle me-2">groups</i>
+                        <span i18n="@@i18n.marketing.total_prospects">total prospects</span>
+                    </span>
+                    <span>
+                        <span class="me-2">{{stats.prospects.total}}</span>
+                        <small class="text-muted">({{stats.prospects.new}} <span i18n="@@i18n.common.new">new</span>)</small>
+                    </span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    (click)="navigateToSection('prospects')" tabindex="0" (keydown.enter)="navigateToSection('prospects')">
+                    <span>
+                        <i class="align-middle me-2">task_alt</i>
+                        <span i18n="@@i18n.marketing.pending_activities">pending activities</span>
+                    </span>
+                    <span>
+                        <span class="me-2">{{stats.activities.pending}}</span>
+                        <small class="text-muted">({{stats.activities.overdue}} <span
+                                i18n="@@i18n.common.overdue">overdue</span>)</small>
+                    </span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    (click)="navigateToSection('workflows')" tabindex="0" (keydown.enter)="navigateToSection('workflows')">
+                    <span>
+                        <i class="align-middle me-2">account_tree</i>
+                        <span i18n="@@i18n.marketing.workflows">workflows</span>
+                    </span>
+                    <span class="text-muted" i18n="@@i18n.marketing.click_to_manage">click to manage</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header hstack gap-2">
+                <div class="flex-fill" i18n="@@i18n.marketing.assets">marketing assets</div>
+            </div>
+            <div class="card-body p-0">
+                @if (loadingAssets) {
+                <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm" role="status">
+                        <span class="visually-hidden" i18n="@@i18n.common.loading">loading</span>
+                    </div>
+                </div>
+                }
+
+                @if (!loadingAssets) {
+                <div class="list-group list-group-flush">
+                    @for (category of assetCategories; track category) {
+                    <div class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                        (click)="navigateToAssets(category.name)" tabindex="0" (keydown.enter)="navigateToAssets(category.name)" [ngbTooltip]="'View ' + category.name + ' assets'">
+                        <div class="d-flex align-items-center">
+                            <i class="me-2 text-{{category.color}}">{{category.icon}}</i>
+                            <span>{{category.name}}</span>
+                        </div>
+                        <span class="badge bg-{{category.color}} rounded-pill">{{category.count}}</span>
+                    </div>
+                    }
+                </div>
+                }
+
+                @if (!loadingAssets && (!assetCategories || assetCategories.length === 0)) {
+                <empty-state [card]="false" class="marketing" i18n-title="@@i18n.marketing.no_assets" title="no assets found"></empty-state>
+                }
+            </div>
+        </div>
+
+    </div>
+    <div class="col-6">
+        <div class="card mb-3">
+            <div class="card-header hstack gap-2">
+                <div class="flex-fill" i18n="@@i18n.marketing.funnel_visualization">funnel visualization (aida)</div>
+                <div class="hstack gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary" (click)="toggleFunnelMode()" tabindex="0" (keydown.enter)="toggleFunnelMode()"
+                        [ngbTooltip]="funnelMode === 'count' ? 'Switch to money view' : 'Switch to count view'">
+                        <i>{{ funnelMode === 'count' ? 'attach_money' : 'format_list_numbered' }}</i>
+                    </button>
+                    <div class="input-group">
+                        <input type="text" class="form-control" ngxDaterangepickerMd [(ngModel)]="creation_span"
+                            [ranges]="presetRanges" [showCustomRangeLabel]="true" [alwaysShowCalendars]="true"
+                            (datesUpdated)="onCreationUpdated()" [locale]="{applyLabel: 'ok', format: 'DD.MM.YYYY'}">
+                        <button type="button" class="btn btn-plain" (click)="clearSelection()" tabindex="0" (keydown.enter)="clearSelection()">
+                            <i class="text-primary pointer" i18n="@@i18n.common.clear">clear</i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <sankey-chart [data]="funnelData" [mode]="funnelMode" [height]="200"></sankey-chart>
+            </div>
+        </div>
+
+        <!-- <div class="card mb-3">
+    <div class="card-header">Campaign performance charts</div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">Source/channel breakdown</div>
+  </div> -->
+
+    </div>
+
+    <div class="col-3">
+
+
+        <settings-projects-leads></settings-projects-leads>
+        <!-- <div class="card mb-3">
+  <div class="card-header">High-level metrics: impressions, clicks, conversions, cost per lead (CPL), ROI</div>
+</div> -->
+    </div>
+</div>

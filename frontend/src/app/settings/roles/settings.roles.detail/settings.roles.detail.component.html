@@ -1,0 +1,69 @@
+<div class="card mb-3">
+    <div class="card-header" i18n="@@i18n.common.properties">module permissions</div>
+    <div class="row m-2">
+        @for (group of getMainPermissions(); track group) {
+        <ng-container *ngTemplateOutlet="properties; context: { $implicit: group, prefix:'' }"></ng-container>
+        }
+    </div>
+    <div class="card-header" i18n="@@i18n.settings.crudPermissions">CRUD permissions</div>
+    <div class="row m-2">
+        @for (group of getCrudPermissions(); track group) {
+        <ng-container *ngTemplateOutlet="crudOrApiGroup; context: { $implicit: group }">
+        </ng-container>
+        }
+    </div>
+    <div class="card-header" i18n="@@i18n.settings.apiEndpoints">API endpoints</div>
+    <div class="row m-2">
+        @for (group of getApiPermissions(); track group) {
+        <ng-container *ngTemplateOutlet="crudOrApiGroup; context: { $implicit: group }">
+        </ng-container>
+        }
+    </div>
+</div>
+<!-- <div class="card mb-3">
+<div class="card-header" i18n="@@i18n.settings.modelsCrud">Models (CRUD)</div>
+<ul class="card-body list-group">
+  @for (permission of permissionsFor('model'); track permission) {
+    <ng-container *ngTemplateOutlet="properties; context: { $implicit: permission, prefix:'model.' }"></ng-container>
+  }
+</ul>
+</div> -->
+<ng-template #crudOrApiGroup let-ca>
+    @for (key of permissionsFor(ca).sort(); track key) {
+    <div class="hstack gap-2 border-bottom">
+        <div class="flex-fill text-{{colorForPermissionLevel(ca + '.' + key)}}">{{key}}</div>
+        <button class="btn ms-2" (click)="onUpdateAll(ca+'.'+key+'.')" [class.active]="hasAllPermissionsFor(ca+'.'+key)" i18n="@@i18n.common.all">all</button>
+        @if (!hasAllPermissionsFor(ca+'.'+key)) {
+            @for (prop of permissionsFor(ca, key); track prop) {
+            <ng-container *ngTemplateOutlet="propButton; context: { $implicit: ca+'.'+key, prop:permissionName(prop), short:true }"></ng-container>
+            }
+        }
+    </div>
+    }
+</ng-template>
+
+<ng-template let-perm let-prefix="prefix" #properties>
+    <div class="hstack gap-2 border-bottom">
+        <div class="hstack gap-2 w-100">
+            <div class="flex-fill text-{{colorForPermissionLevel(prefix + perm)}}">{{perm}}</div>
+            <ng-container *ngTemplateOutlet="propGroup; context: { $implicit: prefix + perm }"></ng-container>
+        </div>
+    </div>
+</ng-template>
+
+<ng-template #propGroup let-key>
+    <button class="btn ms-2" (click)="onUpdateAll(key)" [class.active]="hasAllPermissionsFor(key)" i18n="@@i18n.common.all">all</button>
+    @if (!hasAllPermissionsFor(key)) {
+        @for (prop of filteredPermissions(key); track prop) {
+        <ng-container
+            *ngTemplateOutlet="propButton; context: { $implicit: key, prop:permissionName(prop), short:false }"></ng-container>
+        }
+    }
+</ng-template>
+
+<ng-template #propButton let-key let-prop="prop" let-short="short">
+    <button class="btn ms-2" (click)="onUpdate(key + '.' + permissionName(prop))"
+        [class.active]="hasPermission(key + '.' + permissionName(prop))" [ngbTooltip]="permissionName(prop)">
+        {{ short ? permissionName(prop).substring(0, 1) : permissionName(prop) }}
+    </button>
+</ng-template>

@@ -1,0 +1,98 @@
+<div class="row" col-slider>
+    <div class="col-md-3">
+        <div>
+            <project-state-filter cookieId="projects/dashboard/states" (filterChanged)="reload()"></project-state-filter>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="input-group mb-3 gap-2">
+                        <span class="capitalize-first" i18n="@@i18n.common.created_at">created at</span>
+                        <input type="text" class="form-control" ngxDaterangepickerMd id="creationPicker"
+                            [(ngModel)]="selCreated" [alwaysShowCalendars]="true"
+                            (datesUpdated)="reloadWithCalendar($event)" [showCustomRangeLabel]="true" [ranges]="ranges"
+                            [showClearButton]="true" [locale]="{applyLabel: 'ok', format: 'DD.MM.YYYY'}"
+                            i18n-placeholder="@@i18n.common.customDateRange" placeholder="custom date range" />
+                    </div>
+                    @if (showStartedAtFilter()) {
+                        <div class="input-group mb-3 gap-2">
+                            <span class="capitalize-first" i18n="@@i18n.common.startedAt">started at</span>
+                            <input type="text" class="form-control" ngxDaterangepickerMd id="startPicker"
+                                [(ngModel)]="selStarted" [alwaysShowCalendars]="true"
+                                (datesUpdated)="reloadWithCalendar($event)" [showCustomRangeLabel]="true" [ranges]="ranges"
+                                [showClearButton]="true" [locale]="{applyLabel: 'ok', format: 'DD.MM.YYYY'}"
+                                i18n-placeholder="@@i18n.common.customDateRange" placeholder="custom date range" />
+                        </div>
+                    }
+                    @if (showFinishedAtFilter()) {
+                        <div class="input-group mb-3 gap-2">
+                            <span class="capitalize-first" i18n="@@i18n.common.finishedAt">finished at</span>
+                            <input type="text" class="form-control" ngxDaterangepickerMd id="finishedPicker"
+                                [(ngModel)]="selFinished" [alwaysShowCalendars]="true"
+                                (datesUpdated)="reloadWithCalendar($event)" [showCustomRangeLabel]="true" [ranges]="ranges"
+                                [showClearButton]="true" [locale]="{applyLabel: 'ok', format: 'DD.MM.YYYY'}"
+                                i18n-placeholder="@@i18n.common.customDateRange" placeholder="custom date range" />
+                        </div>
+                    }
+
+                    <!-- Assignee Filter -->
+                    <div class="input-group mb-3 gap-2">
+                        <span class="capitalize-first" i18n="@@i18n.common.assignee">assignee</span>
+                        <select class="form-select" [(ngModel)]="selectedAssigneeId" (change)="filtersUpdated()">
+                            <option [value]="undefined" i18n="@@i18n.common.any">any</option>
+                            @for (user of global.team; track user.id) {
+                                <option [value]="user.id">{{user.name}}</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Project Manager Filter -->
+                    <div class="input-group mb-3 gap-2">
+                        <span class="capitalize-first" i18n="@@i18n.common.projectManager">project manager</span>
+                        <select class="form-select" [(ngModel)]="selectedProjectManagerId" (change)="filtersUpdated()">
+                            <option [value]="undefined" i18n="@@i18n.common.any">any</option>
+                            @for (user of getProjectManagers(); track user.id) {
+                                <option [value]="user.id">{{user.name}}</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Budget Filter -->
+                    @if (global.user?.hasRole('invoicing')) {
+                    <div class="mb-2">
+                        <div class="hstack gap-2">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" (change)="filtersUpdated()" [(ngModel)]="budgetFilterActive" id="cbBudget">
+                                <label class="form-check-label capitalize-first text-truncate" [class.small]="budgetFilterActive" [class.text-muted]="budgetFilterActive" for="cbBudget" i18n="@@i18n.common.budget">budget</label>
+                            </div>
+                            @if (budgetFilterActive) {
+                                <div class="flex-fill">
+                                    <div class="input-group">
+                                        <span class="input-group-text">≥</span>
+                                        <input type="number" class="form-control" [(ngModel)]="budget_min" (change)="filtersUpdated()" i18n-placeholder="@@i18n.common.minAmount" placeholder="min amount">
+                                        <span class="input-group-text">€</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        @if (hasLoaded && projects.length === 0) {
+            <div class="card">
+                <empty-state [card]="false" class="projects" i18n-title="@@i18n.projects.noProjectsYet" title="No projects yet">
+                    <p i18n="@@i18n.projects.emptyStateDescription">Projects are born in the customer detail view — find a customer, open their profile, and create a project from there. Every great project starts with a relationship.</p>
+                </empty-state>
+            </div>
+        }
+        @if (!hasLoaded || projects.length > 0) {
+        <div class="card">
+            <projects-table [projects]="projects" (sortingChanged)="onSortChange($event)"></projects-table>
+            <continuous-marker [observer]="observer" (dataReceived)="onResult($event)"></continuous-marker>
+        </div>
+        }
+    </div>
+</div>

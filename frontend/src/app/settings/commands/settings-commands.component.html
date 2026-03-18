@@ -1,0 +1,83 @@
+<div class="container-fluid">
+
+  @if (loading) {
+    <div class="text-center py-4">
+      <div class="spinner-border" role="status">
+        <span class="visually-hidden" i18n="@@i18n.common.loading">loading</span>
+      </div>
+    </div>
+  }
+
+  @if (!loading) {
+    @for (category of getCommandCategories(); track category) {
+      <div class="card mb-3">
+        <div class="card-header d-flex align-items-center gap-2">
+          <span class="material-icons-outlined" style="font-size: 1.1rem;">{{getCategoryIcon(category)}}</span>
+          <span>{{category}}</span>
+          <span class="badge bg-secondary ms-auto">{{getCommandsInCategory(category).length}}</span>
+        </div>
+        <ul class="list-group list-group-flush">
+          @for (command of getCommandsInCategory(category); track $index) {
+            <li class="list-group-item px-3 py-2">
+              <div class="d-flex align-items-center gap-3">
+                <code class="text-primary flex-shrink-0 small">{{command.name}}</code>
+                <span class="text-muted small flex-fill">{{command.description}}</span>
+                @if (command.schedule) {
+                  <span class="badge bg-dark border border-secondary text-muted small flex-shrink-0 notranslate">{{command.schedule}}</span>
+                }
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary flex-shrink-0"
+                  [disabled]="isExecuting(command.name)"
+                  (click)="executeCommand(command)">
+                  @if (isExecuting(command.name)) {
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                  } @else {
+                    <span i18n="@@i18n.common.execute">execute</span>
+                  }
+                </button>
+              </div>
+
+              @if (getExecutionResult(command.name); as result) {
+                <div
+                  class="alert py-2 px-3 mb-0 mt-2 small"
+                  [class.alert-success]="result.success"
+                  [class.alert-danger]="!result.success"
+                  role="alert">
+                  <div class="d-flex align-items-start gap-2">
+                    <div class="flex-fill">
+                      @if (result.success) {
+                        <span class="fw-semibold" i18n="@@i18n.commands.execution_successful">execution successful</span>
+                        <span class="text-muted ms-2 notranslate">exit {{result.exit_code}}</span>
+                        @if (result.executed_at) {
+                          <span class="text-muted ms-1 notranslate">· {{result.executed_at | date:'short'}}</span>
+                        }
+                      } @else {
+                        <span class="fw-semibold" i18n="@@i18n.commands.execution_failed">execution failed</span>
+                        @if (result.error) {
+                          <span class="ms-2">{{result.error}}</span>
+                        }
+                      }
+                      @if (result.output) {
+                        <pre class="mb-0 mt-1 font-monospace notranslate" style="font-size: 0.75rem; max-height: 200px; overflow-y: auto; white-space: pre-wrap;">{{result.output}}</pre>
+                      }
+                    </div>
+                    <button type="button" class="btn-close flex-shrink-0" style="font-size: 0.7rem;" (click)="clearResult(command.name)" aria-label="Close"></button>
+                  </div>
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
+    @if (getCommandCategories().length === 0) {
+      <div class="text-center py-5 text-muted">
+        <div class="mb-2" style="font-size: 3rem;">code_off</div>
+        <p i18n="@@i18n.commands.no_commands">no commands available</p>
+      </div>
+    }
+  }
+
+</div>

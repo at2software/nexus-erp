@@ -1,0 +1,9 @@
+:host {
+    // Header edit controls visibility based on edit mode
+    app-header .edit {
+        display: none;
+    }
+    &.is_editing app-header .edit {
+        display: inherit;
+    }
+}

@@ -1,0 +1,23 @@
+<div class="card card-chart mb-3">
+
+  <div class="card-header gap-2">
+    <n>git</n>
+    <span class="flex-fill text-truncate" i18n="@@i18n.widget-missing-git">missing git repository</span>
+    <div class="chart-title">{{value ?? (value | loading)}}</div>
+  </div>
+
+  <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+
+  <ul-compact>
+    <li class="list-group-item d-flex text-nowrap compact" *nxFor="let _ of data; let i = index">
+      <div>
+        <avatar [object]="_"></avatar>
+      </div>
+      <div class="flex-fill ms-3 text-truncate">
+        <div class="d-flex text-truncate">
+          <div class="flex-fill text-truncate">{{_.name}}</div>
+        </div>
+      </div>
+    </li>
+  </ul-compact>
+</div>

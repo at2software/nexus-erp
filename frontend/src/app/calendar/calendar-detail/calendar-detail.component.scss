@@ -1,0 +1,204 @@
+@use 'colors' as *;
+
+.popup {
+  position: absolute;
+  padding: 0px;
+  z-index: 1050;
+  min-width: 150px;
+  border-radius: 5px;
+}
+
+.month-picker {
+  background-color: #212529;
+  padding: 0px;
+  border-radius: 0.25rem;
+  color: #fff;
+}
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+
+  button {
+    width: 100%;
+    color: white;
+  }
+  button:hover {
+    color: black;
+  }
+  button:hover {
+    color: black !important;
+  }
+}
+
+.calendar-container {
+  position: relative;
+}
+
+.calendar-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.calendar-week {
+  position: relative;
+}
+
+.calendar-table td {
+  width: 14.28%;
+  height: 100%;
+  vertical-align: top;
+  text-align: center;
+  padding: 0px;
+  position: relative;
+  border: 1px solid #fff3;
+}
+
+.calendar-cell {
+  cursor: pointer;
+  height: 100%;
+}
+
+.calendar-cell-content {
+  height: 100%;
+  padding: 4px;
+  position: relative;
+  z-index: 1;
+}
+
+.date-number {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.calendar-cell.text-primary {
+  background-color: #2a3d4a;
+  color: #87ceeb;
+  border: 1px solid #4a6572;
+  
+  .date-number {
+    font-weight: 600;
+    color: #87ceeb;
+  }
+}
+
+.calendar-cell.text-muted {
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(255, 255, 255, 0.05) 4px,
+    rgba(255, 255, 255, 0.05) 8px
+  );
+  
+  .date-number {
+    opacity: 0.6;
+  }
+}
+
+.events-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.week-events-container {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+.event-spans-container {
+  position: absolute;
+  top: 28px;
+  left: 1px;
+  width: calc(100% - 2px);
+  height: calc(100% - 32px);
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: 22px;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.event-span {
+  background-color: var(--bs-primary);
+  color: white;
+  font-size: 12px;
+  border-radius: 3px;
+  pointer-events: auto;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  min-height: 18px;
+  margin: 1px;
+}
+
+.event-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 2px 4px;
+  overflow: hidden;
+}
+
+.event-icon {
+  font-size: 14px;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.single-day {
+  border-radius: 3px;
+}
+
+.multi-day {
+  border-radius: 3px;
+}
+.time {
+  font-size: 10px;
+  color: #e0e0e0;
+  margin-right: 4px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.event-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-hovered {
+  background-color: var(--bs-primary-dark, #0056b3) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+
+.event-non-editable {
+  opacity: 0.7;
+  cursor: default;
+}
+
+
+// Event type colors
+.event-vacation {
+  background-color: $blue !important;
+}
+
+.event-birthday {
+  background-color: $orange !important;
+}
+
+.event-regular {
+  background-color: var(--bs-primary) !important;
+}
+

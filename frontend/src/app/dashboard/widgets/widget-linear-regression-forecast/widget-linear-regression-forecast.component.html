@@ -1,0 +1,21 @@
+<div class="card mb-3">
+  <div class="card-header gap-2">
+    <n>invoice</n>
+    <div class="me-auto flex-fill text-truncate" i18n="@@i18n.widget-linear-regression-forecast">linear regression forecast</div>
+    <div class="chart-title">{{ data?.current?.forecast | mshort }}</div>
+  </div>
+
+  <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+
+  <div class="card-body p-0 d-flex flex-column">
+    @if (chartOptions) {
+      <div class="flex-fill">
+        <div echarts [options]="chartOptions"
+          [initOpts]="{height: 100}"
+          (chartInit)="onChartInit($event)"
+          style="height: 100px;">
+        </div>
+      </div>
+    }
+  </div>
+</div>

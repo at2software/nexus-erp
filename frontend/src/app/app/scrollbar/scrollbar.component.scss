@@ -1,0 +1,22 @@
+:host {
+    overflow-y: auto;
+
+    // macOS style thin scrollbar
+    &::-webkit-scrollbar {
+        width: 2px;
+    }
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 1px;
+        &:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+    }
+
+    // Firefox
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}

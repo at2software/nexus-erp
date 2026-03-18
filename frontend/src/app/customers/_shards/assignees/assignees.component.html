@@ -1,0 +1,31 @@
+<div class="card">
+	<div class="card-header">
+		<ng-content></ng-content>
+	</div>
+  @for (x of assignees; track x.id) {
+    <ng-container>
+      @if (x.role_id === 4) {
+        <div class="list-group-item hstack gap-2" [nx]="x">
+          <div>
+            <img src="{{x.icon}}" class="avatar avatar-sm" alt="">
+          </div>
+          <div class="flex-fill">
+            <div>{{x.assignee.name}}</div>
+            <small class="text-primary role">{{x.role()}}</small>
+          </div>
+        </div>
+      } @else {
+        <div class="list-group-item hstack gap-2" [nx]="x">
+          <div>
+            <img src="{{x.icon}}" class="avatar avatar-sm" alt="">
+            <span class="avatar-status" [style.background-color]="x.assignee.colorCss + ' !important'"></span>
+          </div>
+          <div class="flex-fill">
+            <div>{{x.assignee.name}}</div>
+            <small class="text-muted role">{{x.role()}}</small>
+          </div>
+        </div>
+      }
+    </ng-container>
+  }
+</div>

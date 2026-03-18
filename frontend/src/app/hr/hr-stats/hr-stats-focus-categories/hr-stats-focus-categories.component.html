@@ -1,0 +1,30 @@
+@if (users.length === 0) {
+  <empty-state [card]="false" class="hr" i18n-title="@@i18n.hr.no_focus_accuracy_data" title="no focus data yet">
+    <p class="text-muted small" i18n="@@i18n.hr.focus_accuracy_data_note">Data will appear once time tracking entries are recorded.</p>
+  </empty-state>
+}
+@for (user of users; track user.id) {
+  <div class="stats-user-row d-flex align-items-center border-bottom py-1 px-3">
+    <div class="flex-fill pe-3">
+      @if (chartOptions[user.id]) {
+        <div echarts
+          [options]="chartOptions[user.id]"
+          class="w-100"
+          style="height: 130px;"
+          >
+        </div>
+      }
+    </div>
+    <div style="width: 130px;">
+      <div class="ratio ratio-1x1">
+        @if (donutChartOptions[user.id]) {
+          <div echarts
+            [options]="donutChartOptions[user.id]"
+            class="w-100 h-100"
+            >
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,28 @@
+<toolbar>
+	<div ngbDropdown class="d-inline-block">
+		<button type="button" class="btn btn-plain dropdown-toggle-simple" ngbDropdownToggle>
+			<i>more_horiz</i>
+		</button>
+		<div ngbDropdownMenu>
+			<button ngbDropdownItem (click)="confirmLogout()" i18n="@@i18n.common.logout">logout</button>
+		</div>
+	</div>
+</toolbar>
+
+<router-outlet></router-outlet>
+
+<app-header>
+	<div class="logo" style="background-image: url({{global.user!.icon}});" [dnd]="global.user!.getApiPathWithId()+'/avatar'" [dndAllowed]="['image/']" (dndUploaded)="onDndUploaded()"></div>
+	<h1>{{global.user!.name}}</h1>
+	<ul class="nav">
+		<header-link-item routerLink="dashboard" i18n-title="@@i18n.common.dashboard" title="dashboard"></header-link-item>
+		<header-link-item routerLink="focus" i18n-title="@@i18n.common.workingTime" title="working time"></header-link-item>
+		<header-link-item routerLink="milestones" i18n-title="@@i18n.common.milestones" title="milestones"></header-link-item>
+		<header-link-item routerLink="vacation" i18n-title="@@i18n.common.vacation" title="vacation"></header-link-item>
+		<header-link-item routerLink="connectors" i18n-title="@@i18n.common.connectors" title="connectors"></header-link-item>
+		<header-link-item routerLink="travel-expenses" i18n-title="@@i18n.profile.travelExpenses" title="travel expenses"></header-link-item>
+		<header-link-item routerLink="vcard" i18n-title="@@i18n.profile.myCard" title="my card"></header-link-item>
+		<header-link-item routerLink="settings" i18n-title="@@i18n.common.settings" title="settings"></header-link-item>
+		<header-link-item routerLink="sentinels" i18n-title="@@i18n.common.sentinels" roles="invoicing" title="sentinels"></header-link-item>
+	</ul>
+</app-header>

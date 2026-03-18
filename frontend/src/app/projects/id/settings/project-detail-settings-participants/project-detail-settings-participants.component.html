@@ -1,0 +1,59 @@
+<div class="row">
+  <div class="col-8">
+    <div class="card">
+      <div class="card-header">
+        <span i18n="@@i18n.projects.participatingCompanies">participating companies</span>
+      </div>
+      @if (loading) {
+        <div class="card-body text-center">
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          <span class="ms-2">
+              <span i18n="@@i18n.common.loading">loading</span>
+              <span class="notranslate">...</span>
+          </span>
+        </div>
+      } @else if (participants.length === 0) {
+        <empty-state [card]="false" class="settings" i18n-title="@@i18n.projects.noParticipants" title="no participating companies yet">
+          <p class="text-muted small" i18n="@@i18n.projects.addParticipantsHint">add connections from the list on the right</p>
+        </empty-state>
+      } @else {
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th style="width: 60px;"></th>
+              <th i18n="@@i18n.common.company">company</th>
+              <th class="text-center" i18n="@@i18n.projects.otherProjects">other projects</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (participant of participants; track participant.id) {
+              <tr>
+                <td>
+                  <avatar [object]="participant.other_company"></avatar>
+                </td>
+                <td class="align-middle">
+                  <div [routerLink]="'/customers/' + participant.other_company.id">
+                    {{ participant.other_company.name }}
+                  </div>
+                </td>
+                <td class="text-center align-middle">
+                  <span>{{ participant.project_count }}</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+
+  <div class="col-4">
+    @if (parent.current) {
+      <connections-list
+        [company]="parent.current.company"
+        [showAddButton]="true"
+        [hideMyCompany]="true"
+        (added)="addConnection($event)"></connections-list>
+    }
+  </div>
+</div>

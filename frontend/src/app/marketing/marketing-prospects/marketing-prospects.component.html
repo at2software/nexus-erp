@@ -1,0 +1,113 @@
+
+<!-- Main Content -->
+<div class="row" col-slider>
+    <!-- Filter Sidebar -->
+    <div class="col-3">
+        <div class="card sticky-side">
+            <div class="card-header">
+                <select class="form-select form-select-sm" [(ngModel)]="initiativeFilter"
+                    (change)="onFilterChange()">
+                    <option value="" i18n="@@i18n.marketing.all_initiatives">all initiatives</option>
+                    @for (initiative of initiatives; track initiative.id) {
+                    <option [value]="initiative.id">
+                        {{initiative.name}}
+                    </option>
+                    }
+                </select>
+            </div>
+            <div class="card-body">
+                <div class="form-label small" i18n="@@i18n.common.assigned_user">assigned user</div>
+                <select class="form-select form-select-sm" [(ngModel)]="userFilter" (change)="onFilterChange()">
+                    <option value="" i18n="@@i18n.common.all_users">all users</option>
+                    @for (user of availableUsers; track user.id) {
+                    <option [value]="user.id">{{user.fullName}}</option>
+                    }
+                </select>
+            </div>
+            <ul class="list-group list-group-flush">
+                @for (filter of statusFilters; track filter.key) {
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" [id]="'filter-' + filter.key"
+                            [(ngModel)]="filter.selected" (change)="onStatusFilterChange()">
+                        <label class="form-check-label" [for]="'filter-' + filter.key">
+                            <span i18n>{{filter.label}}</span>
+                        </label>
+                    </div>
+                    <span class="badge"
+                        [ngClass]="filter.badgeClass">{{filter.count}}</span>
+                </li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <!-- Prospects List -->
+    <div class="col-md-3">
+        <scrollbar class="sticky-side" style="overflow: visible;">
+            <div class="card mb-3">
+                <div class="card-header hstack gap-2">
+                    <span class="flex-fill" i18n="@@i18n.marketing.prospects">prospects</span>
+                    <i class="cursor-pointer text-primary" tabindex="0" (keydown.enter)="createNewProspect()" (click)="createNewProspect()">add</i>
+                </div>
+                @if (isLoading) {
+                <div class="card-body">
+                    <div class="text-center p-4">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden" i18n="@@i18n.common.loading">loading</span>
+                        </div>
+                    </div>
+                </div>
+                }
+
+                @if (!isLoading && prospects.length === 0) {
+                <empty-state [card]="false" class="marketing" i18n-title="@@i18n.marketing.no_prospects_found" title="no prospects yet">
+                  <p class="text-muted small" i18n="@@i18n.marketing.add_prospects_hint">Add prospects manually or through the Firefox addon.</p>
+                </empty-state>
+                }
+
+                @if (!isLoading && prospects.length > 0) {
+                <ul-compact class="list-group list-group-flush">
+                    @for (prospect of filteredProspects; track prospect.id) {
+                    <li class="list-group-item {{prospect.markerClass()}}" 
+                        [class.active]="selectedProspect?.id === prospect.id"
+                        [class.marker]="prospect.has_overdue_activities"
+                        [class.marker-red]="prospect.has_overdue_activities"
+                        [nx]="prospect" [tables]="filteredProspects" (nxActionsResolved)="actionsResolved()"
+                        [routerLink]="['/marketing/prospects', prospect.id]"
+                        routerLinkActive="active">
+                        <div class="hstack gap-2 text-truncate">
+                            <div class="flex-fill">
+                                @if(prospect.company_contact) {
+                                {{prospect.company_contact.contact.name}}
+                                } @else {
+                                {{prospect.name}}
+                                }
+                            </div>
+                            <div class="ms-auto text-truncate">
+                                @if (!prospect.company_contact) {
+                                <!-- Show company name from vcard when not linked to contact -->
+                                <small class="text-end text-truncate text-muted small"
+                                    [ngbTooltip]="prospect.company">{{prospect.company}}</small>
+                                } @else if (prospect.company_contact.company) {
+                                <!-- Show company logo when linked to contact -->
+                                <div (click)="$event.stopPropagation()" (keyup.enter)="$event.stopPropagation()" tabindex="0">
+                                    <avatar [object]="prospect.company_contact!.company!"></avatar>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                    </li>
+                    }
+                </ul-compact>
+                }
+            </div>
+        </scrollbar>
+    </div>
+    <!-- Prospect Details -->
+    <div class="col-md-6">
+        <scrollbar class="sticky-side">
+            <router-outlet></router-outlet>
+        </scrollbar>
+    </div>
+</div>

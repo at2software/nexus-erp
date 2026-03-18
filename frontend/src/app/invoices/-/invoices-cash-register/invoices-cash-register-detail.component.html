@@ -1,0 +1,71 @@
+<toolbar>
+    <div class="btn-group" role="group">
+        <button id="btnGroupDrop1" type="button" class="btn btn-primary px-2" (click)="addExpense(content)" hotkey="CTRL+ALT+N">
+            <i>add</i>
+        </button>
+    </div>
+</toolbar>
+<div class="card">
+    <div class="card-header" i18n="@@i18n.common.entries">entries</div>
+    <div class="table-responsive">
+        <table class="table">
+            <colgroup>
+                <col style="width:100px;">
+                <col>
+                <col style="width:100px;">
+                <col style="width:200px;">
+                <col style="width:100px;">
+            </colgroup>
+            <tbody>
+                <tr *nxFor="let e of entries">
+                    <td class="small text-muted text-nowrap">{{e.occured_at | date}}</td>
+                    <td class="text-truncate">{{e.description}}</td>
+                    <td class="text-truncate">{{e.approver}}</td>
+                    <td class="td-chard">
+                        <saldo-chart [min]="min" [max]="max" [delta]="e.value" [dx]="e.var.current"></saldo-chart>
+                    </td>
+                    <td class="text-nowrap text-end">{{(e.value + e.var.current) | money}}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<ng-template #content let-modal>
+	<div class="modal-header">
+		<h4 class="modal-title" id="modal-basic-title" i18n="@@i18n.invoices.addEntry">add entry</h4>
+		<button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+	</div>
+	<div class="modal-body">
+		<form>
+			<div class="input-group mb-3">
+				<label class="input-group-text" for="occurence" i18n="@@i18n.common.occurence">occurence</label>
+                <input
+                    id="occurence"
+                    class="form-control"
+                    placeholder="yyyy-mm-dd"
+                    name="dp"
+                    ngbDatepicker
+                    [(ngModel)]="modalData.occured_at"
+                    #dp="ngbDatepicker"
+                />
+                <button class="btn btn-outline-secondary input-group-text" (click)="dp.toggle()" type="button"><i>event</i></button>
+			</div>
+			<div class="input-group mb-3">
+				<label class="input-group-text" for="amount" i18n="@@i18n.common.amount">amount</label>
+				<input type="number" class="form-control" name="amount" id="amount" [(ngModel)]="modalData.value" [suffix]="global.currencySymbol()" />
+			</div>
+			<div class="input-group mb-3">
+				<label class="input-group-text" for="description" i18n="@@i18n.common.description">description</label>
+				<input type="text" class="form-control" name="description" id="description" [(ngModel)]="modalData.description" />
+			</div>
+			<div class="input-group mb-3">
+				<label class="input-group-text" for="approver" i18n="@@i18n.common.approver">approver</label>
+				<input type="text" class="form-control" name="approver" id="approver" [(ngModel)]="modalData.approver" />
+			</div>
+		</form>
+	</div>
+	<div class="modal-footer">
+		<button type="button" class="btn btn-primary" (click)="modal.close('Save click')" hotkey="CTRL+ENTER" i18n="@@i18n.common.save">save</button>
+	</div>
+</ng-template>

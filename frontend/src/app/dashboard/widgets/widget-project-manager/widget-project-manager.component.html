@@ -1,0 +1,45 @@
+<div class="card card-chart mb-3">
+
+  <div class="card-header gap-2">
+    <n>project</n>
+    <span class="flex-fill text-truncate" i18n="@@i18n.common.projectManager">project manager</span>
+    <div class="chart-title" roles="invoicing">{{value ? (value | mshort) : (value | loading)}}</div>
+  </div>
+
+  @if (hasInvoicesModule) {
+    <chart-card-range type="rangeArea" [chartData]="chartData" [suffix]="' ' + global.currencySymbol()" [color]="['blue','purple']" [seriesCount]="2" roles="invoicing"></chart-card-range>
+  }
+
+  <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+
+  @if (!getOptions()['chart-only']?.value) {
+    <ul-compact>
+      <li class="list-group-item d-flex text-nowrap {{_.markerClass()}}"
+          [class.compact]="isCompact(_)"
+          *nxFor="let _ of data; let i = index"
+          [ngbTooltip]="_.var.projectType === 'acquisition' ? getProbabilityTooltip(_) : ''">
+        <div>
+          <avatar [object]="_"></avatar>
+        </div>
+        <div class="flex-fill ms-3 text-truncate">
+          <div class="d-flex text-truncate">
+            <div class="flex-fill text-truncate">{{_.name}}</div>
+            @if (_.var.projectType === 'acquisition') {
+              <div class="text-muted" roles="invoicing">{{getDisplayValue(_) | mshort}}</div>
+            }
+            @if (_.var.projectType === 'running') {
+              <div class="text-muted" roles="invoicing" ngbTooltip="{{(_.foci_sum ?? 0) / _.hours_invested | percent}} of time is without focus item">{{getDisplayValue(_) | mshort}}</div>
+            }
+          </div>
+          @if (_.var.projectType === 'acquisition') {
+            <progress-bar [progress]="_.lead_probability || 0" [style]="'purple'" [title]="((_.lead_probability || 0) * 100).toFixed(1) + '%'"></progress-bar>
+          }
+          @if (_.var.projectType === 'running') {
+            <progress-bar [style]="'blue'" [progress]="_.progress" [ngbTooltip]="(_.progress | percent)"></progress-bar>
+          }
+        </div>
+      </li>
+    </ul-compact>
+  }
+
+</div>

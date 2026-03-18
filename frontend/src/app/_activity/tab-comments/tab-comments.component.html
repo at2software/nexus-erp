@@ -1,0 +1,76 @@
+<div class="container">
+  <scrollbar>
+    <ng-content></ng-content>
+
+    @if (stickies && stickies.length) {
+      <div class="header" i18n="@@i18n.common.sticky">sticky</div>
+    }
+    <tab-comment [comment]="comment" *nxFor="let comment of stickies"></tab-comment>
+
+    <div class="header d-flex align-items-center">
+      <span class="flex-fill" i18n="@@i18n.common.comments">comments</span>
+      @if (hasActivity['GitLabPlugin'] || hasActivity['MantisPlugin'] || hasActivity['MattermostPlugin']) {
+        <div class="d-flex gap-2 align-items-center">
+          <n class="pointer"
+            [class.text-primary]="showActivity['nexus']"
+            [class.text-muted]="!showActivity['nexus']"
+            (click)="toggleActivity('nexus')"
+            ngbTooltip="Toggle Nexus comments"
+            i18n-ngbTooltip="@@i18n.comments.toggleNexusComments">nexus</n>
+          @if (hasActivity['GitLabPlugin']) {
+            <n class="pointer"
+              [class.text-primary]="showActivity['GitLabPlugin']"
+              [class.text-muted]="!showActivity['GitLabPlugin']"
+              (click)="toggleActivity('GitLabPlugin')"
+              ngbTooltip="Toggle Git activity"
+              i18n-ngbTooltip="@@i18n.comments.toggleGitActivity">git</n>
+          }
+          @if (hasActivity['MantisPlugin']) {
+            <n class="pointer"
+              [class.text-primary]="showActivity['MantisPlugin']"
+              [class.text-muted]="!showActivity['MantisPlugin']"
+              (click)="toggleActivity('MantisPlugin')"
+              ngbTooltip="Toggle MantisBT activity"
+              i18n-ngbTooltip="@@i18n.comments.toggleMantisActivity">mantis</n>
+          }
+          @if (hasActivity['MattermostPlugin']) {
+            <n class="pointer"
+              [class.text-primary]="showActivity['MattermostPlugin']"
+              [class.text-muted]="!showActivity['MattermostPlugin']"
+              (click)="toggleActivity('MattermostPlugin')"
+              ngbTooltip="Toggle Mattermost activity"
+              i18n-ngbTooltip="@@i18n.comments.toggleMattermostActivity">mattermost</n>
+          }
+        </div>
+      }
+    </div>
+    @for (group of groupedComments; track group.date) {
+      <div class="day-header text-muted small px-3 py-1">{{group.header}}</div>
+      <tab-comment [comment]="comment" *nxFor="let comment of group.comments"></tab-comment>
+    }
+  </scrollbar>
+  <div class="input-container p-2 border-top d-flex gap-2 align-items-start">
+    <div ngbDropdown placement="top-start" class="d-inline-block">
+      <button type="button" class="btn btn-sm btn-outline-primary" ngbDropdownToggle>
+        <n>{{ getTargetIcon() }}</n>
+      </button>
+      <div ngbDropdownMenu>
+        <button ngbDropdownItem (click)="selectTarget('nexus')">
+          <n class="me-2">nexus</n>
+          <span i18n="@@i18n.comments.commentInNexus">comment in NEXUS</span>
+        </button>
+        @for (target of availableChatTargets; track target) {
+          <button ngbDropdownItem (click)="selectTarget(target)">
+            <n class="me-2">{{ target.icon() }}</n>
+            <span>{{ target.channelName || target.constructor.name.replace('Plugin', '') }}</span>
+          </button>
+        }
+      </div>
+    </div>
+    <textarea #commentTextarea class="form-control flex-fill" 
+      [placeholder]="getPlaceholder()"
+      (keydown.control.enter)="onNew($event)"
+      (input)="onTextareaInput($event)"
+      style="resize: none; overflow-y: auto; min-height: 38px;"></textarea>
+  </div>
+</div>

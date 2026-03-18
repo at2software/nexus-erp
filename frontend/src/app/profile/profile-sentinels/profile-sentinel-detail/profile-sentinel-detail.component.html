@@ -1,0 +1,275 @@
+@if (sentinel) {
+  <div class="row">
+    <!-- Main Content (col-8) -->
+    <div class="col-8">
+      <!-- Title Card -->
+      <div class="card mb-3 p-2">
+        <div roles="admin">
+          <input type="text" class="form-control-header" tabindex="1" [autosave]="sentinel" [(ngModel)]="sentinel.name">
+        </div>
+        <div noroles="admin">
+          <h4 class="mb-0">{{sentinel.name}}</h4>
+        </div>
+      </div>
+      <div class="card sentinel-editor overflow-hidden">
+        <div class="card-body p-0">
+
+          <!-- TRIGGER SECTION -->
+          <div class="sentinel-section">
+            <div class="section-header">
+              <span class="section-title" i18n="@@i18n.common.trigger">trigger</span>
+            </div>
+            <div class="sentinel-row" (click)="editTrigger()" (keyup.enter)="editTrigger()" tabindex="0">
+              <span class="sentinel-pill bg-{{getTriggerColor()}}">{{getTriggerLabel()}}</span>
+              <span class="sentinel-content">
+                <span class="sentinel-table">{{sentinel.table_name || 'not configured'}}</span>
+                @if (sentinel.trigger_variable) {
+                  <span class="text-muted" i18n="@@i18n.common.as">as</span>
+                  <span class="sentinel-field">{{sentinel.trigger_variable}}</span>
+                }
+              </span>
+              <span class="sentinel-actions">
+                <i class="text-muted">edit</i>
+              </span>
+            </div>
+          </div>
+
+          <!-- CONDITIONS SECTION -->
+          <div class="sentinel-section">
+            <div class="section-header">
+              <span class="section-title" i18n="@@i18n.common.conditions">conditions</span>
+              <button class="btn btn-sm btn-outline-primary" (click)="addCondition()">
+                <i>add</i>
+              </button>
+            </div>
+
+            @for (column of conditions; track $index; let colIndex = $index) {
+              @if (colIndex > 0) {
+                <div class="condition-or-divider">
+                  <span i18n="@@i18n.common.or">or</span>
+                </div>
+              }
+              <div class="condition-group">
+                @for (condition of column; track $index; let rowIndex = $index) {
+                  <div class="sentinel-row" (click)="editCondition(colIndex, rowIndex)" (keyup.enter)="editCondition(colIndex, rowIndex)" tabindex="0">
+                    <span class="sentinel-pill bg-info" i18n="@@i18n.common.if">if</span>
+                    <span class="sentinel-content">
+                      <span class="sentinel-field">{{getConditionColumn(condition)}}</span>
+                      <span class="sentinel-operator">{{getConditionLabel(condition)}}</span>
+                      @if (getConditionInput(condition)) {
+                        <span class="sentinel-value">"{{getConditionInput(condition)}}"</span>
+                      }
+                      @if (condition.inverted) {
+                        <span class="sentinel-inverted">
+                            <span class="notranslate">(</span>
+                            <span i18n="@@i18n.common.inverted">inverted</span>
+                            <span class="notranslate">)</span>
+                        </span>
+                      }
+                    </span>
+                    <span class="sentinel-actions">
+                      <i class="text-muted me-2">edit</i>
+                      <i class="text-danger" (click)="deleteCondition(colIndex, rowIndex); $event.stopPropagation()" (keyup.enter)="deleteCondition(colIndex, rowIndex); $event.stopPropagation()" tabindex="0">delete</i>
+                    </span>
+                  </div>
+                  @if (rowIndex < column.length - 1) {
+                    <div class="condition-and-label" i18n="@@i18n.common.and">and</div>
+                  }
+                }
+                <button class="btn btn-sm btn-link text-muted add-and-btn" (click)="addConditionToGroup(colIndex)">
+                    <span class="notranslate">+ </span>
+                    <span i18n="@@i18n.profile.addAndCondition">add and condition</span>
+                </button>
+              </div>
+            }
+
+            @if (conditions.length === 0) {
+              <div class="sentinel-row empty" (click)="addCondition()" (keyup.enter)="addCondition()" tabindex="0">
+                <span class="text-muted" i18n="@@i18n.profile.noConditionsClickToAdd">no conditions - click to add</span>
+              </div>
+            }
+          </div>
+
+          <!-- ACTIONS SECTION -->
+          <div class="sentinel-section">
+            <div class="section-header">
+              <span class="section-title" i18n="@@i18n.common.actions">actions</span>
+              @if (!circularWarning) {
+                <button class="btn btn-sm btn-outline-primary" (click)="addCommand()">
+                  <i>add</i>
+                </button>
+              }
+            </div>
+
+            @if (circularWarning) {
+              <div class="alert alert-warning m-2">
+                <i class="me-2">warning</i>
+                <span>{{circularWarning}}</span>
+              </div>
+            } @else {
+              @for (command of commands; track $index; let cmdIndex = $index) {
+                @if (command.key === 'for_each') {
+                  <!-- FOR EACH BLOCK -->
+                  <div class="for-each-block">
+                    <div class="sentinel-row for-each-header" (click)="editCommand(cmdIndex)" (keyup.enter)="editCommand(cmdIndex)" tabindex="0">
+                      <span class="sentinel-pill bg-purple" i18n="@@i18n.profile.forEach">for each</span>
+                      <span class="sentinel-content">
+                        <span class="sentinel-table">{{getForEachRelation(command)}}</span>
+                        <span class="text-muted" i18n="@@i18n.common.as">as</span>
+                        <span class="sentinel-field">{{getForEachVariable(command)}}</span>
+                      </span>
+                      <span class="sentinel-actions">
+                        <i class="text-muted me-2">edit</i>
+                        <i class="text-danger" (click)="deleteCommand(cmdIndex); $event.stopPropagation()" (keyup.enter)="deleteCommand(cmdIndex); $event.stopPropagation()" tabindex="0">delete</i>
+                      </span>
+                    </div>
+                    <div class="for-each-body">
+                      <!-- Nested Conditions -->
+                      @if (command.conditions?.length) {
+                        <div class="nested-section">
+                          <div class="nested-label">
+                              <span i18n="@@i18n.common.conditions">conditions</span>
+                              <span class="notranslate">:</span>
+                          </div>
+                          @for (cond of getNestedConditionsFlat(command); track $index) {
+                            <div class="sentinel-row nested-row" (click)="editForEachCondition(cmdIndex, cond.groupIndex, cond.index)" (keyup.enter)="editForEachCondition(cmdIndex, cond.groupIndex, cond.index)" tabindex="0">
+                              <span class="sentinel-pill bg-info" i18n="@@i18n.common.if">if</span>
+                              <span class="sentinel-content">
+                                <span class="sentinel-field">{{cond.column}}</span>
+                                <span class="sentinel-operator">{{cond.label}}</span>
+                                @if (cond.input) {
+                                  <span class="sentinel-value">"{{cond.input}}"</span>
+                                }
+                              </span>
+                              <span class="sentinel-actions">
+                                <i class="text-danger" (click)="deleteForEachCondition(cmdIndex, cond.groupIndex, cond.index, $event)" (keyup.enter)="deleteForEachCondition(cmdIndex, cond.groupIndex, cond.index, $event)" tabindex="0">delete</i>
+                              </span>
+                            </div>
+                          }
+                        </div>
+                      }
+                      <!-- Nested Actions -->
+                      @if (command.actions?.length) {
+                        <div class="nested-section">
+                          <div class="nested-label">
+                              <span i18n="@@i18n.common.actions">actions</span>
+                              <span class="notranslate">:</span>
+                          </div>
+                          @for (action of command.actions; track $index; let actionIndex = $index) {
+                            <div class="sentinel-row nested-row command-block" (click)="editForEachAction(cmdIndex, actionIndex)" (keyup.enter)="editForEachAction(cmdIndex, actionIndex)" tabindex="0">
+                              <span class="sentinel-pill bg-danger" i18n="@@i18n.common.do">do</span>
+                              <span class="sentinel-content">
+                                <div class="command-header">
+                                  <span class="sentinel-command">{{getCommandLabel(action)}}</span>
+                                  @if (getCommandTarget(action)) {
+                                    <span class="sentinel-table">"{{getCommandTarget(action)}}"</span>
+                                  }
+                                </div>
+                                @for (detail of getCommandDetails(action); track $index) {
+                                  <div class="command-detail">
+                                    <span class="detail-key">{{detail.key}}:</span>
+                                    <span class="detail-value">"<span [innerHTML]="colorizeVariables(detail.value)"></span>"</span>
+                                  </div>
+                                }
+                              </span>
+                              <span class="sentinel-actions">
+                                <i class="text-danger" (click)="deleteForEachAction(cmdIndex, actionIndex, $event)" (keyup.enter)="deleteForEachAction(cmdIndex, actionIndex, $event)" tabindex="0">delete</i>
+                              </span>
+                            </div>
+                          }
+                        </div>
+                      }
+                      <div class="nested-add-buttons">
+                        <button class="btn btn-sm btn-link" (click)="addForEachCondition(cmdIndex)">
+                            <span class="notranslate">+ </span>
+                            <span i18n="@@i18n.common.condition">condition</span>
+                        </button>
+                        <button class="btn btn-sm btn-link" (click)="addForEachAction(cmdIndex)">
+                            <span class="notranslate">+ </span>
+                            <span i18n="@@i18n.common.action">action</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                } @else {
+                  <!-- REGULAR COMMAND -->
+                  <div class="sentinel-row command-block" (click)="editCommand(cmdIndex)" (keyup.enter)="editCommand(cmdIndex)" tabindex="0">
+                    <span class="sentinel-pill bg-danger" i18n="@@i18n.common.do">do</span>
+                    <span class="sentinel-content">
+                      <div class="command-header">
+                        <span class="sentinel-command">{{getCommandLabel(command)}}</span>
+                        @if (getCommandTarget(command)) {
+                          <span class="sentinel-table">"{{getCommandTarget(command)}}"</span>
+                        }
+                      </div>
+                      @for (detail of getCommandDetails(command); track $index) {
+                        <div class="command-detail">
+                          <span class="detail-key">{{detail.key}}:</span>
+                          <span class="detail-value">"<span [innerHTML]="colorizeVariables(detail.value)"></span>"</span>
+                        </div>
+                      }
+                    </span>
+                    <span class="sentinel-actions">
+                      <i class="text-muted me-2">edit</i>
+                      <i class="text-danger" (click)="deleteCommand(cmdIndex); $event.stopPropagation()" (keyup.enter)="deleteCommand(cmdIndex); $event.stopPropagation()" tabindex="0">delete</i>
+                    </span>
+                  </div>
+                }
+              }
+
+              @if (commands.length === 0) {
+                <div class="sentinel-row empty" (click)="addCommand()" (keyup.enter)="addCommand()" tabindex="0">
+                  <span class="text-muted" i18n="@@i18n.profile.noActionsClickToAdd">no actions - click to add</span>
+                </div>
+              }
+            }
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar (col-4) -->
+    <div class="col-4">
+      <div class="card">
+        <div class="card-header" i18n="@@i18n.common.info">info</div>
+        <div class="card-body">
+          <div class="mb-2">
+            <small class="text-muted d-block" i18n="@@i18n.common.status">status</small>
+            <span class="badge bg-{{getTriggerColor()}}">{{getTriggerLabel()}}</span>
+          </div>
+          <div class="mb-2">
+            <small class="text-muted d-block" i18n="@@i18n.common.table">table</small>
+            <code>{{sentinel.table_name || '-'}}</code>
+          </div>
+          <div class="mb-2">
+            <small class="text-muted d-block" i18n="@@i18n.common.conditions">conditions</small>
+            <span>{{conditions.length}} group(s)</span>
+          </div>
+          <div class="mb-2">
+            <small class="text-muted d-block" i18n="@@i18n.common.actions">actions</small>
+            <span>{{commands.length}} action(s)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Help Card -->
+      <div class="card mt-3">
+        <div class="card-header" i18n="@@i18n.profile.templateVariables">template variables</div>
+        <div class="card-body small">
+          <code class="d-block mb-1">{{"{{" + (sentinel.trigger_variable || 'var') + ".field}}"}}</code>
+          <span class="text-muted" i18n="@@i18n.profile.triggerModelField">trigger model field</span>
+
+          <code class="d-block mb-1 mt-2">{{"{{" + (sentinel.trigger_variable || 'var') + ".relation.field}}"}}</code>
+          <span class="text-muted" i18n="@@i18n.profile.relatedModelField">related model field</span>
+
+          <code class="d-block mb-1 mt-2">{{"{{old.field}}"}}</code>
+          <span class="text-muted" i18n="@@i18n.profile.valueBeforeUpdate">value before update</span>
+
+          <code class="d-block mb-1 mt-2">{{"{{item.field}}"}}</code>
+          <span class="text-muted" i18n="@@i18n.profile.foreachLoopItem">for-each loop item</span>
+        </div>
+      </div>
+    </div>
+  </div>
+}

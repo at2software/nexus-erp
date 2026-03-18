@@ -1,0 +1,20 @@
+@if (active !== undefined && rolesAllowed) {
+  <a class="nav-link"
+    placement="right"
+    tabindex="-1"
+    [routerLink]="routerLink"
+    [class.active]="active">
+    {{title}}
+  </a>
+}
+@if (active === undefined && rolesAllowed) {
+  <a class="nav-link"
+    placement="right"
+    tabindex="-1"
+    [routerLink]="routerLink"
+    routerLinkActive="active"
+    [routerLinkActiveOptions]="{ exact: exact }">
+    {{title}}
+  </a>
+}
+<ng-content></ng-content>

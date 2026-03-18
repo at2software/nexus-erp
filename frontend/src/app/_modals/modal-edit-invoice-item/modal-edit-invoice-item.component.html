@@ -1,0 +1,99 @@
+<div class="modal d-block" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title" i18n="@@i18n.invoice.addNewInvoiceItem">add new invoice item</span>
+      </div>
+      <div class="modal-body">
+        <div class="input-group mb-3">
+          <span class="input-group-text" i18n="@@i18n.common.product">product</span>
+          <search-input
+            class="p-0 flex-fill"
+            only="Product"
+            [has_icon]="true"
+            [minSearch]="1"
+            (itemSelected)="onSelect($event)"
+            [query]="currentProduct ? currentProduct.name : ''">
+          </search-input>
+        </div>
+        <div class="form-floating mb-3">
+          <angular-editor class="form-control pt-2" style="height:auto; min-height: auto;" #title [config]="config" [(ngModel)]="item.text"></angular-editor>
+          <!-- <textarea class="form-control" cdkTextareaAutosize #autosize="cdkTextareaAutosize" id="title" #title [(ngModel)]="item.text"></textarea>
+          <label for="title" i18n="@@i18n.common.title">title</label> -->
+        </div>
+
+        @if (!currentProduct || currentProduct.time_based === 0) {
+          <div class="d-flex mb-3 align-items-center">
+            <span class="flex-fill"></span>
+            <span class="input-group-text bg-transparent"  i18n="@@i18n.common.price">price</span>
+            <span>
+              <input type="number" class="form-control text-end" [(ngModel)]="item.price" style="width:100px;" [suffix]="global.currencySymbol()">
+            </span>
+            @if (item.canModifyQuantity) {
+              <span class="input-group-text bg-transparent">x</span>
+              <span>
+                <input type="number" class="form-control" placeholder="quantity" style="width:100px;" [(ngModel)]="item.qty" i18n-placeholder="@@i18n.common.quantity">
+              </span>
+              <span>
+                <input type="text" class="form-control" placeholder="unit name" style="width:75px;" [(ngModel)]="item.unit_name" i18n-placeholder="@@i18n.common.unitName">
+              </span>
+              <span class="input-group-text bg-transparent">= {{(item.qty * item.price * item.qtyMultiplicator | money)}}</span>
+            }
+            @if (!item.canModifyQuantity) {
+              <span class="input-group-text bg-transparent">{{item.getRepeatString()}}</span>
+            }
+          </div>
+        }
+
+        @if (currentProduct && currentProduct.time_based !== 0) {
+          <div class="d-flex mb-3 align-items-center">
+            <span class="flex-fill"></span>
+            <span class="input-group-text bg-transparent"  i18n="@@i18n.common.price">price</span>
+            <span class="input-group-text bg-transparent">
+              <span #p1 (click)="onTogglePriceVisiblity(p1, p2)" (keyup.enter)="onTogglePriceVisiblity(p1, p2)" tabindex="0">{{item.price}} {{global.currencySymbol()}} x</span>
+              <span #p2 class="d-none">
+                <input type="number" class="form-control text-end" [(ngModel)]="item.price" style="width:100px;" [suffix]="global.currencySymbol()">
+              </span>
+            </span>
+            <span>
+              <input type="number" class="form-control text-end" placeholder="qty" style="width:100px;" [(ngModel)]="item.qty" i18n-placeholder="@@i18n.common.qty">
+            </span>
+            <span class="input-group-text bg-transparent">
+              <span #q1 (click)="onTogglePriceVisiblity(q1, q2)" (keyup.enter)="onTogglePriceVisiblity(q1, q2)" tabindex="0">{{item.unit_name}}</span>
+              <span #q2 class="d-none"><input type="text" class="form-control" placeholder="unit name" style="width:75px;" [(ngModel)]="item.unit_name" i18n-placeholder="@@i18n.common.unitName"></span>
+            </span>
+            <span class="input-group-text bg-transparent">
+              = {{item.qty * item.price}} {{global.currencySymbol()}}
+            </span>
+          </div>
+        }
+
+        <div class="d-flex mb-3 align-items-center">
+          <span class="flex-fill"></span>
+          <span class="input-group-text bg-transparent">
+              <span i18n="@@i18n.common.vat">VAT</span>
+              <span class="notranslate">:</span>
+          </span>
+          <span>
+            <input type="number" class="form-control p-0 text-end" [(ngModel)]="item.vat_rate" style="width:75px;" suffix="%">
+          </span>
+          <span>
+            <select class="form-select" aria-label="Default select example" [(ngModel)]="item.vat_calculation">
+              <option [value]="0" i18n="@@i18n.common.net">net</option>
+              <option [value]="1" i18n="@@i18n.common.gross">gross</option>
+            </select>
+          </span>
+          <span class="input-group-text bg-transparent"  i18n="@@i18n.common.discount">discount</span>
+          <span><input type="text" class="form-control text-end" [(ngModel)]="item.discount" style="width:100px;" suffix="%"></span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" (click)="decline()" data-bs-dismiss="modal" i18n="@@i18n.common.cancel">cancel</button>
+        @if (okNextButtonText) {
+          <button type="button" class="btn btn-primary" (click)="acceptNext()" hotkey="CTRL+SHIFT+ENTER">{{okNextButtonText}}</button>
+        }
+        <button type="button" class="btn btn-primary" (click)="accept()" hotkey="CTRL+ENTER">{{okButtonText}}</button>
+      </div>
+    </div>
+  </div>
+</div>

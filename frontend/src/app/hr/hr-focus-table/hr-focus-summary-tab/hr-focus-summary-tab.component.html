@@ -1,0 +1,77 @@
+<activity-tab icon="bar_chart">
+    <div class="container">
+        <scrollbar>
+            <div class="p-3">
+
+                <!-- User header -->
+                @if (user) {
+                <div class="text-center mb-3">
+                    @for (_ of [userKey]; track _) {
+                        <avatar [object]="user" size="lg" class="d-inline-block my-4 mb-6"></avatar>
+                    }
+                    <div class="fw-semibold">{{ user.name }}</div>
+                </div>
+                }
+
+                <!-- Date range -->
+                <div class="small text-muted mb-3 text-center">
+                    <i class="align-middle" style="font-size:1rem">date_range</i>
+                    {{ dateFrom }} – {{ dateTo }}
+                </div>
+
+                <!-- Donut chart: actual vs expected -->
+                @if (donutOptions) {
+                <div echarts [options]="donutOptions" style="height: 200px;"></div>
+                }
+
+                <!-- Legend -->
+                <div class="d-flex flex-wrap justify-content-around small mt-1 mb-3 gap-1">
+                    <span><span class="me-1" style="color:#20c997">●</span>Paid: {{ totalPaid | number:'1.1-1' }}h</span>
+                    <span><span class="me-1" style="color:#6c757d">●</span>Unpaid: {{ totalUnpaid | number:'1.1-1' }}h</span>
+                    @if (totalVacation > 0) {
+                    <span><span class="me-1" style="color:#0dcaf0">●</span>Vacation: {{ totalVacation | number:'1.1-1' }}h</span>
+                    }
+                    @if (totalSick > 0) {
+                    <span><span class="me-1" style="color:#ffc107">●</span>Sick: {{ totalSick | number:'1.1-1' }}h</span>
+                    }
+                    @if (gap > 0) {
+                    <span><span class="me-1" style="color:#dc3545">●</span>Gap: {{ gap | number:'1.1-1' }}h</span>
+                    } @else if (gap < 0) {
+                    <span><span class="me-1" style="color:#fd7e14">●</span>Overtime: +{{ -gap | number:'1.1-1' }}h</span>
+                    } @else {
+                    <span class="text-success"><i class="align-middle" style="font-size:.9rem">check_circle</i> On track</span>
+                    }
+                </div>
+
+                <!-- Paid vs unpaid progress bar -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                        <span>Paid vs. Unpaid</span>
+                        <span>{{ paidPercent | number:'1.0-0' }}% paid</span>
+                    </div>
+                    <div class="progress" style="height:6px;">
+                        <div class="progress-bar" style="background:#20c997" [style.width.%]="paidPercent"></div>
+                        <div class="progress-bar bg-dark-grey" [style.width.%]="100 - paidPercent"></div>
+                    </div>
+                </div>
+
+                <!-- Summary row -->
+                <div class="d-flex justify-content-between small">
+                    <div class="text-muted">Expected<br><strong class="text-light fs-6">{{ totalExpected |
+                            number:'1.1-1' }}h</strong></div>
+                    <div class="text-center text-muted">Actual<br><strong class="fs-6"
+                            [class.text-success]="totalActual >= totalExpected"
+                            [class.text-warning]="totalActual < totalExpected">{{ totalActual | number:'1.1-1'
+                            }}h</strong></div>
+                    <div class="text-end text-muted">{{ gap < 0 ? 'Overtime' : 'Gap' }}<br>
+                        <strong class="fs-6" [class.text-danger]="gap > 0" [class.text-warning]="gap < 0" [class.text-success]="gap === 0">
+                            {{ (gap < 0 ? -gap : gap) | number:'1.1-1' }}h
+                        </strong>
+                        <div class="text-muted" style="font-size:.7rem">{{ totalExpected > 0 ? ((gap < 0 ? -gap : gap) / totalExpected * 100 | number:'1.0-0') : 0 }}%</div>
+                    </div>
+                </div>
+
+            </div>
+        </scrollbar>
+    </div>
+</activity-tab>

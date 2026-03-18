@@ -1,0 +1,124 @@
+// Maps GitHub/Mattermost emoji shortcodes to Unicode codepoints
+// Images served from GitHub CDN: https://github.githubassets.com/images/icons/emoji/unicode/CODEPOINT.png
+// Reference: https://gist.github.com/rxaviers/7360908
+const EMOJI_MAP: Record<string, string> = {
+    // Smileys
+    'grinning': '1f600', 'smiley': '1f603', 'smile': '1f604', 'happy': '1f604', 'grin': '1f601',
+    'laughing': '1f606', 'sweat_smile': '1f605', 'joy': '1f602', 'rofl': '1f923',
+    'blush': '1f60a', 'innocent': '1f607', 'wink': '1f609', 'relaxed': '263a',
+    'yum': '1f60b', 'stuck_out_tongue': '1f61b', 'stuck_out_tongue_winking_eye': '1f61c',
+    'stuck_out_tongue_closed_eyes': '1f61d', 'money_mouth_face': '1f911',
+    'heart_eyes': '1f60d', 'sunglasses': '1f60e', 'smirk': '1f60f',
+    'neutral_face': '1f610', 'expressionless': '1f611', 'unamused': '1f612',
+    'sweat': '1f613', 'pensive': '1f614', 'confused': '1f615', 'confounded': '1f616',
+    'kissing': '1f617', 'kissing_heart': '1f618', 'kissing_smiling_eyes': '1f619',
+    'kissing_closed_eyes': '1f61a', 'disappointed': '1f61e', 'worried': '1f61f',
+    'angry': '1f620', 'rage': '1f621', 'cry': '1f622', 'persevere': '1f623',
+    'triumph': '1f624', 'disappointed_relieved': '1f625', 'frowning_face': '1f626',
+    'anguished': '1f627', 'fearful': '1f628', 'weary': '1f629', 'sleepy': '1f62a',
+    'tired_face': '1f62b', 'grimacing': '1f62c', 'sob': '1f62d', 'open_mouth': '1f62e',
+    'hushed': '1f62f', 'cold_sweat': '1f630', 'scream': '1f631', 'astonished': '1f632',
+    'flushed': '1f633', 'sleeping': '1f634', 'dizzy_face': '1f635', 'no_mouth': '1f636',
+    'mask': '1f637', 'nerd_face': '1f913', 'thinking': '1f914', 'zipper_mouth_face': '1f910',
+    'raised_eyebrow': '1f928', 'star_struck': '1f929', 'partying_face': '1f973',
+    'woozy_face': '1f974', 'hot_face': '1f975', 'cold_face': '1f976',
+    'exploding_head': '1f92f', 'shushing_face': '1f92b', 'lying_face': '1f925',
+    'drooling_face': '1f924', 'sneezing_face': '1f927', 'monocle_face': '1f9d0',
+    'upside_down_face': '1f643', 'roll_eyes': '1f644', 'hugs': '1f917',
+    'yawning_face': '1f971',
+    // Gestures & Hands
+    '+1': '1f44d', 'thumbsup': '1f44d', '-1': '1f44e', 'thumbsdown': '1f44e',
+    'ok_hand': '1f44c', 'clap': '1f44f', 'wave': '1f44b', 'pray': '1f64f',
+    'raised_hands': '1f64c', 'open_hands': '1f450', 'muscle': '1f4aa',
+    'raised_hand': '270b', 'v': '270c', 'fist': '270a', 'punch': '1f44a',
+    'point_right': '1f449', 'point_left': '1f448', 'point_up': '261d',
+    'point_up_2': '1f446', 'point_down': '1f447', 'crossed_fingers': '1f91e',
+    'handshake': '1f91d', 'metal': '1f918', 'vulcan_salute': '1f596',
+    'writing_hand': '270d', 'nail_care': '1f485',
+    // Hearts & Love
+    'heart': '2764', 'orange_heart': '1f9e1', 'yellow_heart': '1f49b',
+    'green_heart': '1f49a', 'blue_heart': '1f499', 'purple_heart': '1f49c',
+    'black_heart': '1f5a4', 'broken_heart': '1f494', 'two_hearts': '1f495',
+    'revolving_hearts': '1f49e', 'heartbeat': '1f493', 'heartpulse': '1f497',
+    'sparkling_heart': '1f496', 'cupid': '1f498', 'gift_heart': '1f491',
+    'heart_decoration': '1f49f', 'heart_exclamation': '2763',
+    // Symbols & Signs
+    'star': '2b50', 'star2': '1f31f', 'sparkles': '2728', 'fire': '1f525',
+    'boom': '1f4a5', 'collision': '1f4a5', 'tada': '1f389', 'balloon': '1f388',
+    'gift': '1f381', 'trophy': '1f3c6', 'medal_sports': '1f3c5',
+    'first_place_medal': '1f947', '100': '1f4af', 'warning': '26a0',
+    'x': '274c', 'heavy_check_mark': '2714', 'white_check_mark': '2705',
+    'question': '2753', 'grey_question': '2754', 'grey_exclamation': '2755',
+    'exclamation': '2757', 'heavy_exclamation_mark': '2757', 'no_entry': '26d4',
+    'no_entry_sign': '1f6ab', 'stop_sign': '1f6d1', 'recycle': '267b',
+    'information_source': '2139', 'copyright': '00a9', 'registered': '00ae', 'tm': '2122',
+    'sos': '1f198', 'new': '1f195', 'up': '1f199', 'cool': '1f192', 'ok': '1f197',
+    'speech_balloon': '1f4ac', 'thought_balloon': '1f4ad', 'zzz': '1f4a4',
+    // Objects & Tech
+    'bulb': '1f4a1', 'flashlight': '1f526', 'mag': '1f50d', 'key': '1f511',
+    'lock': '1f512', 'unlock': '1f513', 'bell': '1f514', 'no_bell': '1f515',
+    'computer': '1f4bb', 'iphone': '1f4f1', 'phone': '1f4de', 'email': '1f4e7',
+    'envelope': '2709', 'mailbox': '1f4eb', 'inbox_tray': '1f4e5', 'outbox_tray': '1f4e4',
+    'pencil': '270f', 'pencil2': '270f', 'paperclip': '1f4ce', 'books': '1f4da',
+    'book': '1f4d6', 'notebook': '1f4d3', 'clipboard': '1f4cb', 'calendar': '1f4c5',
+    'date': '1f4c5', 'chart_with_upwards_trend': '1f4c8', 'chart_with_downwards_trend': '1f4c9',
+    'bar_chart': '1f4ca', 'moneybag': '1f4b0', 'dollar': '1f4b5', 'euro': '1f4b6',
+    'pound': '1f4b7', 'yen': '1f4b4', 'credit_card': '1f4b3', 'money_with_wings': '1f4b8',
+    'hammer': '1f528', 'wrench': '1f527', 'gear': '2699', 'scissors': '2702',
+    'pushpin': '1f4cc', 'link': '1f517', 'newspaper': '1f4f0',
+    'camera': '1f4f7', 'camera_flash': '1f4f8', 'video_camera': '1f4f9',
+    'tv': '1f4fa', 'radio': '1f4fb', 'headphones': '1f3a7', 'microphone': '1f3a4',
+    'loudspeaker': '1f4e2', 'mega': '1f4e3', 'art': '1f3a8', 'musical_note': '1f3b5',
+    'notes': '1f3b6', 'movie_camera': '1f3ac', 'clapper': '1f3ac',
+    // Travel & Places
+    'car': '1f697', 'taxi': '1f695', 'bus': '1f68c', 'airplane': '2708',
+    'rocket': '1f680', 'boat': '26f5', 'ship': '1f6a2', 'train': '1f686',
+    'house': '1f3e0', 'office': '1f3e2', 'school': '1f3eb', 'hospital': '1f3e5',
+    'earth_africa': '1f30d', 'earth_americas': '1f30e', 'earth_asia': '1f30f',
+    'globe_with_meridians': '1f310', 'world_map': '1f5fa',
+    // Nature & Weather
+    'sunny': '2600', 'cloud': '2601', 'umbrella': '2602', 'snowflake': '2744',
+    'rainbow': '1f308', 'droplet': '1f4a7', 'ocean': '1f30a', 'zap': '26a1',
+    'snowman': '26c4', 'partly_sunny': '26c5', 'thunder_cloud_and_rain': '26c8',
+    // Animals
+    'dog': '1f436', 'cat': '1f431', 'mouse': '1f42d', 'rabbit': '1f430',
+    'bear': '1f43b', 'panda_face': '1f43c', 'koala': '1f428', 'tiger': '1f42f',
+    'lion': '1f981', 'cow': '1f42e', 'pig': '1f437', 'frog': '1f438',
+    'monkey_face': '1f435', 'see_no_evil': '1f648', 'hear_no_evil': '1f649',
+    'speak_no_evil': '1f64a', 'chicken': '1f414', 'penguin': '1f427', 'bird': '1f426',
+    'snake': '1f40d', 'turtle': '1f422', 'bug': '1f41b', 'bee': '1f41d',
+    'ant': '1f41c', 'fish': '1f41f', 'dolphin': '1f42c', 'octopus': '1f419',
+    'wolf': '1f43a', 'fox_face': '1f98a', 'unicorn': '1f984',
+    // Food & Drink
+    'pizza': '1f355', 'hamburger': '1f354', 'hotdog': '1f32d', 'taco': '1f32e',
+    'sushi': '1f363', 'ramen': '1f35c', 'spaghetti': '1f35d',
+    'cake': '1f370', 'birthday': '1f382', 'cookie': '1f36a',
+    'chocolate_bar': '1f36b', 'candy': '1f36c', 'lollipop': '1f36d',
+    'coffee': '2615', 'tea': '1f375', 'beer': '1f37a', 'beers': '1f37b',
+    'wine_glass': '1f377', 'cocktail': '1f378', 'tropical_drink': '1f379',
+    'apple': '1f34e', 'green_apple': '1f34f', 'banana': '1f34c',
+    'watermelon': '1f349', 'grapes': '1f347', 'strawberry': '1f353',
+    'peach': '1f351', 'cherries': '1f352', 'pineapple': '1f34d', 'lemon': '1f34b',
+    // Flags
+    'gb': '1f1ec-1f1e7', 'us': '1f1fa-1f1f8', 'de': '1f1e9-1f1ea',
+    'fr': '1f1eb-1f1f7', 'it': '1f1ee-1f1f9', 'es': '1f1ea-1f1f8',
+    'jp': '1f1ef-1f1f5', 'cn': '1f1e8-1f1f3', 'au': '1f1e6-1f1fa',
+    'ca': '1f1e8-1f1e6', 'checkered_flag': '1f3c1',
+}
+
+export const shortcodeToEmoji = (name: string): string => {
+    const code = EMOJI_MAP[name]
+    return code ? String.fromCodePoint(...code.split('-').map(c => parseInt(c, 16))) : ''
+}
+
+export const markdown2html = (markdown:string) => {
+    markdown = markdown.replace(/`+([^`]*?)`+/gs, "<code>$1</code>")
+    markdown = markdown.replace(/[([[]([^\][]*?)[\]](?!\()/gs, "&#91;$1&#93;")
+    markdown = markdown.replace(/!\[(.*?)\]\((.*?)( =\d+x\d+)?\)/gs, "<img src=\"$2\" title=\"$1\">")
+    markdown = markdown.replace(/\[(.*?)\]\((.*?)\)/gs, "<a class=\"text-primary\" href=\"$2\" target=\"_blank\">$1</a>")
+    markdown = markdown.replace(/:([a-z0-9_+\-]+):/g, (match, name) => {
+        const code = EMOJI_MAP[name]
+        return code ? String.fromCodePoint(...code.split('-').map(c => parseInt(c, 16))) : match
+    })
+    return markdown
+}

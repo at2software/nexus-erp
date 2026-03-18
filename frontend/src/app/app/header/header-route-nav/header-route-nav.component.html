@@ -1,0 +1,3 @@
+@for (route of routes; track route.path) {
+<header-link-item [routerLink]="route.path" [title]="route.title" [exact]="route.exact"></header-link-item>
+}

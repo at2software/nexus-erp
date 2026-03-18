@@ -1,0 +1,44 @@
+<activity-tab nicon="mattermost" [hidden]="true">
+  <div class="container">
+    <div class="header d-flex w-100">
+      @for (instance of services; track instance.id) {
+        <div class="nav-item flex-fill d-flex">
+          <a class="nav-link active flex-fill"
+            data-bs-toggle="tab"
+            attr.data-bs-target="#chatInstance{{instance.id}}"
+            type="button"
+            role="tab"
+            aria-controls="home"
+          aria-selected="true">{{instance.getName()}}</a>
+          <a class="text-primary cursor-pointer" href="{{instance.link()}}" target="_blank"><i>chevron_right</i></a>
+        </div>
+      }
+    </div>
+    <div class="container">
+      @for (instance of services; track instance.id) {
+        <div class="tab-content" id="myTabContent">
+          <div class="tab-pane fade show active" id="chatInstance{{instance.id}}" class="instance-container" role="tabpanel" aria-labelledby="home-tab">
+            <scrollbar #scroll>
+              @for (p of instance.posts; track p.id) {
+                @if (p.type.length <= 0) {
+                  <div class="callout">
+                    <img class="avatar avatar-xs avatar-img" src="{{p.avatar()}}" alt="User avatar">
+                    <span [innerHTML]="p.message | safe:'html'"></span>
+                  </div>
+                }
+                @if (p.type.length > 0) {
+                  <div class="system">
+                    <span [innerHTML]="p.message | safe:'html'"></span>
+                  </div>
+                }
+              }
+            </scrollbar>
+            <div class="input-container p-2 border-top">
+              <textarea class="form-control" placeholder="New Comment (CTRL+ENTER to save)" (keydown.control.enter)="onNew(instance, $event)" i18n-placeholder="@@i18n.info.newCommentCtrlEnterToSave"></textarea>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</activity-tab>

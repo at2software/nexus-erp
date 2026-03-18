@@ -1,0 +1,129 @@
+.chart-column {
+    width: 200px !important;
+    min-width: 200px !important;
+    max-width: 200px !important;
+    flex-shrink: 0 !important;
+}
+.stat-card {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    transition: background-color 0.2s ease;
+    min-width: 70px;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.2);
+
+    &:hover {
+        background-color: rgba(0, 0, 0, 0.3);
+    }
+
+    &.active {
+        background-color: rgba(0, 0, 0, 0.4);
+        border: 2px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        line-height: 1;
+        
+        &.text-muted {
+            color: rgba(255, 255, 255, 0.3) !important;
+        }
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.8);
+        margin-top: 0.25rem;
+        text-align: center;
+    }
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.75rem 0;
+    transition: background-color 0.2s ease;
+    border-radius: 0.25rem;
+
+    &:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    &.active {
+        background-color: rgba(13, 110, 253, 0.1);
+        border-left: 3px solid var(--bs-primary);
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 600;
+        line-height: 1;
+        
+        &.text-muted {
+            color: #6c757d !important;
+        }
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+        text-align: center;
+    }
+}
+
+hr {
+    margin: 0.5rem 0;
+}
+
+.cursor-pointer {
+    transition: opacity 0.2s ease;
+
+    &:hover {
+        opacity: 0.9;
+    }
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s;
+
+    &:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+}
+
+.table {
+    tr {
+        transition: background-color 0.15s;
+    }
+
+    tbody tr:hover {
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+}
+
+.progress {
+    background-color: #e9ecef;
+}
+
+.modal {
+    &.show {
+        display: block !important;
+    }
+}
+
+.modal-backdrop {
+    &.show {
+        opacity: 0.5;
+    }
+}
+
+.material-icons {
+    user-select: none;
+}

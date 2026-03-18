@@ -1,0 +1,82 @@
+.collapse-toggle {
+    cursor: pointer;
+    color: var(--bs-primary);
+    display: flex;
+    align-items: center;
+    width: 24px;
+    transition: opacity 0.2s;
+    opacity: 0.7;
+
+    &:hover {
+        opacity: 1;
+    }
+
+    i {
+        font-size: 20px;
+    }
+}
+.col-date { width: 100px !important; text-align: right; }
+.col-net { width: 75px !important; text-align: right; }
+
+.collapse-toggle-spacer {
+    width: 24px;
+}
+
+.project-content {
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin: -4px -8px;
+    cursor: move;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.make-root-icon {
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    padding: 0 4px;
+
+    &:hover {
+        opacity: 1;
+    }
+
+    i {
+        font-size: 18px;
+    }
+}
+
+.drop-zone-wrapper {
+    min-height: 30px;
+    position: relative;
+    transition: background-color 0.2s;
+}
+li ul.list-group li {
+    padding: 0 !important;
+}
+
+// Only highlight during drag - when body has project-dragging class
+body.project-dragging {
+    .drop-zone-wrapper:not(:has(.drop-zone-wrapper:hover)):hover > .project-row .project-content {
+        background-color: rgba(var(--bs-success-rgb), 0.15) !important;
+        border-color: var(--bs-success) !important;
+        box-shadow: 0 0 0 2px rgba(var(--bs-success-rgb), 0.2) !important;
+    }
+}
+
+.cdk-drag-preview {
+    opacity: 0.8;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.cdk-drag-animating {
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.cdk-drag-placeholder {
+    display: none;
+}

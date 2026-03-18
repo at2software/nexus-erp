@@ -1,0 +1,21 @@
+.problem-autocomplete {
+    .dropdown-menu {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .category-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .dropdown-item {
+        cursor: pointer;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+    }
+}

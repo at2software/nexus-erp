@@ -1,0 +1,22 @@
+<div class="row">
+    <div class="col-3">
+        <div class="card">
+            <div class="card-header" i18n="@@i18n.common.cashRegisters">cash registers</div>
+            <ul class="list-group">
+                <li *nxFor="let r of registers" class="list-group-item" routerLink="./{{r.id}}">{{r.name}}</li>
+            </ul>
+        </div>
+    </div>
+    <div class="col-9">
+        @if (isLoaded && registers.length === 0) {
+            <div class="card">
+                <empty-state [card]="false" class="invoices" i18n-title="@@i18n.invoices.noCashRegistersYet" title="No cash registers yet">
+                    <p i18n="@@i18n.invoices.cashRegistersEmptyDescription">Set up your first cash register to start tracking point-of-sale transactions with precision.</p>
+                </empty-state>
+            </div>
+        }
+        @if (!isLoaded || registers.length > 0) {
+        <router-outlet></router-outlet>
+        }
+    </div>
+</div>

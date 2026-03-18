@@ -1,0 +1,21 @@
+<div class="card card-chart mb-3">
+
+  <div class="card-header gap-2">
+    <n>project</n>
+    <span class="flex-fill text-truncate" i18n="@@i18n.project.leadSuccess">lead success</span>
+    <span class="badge bg-lighter ms-2 py-1 px-1" ngbTooltip="lead success rate of the last 12 months" i18n-ngbTooltip="@@i18n.project.leadSuccess12m">12m</span>
+    @if (value) {
+      <div class="chart-title" roles="invoicing">{{(value ? value : 0) | mshort}}</div>
+    }
+  </div>
+
+  <chart-card-range
+    type="rangeArea"
+    roles="invoicing"
+    keyPath="params/PROJECT_SUCCESS_RATE"
+    [color]="['white','primary']"
+    [options]="{chart:{height:100}}"
+    suffix="%">
+  </chart-card-range>
+  <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+</div>

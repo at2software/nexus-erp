@@ -1,0 +1,9 @@
+
+    <milestone-popup
+        [milestone]="milestone"
+        [project]="project"
+        [visible]="true"
+        (updated)="onMilestoneUpdated($event)"
+        (deleted)="onMilestoneDeleted()"
+        (closed)="dismiss()">
+    </milestone-popup>

@@ -1,0 +1,63 @@
+/* To learn more about this file see: https://angular.io/config/tsconfig. */
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "baseUrl": "./",
+    "outDir": "./dist/out-tsc",
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "strictPropertyInitialization": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "sourceMap": true,
+    "declaration": false,
+    "experimentalDecorators": true,
+    "moduleResolution": "bundler",
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "es2020",
+    "lib": [
+      "es2018",
+      "dom"
+    ],
+    "paths": {
+      "@charts/*": [
+        "src/app/_charts/*"
+      ],
+      "@dashboard/*": [
+        "src/app/dashboard/*"
+      ],
+      "@models/*": [
+        "src/models/*"
+      ],
+      "@constants/*": [
+        "src/constants/*"
+      ],
+      "@directives/*": [
+        "src/directives/*"
+      ],
+      "@guards/*": [
+        "src/guards/*"
+      ],
+      "@shards/*": [
+        "src/app/_shards/*"
+      ],
+      "@activity/*": [
+        "src/app/_activity/*"
+      ],
+      "@app/*": [
+        "src/app/*"
+      ]
+    }
+  },
+  "types": ["node"],
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true,
+    "strictPropertyInitialization": false
+  }
+}

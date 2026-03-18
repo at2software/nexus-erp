@@ -1,0 +1,185 @@
+<toolbar>
+  <button data-tour="customers-add-btn" type="button" class="btn btn-primary capitalize" (click)="create()" ngbTooltip="CTRL+ALT+N" hotkey="CTRL+ALT+N">
+    <i>add</i><span i18n="@@i18n.common.company">company</span>
+  </button>
+</toolbar>
+
+<div class="row" col-slider>
+  <div class="col-md-3">
+    <div class="card mb-3" data-tour="customers-filter">
+      <div class="card-header">
+        <span i18n="@@i18n.common.filters">filters</span>
+      </div>
+      <div class="card-body">
+        <!-- Active Projects Filter -->
+        <div class="form-check form-switch mb-2">
+          <input class="form-check-input" type="checkbox" (change)="filtersUpdated($event)" [(ngModel)]="onlyWithActiveProjects" id="cbProjects">
+          <label class="form-check-label capitalize-first" for="cbProjects" i18n="@@i18n.customers.onlyWithActiveProjects">only with active projects</label>
+        </div>
+
+        <!-- Date Range Filter -->
+        <div class="mb-2">
+          <div class="hstack gap-2">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" (change)="filtersUpdated($event)" [(ngModel)]="dateRangeFilterActive" id="cbDateRange">
+              <label class="form-check-label capitalize-first text-truncate" [class.small]="dateRangeFilterActive" [class.text-muted]="dateRangeFilterActive" for="cbDateRange" i18n="@@i18n.common.created_at">created at</label>
+            </div>
+            @if (dateRangeFilterActive) {
+              <div class="flex-fill">
+                <input type="text"
+                  class="form-control"
+                  ngxDaterangepickerMd
+                  [(ngModel)]="dateRange"
+                  (datesUpdated)="filtersUpdated($event)"
+                  placeholder="select date range"
+                  [alwaysShowCalendars]="true"
+                  [ranges]="ranges" i18n-placeholder="@@i18n.common.selectDateRange">
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Updated At Filter -->
+          <div class="mb-2">
+            <div class="hstack gap-2">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" (change)="filtersUpdated($event)" [(ngModel)]="updatedAtFilterActive" id="cbUpdatedAt">
+                <label class="form-check-label capitalize-first text-truncate" [class.small]="updatedAtFilterActive" [class.text-muted]="updatedAtFilterActive" for="cbUpdatedAt" i18n="@@i18n.common.last_updated">last updated</label>
+              </div>
+              @if (updatedAtFilterActive) {
+                <div class="flex-fill">
+                  <input type="text"
+                    class="form-control"
+                    ngxDaterangepickerMd
+                    [(ngModel)]="updatedAtRange"
+                    (datesUpdated)="filtersUpdated($event)"
+                    placeholder="Select update date range"
+                    [alwaysShowCalendars]="true"
+                    [ranges]="updatedAtRanges" i18n-placeholder="@@i18n.customers.selectUpdateDateRange">
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Revenue Filter -->
+            @if (hasInvoicesModule) {
+              <div class="mb-2">
+                <div class="hstack gap-2">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" (change)="filtersUpdated($event)" [(ngModel)]="revenueFilterActive" id="cbRevenue">
+                    <label class="form-check-label capitalize-first text-truncate" [class.small]="revenueFilterActive" [class.text-muted]="revenueFilterActive" for="cbRevenue" i18n="@@i18n.common.revenue">revenue</label>
+                  </div>
+                  @if (revenueFilterActive) {
+                    <div class="flex-fill">
+                      <div class="input-group">
+                        <span class="input-group-text">≥</span>
+                        <input type="number" class="form-control" [(ngModel)]="revenue_min" (change)="filtersUpdated($event)" placeholder="min amount" i18n-placeholder="@@i18n.common.minAmount">
+                        <span class="input-group-text">€</span>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Product Filter -->
+            <div class="mb-2">
+              <div class="hstack gap-2">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" (change)="filtersUpdated($event)" [(ngModel)]="productFilterActive" id="cbProduct">
+                  <label class="form-check-label capitalize-first text-truncate" [class.small]="productFilterActive" [class.text-muted]="productFilterActive" for="cbProduct" i18n="@@i18n.common.product">product</label>
+                </div>
+                @if (productFilterActive) {
+                  <div class="flex-fill">
+                    <search-input
+                      only="Product"
+                      [selected]="selectedProduct"
+                      (itemSelected)="onProductSelect($event)"
+                      [query]="selectedProduct?.name || ''"
+                      placeholder="Search products..." i18n-placeholder="@@i18n.customers.searchProducts">
+                    </search-input>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-9">
+        @if (hasLoaded && sortedItems.length === 0) {
+          <div class="card">
+            <empty-state [card]="false" class="customers" i18n-title="@@i18n.customers.noCustomersYet" title="No customers yet">
+              <p i18n="@@i18n.customers.emptyStateDescription">Your customer universe is waiting to be built. Add your first company and start mapping the relationships, projects, and revenue that will define your success.</p>
+            </empty-state>
+          </div>
+        }
+        @if (!hasLoaded || sortedItems.length > 0) {
+        <div class="card">
+          <table enableTableExport [filenamePrefix]="'customers'" cdk-table [dataSource]="sortedItems" class="table mb-0">
+            <ng-container cdkColumnDef="created_at">
+              <th cdk-header-cell *cdkHeaderCellDef class="text-end d-none d-md-table-cell sortable" (click)="sortByColumn('created_at')">
+                since {{getSortIcon('created_at')}}
+              </th>
+              <td cdk-cell *cdkCellDef="let x" class="text-end small text-muted text-nowrap d-none d-md-table-cell">{{x.created_at | date}}</td>
+            </ng-container>
+            <ng-container cdkColumnDef="icon">
+              <th cdk-header-cell *cdkHeaderCellDef></th>
+              <td cdk-cell class="text-start align-top" *cdkCellDef="let x">
+                <avatar [object]="x"></avatar>
+              </td>
+            </ng-container>
+            <ng-container cdkColumnDef="name">
+              <th cdk-header-cell *cdkHeaderCellDef class="sortable" (click)="sortByColumn('customer_number')"># {{getSortIcon('customer_number')}}</th>
+              <td cdk-cell *cdkCellDef="let x">
+                <div class="customer-name text-truncate">{{x.card.name}}</div>
+                <div class="customer-projects d-md-none mt-1 small">
+                  @for (project of x.projects_unfinished; track project.id) {
+                    <project [project]="project" class="me-1"></project>
+                  }
+                </div>
+              </td>
+            </ng-container>
+            <ng-container cdkColumnDef="projects">
+              <th cdk-header-cell *cdkHeaderCellDef class="text-end d-none d-md-table-cell" i18n="@@i18n.common.projects">projects</th>
+              <td cdk-cell *cdkCellDef="let x" class="overflow-visible text-end d-none d-md-table-cell">
+                @for (project of x.projects_unfinished; track project.id) {
+                  <project [project]="project" class="me-1"></project>
+                }
+              </td>
+            </ng-container>
+            @if (hasInvoicesModule) {
+              <ng-container cdkColumnDef="revenue">
+                <th cdk-header-cell *cdkHeaderCellDef class="text-end sortable" (click)="sortByColumn('net')">revenue {{getSortIcon('net')}}</th>
+                <td cdk-cell *cdkCellDef="let x" class="text-end">
+                  @if (x.net) {
+                    <div>
+                      {{x.net | money}}
+                    </div>
+                  }
+                </td>
+              </ng-container>
+            }
+            <tr cdk-header-row *cdkHeaderRowDef="displayedColumns" class="sticky-header"></tr>
+            <tr cdk-row class="align-middle border-black {{row.markerClass()}}" [nx]="row" *cdkRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+          <continuous-marker [observer]="observer" (dataReceived)="onResult($event)"></continuous-marker>
+        </div>
+        }
+      </div>
+    </div>
+
+<!-- ── Guided Tour Slides ──────────────────────────────────────────────────── -->
+
+<guided-tour
+  id="customers-guide-filter"
+  i18n-title="@@i18n.guidedTour.customers.filterTitle" title="Filter Companies"
+  i18n-content="@@i18n.guidedTour.customers.filterContent" content="Use the filter panel to narrow down your customer list by project status, creation date, last update, revenue, or assigned product."
+  focusSelector="[data-tour='customers-filter']">
+</guided-tour>
+
+<guided-tour
+  id="customers-guide-add"
+  i18n-title="@@i18n.guidedTour.customers.addTitle" title="Add a Company"
+  i18n-content="@@i18n.guidedTour.customers.addContent" content="Create a new company by entering a name — or simply paste a website URL. NEXUS will automatically try to parse the company's imprint page to fill in address, contact details, and more."
+  focusSelector="[data-tour='customers-add-btn']">
+</guided-tour>

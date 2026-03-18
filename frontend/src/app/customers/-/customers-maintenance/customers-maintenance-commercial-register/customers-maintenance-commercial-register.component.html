@@ -1,0 +1,31 @@
+<div class="card mb-3">
+  <div class="card-header" i18n="@@i18n.customers.missingRegisterInformation">missing register information</div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th></th>
+        <th i18n="@@i18n.common.name">name</th>
+        <th i18n="@@i18n.common.url">URL</th>
+        <th i18n="@@i18n.common.registerart">registerart</th>
+        <th i18n="@@i18n.common.registernummer">registernummer</th>
+        <th i18n="@@i18n.common.registergericht">registergericht</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *nxFor="let company of companies">
+        <td><avatar [object]="company"></avatar></td>
+        <td class="text-truncate">{{company.name}}</td>
+        <td>@if (company.url) {
+          <a href="{{company.url}}" class="text-primary" target="_blank" i18n="@@i18n.common.webpage">webpage</a>
+        }</td>
+        <td><input type="text" (blur)="onUpdate(company)" [(ngModel)]="company.var.parts[0]" class="form-control" placeholder="HRB" i18n-placeholder="@@i18n.common.hrb"></td>
+        <td><input type="text" (blur)="onUpdate(company)" [(ngModel)]="company.var.parts[1]" class="form-control" placeholder="12345"></td>
+        <td><input type="text" (blur)="onUpdate(company)" [(ngModel)]="company.var.parts[2]" [ngbTypeahead]="search" class="form-control" placeholder="Nürnberg" i18n-placeholder="@@i18n.common.nürnberg"></td>
+        <td>
+          <a href="customers/{{company.id}}/contacts" class="pointer text-primary"><i>chevron_right</i></a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

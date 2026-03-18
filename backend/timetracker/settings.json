@@ -1,0 +1,5 @@
+{
+    "api_url": "http://localhost:8000/api",
+    "token": "",
+    "remember_token": true
+}

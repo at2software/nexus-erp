@@ -1,0 +1,26 @@
+<div class="modal d-block background" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" i18n="@@i18n.common.nexus_login">NEXUS // log-in</span>
+            </div>
+            <div class="modal-body">
+
+                <div data-mdb-input-init class="form-floating mb-3">
+                    <input type="email" id="email" [(ngModel)]="email" (keyup.enter)="login()" placeholder="" class="form-control" />
+                    <label class="form-label" for="email" i18n="@@i18n.common.email_address">email address</label>
+                </div>
+
+                <!-- Password input -->
+                <div data-mdb-input-init class="form-floating mb-3">
+                    <input type="password" id="pass" [(ngModel)]="password" (keyup.enter)="login()" placeholder="" class="form-control" />
+                    <label class="form-label" for="pass" i18n="@@i18n.common.password">password</label>
+                </div>
+
+                <!-- Submit button -->
+                <button type="button" (click)="login()" [disabled]="!canLogin()" data-mdb-button-init data-mdb-ripple-init class="btn btn-primary btn-block w-100 mb-3" i18n="@@i18n.common.sign_in">sign in</button>
+
+            </div>
+        </div>
+    </div>
+</div>

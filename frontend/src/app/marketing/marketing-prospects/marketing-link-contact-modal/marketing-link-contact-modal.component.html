@@ -1,0 +1,86 @@
+<div class="modal d-block" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title" i18n="@@i18n.marketing.linkToContact">link to contact</span>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <div class="form-label" i18n="@@i18n.marketing.selectExistingContact">select existing contact</div>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchInput()"
+            placeholder="search for contact"
+            i18n-placeholder="@@i18n.marketing.searchForContact"
+           >
+        </div>
+
+        <!-- Loading indicator -->
+        @if (isLoading) {
+        <div class="text-center py-3">
+          <div class="spinner-border spinner-border-sm" role="status">
+            <span class="visually-hidden" i18n="@@i18n.common.loading">loading</span>
+          </div>
+        </div>
+        }
+
+        <!-- Search results -->
+        @if (!isLoading && contactResults.length > 0) {
+        <scrollbar style="max-height: 400px;">
+          <div class="list-group">
+            @for (contact of contactResults; track contact.id) {
+            <button
+              type="button"
+              class="list-group-item list-group-item-action d-flex align-items-center gap-2"
+              [class.active]="selectedContact?.id === contact.id"
+              (click)="selectContact(contact)">
+              <avatar [object]="contact" size="32"></avatar>
+              <div class="flex-fill">
+                <div>{{contact.name}}</div>
+                @if (contact.company.name) {
+                <small class="text-muted">
+                  {{contact.company.name}}
+                </small>
+                }
+                @if (contact.card?.get('EMAIL')?.[0]?.vals?.[0]) {
+                <small class="text-muted d-block">
+                  {{contact.card?.get('EMAIL')?.[0]?.vals?.[0]}}
+                </small>
+                }
+              </div>
+            </button>
+            }
+          </div>
+        </scrollbar>
+        }
+
+        <!-- No results message -->
+        @if (!isLoading && searchQuery.length >= 2 && contactResults.length === 0) {
+        <div class="text-center text-muted py-3">
+          <i class="mb-2" style="font-size: 2rem;">search_off</i>
+          <p i18n="@@i18n.marketing.noContactsFound">no contacts found</p>
+        </div>
+        }
+
+        <!-- Initial message -->
+        @if (searchQuery.length < 2 && contactResults.length === 0) {
+        <div class="text-center text-muted py-3">
+          <i class="mb-2" style="font-size: 2rem;">person_search</i>
+          <p i18n="@@i18n.marketing.enterSearchTerm">enter at least 2 characters to search</p>
+        </div>
+        }
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" (click)="decline()" i18n="@@i18n.common.cancel">cancel</button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="accept()"
+          [disabled]="!selectedContact"
+          i18n="@@i18n.marketing.link">link</button>
+      </div>
+    </div>
+  </div>
+</div>

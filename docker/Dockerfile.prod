@@ -1,0 +1,67 @@
+# =============================================================================
+#  NEXUS — Pre-built release image
+#
+#  The Angular frontend has already been compiled by release-foss.sh.
+#  This Dockerfile only installs the PHP backend and copies the pre-built
+#  static assets — no Node.js required.
+#
+#  Build context must be the repository root (where dist/ and backend/ live):
+#    docker build -f docker/Dockerfile .
+#
+#  Or via docker compose (see docker-compose.yml).
+# =============================================================================
+
+FROM php:8.4-fpm-alpine
+
+RUN apk add --no-cache \
+        nginx supervisor \
+        ca-certificates curl openssl \
+        mariadb-client \
+        libzip libpng libxml2 oniguruma icu-libs libwebp \
+    && apk add --no-cache --virtual .build-deps \
+        libzip-dev libpng-dev libxml2-dev oniguruma-dev icu-dev curl-dev libwebp-dev \
+    && docker-php-ext-configure gd --with-webp \
+    && docker-php-ext-install \
+        pdo_mysql zip gd xml mbstring bcmath intl opcache curl pcntl \
+    && apk del .build-deps
+
+# Install Composer
+RUN curl -sS https://getcomposer.org/installer \
+    | php -- --install-dir=/usr/local/bin --filename=composer
+
+# PHP-FPM: run workers as nginx user so they can write to storage/
+RUN printf '[www]\nuser = nginx\ngroup = nginx\n' \
+    > /usr/local/etc/php-fpm.d/zzz-nexus.conf
+
+# ── Backend ───────────────────────────────────────────────────────────────────
+WORKDIR /var/www/backend
+COPY backend/ .
+
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --quiet \
+    && mkdir -p \
+        storage/app/public \
+        storage/framework/cache \
+        storage/framework/sessions \
+        storage/framework/views \
+        storage/framework/testing \
+        storage/logs \
+        bootstrap/cache \
+    && chown -R nginx:nginx /var/www/backend \
+    && chmod -R 775 storage bootstrap/cache
+
+# ── Frontend (pre-built by release-foss.sh) ───────────────────────────────────
+COPY frontend/ /var/www/frontend
+
+# ── Config files ─────────────────────────────────────────────────────────────
+COPY docker/nginx.conf        /etc/nginx/nginx.conf
+COPY docker/supervisord.conf  /etc/supervisor/conf.d/supervisord.conf
+COPY docker/entrypoint.sh     /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh \
+    && chmod +x /entrypoint.sh \
+    && mkdir -p /var/log/supervisor
+
+EXPOSE 3200 8000
+
+VOLUME ["/var/www/backend/storage"]
+
+ENTRYPOINT ["/entrypoint.sh"]

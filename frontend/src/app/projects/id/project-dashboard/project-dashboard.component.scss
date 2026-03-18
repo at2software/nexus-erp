@@ -1,0 +1,22 @@
+.avatar-leader { box-shadow:0 0 3px var(--color-yellow), 0 0 3px var(--color-yellow), 0 0 3px var(--color-yellow); }
+.avatar-designer { box-shadow:0 0 3px var(--color-pink), 0 0 3px var(--color-pink), 0 0 3px var(--color-pink); }
+
+// Heatmap chart styling
+:host ::ng-deep {
+    .apexcharts-tooltip-custom {
+        background: rgba(0, 0, 0, 0.85);
+        color: #fff;
+        border-radius: 4px;
+        font-size: 12px;
+        line-height: 1.4;
+        
+        .text-muted {
+            color: #999;
+        }
+    }
+    
+    // Ensure bar colors are applied correctly
+    .apexcharts-bar-area {
+        stroke-width: 0;
+    }
+}

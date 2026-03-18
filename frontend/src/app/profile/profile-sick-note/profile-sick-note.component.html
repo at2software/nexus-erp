@@ -1,0 +1,63 @@
+<div class="row">
+  <div class="col-3">
+    <div class="card mb-3">
+      <div class="card-header" i18n="@@i18n.common.sickNote">sick note</div>
+    </div>
+  </div>
+  <div class="col-6">
+    @if (global.user && !formHasBeenSent) {
+      <div class="card">
+        <div class="card-header" i18n="@@i18n.common.newSickNote">new sick note</div>
+        <div class="card-body">
+          <ul class="list-group">
+            <li class="list-group-item">
+              <div class="input-group">
+                <div class="input-group-prepend col-3">
+                  <span class="input-group-text" i18n="@@i18n.common.name">name</span>
+                </div>
+                <input type="text" disabled class="form-control" [value]="global!.user!.name">
+              </div>
+            </li>
+            <li class="list-group-item">
+              <div class="input-group">
+                <div class="input-group-prepend col-3">
+                  <span class="input-group-text" i18n="@@i18n.profile.sickPeriod">sick period</span>
+                </div>
+                <input type="text" class="form-control" ngxDaterangepickerMd [(ngModel)]="sickPeriod" [alwaysShowCalendars]="true" [locale]="{applyLabel: 'ok', format: 'YYYY-MM-DD'}">
+              </div>
+            </li>
+            <li class="list-group-item">
+              <div class="form-check form-switch">
+                <div class="input-group-prepend col-3">
+                  <input class="form-check-input" type="checkbox" role="switch" id="eSickNote" [(ngModel)]="hasESickNote">
+                </div>
+                <label class="form-check-label" for="eSickNote" i18n="@@i18n.profile.hasElectronicSickNote">has electronic sick note</label>
+              </div>
+            </li>
+            @if (!hasESickNote) {
+              <li class="list-group-item">
+                <div class="card card-info" i18n="@@i18n.common.sickNoteInfoBackToWork">please hand in your sick note when you are back to work</div>
+              </li>
+            }
+          </ul>
+        </div>
+        <div class="card-footer mt-3">
+          <button class="btn btn-fancy btn-fancy-be" (click)="onSendSickNote()" i18n="@@i18n.profile.sendSickNote">send sick note</button>
+        </div>
+      </div>
+    }
+    @if (global.user && formHasBeenSent) {
+      <empty-state class="get-well" [title]="undefined">
+        <div class="my-3">
+            <span i18n="@@i18n.profile.thankYouForYourSick">thank you for your sick note. get well soon</span>
+            <span class="notranslate">!</span>
+        </div>
+        <button class="btn btn-primary" (click)="onResetForm()" i18n="@@i18n.profile.resetForm">reset form</button>
+      </empty-state>
+    }
+  </div>
+  <div class="col-3">
+    <div class="card mb-3">
+    </div>
+  </div>
+</div>

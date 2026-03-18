@@ -1,0 +1,44 @@
+<toolbar>
+  <div ngbDropdown class="d-inline-block">
+    <button type="button" class="btn btn-plain dropdown-toggle-simple" ngbDropdownToggle>
+      <i>more_horiz</i>
+    </button>
+    <div ngbDropdownMenu>
+      <button ngbDropdownItem (click)="onAddSickNote()" [disabled]="!id" i18n="@@i18n.common.sickNote">sick note</button>
+      @if (isTokenAuth) {
+        <button ngbDropdownItem (click)="onAddEmployee()" i18n="@@i18n.hr.addEmployee">add employee</button>
+      }
+    </div>
+  </div>
+</toolbar>
+
+<scrollbar #loader>
+  <div class="row">
+    <div class="col-md-3 team-container">
+      <div class="card team sticky-side">
+        <li class="card-header">
+          <span i18n="@@i18n.common.employee">employee</span>
+          <div class="card-header-actions">
+            <button class="card-header-action btn text-primary" (click)="toggleEnabled()" title="Retired Employees" i18n-title="@@i18n.hr.retiredEmployees">
+              <i>{{enabledIcon()}}</i>
+            </button>
+          </div>
+        </li>
+        @for (x of team; track x.id) {
+          <list-group-item-contact
+            style="cursor:pointer;"
+            [class.d-none]="enabledOnly && x.is_retired"
+            [contact]="x"
+            [active]="x.id === id"
+            [routerLink]="currentRouteFor(x)"
+            [nx]="x"
+            [primary]="false">
+          </list-group-item-contact>
+        }
+      </div>
+    </div>
+    <div class="col-md-9">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
+</scrollbar>

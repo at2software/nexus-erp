@@ -1,0 +1,24 @@
+.role-header {
+    white-space: nowrap;
+    user-select: none;
+    vertical-align: bottom !important;
+    height: 130px;
+    width: 36px;
+    padding-bottom: 10px !important;
+
+    .role-header-label {
+        display: inline-block;
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        text-align: left;
+    }
+
+    &:hover {
+        opacity: 0.8;
+    }
+}
+
+.sticky-side {
+    position: sticky;
+    top: 1rem;
+}

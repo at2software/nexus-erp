@@ -1,0 +1,11 @@
+$tooltip-additional-space: 10px;
+.bar-container {
+    margin: -$tooltip-additional-space 0;
+}
+.bar-tooltip-inside {
+    padding: $tooltip-additional-space 0;
+    height: 2px + 2 * $tooltip-additional-space;
+}
+.progress {
+    left:0; right: 0;
+}

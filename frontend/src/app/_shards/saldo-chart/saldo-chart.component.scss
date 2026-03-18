@@ -1,0 +1,56 @@
+:host {
+    display: block;
+    height: 25px;
+    width: 100%;
+    position: relative;
+}
+.d {
+    height: 60%;
+    top: 20%;
+    position: absolute;
+}
+.null {
+    width: 0px;
+    height: 100%;
+    top: 0;
+    border-right: 1px #999 solid;
+}
+.null {
+    background-color: 1px #999 solid;
+}
+.offset-p {
+    background-color: #00ff0033;
+}
+.offset-n {
+    background-color: #ff000033;
+}
+.change-p {
+    background-color: #00ff00;
+}
+.change-n {
+    background-color: #ff0000;
+}
+
+.t {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.t.text-end {
+    right: 0;
+    justify-content: flex-start;
+    padding-left: 8px;
+}
+
+.t:not(.text-end) {
+    right: calc(100% - var(--null-position, 0%));
+    transform: translateX(100%);
+    justify-content: flex-end;
+    padding-right: 8px;
+}

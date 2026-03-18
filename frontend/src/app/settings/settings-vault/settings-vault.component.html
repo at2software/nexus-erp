@@ -1,0 +1,39 @@
+<div class="card card-info mb-3">
+  <div class="card-body" i18n="@@i18n.settings.connectorsDescription">
+    Connectors link NEXUS to external services via encrypted credentials. Values are stored securely and never exposed again after saving — leave fields blank to keep existing values unchanged.
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-3">
+    <div class="card">
+      <div class="card-header" i18n="@@i18n.common.connectors">connectors</div>
+      <ul class="list-group">
+        @for (vault of vaults; track vault) {
+          <li class="list-group-item hstack gap-2 align-items-center" (click)="currentVault = vault" (keyup.enter)="currentVault = vault" tabindex="0" [class.active]="currentVault === vault">
+            <div class="avatar-bullet" [class.bg-green]="vault.active" [class.bg-grey]="!vault.active"></div>
+            <div>{{vault.name}}</div>
+          </li>
+        }
+      </ul>
+    </div>
+  </div>
+  <div class="col-9">
+    @if (currentVault) {
+      <div class="card">
+        <div class="card-header">{{currentVault.name}}</div>
+        <button class="btn btn-fancy btn-fancy-te" (click)="checkCredentials()" i18n="@@i18n.settings.checkSave">check & save</button>
+        <ul class="list-group">
+          @for (key of keysFor(currentVault); track key) {
+            <li class="list-group-item hstack gap-2">
+              <div class="col-3">{{currentVault.keys[key]}}</div>
+              <div>
+                <input class="form-control" [(ngModel)]="currentVault.map[mapKey(key)]">
+              </div>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </div>
+</div>

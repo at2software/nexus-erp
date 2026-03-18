@@ -1,0 +1,33 @@
+@if (vacationRequests.length) {
+<div class="header" i18n="@@i18n.common.timeOffRequests">time off requests</div>
+<ul class="list-group">
+    @for (_ of vacationRequests; track _.id) {
+    <li class="list-group-item d-flex" [ngbTooltip]="_.comment" [nx]="_" [tables]="vacationRequests"
+        (actionsResolved)="actionsResolved($event)">
+        <div class="avatar float-end mt-1 d-flex me-3">
+            <img class="avatar-img" src="{{_.user.icon}}" alt="User avatar">
+        </div>
+        <div class="flex-fill">{{_.started_at | date}} - {{_.ended_at | date}}</div>
+        <span class="badge bg-dark">{{_.amount}}h</span>
+    </li>
+    }
+</ul>
+}
+
+@if (sickNotes.length) {
+<div class="header" i18n="@@i18n.common.sickNotes">sick notes</div>
+<ul class="list-group">
+    @for (_ of sickNotes; track _.id) {
+    <li class="list-group-item d-flex" [ngbTooltip]="_.comment" [nx]="_" [tables]="sickNotes"
+        (actionsResolved)="actionsResolved($event)">
+        <div class="avatar float-end mt-1 d-flex me-3">
+            <img class="avatar-img" src="{{_.user.icon}}" alt="User avatar">
+        </div>
+        <div class="flex-fill">{{_.started_at | date}} - {{_.ended_at | date}}</div>
+        <i class="ms-2 text-primary pointer" (click)="getPrepopulatedSickNoteMail(_)"
+            (keyup.enter)="getPrepopulatedSickNoteMail(_)" tabindex="0">email</i>
+        <i class="ms-2" [class]="_.getTypeClass()">{{_.getTypeIcon()}}</i>
+    </li>
+    }
+</ul>
+}

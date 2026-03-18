@@ -1,0 +1,47 @@
+<div class="row">
+  <div class="col-3">
+    <widget-cashflow></widget-cashflow>
+    <!-- <widget-revenue-12></widget-revenue-12> -->
+    <widget-revenue-current-year></widget-revenue-current-year>
+  </div>
+  <div class="col-6">
+
+    @if (overallChart) {
+      <div class="card mb-3">
+        <div class="card-header" i18n="@@i18n.common.overall">overall</div>
+        <div class="card-body">
+          <apx-chart-x [options]="overallChart"></apx-chart-x>
+        </div>
+      </div>
+    }
+    
+    <div class="card mb-3">
+      <div class="card-header hstack gap-2">
+        <div class="flex-fill" i18n="@@i18n.invoices.invoice_funnel">invoice funnel</div>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="toggleFunnelMode()"
+          [ngbTooltip]="funnelMode === 'count' ? 'Switch to money view' : 'Switch to count view'">
+          <i>{{ funnelMode === 'count' ? 'attach_money' : 'format_list_numbered' }}</i>
+        </button>
+      </div>
+      <div class="card-body">
+        <sankey-chart [data]="funnelData" [mode]="funnelMode" [height]="200"></sankey-chart>
+      </div>
+    </div>
+
+  </div>
+  <div class="col-3">
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center gap-2">
+        <span class="flex-fill text-truncate">
+            <span class="notranslate">5-</span>
+            <span i18n="@@i18n.invoices.yearRevenueSpiral">year revenue spiral</span>
+        </span>
+        <div class="form-label mb-0 small" style="white-space: nowrap;" ngbTooltip="smoothing" i18n-ngbTooltip="@@i18n.common.smoothing">{{spiralSmoothing}}</div>
+        <input type="range" class="form-range" ngbTooltip="smoothing" style="width: 100px;" min="0" max="12" step="1" [(ngModel)]="spiralSmoothing"  i18n-ngbTooltip="@@i18n.common.smoothing" />
+      </div>
+      <revenue-spiral-chart [data]="spiralRevenueData" [height]="250" [smoothing]="spiralSmoothing"></revenue-spiral-chart>
+    </div>
+    
+    <widget-revenue-radial></widget-revenue-radial>
+  </div>
+</div>
