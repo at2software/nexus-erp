@@ -1,0 +1,33 @@
+<div class="activity">
+  <ul class="nav nav-pills justify-content-start align-items-end" role="tablist" #buttonContainer>
+    @for (tab of srv.tabs; track tab.id; let i = $index) {
+      <li class="nav-item position-relative" role="presentation">
+        <button #buttonRef
+          class="nav-link"
+          [class.active]="srv.activeTabIndex === i"
+          [class.has-badge]="tab.badge"
+          id="activity-tab-{{i}}"
+          data-bs-toggle="tab"
+          [class.d-none]="tab.hidden()"
+          [attr.data-bs-target]="'#activity-'+ i" type="button"
+          role="tab"
+          [attr.aria-controls]="'activity-'+ i"
+          [attr.aria-selected]="srv.activeTabIndex === i"
+          (click)="srv.setActiveTab(i)">
+          @if (tab.icon) {
+            <i>{{tab.icon}}</i>
+          }
+          @if (tab.nicon) {
+            <n>{{tab.nicon}}</n>
+          }
+        </button>
+      </li>
+    }
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="activity-nav-burger" (click)="onActivityTabClicked()" i18n-ngbTooltip="@@i18n.common.minimize" ngbTooltip="minimize">
+        <i>menu</i>
+      </button>
+    </li>
+  </ul>
+  <div class="tab-content" #content></div>
+</div>

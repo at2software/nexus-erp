@@ -1,0 +1,516 @@
+<toolbar>
+    @if (initiative && !isCurrentUserSubscribed()) {
+        <button class="btn btn-primary" (click)="subscribe()" tabindex="0" (keydown.enter)="subscribe()">
+            <i class="me-1" style="vertical-align: middle;">notifications_active</i>
+            <span i18n="@@i18n.uptime.subscribe">subscribe</span>
+        </button>
+    }
+    @if (initiative && isCurrentUserSubscribed()) {
+        <button class="btn btn-dark" (click)="unsubscribe()" tabindex="0" (keydown.enter)="unsubscribe()">
+            <i class="me-1" style="vertical-align: middle;">notifications_off</i>
+            <span i18n="@@i18n.uptime.unsubscribe">unsubscribe</span>
+        </button>
+    }
+</toolbar>
+
+@if (isLoading) {
+<div class="card">
+    <div class="card-body text-center p-4">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden" i18n="@@i18n.common.loading">loading</span>
+        </div>
+    </div>
+</div>
+}
+
+@if (!isLoading && initiative) {
+<div class="card mb-3">
+    <!-- Header -->
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>{{initiative.name}}</div>
+        @if (initiative.users?.length) {
+        <div class="d-flex flex-wrap gap-2">
+            @for (user of initiative.users; track user.id) {
+            <avatar
+                [object]="user"
+                [nx]="user"
+                [tables]="initiative.users"
+                [nxContext]="{initiative: initiative, component: this}"
+                context="initiative_subscriber">
+            </avatar>
+            }
+        </div>
+        }
+    </div>
+
+    <!-- Prospect Development Chart -->
+    @if (chartOptions) {
+    <div class="card-body">
+        <div class="d-flex gap-2 align-items-end">
+            <div class="flex-grow-1">
+                <apx-chart
+                    [series]="chartOptions.series"
+                    [chart]="chartOptions.chart"
+                    [xaxis]="chartOptions.xaxis"
+                    [yaxis]="chartOptions.yaxis"
+                    [stroke]="chartOptions.stroke"
+                    [fill]="chartOptions.fill"
+                    [tooltip]="chartOptions.tooltip"
+                    [grid]="chartOptions.grid"
+                    [legend]="chartOptions.legend"
+                ></apx-chart>
+            </div>
+            @if (donutChartOptions) {
+            <div class="flex-shrink-0" style="margin-bottom: -10px;">
+                <apx-chart
+                    [series]="donutChartOptions.series"
+                    [chart]="donutChartOptions.chart"
+                    [labels]="donutChartOptions.labels"
+                    [colors]="donutChartOptions.colors"
+                    [legend]="donutChartOptions.legend"
+                    [dataLabels]="donutChartOptions.dataLabels"
+                    [stroke]="donutChartOptions.stroke"
+                    [plotOptions]="donutChartOptions.plotOptions"
+                    [tooltip]="donutChartOptions.tooltip"
+                ></apx-chart>
+            </div>
+            }
+        </div>
+    </div>
+    }
+
+    <!-- Description & Timeline -->
+    @if (initiative.description || initiative.start_date || initiative.end_date) {
+    <div class="card-body">
+        @if (initiative.description) {
+            <p class="small text-muted mb-0">
+                {{initiative.description}}
+            </p>
+        }
+        @if (initiative.start_date || initiative.end_date) {
+            <div class="mt-2">
+                @if (initiative.start_date) {
+                <div class="small text-muted">
+                    <span>
+                        <span i18n="@@i18n.common.start">start</span>
+                        <span class="notranslate">:</span>
+                    </span> {{initiative.start_date | date:'mediumDate'}}
+                </div>
+                }
+                @if (initiative.end_date) {
+                <div class="small text-muted">
+                    <span>
+                        <span i18n="@@i18n.common.end">end</span>
+                        <span class="notranslate">:</span>
+                    </span> {{initiative.end_date | date:'mediumDate'}}
+                </div>
+                }
+            </div>
+        }
+    </div>
+    }
+
+    <!-- Channels -->
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div i18n="@@i18n.marketing.channels">channels</div>
+        @if (initiative.channels?.length) {
+            <div class="hstack gap-2">
+                @for (channel of initiative.channels; track channel.id) {
+                <span class="badge cursor-pointer bg-dark text-white"
+                    (click)="removeChannel(channel.id)" tabindex="0" (keydown.enter)="removeChannel(channel.id)"
+                    i18n-title="@@i18n.marketing.click_to_remove_channel"
+                    title="click to remove channel">
+                    @if (channel.pivot.is_primary) {
+                    <i class="me-1 text-yellow">star</i>
+                    }
+                    {{channel.name}}
+                </span>
+                }
+            </div>
+        } @else {
+            <span class="text-muted small" i18n="@@i18n.marketing.no_channels_assigned">no channels assigned</span>
+        }
+        <button class="btn btn-plain text-primary ms-2" (click)="showChannelModal = true" tabindex="0" (keydown.enter)="showChannelModal = true">
+            <i class="text-primary">add</i>
+        </button>
+    </div>
+
+    <!-- Workflows -->
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div i18n="@@i18n.marketing.workflows">workflows</div>
+        @if (initiative.workflows?.length) {
+            <div class="hstack gap-2">
+                @for (workflow of initiative.workflows; track workflow.id) {
+                <span class="badge bg-dark cursor-pointer" 
+                    [nx]="workflow" 
+                    [tables]="initiative.workflows" 
+                    [nxContext]="{initiative: initiative, component: this}" 
+                    [class.text-white]="workflow.is_active" 
+                    [class.text-muted]="!workflow.is_active"
+                    context="initiative_details"
+                    tabindex="0">
+                    {{workflow.name}}
+                </span>
+                }
+            </div>
+        } @else {
+            <span class="text-muted small" i18n="@@i18n.marketing.no_workflows_assigned">no workflows assigned</span>
+        }
+        <button class="btn btn-plain text-primary ms-2" (click)="showWorkflowModal = true" tabindex="0" (keydown.enter)="showWorkflowModal = true">
+            <i class="text-primary">add</i>
+        </button>
+    </div>
+
+    <!-- Activity Visualization -->
+    @if (initiative.initiative_activities && initiative.initiative_activities.length > 0) {
+    <activity-table 
+        [activities]="initiative.initiative_activities" 
+        (activityClicked)="openEditInitiativeActivityModal($event)">
+    </activity-table>
+    }
+
+    <!-- Performance Metrics - HIDDEN (use activity visualization instead) -->
+    <!--
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div i18n="@@i18n.marketing.performance_metrics">performance metrics</div>
+        <button class="btn btn-plain text-primary" (click)="showMetricModal = true" tabindex="0" (keydown.enter)="showMetricModal = true">
+            <i class="text-primary">add</i>
+        </button>
+    </div>
+    @if (getAllMetrics().length) {
+    <ul class="list-group list-group-flush">
+        @for (metric of getAllMetrics(); track metric.id) {
+        <li class="list-group-item"
+            [nx]="metric"
+            [tables]="getAllMetrics()"
+            [nxContext]="{initiative: initiative}"
+            context="initiative_details">
+            <div class="d-flex justify-content-between align-items-center small mb-1">
+                <span class="d-flex align-items-center gap-1">
+                    <i [style.color]="metric.getIconColor()" style="font-size: 1rem;">{{metric.getIcon()}}</i>
+                    {{metric.name}}
+                </span>
+                <span>{{metric.activity_stats?.completed || 0}}/{{metric.activity_stats?.total || 0}}</span>
+            </div>
+            @if (metric.activity_stats && metric.activity_stats.total > 0) {
+            <div class="progress" style="height: 4px;">
+                <div class="progress-bar {{STATS_COLORS.completed}}"
+                    [style.width.%]="(metric.activity_stats.completed / metric.activity_stats.total) * 100"
+                    [ngbTooltip]="metric.activity_stats.completed + ' completed'"
+                    placement="top"></div>
+                <div class="progress-bar {{STATS_COLORS.overdue}}"
+                    [style.width.%]="(metric.activity_stats.overdue / metric.activity_stats.total) * 100"
+                    [ngbTooltip]="metric.activity_stats.overdue + ' overdue'"
+                    placement="top"></div>
+                <div class="progress-bar {{STATS_COLORS.pending}}"
+                    [style.width.%]="(metric.activity_stats.pending / metric.activity_stats.total) * 100"
+                    [ngbTooltip]="metric.activity_stats.pending + ' pending'"
+                    placement="top"></div>
+                <div class="progress-bar"
+                    [style.background-color]="STATS_COLORS.skipped"
+                    [style.width.%]="(metric.activity_stats.skipped / metric.activity_stats.total) * 100"
+                    [ngbTooltip]="metric.activity_stats.skipped + ' skipped'"
+                    placement="top"></div>
+            </div>
+            } @else {
+            <div class="progress" style="height: 4px;">
+                <div class="progress-bar bg-secondary" style="width: 100%;"></div>
+            </div>
+            }
+        </li>
+        }
+    </ul>
+    } @else {
+    <div class="card-body">
+        <p class="small text-muted mb-0" i18n="@@i18n.marketing.no_metrics_defined">no metrics defined</p>
+    </div>
+    }
+    -->
+</div>
+}
+
+<!-- Assign Channel Modal -->
+<div class="modal fade" [class.show]="showChannelModal" [style.display]="showChannelModal ? 'block' : 'none'" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" i18n="@@i18n.marketing.assign_channel">assign channel</span>
+                <button type="button" class="btn-close" (click)="showChannelModal = false" tabindex="0" (keydown.enter)="showChannelModal = false" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="mb-3">
+                        <label for="channelSelect" class="form-label">
+                            <span i18n="@@i18n.marketing.leadSourceChannel">lead source / channel</span>
+                            <span class="notranslate"> *</span>
+                        </label>
+                        <select
+                            class="form-select"
+                            id="channelSelect"
+                            [(ngModel)]="selectedChannelId"
+                            name="channel"
+                        >
+                            <option value="" i18n="@@i18n.marketing.select_channel">select a channel...</option>
+                            @for (source of availableLeadSources; track source.id) {
+                            <option [value]="source.id">
+                                {{source.name}}
+                            </option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="isPrimaryChannel"
+                                [(ngModel)]="isPrimaryChannel"
+                                name="isPrimary"
+                            >
+                            <label class="form-check-label" for="isPrimaryChannel" i18n="@@i18n.marketing.primary_channel">primary channel</label>
+                        </div>
+                        <small class="text-muted" i18n="@@i18n.marketing.primary_channel_description">primary channel will be used as the default for new prospects</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" (click)="showChannelModal = false" tabindex="0" (keydown.enter)="showChannelModal = false" i18n="@@i18n.common.cancel">cancel</button>
+                <button type="button" class="btn btn-primary" hotkey="CTRL+ENTER" (click)="assignChannel()" tabindex="0" (keydown.enter)="assignChannel()" [disabled]="!selectedChannelId" i18n="@@i18n.marketing.assign_channel">assign channel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Select Workflow Modal -->
+<div class="modal fade" [class.show]="showWorkflowModal" [style.display]="showWorkflowModal ? 'block' : 'none'" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" i18n="@@i18n.marketing.attach_workflow">attach workflow</span>
+                <button type="button" class="btn-close" (click)="resetWorkflowForm()" tabindex="0" (keydown.enter)="resetWorkflowForm()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="mb-3">
+                        <label for="workflowSelect" class="form-label">
+                            <span i18n="@@i18n.marketing.selectWorkflow">select workflow</span>
+                            <span class="notranslate"> *</span>
+                        </label>
+                        <select
+                            class="form-select"
+                            id="workflowSelect"
+                            [(ngModel)]="selectedWorkflowId"
+                            name="workflow"
+                        >
+                            <option value="" i18n="@@i18n.marketing.select_workflow">select a workflow...</option>
+                            @for (workflow of availableWorkflows; track workflow.id) {
+                            <option [value]="workflow.id">
+                                {{workflow.name}}
+                                @if (workflow.is_active) {<span>
+                                    <span class="notranslate">(</span>
+                                    <span i18n="@@i18n.common.active">active</span>
+                                    <span class="notranslate">)</span>
+                                </span>} @else {<span>
+                                    <span class="notranslate">(</span>
+                                    <span i18n="@@i18n.common.inactive">inactive</span>
+                                    <span class="notranslate">)</span>
+                                </span>}
+                            </option>
+                            }
+                        </select>
+                        @if (availableWorkflows.length === 0) {
+                            <small class="text-muted" i18n="@@i18n.marketing.no_workflows_create_first">no workflows available. create workflows in the workflows tab first.</small>
+                        }
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="resetWorkflowForm()" tabindex="0" (keydown.enter)="resetWorkflowForm()" i18n="@@i18n.common.cancel">cancel</button>
+                <button type="button" class="btn btn-primary" hotkey="CTRL+ENTER" (click)="attachWorkflow()" tabindex="0" (keydown.enter)="attachWorkflow()" [disabled]="!selectedWorkflowId" i18n="@@i18n.marketing.attach_workflow">attach workflow</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Select Metric Modal -->
+<div class="modal fade" [class.show]="showMetricModal" [style.display]="showMetricModal ? 'block' : 'none'" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" i18n="@@i18n.marketing.add_performance_metric">add performance metric</span>
+                <button type="button" class="btn-close" (click)="resetMetricForm()" tabindex="0" (keydown.enter)="resetMetricForm()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="mb-3">
+                        <label for="metricSelect" class="form-label">
+                            <span i18n="@@i18n.marketing.selectMetric">select metric</span>
+                            <span class="notranslate"> *</span>
+                        </label>
+                        <select
+                            class="form-select"
+                            id="metricSelect"
+                            [(ngModel)]="selectedMetricId"
+                            name="metric"
+                        >
+                            <option value="" i18n="@@i18n.marketing.select_metric">select a metric...</option>
+                            @for (metric of availableMetrics; track metric.id) {
+                            <option [value]="metric.id">
+                                {{metric.name}} ({{metric.metric_type}})
+                            </option>
+                            }
+                        </select>
+                        @if (availableMetrics.length === 0) {
+                            <small class="text-muted" i18n="@@i18n.marketing.no_metrics_auto_created">no metrics available. metrics are created automatically when workflows are seeded.</small>
+                        }
+                    </div>
+                    <div class="mb-3">
+                        <label for="metricTarget" class="form-label" i18n="@@i18n.marketing.target_value_optional">target value (optional)</label>
+                        <input
+                            type="number"
+                            class="form-control"
+                            id="metricTarget"
+                            [(ngModel)]="metricTargetValue"
+                            name="targetValue"
+                            placeholder="e.g., 100" i18n-placeholder="@@i18n.marketing.target_value_placeholder"
+                        >
+                        <small class="text-muted" i18n="@@i18n.marketing.set_target_value_description">set a target value for this initiative</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="resetMetricForm()" tabindex="0" (keydown.enter)="resetMetricForm()" i18n="@@i18n.common.cancel">cancel</button>
+                <button type="button" class="btn btn-primary" hotkey="CTRL+ENTER" (click)="attachMetric()" tabindex="0" (keydown.enter)="attachMetric()" [disabled]="!selectedMetricId" i18n="@@i18n.marketing.add_metric">
+                    add metric
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Activity Offcanvas -->
+<div class="offcanvas offcanvas-end" [class.show]="showActivityModal"
+    tabindex="-1" style="width: 500px;">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" i18n="@@i18n.marketing.edit_initiative_activity">edit initiative activity</h5>
+        <button type="button" class="btn-close" (click)="resetActivityForm()" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <form>
+            <!-- Name -->
+            <div class="row mb-3 align-items-center">
+                <label for="activityName" class="col-3 col-form-label">
+                    <span i18n="@@i18n.common.name">name</span>
+                    <span class="notranslate text-danger"> *</span>
+                </label>
+                <div class="col-8">
+                    <input type="text" class="form-control" id="activityName" [(ngModel)]="newActivity.name"
+                        name="name" placeholder="e.g., Send Connection Request"
+                        i18n-placeholder="@@i18n.marketing.activity_name_placeholder">
+                </div>
+                <div class="col-1 text-center">
+                    <i class="material-icons text-muted" style="font-size: 1.2rem; cursor: help;" 
+                       ngbTooltip="short name for this activity"
+                       i18n-ngbTooltip="@@i18n.marketing.activity_name_description">info</i>
+                </div>
+            </div>
+
+            <!-- Day Offset -->
+            <div class="row mb-3 align-items-center">
+                <label for="activityDay" class="col-3 col-form-label">
+                    <span i18n="@@i18n.marketing.dayOffset">day offset</span>
+                    <span class="notranslate text-danger"> *</span>
+                </label>
+                <div class="col-8">
+                    <input type="number" class="form-control" id="activityDay" [(ngModel)]="newActivity.day_offset"
+                        name="dayOffset" min="0" placeholder="0">
+                </div>
+                <div class="col-1 text-center">
+                    <i class="material-icons text-muted" style="font-size: 1.2rem; cursor: help;" 
+                       ngbTooltip="number of days after workflow starts"
+                       i18n-ngbTooltip="@@i18n.marketing.day_offset_description">info</i>
+                </div>
+            </div>
+
+            <!-- Depends On -->
+            <div class="row mb-3 align-items-center">
+                <label for="parentActivity" class="col-3 col-form-label" i18n="@@i18n.marketing.depends_on">depends on</label>
+                <div class="col-8">
+                    <select class="form-select" id="parentActivity" [(ngModel)]="newActivity.parent_activity_id" name="parentActivity">
+                        <option [ngValue]="null" i18n="@@i18n.common.none">none</option>
+                        @for (activity of initiative?.initiative_activities; track activity.id) {
+                            @if (activity.id !== editingActivity?.id) {
+                                <option [ngValue]="activity.id">Day {{activity.day_offset}}: {{activity.name}}</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-1 text-center">
+                    <i class="material-icons text-muted" style="font-size: 1.2rem; cursor: help;" 
+                       ngbTooltip="this activity will be scheduled after the selected dependency"
+                       i18n-ngbTooltip="@@i18n.marketing.depends_on_description">info</i>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="mb-3">
+                <i18n-textarea [(ngModel)]="newActivity.description" name="description" label="description"
+                    placeholder="Additional details about this activity" [rows]="4"
+                    [showPlaceholderInfo]="true" i18n-placeholder="@@i18n.marketing.additionalDetailsAboutThisActivity"></i18n-textarea>
+            </div>
+
+            <!-- Required Activity -->
+            <div class="row mb-3 align-items-center">
+                <label class="col-3 col-form-label" i18n="@@i18n.marketing.required_activity">required</label>
+                <div class="col-8">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="activityRequired"
+                            [(ngModel)]="newActivity.is_required" name="isRequired">
+                        <label class="form-check-label" for="activityRequired" i18n="@@i18n.marketing.required_activity_check">
+                            this is a required activity
+                        </label>
+                    </div>
+                </div>
+                <div class="col-1 text-center">
+                    <i class="material-icons text-muted" style="font-size: 1.2rem; cursor: help;" 
+                       ngbTooltip="required activities must be completed before moving to next steps"
+                       i18n-ngbTooltip="@@i18n.marketing.required_activity_description">info</i>
+                </div>
+            </div>
+
+            <!-- Quick Action -->
+            <div class="row mb-3 align-items-center">
+                <label for="quickAction" class="col-3 col-form-label" i18n="@@i18n.marketing.quick_action">quick action</label>
+                <div class="col-8">
+                    <select class="form-select" id="quickAction" [(ngModel)]="newActivity.quick_action" name="quickAction">
+                        <option [ngValue]="null" i18n="@@i18n.common.none">none</option>
+                        <option value="EMAIL" i18n="@@i18n.marketing.quick_action_email">send email</option>
+                        <option value="LINKEDIN" i18n="@@i18n.marketing.quick_action_linkedin">open linkedin</option>
+                        <option value="LINKEDIN_SEARCH" i18n="@@i18n.marketing.quick_action_linkedin_search">search linkedin</option>
+                        <option value="CALL" i18n="@@i18n.marketing.quick_action_call">call</option>
+                    </select>
+                </div>
+                <div class="col-1 text-center">
+                    <i class="material-icons text-muted" style="font-size: 1.2rem; cursor: help;" 
+                       ngbTooltip="display a quick action button next to this activity on prospect pages"
+                       i18n-ngbTooltip="@@i18n.marketing.quick_action_description">info</i>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="offcanvas-footer border-top p-3">
+        <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-dark" (click)="resetActivityForm()"
+                i18n="@@i18n.common.cancel">cancel</button>
+            <button type="button" class="btn btn-primary" (click)="saveInitiativeActivity()"
+                [disabled]="!newActivity.name || newActivity.day_offset === undefined">
+                <span i18n="@@i18n.marketing.update_activity">update activity</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Backdrops -->
+@if (showChannelModal || showWorkflowModal || showMetricModal || showActivityModal) {
+<div class="modal-backdrop fade show" (click)="showActivityModal ? resetActivityForm() : null"></div>
+}

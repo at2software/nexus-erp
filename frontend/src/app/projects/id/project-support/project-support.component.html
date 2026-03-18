@@ -1,0 +1,131 @@
+<div class="row">
+    <div class="col-9">
+        <div class="card mb-3">
+            <div class="card-header hstack gap-2 text-truncate">
+                <i>timer</i>
+                <span i18n="@@i18n.common.unbilledFoci">unbilled foci</span>
+                <div class="card-header-actions">
+                    <input type="text" class="form-control" ngxDaterangepickerMd [(ngModel)]="span"
+                        [alwaysShowCalendars]="true" (datesUpdated)="datesUpdated()"
+                        [showCustomRangeLabel]="true" [ranges]="ranges" [showClearButton]="true"
+                        [locale]="{applyLabel: 'ok', format: 'DD.MM.YYYY'}" placeholder="custom date range"
+                        i18n-placeholder="@@i18n.common.customDateRange" />
+                </div>
+            </div>
+            <div class="card-body p-0" style="overflow-y: auto; overflow-x: hidden;">
+                <spinner #fociSpinner [size]="48" [centered]="true"></spinner>
+                <table cdk-table [dataSource]="foci" class="table table-fixed foci-table mb-0">
+                    <colgroup>
+                        <col style="width:30px;">
+                        <col style="width:100px;">
+                        <col style="width:75px;">
+                        <col>
+                    </colgroup>
+                    <ng-container cdkColumnDef="user_id">
+                        <th cdk-header-cell *cdkHeaderCellDef class="text-end"></th>
+                        <td cdk-cell *cdkCellDef="let x" class="text-end small">
+                            <div class="avatar float-end">
+                                <img src="{{x.icon}}" class="avatar-img" alt="">
+                            </div>
+                        </td>
+                    </ng-container>
+                    <ng-container cdkColumnDef="started_at">
+                        <th cdk-header-cell *cdkHeaderCellDef class="text-end" i18n="@@i18n.common.startedAt">started at</th>
+                        <td cdk-cell *cdkCellDef="let x" class="text-end small">{{x.started_at | date}}</td>
+                    </ng-container>
+                    <ng-container cdkColumnDef="comment">
+                        <th cdk-header-cell *cdkHeaderCellDef class="text-truncate"
+                            i18n="@@i18n.common.comment">comment</th>
+                        <td cdk-cell *cdkCellDef="let x" class="text-truncate small">{{x.comment}}</td>
+                    </ng-container>
+                    <ng-container cdkColumnDef="duration">
+                        <th cdk-header-cell *cdkHeaderCellDef class="text-end text-truncate"><i>timer</i></th>
+                        <td cdk-cell *cdkCellDef="let x" class="text-end small">{{x.duration | number:'1.1-1'}}
+                            h</td>
+                    </ng-container>
+                    <tr cdk-row class="align-middle border-black text-truncate {{row.markerClass()}}" [nx]="row"
+                        *cdkRowDef="let row; columns: fociColumns;"></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-3">
+
+        <ng-container>
+            <div class="card mb-3" [class.d-none]="selection.length > 0">
+                <div class="card-header hstack gap-2">
+                    <i>checklist</i>
+                    <span i18n="@@i18n.invoice.noItemsSelected">no items selected</span>
+                </div>
+                <empty-state [card]="false" class="select" [size]="3"></empty-state>
+            </div>
+            <div class="card mb-3" [class.d-none]="selection.length === 0">
+                <div class="card-header hstack gap-2">
+                    <i>checklist</i>
+                    <span>{{selection.length}} items selected</span>
+                </div>
+                <div class="card-body clearfix">
+                    <div class="mb-2 input-group">
+                        <div class="input-group-text" [class.text-warning]="!selectionProduct">
+                            <n i18n-ngbTooltip="@@i18n.common.product" ngbTooltip="product">product</n>
+                        </div>
+                        <search-input class="form-control p-0" only="Product"
+                            [query]="selectionProduct?.name ?? ''" [has_icon]="true"
+                            (itemSelected)="onProductSelect($event)"></search-input>
+                    </div>
+                    <div class="mb-2 input-group">
+                        <div class="input-group-text">
+                            <i i18n-ngbTooltip="@@i18n.common.sum" ngbTooltip="sum">functions</i>
+                        </div>
+                        <input type="text" class="form-control" affix suffix="h" [(ngModel)]="selectionSum">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-label text-muted d-block" i18n="@@i18n.common.description">description</div>
+                        <textarea #desc class="form-control" rows="4"
+                            [(ngModel)]="selectionDescription"></textarea>
+                    </div>
+                    @if (vatId) {
+                    <div class="mb-2 card card-info" i18n="@@i18n.projects.vatexcemptionApplied">VAT-excemption applied</div>
+                    }
+                    @if (selectionProduct) {
+                    <button class="btn btn-primary float-end" (click)="onCreateNewSupportItem()"><i>add</i></button>
+                    }
+                </div>
+            </div>
+        </ng-container>
+
+        <div class="card mb-3">
+            <div class="card-header hstack gap-2">
+                <i>receipt_long</i>
+                <span i18n="@@i18n.invoice.supportItems">support items</span>
+                @if (supportItems.length > 0) {
+                <div class="card-header-actions">
+                    <a [routerLink]="['..', invoicingRoute]" class="btn btn-sm text-primary"
+                       ngbTooltip="go to invoicing" i18n-ngbTooltip="@@i18n.projects.goToInvoicing">
+                        <i>arrow_forward</i>
+                    </a>
+                </div>
+                }
+            </div>
+            <div class="card-body p-0">
+                @if (supportItems.length === 0) {
+                <empty-state [card]="false" [size]="3"></empty-state>
+                }
+                @if (supportItems.length > 0) {
+                <table cdk-table [dataSource]="supportItems" class="table mb-0">
+                    <ng-container cdkColumnDef="text">
+                        <th cdk-header-cell *cdkHeaderCellDef i18n="@@i18n.common.description">description</th>
+                        <td cdk-cell *cdkCellDef="let x" class="text-truncate small" style="max-width: 150px;" [ngbTooltip]="x.text">{{x.text}}</td>
+                    </ng-container>
+                    <ng-container cdkColumnDef="net">
+                        <th cdk-header-cell *cdkHeaderCellDef class="text-end" i18n="@@i18n.common.net">net</th>
+                        <td cdk-cell *cdkCellDef="let x" class="text-end small">{{x.net | money}}</td>
+                    </ng-container>
+                    <tr cdk-row class="align-middle border-black" [nx]="row"
+                        *cdkRowDef="let row; columns: supportItemColumns;"></tr>
+                </table>
+                }
+            </div>
+        </div>
+    </div>
+</div>

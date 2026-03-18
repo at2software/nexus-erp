@@ -1,0 +1,32 @@
+<div class="modal d-block" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title" i18n="@@i18n.hr.newEmployment">new employment</span>
+      </div>
+      <div class="modal-body">
+        <div class="input-group mb-2">
+          <span class="input-group-text" i18n="@@i18n.common.description">description</span>
+          <select class="form-control" [(ngModel)]="type">
+            @for (_ of TYPES; track _) {
+              <option [value]="_">{{_}}</option>
+            }
+          </select>
+        </div>
+        <div class="input-group mb-2">
+          <span class="input-group-text" i18n="@@i18n.common.hoursPerWeek">hours per week</span>
+          <input class="form-control" type="number" [(ngModel)]="hpw" suffix="h">
+        </div>
+        <div class="input-group mb-3 d-flex">
+          <span class="input-group-text" i18n="@@i18n.common.start">start</span>
+          <input ngbDatepicker #d="ngbDatepicker" placeholder="yyyy-mm-dd" class="form-control" tabindex="-1"
+            [(ngModel)]="start" (click)="d.toggle()"/>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" (click)="decline()" data-bs-dismiss="modal" i18n="@@i18n.common.cancel">cancel</button>
+          <button type="button" class="btn btn-primary" (click)="accept()" hotkey="CTRL+ENTER" i18n="@@i18n.common.ok">ok</button>
+        </div>
+      </div>
+    </div>
+  </div>

@@ -1,0 +1,83 @@
+@use "sass:map";
+@use 'colors' as *;
+@use 'var';
+
+.bg-default { background-color: #0009; color: #999;}
+.badge { white-space:wrap !important; text-align: left; }
+.callout-avatar {
+    width: 28px;
+}
+.callout {
+    background-color: $bg-muted;
+    padding: 2px 10px; margin: 0;
+    border-radius: 5px;
+    box-shadow: var.liquid-glass();
+    position: relative;
+    min-width: 0;
+
+    &::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 6px;
+        width: 0;
+        height: 0;
+        border-top: 6px solid transparent;
+        border-bottom: 6px solid transparent;
+        border-right: 6px solid $bg-muted;
+    }
+
+    &.callout-myself {
+        background-color: $primary-4;
+
+        &::before {
+            border-right-color: $primary-4;
+        }
+    }
+}
+.hstack {
+    padding: 2px 10px; margin: 0;
+}
+.attachments {
+    margin-top: 0.25rem;
+}
+.attachment-image {
+    display: block;
+    width: 100%;
+    border-radius: 4px;
+    margin-top: 0.15rem;
+}
+.attachment-file {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0;
+    font-size: 0.8em;
+    text-decoration: none;
+    color: inherit;
+    min-width: 0;
+    &:hover { color: var(--bs-primary); }
+    &.disabled { pointer-events: none; opacity: 0.5; }
+    i { color: var(--bs-primary); flex-shrink: 0; }
+    .attachment-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+    }
+}
+.reactions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.2rem;
+    margin-top: -0.5rem;  
+    margin-bottom: -0.5rem;
+}
+.reaction {
+    font-size: 0.75em;
+    padding: 0.05rem 0.35rem;
+    border-radius: 1rem;
+    cursor: default;
+    user-select: none;
+}

@@ -1,0 +1,21 @@
+
+<div class="card mb-3">
+  <div class="card-header">
+    <span class="flex-fill" i18n="@@i18n.common.vacation">vacation</span>
+    <ng-container>&nbsp;</ng-container>
+    <div class="chart-title">{{ this.totalVacationDays | loading:3:'d'}}</div>
+  </div>
+  <img src="assets/images/hero-vacation.jpg" class="card-img-top card-img-21-9 chart" alt="">
+  <div class="card-body">
+    <p class="card-text" i18n="@@i18n.profile.remainingVacationHours">Remaining vacation hours: <code>{{ this.totalVacationHours | loading:3:'h'}}</code></p>
+    <!-- <div class="d-flex w-100 mb-2">
+      @for (_ of getWorkingHoursPerDay(); track _) {
+        <div class="text-center flex-fill" [class.text-dark-grey]="_[1] === 0">
+          {{_[0]}}<br>
+          <strong>{{_[1]}}h</strong>
+        </div>
+      }
+    </div> -->
+    <p class="card-text" i18n="@@i18n.profile.workingDaysPerWeekInfo"><code>{{global.user?.getWorkingDaysAmount()}}</code> working days per week with an average of <code>{{global.user?.getAverageHpd()|number:'1.1-1'}}</code> hours per day.</p>
+  </div>
+</div>

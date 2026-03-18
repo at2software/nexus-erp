@@ -1,0 +1,10 @@
+<toolbar>
+  <button type="button" class="btn btn-primary me-3" (click)="onAddGrant()" ngbTooltip="CTRL+ALT+G" placement="bottom" hotkey="CTRL+ALT+G">
+    <i>add</i>
+    <span i18n="@@i18n.hr.leaveAllowance">leave allowance</span>
+  </button>
+</toolbar>
+
+@if (currentUser) {
+  <hr-vacation [user]="currentUser" [isHr]="true"></hr-vacation>
+}

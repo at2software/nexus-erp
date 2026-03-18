@@ -1,0 +1,4 @@
+invoices/*
+!public/
+!.gitignore
+travel-expenses/*

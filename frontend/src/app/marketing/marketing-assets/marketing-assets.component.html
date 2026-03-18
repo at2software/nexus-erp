@@ -1,0 +1,194 @@
+<div class="row">
+  <!-- Categories Sidebar -->
+  <div class="col-md-3">
+    <div class="card" data-tour="assets-categories">
+      <div class="card-header">
+        <h6 class="mb-0" i18n="@@i18n.marketing.asset_categories">asset categories</h6>
+      </div>
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+          <!-- Category Items -->
+          @for (category of categories; track $index) {
+            <button
+              class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+              [class.active]="selectedCategory === category.name" (click)="filterByCategory(category.name)" tabindex="0" (keydown.enter)="filterByCategory(category.name)">
+              <div>
+                <i class="me-2">{{category.icon}}</i>
+                <span>{{category.name}}</span>
+              </div>
+              <span class="badge bg-{{category.color}} rounded-pill">{{category.count}}</span>
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="card mt-3" data-tour="assets-search">
+      <div class="card-header">
+        <h6 class="mb-0" i18n="@@i18n.common.search">search</h6>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <div class="form-label small">
+              <span i18n="@@i18n.marketing.searchByName">search by name</span>
+              <span class="notranslate">:</span>
+          </div>
+          <div class="input-group input-group-sm">
+            <input type="text" class="form-control" [(ngModel)]="searchQuery" (keyup.enter)="onSearch()"
+              placeholder="Search assets..." i18n-placeholder="@@i18n.marketing.search_assets_placeholder">
+              <button class="btn btn-outline-secondary" type="button" (click)="onSearch()" tabindex="0" (keydown.enter)="onSearch()">
+                <i>search</i>
+              </button>
+            </div>
+          </div>
+          <div>
+            <div class="form-label small">
+                <span i18n="@@i18n.marketing.searchByTags">search by tags</span>
+                <span class="notranslate">:</span>
+            </div>
+            <div class="input-group input-group-sm">
+              <input type="text" class="form-control"
+                [(ngModel)]="searchTags"
+                (keyup.enter)="onSearch()"
+                [ngbTypeahead]="tagTypeahead"
+                (selectItem)="onTagSearchSelected($event)"
+                placeholder="Search tags..."
+                i18n-placeholder="@@i18n.marketing.search_tags_placeholder">
+                <button class="btn btn-outline-secondary" type="button" (click)="onSearch()" tabindex="0" (keydown.enter)="onSearch()">
+                  <i>local_offer</i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assets Grid -->
+      <div class="col-md-9">
+        <!-- Loading State -->
+        @if (loading) {
+          <div class="text-center py-5">
+            <div class="spinner-border" role="status">
+              <span class="visually-hidden" i18n="@@i18n.common.loading">loading</span>
+            </div>
+            <p class="mt-2 text-muted">
+                <span i18n="@@i18n.marketing.loadingAssets">loading assets</span>
+                <span class="notranslate">...</span>
+            </p>
+          </div>
+        }
+
+        <!-- Category Description RTE -->
+        @if (selectedCategory) {
+          <div class="mb-4">
+            <div class="card">
+              <div class="card-header">
+                <h6 class="mb-0" i18n="@@i18n.marketing.category_description">{{selectedCategory}} description</h6>
+              </div>
+              <div class="card-body">
+                <text-param-editor [key]="getCategoryParamKey(selectedCategory)" maxHeight="150px"></text-param-editor>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Upload Area when category selected -->
+        @if (!loading && assets.length > 0 && selectedCategory) {
+          <div class="mb-4">
+            <div class="card border-dashed" data-tour="assets-upload" [dnd]="'marketing-assets'" [dndCategory]="selectedCategory" (dndUploaded)="onFilesUploaded()">
+              <div class="card-body text-center py-3">
+                <i class="me-2">cloud_upload</i>
+                <span i18n="@@i18n.marketing.drop_files_to_add">drop files here to add to <strong>{{selectedCategory}}</strong></span>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Assets Grid -->
+        @if (!loading && assets.length > 0) {
+          <div class="row">
+            @for (asset of assets; track asset.id) {
+              <div class="col-sm-6 col-md-4 col-lg-3 mb-4">
+                <div class="card h-100" [nx]="asset">
+                  <!-- Asset Preview -->
+                  <div class="text-center p-3">
+                    @if (asset.thumbnail || (isImage(asset.mime) && asset.preview_url)) {
+                      <img
+                        [src]="asset.thumbnail || asset.preview_url"
+                        [alt]="asset.name"
+                        class="card-img-top"
+                        style="max-height: 150px; object-fit: cover;">
+                    }
+                    @if (!asset.thumbnail && (!isImage(asset.mime) || !asset.preview_url)) {
+                      <i
+                        class="material-icons"
+                      style="font-size: 4rem; color: #6c757d;">{{getFileIcon(asset.mime)}}</i>
+                    }
+                  </div>
+                  <div class="card-body p-3">
+                    <h6 class="card-title text-truncate" [title]="asset.name">{{asset.name}}</h6>
+                    <div class="card-text">
+                      <span class="badge bg-{{getCategoryColor(asset.category)}} mb-2">{{asset.category || uncategorizedLabel}}</span>
+                      <small class="text-muted d-block">{{formatFileSize(asset.file_size)}}</small>
+                      <small class="text-muted d-block">{{asset.created_at | date:'short'}}</small>
+                    </div>
+                    <!-- Tags Section -->
+                    <div class="mt-2">
+                      <div class="d-flex flex-wrap gap-1 mb-2">
+                        @for (tag of asset.tags; track tag) {
+                          <span
+                            class="badge bg-light text-dark small pointer"
+                            (click)="removeTagFromAsset(asset, tag)" tabindex="0" (keydown.enter)="removeTagFromAsset(asset, tag)"
+                          [title]="getRemoveTagTitle(tag)">{{tag}}</span>
+                        }
+                      </div>
+                      <input type="text" class="form-control form-control-sm"
+                        placeholder="Add new tag..."
+                        i18n-placeholder="@@i18n.marketing.add_new_tag_placeholder"
+                        [ngbTypeahead]="tagTypeahead"
+                        (keyup)="onTagInputKeyup($event, asset, $any($event.target))"
+                        (selectItem)="onTagSelected($event, asset)"
+                        #tagInput>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Empty State with Drag & Drop -->
+          @if (!loading && assets.length === 0) {
+            <div class="card border-dashed" [dnd]="'marketing-assets'"
+              [dndCategory]="selectedCategory" (dndUploaded)="onFilesUploaded()">
+              <empty-state [card]="false" class="marketing" i18n-title="@@i18n.marketing.no_assets" title="no assets found">
+                <p class="text-muted small" i18n="@@i18n.marketing.no_assets_description">Drop files here to build your marketing asset library. Supports images, videos, documents and more.</p>
+              </empty-state>
+            </div>
+          }
+        </div>
+      </div>
+
+<!-- ── Guided Tour Slides ──────────────────────────────────────────────────── -->
+
+<guided-tour
+  id="assets-guide-categories"
+  i18n-title="@@i18n.guidedTour.assets.categoriesTitle" title="Asset Categories"
+  i18n-content="@@i18n.guidedTour.assets.categoriesContent" content="Your marketing asset library is organized into categories — brand assets, social media content, email templates, presentations, and more. Select a category to browse its files."
+  focusSelector="[data-tour='assets-categories']">
+</guided-tour>
+
+<guided-tour
+  id="assets-guide-search"
+  i18n-title="@@i18n.guidedTour.assets.searchTitle" title="Find Assets Quickly"
+  i18n-content="@@i18n.guidedTour.assets.searchContent" content="Search assets by name or by tags. Tags help you cross-reference files across different categories — for example finding all assets tagged 'Q1 2025'."
+  focusSelector="[data-tour='assets-search']">
+</guided-tour>
+
+<guided-tour
+  id="assets-guide-upload"
+  i18n-title="@@i18n.guidedTour.assets.uploadTitle" title="Upload Files"
+  i18n-content="@@i18n.guidedTour.assets.uploadContent" content="Simply drag and drop files onto the upload zone to add them to the selected category. Images, videos, PDFs, and other document types are all supported."
+  focusSelector="[data-tour='assets-upload']">
+</guided-tour>

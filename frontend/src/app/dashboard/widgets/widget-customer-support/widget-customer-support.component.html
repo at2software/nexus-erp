@@ -1,0 +1,33 @@
+<div class="card card-chart mb-3">
+
+  <div class="card-header gap-2">
+    <i>schedule</i>
+    <span class="flex-fill text-truncate" i18n="@@i18n.common.customerSupport">customer support</span>
+    @if (value) {
+      <div class="chart-title">{{(value ? value : 0) | short}}h</div>
+    }
+  </div>
+
+  <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+
+  @if (hasInvoicesModule) {
+    <chart-card-range type="rangeArea" [chartData]="chartData" [suffix]="' ' + global.currencySymbol()" [color]="['cyan','orange']" roles="invoicing"></chart-card-range>
+  }
+
+  <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+  @if (!getOptions()['chart-only']?.value) {
+    <ul-compact [badge]="this.badgeCount(data) > 0 ? '' + this.badgeCount(data) : undefined">
+      <li class="list-group-item d-flex text-nowrap" [class.compact]="indexExceedsSettings(i) && !_.badge" *nxFor="let _ of data; let i = index;">
+        <div>
+          <avatar [object]="_"></avatar>
+        </div>
+        <div class="flex-fill ms-3 text-truncate">
+          <div class="d-flex text-truncate">
+            <div class="flex-fill text-truncate">{{_.name}}</div>
+            <div class="text-muted">{{_.foci_unbilled_sum_duration | number : '1.1-1'}}h</div>
+          </div>
+        </div>
+      </li>
+    </ul-compact>
+  }
+</div>

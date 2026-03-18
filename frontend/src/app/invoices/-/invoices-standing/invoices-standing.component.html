@@ -1,0 +1,80 @@
+<div class="row">
+  <div class="col-3">
+    <div class="card">
+      <div class="card-header" i18n="@@i18n.common.standingOrders">standing orders</div>
+    </div>
+  </div>
+  <div class="col-9">
+    @if (isLoaded && items.length === 0) {
+      <div class="card">
+        <empty-state [card]="false" class="invoices" i18n-title="@@i18n.invoices.noStandingOrdersYet" title="No standing orders yet">
+          <p i18n="@@i18n.invoices.standingOrdersEmptyDescription">Automate your recurring revenue. Set up standing orders and let NEXUS handle the rhythm of your business.</p>
+        </empty-state>
+      </div>
+    }
+    @if (!isLoaded || items.length > 0) {
+    <div class="card">
+      <div class="card-header" i18n="@@i18n.common.standingOrders">standing orders</div>
+      <table class="table card-body">
+        <thead>
+          <tr>
+            <td colspan="2" i18n="@@i18n.common.next">next</td>
+            <td></td>
+            <td i18n="@@i18n.common.description">description</td>
+            <td class="text-end" i18n="@@i18n.common.value">value</td>
+            <td class="text-end" i18n="@@i18n.common.interval">interval</td>
+            <td class="text-end" i18n="@@i18n.invoices.eurPa">EUR p.a.</td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *nxFor="let item of items">
+            <td class="p-2 text-end text-muted small align-middle">
+              {{getDaysUntilNext(item)}}d
+            </td>
+            <td class="p-2">
+              <input class="form-control form-control-sm"
+                placeholder="yyyy-mm-dd"
+                (click)="d.toggle()"
+                (dateSelect)="updateDate(item, 'next_recurrence_at', $event)"
+                [(ngModel)]="item.next_recurrence_at"
+                ngbDatepicker
+                #d="ngbDatepicker">
+              </td>
+              <td class="p-2">
+                <avatar [object]="item.company"></avatar>
+                <td class="p-2" [innerHTML]="item.text | safe:'html'"></td>
+                <td class="p-2 text-end text-muted small">{{item.net | money}}</td>
+                <td class="p-2 text-end small" [class]="item.getRepeatColor()">{{item.getRepeatString()}}</td>
+                <td class="p-2 text-end text-monospace">{{item.getYearlyPrice() | money}}</td>
+              </tr>
+            </tbody>
+
+            <tfoot>
+              @if (selection.length) {
+                <tr class="sticky-footer selection-row">
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td i18n="@@i18n.common.selection">selection</td>
+                  <td></td>
+                  <td></td>
+                  <td class="text-end">{{selectionSum | money}}</td>
+                </tr>
+              }
+              @if (!selection.length) {
+                <tr class="sticky-footer">
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td><strong i18n="@@i18n.common.sum">sum</strong></td>
+                  <td></td>
+                  <td></td>
+                  <td class="text-end"><strong>{{sum | money}}</strong></td>
+                </tr>
+              }
+            </tfoot>
+          </table>
+        </div>
+    }
+      </div>
+    </div>

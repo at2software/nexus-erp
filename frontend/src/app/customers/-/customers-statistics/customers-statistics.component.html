@@ -1,0 +1,65 @@
+@if (premiumCustomers === undefined) {
+  <empty-state class="chart" i18n-title="@@i18n.customers.statsEmpty" title="no customer statistics yet">
+    <p class="text-muted small" i18n="@@i18n.customers.statsEmptyBody">Statistics will appear once invoices are recorded for your customers.</p>
+  </empty-state>
+}
+@if (premiumCustomers !== undefined && premiumCustomers.length === 0) {
+  <empty-state class="chart" i18n-title="@@i18n.customers.statsNoData" title="no data available">
+    <p class="text-muted small" i18n="@@i18n.customers.statsNoDataBody">No revenue data found. Statistics require invoices to be recorded.</p>
+  </empty-state>
+}
+@if (premiumCustomers !== undefined && premiumCustomers.length > 0) {
+<div class="row">
+  <div class="col-4">
+    <div class="card sticky-side">
+      <div class="card-header" i18n="@@i18n.common.companies">companies</div>
+      <ul class="list-group">
+        @for (c of premiumCustomers; track c.id) {
+          <li class="list-group-item list-group-item-action d-flex">
+            <div class="me-3"><avatar [object]="c"></avatar></div>
+            <div class="flex-fill text-truncate me-3">{{c.name}}</div>
+            <div class="text-end text-truncate text-muted small me-3" ngbTooltip="first invoice: {{c.created_at | date}}">{{c.var.customer_since|number:'1.1-1'}} years</div>
+            @if (c.var.trend > .1) {
+              <div class="text-success" ngbTooltip="trend: {{c.var.trend | percent}}"><i>trending_up</i></div>
+            }
+            @if (c.var.trend < -.1) {
+              <div class="text-danger" ngbTooltip="trend: {{c.var.trend | percent}}"><i>trending_down</i></div>
+            }
+            @if (c.var.trend >= -.1 && c.var.trend <= .1) {
+              <div class="text-grey" ngbTooltip="trend: {{c.var.trend | percent}}"><i>trending_flat</i></div>
+            }
+          </li>
+        }
+      </ul>
+    </div>
+  </div>
+  <div class="col-8">
+
+    <div class="card mb-3">
+      <div class="card-header">revenue shares <span class="badge badge-dark" i18n="@@i18n.common.12m">12m</span></div>
+      <div class="card-body">
+        <apx-chart-x [options]="pieOptions"></apx-chart-x>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header" i18n="@@i18n.common.hourlyWage">hourly wage</div>
+      <div class="card-body" style="position: relative;">
+        <apx-chart-x [options]="wageOptions"></apx-chart-x>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col">
+        <div class="card">
+          <div class="card-header" i18n="@@i18n.customers.bcgMatrix">BCG matrix</div>
+          <div class="card-body">
+            <apx-chart-x [options]="bcgOptions"></apx-chart-x>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+}

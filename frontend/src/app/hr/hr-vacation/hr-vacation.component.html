@@ -1,0 +1,73 @@
+@if (grants.length === 0) {
+  <div class="card mb-3">
+    <empty-state [card]="false" class="hr" i18n-title="@@i18n.hr.noVacationGrants" title="no vacation entitlements yet">
+      <p class="text-muted small" i18n="@@i18n.hr.noVacationGrantsBody">Vacation records will appear here once a vacation entitlement has been granted to this user.</p>
+    </empty-state>
+  </div>
+}
+@for (grant of grants; track grant.track_id) {
+<div class="card mb-3">
+    <div class="card-header hstack gap-2" [nx]="grant" [tables]="grants">
+        @if (isHr) {
+        <div ngbDropdown>
+            <i class="text-primary pointer dropdown-toggle-simple" ngbDropdownToggle>add</i>
+            <div ngbDropdownMenu>
+                <button class="dropdown-item" (click)="onVacationAdd(grant)" i18n="@@i18n.hr.vacationDays">vacation days</button>
+                <button class="dropdown-item" (click)="onFreeDayAdd(grant)" i18n="@@i18n.hr.freeDays">free days</button>
+            </div>
+        </div>
+        }
+        <div>{{grant.name}}</div>
+        <div class="flex-fill">@if (grant.expires_at) {
+            <span class="text-muted small" i18n-ngbTooltip="@@i18n.hr.expiration-date"
+                ngbTooltip="expiration date">{{grant.expires_at | date}}</span>
+            }
+        </div>
+        <div class="chart-title" [class.text-muted]="remainingVacationFor(grant) === 0"
+            [class.text-danger]="remainingVacationFor(grant) < 0">
+            {{remainingVacationFor(grant) | number:'1.1-1'}} h
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <table class="table card-table mb-0" style="table-layout: fixed;">
+            <colgroup>
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col>
+                <col style="width: 180px;">
+                <col style="width: 100px;">
+                <col style="width: 60px;">
+            </colgroup>
+            @for (_ of grant.vacations; track _.track_id) {
+            <tr [nx]="_" [tables]="grant.vacations" [class.text-decoration-line-through]="[2,4].contains(_.state)"
+                (actionsResolved)="reload()" [class.text-dark-grey]="_.state === 2"
+                [class.text-primary]="_.state === 0">
+                <td class="text-muted small ps-2 text-truncate">{{_.started_at | date:'dd.MM.yyyy'}}</td>
+                <td class="text-muted small text-truncate">{{_.ended_at | date:'dd.MM.yyyy'}}</td>
+                <td class="flex-fill text-truncate">
+                    {{_.comment}}
+                </td>
+                <td class="px-2">
+                    <saldo-chart [min]="getVacationChartMin(grant)" [max]="getVacationChartMax(grant)"
+                        [dx]="getVacationChartDx(grant, _)" [delta]="[1, 3].includes(_.state) ? _.amount : 0"
+                        unit="hours">
+                    </saldo-chart>
+                </td>
+                <td class="text-end text-nowrap text-truncate">{{getRemainingHoursAt(grant, _) | number:'1.0-1'}}<span
+                        class="small text-muted"> h</span></td>
+                <td class="text-center text-truncate">
+                    <i [ngbTooltip]="getVacationStateTooltip(_.state)"
+                        [class]="getVacationStateClass(_.state)">{{getVacationStateIcon(_.state)}}</i>
+                </td>
+            </tr>
+            }
+        </table>
+    </div>
+    <div class="card-footer bg-dark">
+        <div class="d-flex justify-content-between small text-light">
+            <span i18n="@@i18n.vacation.initialAllowance">initial allowance (yearly)</span>
+            <span class="text-nowrap">{{grant.amount}}<span class="small"> h</span></span>
+        </div>
+    </div>
+</div>
+}

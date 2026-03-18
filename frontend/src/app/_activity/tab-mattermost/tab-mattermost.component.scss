@@ -1,0 +1,40 @@
+$input-height: 6rem;
+scrollbar,
+empty-state {
+    position: absolute;
+    top: 40px;
+    right: 0;
+    left: 0;
+    bottom: $input-height !important;
+    white-space: pre-wrap;
+    overflow-x: hidden;
+}
+.input-container {
+    position: absolute;
+    bottom: 0;
+    height: $input-height;
+    left: 0;
+    right: 0;
+    textarea {
+        resize: none;
+    }
+}
+.instance-container, .tab-content {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    padding: 0;
+}
+.header { z-index: 101;}
+scrollbar { top: 0; padding-top: 40px; }
+.container {
+    padding: 0;
+}
+.nav-link {
+    border: none !important;
+}
+.tab-content {
+    top: 0 !important;
+}

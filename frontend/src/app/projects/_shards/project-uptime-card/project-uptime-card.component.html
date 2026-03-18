@@ -1,0 +1,66 @@
+<div class="card mb-3">
+    <div class="card-header pe-0">
+        <span i18n="@@i18n.uptime.uptimeMonitoring" [collapsible]="uptimeList">uptime monitoring</span>
+        <div class="card-header-actions">
+            <div ngbDropdown>
+                <button class="btn btn-plain dropdown-toggle-simple" ngbDropdownToggle>
+                    <i class="text-primary">add</i>
+                </button>
+                <ul ngbDropdownMenu class="autoposition">
+                    <li>
+                        <a class="dropdown-item pointer" (click)="createNew()" (keyup.enter)="createNew()" tabindex="0">
+                            <i class="me-2">add_circle</i>
+                            <span i18n="@@i18n.common.createNew">create new</span>
+                        </a>
+                    </li>
+                    @if (allMonitors.length > 0) {
+                        <li><hr class="dropdown-divider"></li>
+                        <li class="dropdown-header" i18n="@@i18n.uptime.linkExisting">link existing</li>
+                        @for (monitor of allMonitors; track monitor.id) {
+                            <li>
+                                <a class="dropdown-item pointer d-flex align-items-center" (click)="linkExisting(monitor)" (keyup.enter)="linkExisting(monitor)" tabindex="0">
+                                    <i class="me-2 text-{{ monitor.statusColor }}">{{ monitor.statusIcon }}</i>
+                                    <span class="flex-fill">{{ monitor.name }}</span>
+                                </a>
+                            </li>
+                        }
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+    <ul class="list-group" #uptimeList>
+        @if (loading) {
+            <li class="list-group-item text-center">
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">
+                        <span i18n="@@i18n.common.loading">loading</span>
+                        <span class="notranslate">...</span>
+                    </span>
+                </div>
+            </li>
+        } @else if (monitors.length === 0) {
+            <li class="list-group-item text-muted" i18n="@@i18n.uptime.noMonitorsLinked">no uptime monitors linked to this project</li>
+        } @else {
+            @for (monitor of monitors; track monitor.id) {
+                <li class="list-group-item hstack gap-2" [nx]="monitor" context="project-dashboard">
+                    <i class="text-{{ monitor.statusColor }}"
+                       [ngbTooltip]="monitor.last_status">
+                        {{ monitor.statusIcon }}
+                    </i>
+                    <div class="flex-fill">
+                        <div class="fw-bold">{{ monitor.name }}</div>
+                    </div>
+                    <div class="avatars-stack">
+                        @if (project.project_manager) {
+                        <avatar [object]="project.project_manager" size="xs"></avatar>
+                        }
+                        @for (user of monitor.recipients; track user.id) {
+                        <avatar [object]="user" size="xs"></avatar>
+                        }
+                    </div>
+                </li>
+            }
+        }
+    </ul>
+</div>

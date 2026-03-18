@@ -1,0 +1,32 @@
+<div class="card card-chart mb-3">
+
+  <div class="card-header gap-2">
+    <n>project</n>
+    <span class="flex-fill text-truncate" i18n="@@i18n.common.acquisitions">acquisitions</span>
+    <div class="chart-title" roles="invoicing">{{value ? (value | mshort) : (value | loading)}}</div>
+  </div>
+
+  @if (hasInvoicesModule) {
+    <chart-card-range type="rangeArea" [chartData]="chartData" [suffix]="' ' + global.currencySymbol()" color="purple" roles="invoicing"></chart-card-range>
+  }
+
+  <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+
+  @if (!getOptions()['chart-only']?.value) {
+    <ul-compact [badge]="this.badgeCount(data) > 0 ? '' + this.badgeCount(data) : undefined">
+      <li class="list-group-item d-flex text-nowrap {{_.markerClass()}}" [class.compact]="indexExceedsSettings(i) && !_.badge" *nxFor="let _ of data; let i = index" [ngbTooltip]="getProbabilityTooltip(_)">
+        <div>
+          <avatar [object]="_"></avatar>
+        </div>
+        <div class="flex-fill ms-3 text-truncate">
+          <div class="d-flex text-truncate">
+            <div class="flex-fill text-truncate">{{_.name}}</div>
+            <div class="text-muted" roles="invoicing">{{_.net | mshort}}</div>
+          </div>
+          <progress-bar [progress]="_.lead_probability || 0" [style]="'purple'" [title]="((_.lead_probability || 0) * 100).toFixed(1) + '%'"></progress-bar>
+        </div>
+      </li>
+    </ul-compact>
+  }
+
+</div>

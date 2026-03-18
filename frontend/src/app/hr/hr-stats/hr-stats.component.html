@@ -1,0 +1,51 @@
+<div class="container-fluid">
+
+  <div class="row d-flex align-items-stretch">
+    <div class="col-3 d-flex">
+      <div class="card w-100">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="me-2">group</i>
+            Active Team Members
+          </h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="team-list">
+            @for (user of team; track user.id) {
+              <div class="team-member d-flex align-items-center p-3 border-bottom">
+                <div class="avatar me-3">
+                  <avatar [object]="user"></avatar>
+                </div>
+                <div class="flex-grow-1">
+                  <h6 class="mb-1">{{ user.name }}</h6>
+                  <span class="badge"
+                    [style.background-color]="getHpwBadgeColor(user.active_employment.hpw)"
+                    [style.color]="'#ffffff'">
+                    {{ user.active_employment.hpw }}h per week
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-9 d-flex">
+      <div class="card w-100">
+        <div class="card-header hstack gap-2">
+          @for (item of statsItems; track item.route) {
+            <div>
+              <div class="cursor-pointer" (click)="navigateToStats(item.route)" tabindex="0" (keydown.enter)="navigateToStats(item.route)"
+                [routerLink]="[item.route]" routerLinkActive="active">
+                {{ item.title }}
+              </div>
+            </div>
+          }
+        </div>
+        <div class="card-body p-0">
+          <router-outlet></router-outlet>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

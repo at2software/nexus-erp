@@ -1,0 +1,75 @@
+@use 'src/scss/colors';
+
+.preview-container {
+    position: relative;
+
+    &.has-max-height {
+        .accordion-toggle {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+    }
+
+    &:not(.has-max-height) {
+        .accordion-toggle {
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+    }
+}
+
+.preview {
+    position: relative;
+    min-height: 2rem;
+    transition: max-height 0.3s ease-in-out;
+}
+
+.image-card {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 2px solid transparent;
+
+    &:hover {
+        transform: scale(1.05);
+        border-color: var(--bs-primary);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+}
+
+.accordion-toggle {
+    .gradient-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: linear-gradient(transparent, colors.$bg-card);
+        pointer-events: none;
+    }
+
+    i {
+        position: relative;
+        font-size: 20px;
+        transition: color 0.2s ease;
+        display: block;
+        text-align: center;
+        padding: 0.5rem;
+        background: colors.$bg-card;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        line-height: 22px;
+        margin: 0 auto;
+
+        &:hover {
+            color: var(--bs-primary) !important;
+            opacity: 0.8;
+        }
+    }
+}
+
+::ng-deep {
+    p { margin-bottom: 0; }
+}

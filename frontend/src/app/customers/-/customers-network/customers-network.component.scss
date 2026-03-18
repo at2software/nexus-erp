@@ -1,0 +1,13 @@
+@use "var";
+
+:host {
+    display: block;
+    height: 100%;
+}
+network-chart {
+    position: fixed;
+    left: 0;
+    top: var.$header-height;
+    right: 0;
+    bottom: 0;
+}

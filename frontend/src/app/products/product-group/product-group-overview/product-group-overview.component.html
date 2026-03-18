@@ -1,0 +1,55 @@
+<div class="row">
+  <div class="col-8">
+    @if (parent.current) {
+      <div class="card mb-3">
+        <div class="card-header" i18n="@@i18n.common.information">information</div>
+        <div class="card-body">
+          <div class="input-group mb-3">
+            <span class="input-group-text col-3" id="name" i18n="@@i18n.common.name">name</span>
+            <input type="text" class="form-control" [autosave]="parent.current" [(ngModel)]="parent.current.name">
+          </div>
+          <div class="input-group mb-3">
+            <span class="input-group-text col-3" id="color" i18n="@@i18n.common.color">color</span>
+            <input type="text" class="form-control"
+              [style.background]="parent.current.color"
+              [autosave]="parent.current"
+              [(colorPicker)]="parent.current.color"
+              [cpOKButton]="true"
+              [cpSaveClickOutside]="false"
+              [cpOKButtonClass]= "'btn btn-primary btn-xs'"
+              [(ngModel)]="parent.current.color">
+            </div>
+            <div class="input-group mb-3">
+              <span class="input-group-text col-3" id="symbol" i18n="@@i18n.common.symbol">symbol</span>
+              <input type="text" class="form-control" [autosave]="parent.current" [(ngModel)]="parent.current.symbol">
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (parent.current) {
+        <div class="card mb-3">
+          <div class="card-header" i18n="@@i18n.common.additionalQuoteClauses">additional quote clauses</div>
+          <rte [object]="parent.current" key="quote"></rte>
+        </div>
+      }
+
+    </div>
+    <div class="col-4">
+      <div class="card sticky-side">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span i18n="@@i18n.common.customers">customers</span>
+          <div class="chart-title" [ngbTooltip]="totalCustomers + ' customers total'">{{totalRevenue ? (totalRevenue | mshort) : (totalRevenue | loading)}}</div>
+        </div>
+        <ul class="list-group">
+          <li class="list-group-item d-flex justify-content-between align-items-center" *nxFor="let c of customers">
+            <div class="d-flex align-items-center overflow-hidden">
+              <avatar [object]="c" class="me-2 flex-shrink-0"></avatar>
+              <div class="text-truncate">{{c.name}}</div>
+            </div>
+            <small class="text-muted ms-2 flex-shrink-0">{{c.revenue | mshort}}</small>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>

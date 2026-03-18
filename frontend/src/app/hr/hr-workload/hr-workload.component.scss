@@ -1,0 +1,54 @@
+.visu {
+    width: 1000px;
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+    .visu-recurring-project, .visu-planned-project {
+        box-sizing: border-box;
+    }
+    .visu-planned {
+        position: relative;
+    }
+    .visu-recurring-project { 
+        width: 100%; 
+        border-top: 1px #0009 solid;
+    }
+    .visu-planned-project { 
+        height: 100%; 
+        display: inline-block; 
+        position: absolute;
+        border-right: 1px #0009 solid;
+    }
+    .bg-unpaid {
+        background-image: repeating-linear-gradient(
+            45deg,
+            #0006 0,
+            #0006 5px,
+            transparent 5px,
+            transparent 10px
+        );
+    }
+    .visu-month-label {
+        pointer-events: none;
+        position: absolute;
+        top: 0; bottom: 0;
+        width: 0;
+        border-left:1px #666 solid;
+        .visu-month-label-text {
+            color: #ffffff99;
+            transform: rotate(90deg) translate3d( 0, 0, 0);
+            -webkit-transform: rotate(90deg) translate3d( 0, 0, 0);
+            position: absolute;
+            left: 0;
+            top:5px;
+        }
+    }
+    .visu-break {
+        position: absolute;
+        top: 0; bottom: 0;
+        border: 1px black solid;
+    }
+    .visu-sick { background-color: var(--color-cyan); }
+    .visu-vacation { background-color: var(--color-orange); }
+    .visu-holiday { background-color: #666666; }
+}

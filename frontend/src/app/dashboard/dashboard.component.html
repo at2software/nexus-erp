@@ -1,0 +1,103 @@
+<app-header>
+  <div class="logo" style="background-image: url(assets/images/dashboard.jpg);"></div>
+  <h1 i18n="@@i18n.common.dashboard">dashboard</h1>
+  @if (global && global.dashboards) {
+    <ul class="nav" data-tour="dashboard-tabs">
+      @for (dashboard of global.dashboards; track dashboard.title; let i = $index) {
+        <header-link-item routerLink="/dashboard{{i > 0  ? '/' + i : ''}}" title="{{dashboard.title}}" class="text-nowrap" icon="dashboard">
+          <span class="edit text-danger cursor-pointer" (click)="onDashboadDelete(i)" (keyup.enter)="onDashboadDelete(i)" tabindex="0"><i>delete</i></span>
+        </header-link-item>
+      }
+      <li class="nav-item text-primary edit cursor-pointer" (click)="onNewDashboard()" (keyup.enter)="onNewDashboard()" tabindex="0"><i>add</i> <span i18n="@@i18n.common.newDashboard">new dashboard</span></li>
+    </ul>
+  }
+</app-header>
+
+<toolbar>
+  <div class="btn-group" role="group">
+    <button data-tour="dashboard-edit-btn" type="button" class="btn btn-plain px-2" [class.btn-primary]="is_editing" (click)="toggleEditing()">
+      <i>{{!is_editing ? 'edit' : 'check' }}</i>
+    </button>
+  </div>
+</toolbar>
+
+@if (global && global.dashboards) {
+  <scrollbar>
+    @if (global.dashboards.length === 0) {
+      <empty-state class="dashboard" title="No dashboard found" description="Please create a dashboard"></empty-state>
+    }
+    @if (global.dashboards.length > 0) {
+      <div class="row" cdkDropListGroup data-tour="dashboard-zone">
+        @for (i of [0, 1, 2, 3]; track i) {
+          <div
+            cdkDropList
+            [id]="'col-' + i"
+            [cdkDropListConnectedTo]="['col-0', 'col-1', 'col-2', 'col-3', 'widget-list']"
+            class="col-12 col-md-3"
+            [cdkDropListData]="global.dashboards[currentDashboard].cols[i]"
+            (cdkDropListDropped)="drop($event)"
+            [cdkDropListDisabled]="!is_editing"
+            [class.cursor-move]="is_editing">
+            @if (i === 0) {
+              <widget-superadmin-warning></widget-superadmin-warning>
+            }
+            @for (_ of global.dashboards[currentDashboard].cols[i]; track _.widget; let j = $index) {
+              @if (hasAccess(_.widget)) {
+                <div cdkDrag>
+                  <ng-container
+                        *ngComponentOutlet="componentFor(_.widget);
+                        inputs:{options:_.options, widget:_, is_editing:is_editing, i:i, j:j, onReload: _.onReload}">
+                  </ng-container>
+                </div>
+              }
+            }
+          </div>
+        }
+      </div>
+    }
+  </scrollbar>
+}
+
+<!-- ── Guided Tour Slides ──────────────────────────────────────────────────── -->
+
+<guided-tour
+  id="dashboard-guide-widgets"
+  i18n-title="@@i18n.guidedTour.dashboard.widgetsTitle" title="Your Dashboard"
+  i18n-content="@@i18n.guidedTour.dashboard.widgetsContent" content="This is your personal dashboard. You can arrange it individually with widgets to keep the most relevant information at a glance."
+  focusSelector="[data-tour='dashboard-zone']">
+</guided-tour>
+
+<guided-tour
+  id="dashboard-guide-edit"
+  i18n-title="@@i18n.guidedTour.dashboard.editTitle" title="Edit Mode"
+  i18n-content="@@i18n.guidedTour.dashboard.editContent" content="Click the edit icon in the toolbar to enter edit mode. Once active, you can rearrange, add, and remove widgets on your dashboard."
+  focusSelector="[data-tour='dashboard-edit-btn']">
+</guided-tour>
+
+@if (is_editing) {
+  <guided-tour
+    id="dashboard-guide-tabs"
+    i18n-title="@@i18n.guidedTour.dashboard.tabsTitle" title="Multiple Dashboards"
+    i18n-content="@@i18n.guidedTour.dashboard.tabsContent" content="In edit mode, you can rename your dashboards by clicking their title, and add new dashboards to organize different views for different contexts."
+    focusSelector="[data-tour='dashboard-tabs']">
+  </guided-tour>
+
+  <guided-tour
+    id="dashboard-guide-widget-panel"
+    i18n-title="@@i18n.guidedTour.dashboard.widgetPanelTitle" title="Widget Panel"
+    i18n-content="@@i18n.guidedTour.dashboard.widgetPanelContent" content="In edit mode, the panel on the right shows all available widgets. Simply drag one onto your dashboard to add it."
+    focusSelector="app-activity">
+  </guided-tour>
+
+  <guided-tour
+    id="dashboard-guide-context-menus"
+    i18n-title="@@i18n.guidedTour.dashboard.contextMenusTitle" title="Context Menus"
+    i18n-content="@@i18n.guidedTour.dashboard.contextMenusContent" content="Most objects in NEXUS support right-click context menus with quick actions. You can easily spot them — their background turns teal when you hover over them.">
+  </guided-tour>
+
+  <guided-tour
+    id="dashboard-guide-multiselect"
+    i18n-title="@@i18n.guidedTour.dashboard.multiselectTitle" title="Multi-Selection"
+    i18n-content="@@i18n.guidedTour.dashboard.multiselectContent" content="Context-aware objects support multi-selection just like in Windows Explorer. Use Ctrl+Click to add items to your selection, and Shift+Click to select a range up to that item.">
+  </guided-tour>
+}

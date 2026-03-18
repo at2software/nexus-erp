@@ -1,0 +1,30 @@
+<div class="card card-chart mb-3">
+    <div class="card-header gap-2">
+        <n>monitor</n>
+        <span class="flex-fill text-truncate" i18n="@@i18n.uptime.uptimeMonitoring">uptime monitoring</span>
+        <div class="chart-title">{{value ? value + '%' : (value | loading)}}</div>
+    </div>
+
+    @if (chartOptions && chartOptions.series) {
+        <apx-chart-x [options]="chartOptions" class="chart-container"></apx-chart-x>
+    }
+
+    <widget-options [options]="defaultOptions()" (updated)="reload()" (deleted)="reload()"></widget-options>
+
+    <ul-compact>
+        @for (monitor of monitors; track monitor.id) {
+            <li class="list-group-item d-flex align-items-center">
+                <div class="flex-fill">{{ monitor.name }}</div>
+                <span class="badge bg-{{ monitor.statusColor }}">
+                    {{ monitor.last_status }}
+                </span>
+            </li>
+        }
+
+        @if (monitors.length === 0) {
+            <li class="list-group-item text-center text-muted">
+                <span i18n="@@i18n.uptime.noMonitors">no uptime monitors configured</span>
+            </li>
+        }
+    </ul-compact>
+</div>

@@ -1,0 +1,213 @@
+@use "var";
+
+:host {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+
+    --activity-container-bg: #1a1d21;
+}
+
+.gantt-wrapper {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    background-color: var(--bs-body-bg);
+}
+
+
+.gantt-svg {
+    display: block;
+    cursor: crosshair; // Show crosshair for area selection
+
+    // Reset cursor for interactive elements
+    .milestone-bar {
+        cursor: pointer;
+    }
+}
+
+.off-screen-chevron {
+    opacity: 0.9;
+    transition: opacity 0.2s;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+
+    &:hover {
+        opacity: 1;
+    }
+}
+
+.milestone-rect {
+    cursor: move;
+    transition: opacity 0.2s, stroke 0.2s, stroke-width 0.2s;
+
+    &:hover {
+        opacity: 0.8;
+    }
+}
+
+.milestone-bar {
+    &.dependency-target .milestone-rect {
+        stroke: #0d6efd;
+        stroke-width: 3;
+        opacity: 1;
+    }
+
+    &.dependency-invalid .milestone-rect {
+        stroke: #dc3545;
+        stroke-width: 3;
+        opacity: 0.7;
+    }
+}
+
+.milestone-label-group {
+    pointer-events: none;
+
+    text {
+        //text-shadow: 0 0 3px #000;
+        font-weight: bold;
+    }
+
+    .workload-percent {
+        text-shadow: none;
+    }
+}
+
+
+.milestone-label {
+    pointer-events: auto;
+    //filter: drop-shadow(0 0 3px black);
+
+    .workload-percent {
+        filter: none;
+        text-shadow: none;
+    }
+}
+
+.label-avatar,
+.unassigned-icon {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.dependency-point {
+    opacity: 0;
+    transition: opacity 0.2s;
+
+    .milestone-bar:hover & {
+        opacity: 1;
+    }
+
+    &.left {
+        cursor: crosshair;
+    }
+}
+
+.resize-handle {
+    opacity: 0;
+    transition: opacity 0.2s;
+
+    .milestone-bar:hover & {
+        opacity: 1;
+    }
+
+    &.right {
+        cursor: ew-resize;
+    }
+}
+
+.task-content-wrapper {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+    overflow: visible;
+    position: relative;
+
+    .task-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 400;
+        pointer-events: auto;
+        padding-left: 0.5rem;
+        transition: text-decoration 0.2s, opacity 0.5s;
+
+        &.completing {
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+
+        .task-checkbox {
+            margin: 0;
+            cursor: pointer;
+            width: 14px;
+            height: 14px;
+            accent-color: var(--bs-primary);
+        }
+
+        .task-name {
+            white-space: nowrap;
+        }
+    }
+}
+
+:host {
+    position: relative;
+}
+
+.header-content-wrapper {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+    overflow: visible;
+    position: relative;
+    background-color: var(--bs-dark-rgb);
+
+    .project-label {
+        position: absolute;
+        font-weight: bold;
+        color: white;
+        font-size: 12px;
+        cursor: pointer;
+        padding: 0.125rem 0.5rem;
+        border-radius: 0.25rem;
+        white-space: nowrap;
+        pointer-events: auto;
+        z-index: 10;
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+
+    .header-add-button {
+        position: absolute;
+        pointer-events: auto;
+        z-index: 10;
+
+        .btn-add {
+            background-color: #000;
+            border: 1px solid var(--bs-primary);
+            color: var(--bs-primary);
+            padding: 0.125rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 11px;
+            cursor: pointer;
+
+            &:hover {
+                background-color: var(--bs-primary);
+                color: white;
+            }
+
+            i {
+                font-size: 14px;
+            }
+        }
+    }
+}

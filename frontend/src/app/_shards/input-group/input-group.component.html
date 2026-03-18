@@ -1,0 +1,13 @@
+@if (object) {
+  <div class="input-group mb-3">
+    <span class="input-group-text"><ng-content></ng-content></span>
+    @if (typeahead) {
+      <input type="text" class="form-control" [placeholder]="placeholder" [value]="value" [ngbTypeahead]="search" [inputFormatter]="taKey" [resultFormatter]="taValue" (selectItem)="taSelect($event)" />
+    } @else {
+      <input type="text" class="form-control" [placeholder]="placeholder" [value]="value" (blur)="onBlur($event)">
+    }
+    @if (suffix) {
+      <span class="input-group-text">{{suffix}}</span>
+    }
+  </div>
+}

@@ -1,0 +1,99 @@
+<div class="modal d-block" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title" i18n="@@i18n.common.condition">condition</span>
+      </div>
+      <div class="modal-body">
+        <!-- Column selection first -->
+        @if (selectedCondition) {
+          @for (opt of selectedCondition.options; track opt) {
+            @if (opt.type === 'column') {
+              <div class="form-group mb-3">
+                <ng-container *ngTemplateOutlet="renderOption; context: { $implicit: opt }"></ng-container>
+              </div>
+            }
+          }
+        }
+
+        <!-- Condition Type Dropdown -->
+        <div class="form-group mb-3">
+          <div i18n="@@i18n.common.condition">condition</div>
+          <div ngbDropdown class="sentinel-dropdown">
+            <button type="button" class="btn btn-outline-secondary w-100 text-start d-flex align-items-center" ngbDropdownToggle>
+              <span class="sentinel-pill bg-info" i18n="@@i18n.common.if">if</span>
+              <span class="sentinel-operator ms-2">{{selectedCondition.label || 'Select condition...'}}</span>
+            </button>
+            <div ngbDropdownMenu class="w-100 dropdown-menu-scroll">
+              @for (condition of allConditions; track condition) {
+                <button ngbDropdownItem (click)="selectedCondition = condition" class="d-flex align-items-center">
+                  <span class="sentinel-pill bg-info" i18n="@@i18n.common.if">if</span>
+                  <span class="sentinel-operator ms-2">{{condition.label}}</span>
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Other options -->
+        @if (selectedCondition) {
+          @for (opt of selectedCondition.options; track opt) {
+            @if (opt.type !== 'column') {
+              <div class="form-group mb-3">
+                <ng-container *ngTemplateOutlet="renderOption; context: { $implicit: opt }"></ng-container>
+              </div>
+            }
+          }
+        }
+
+        <!-- Inverted checkbox -->
+        <div class="form-group mb-3 d-flex align-items-center">
+          <div class="me-2" i18n="@@i18n.common.inverted">inverted</div>
+          <input class="form-check-input" type="checkbox" [(ngModel)]="selectedCondition.inverted" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" (click)="decline()" i18n="@@i18n.common.cancel">cancel</button>
+        <button type="button" class="btn btn-primary" (click)="accept()" hotkey="CTRL+ENTER" i18n="@@i18n.common.ok">ok</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ng-template #renderOption let-opt>
+  @if (opt.label) {
+    <div>{{ opt.label }}</div>
+  }
+
+  @switch (opt.type) {
+    @case ('boolean') {
+      <input class="form-check-input ms-2" type="checkbox" [(ngModel)]="opt.value" />
+    }
+    @case ('string') {
+      <variable-autocomplete [option]="opt" [tableName]="sentinel.table_name" [triggerVariable]="sentinel.trigger_variable" [loopVariable]="variableContext?.name" [loopTable]="variableContext?.table"></variable-autocomplete>
+    }
+    @case ('number') {
+      <input class="form-control sentinel-input" type="number" [(ngModel)]="opt.value" />
+    }
+    @case ('enum') {
+      <div ngbDropdown class="sentinel-dropdown">
+        <button type="button" class="btn btn-outline-secondary w-100 text-start" ngbDropdownToggle>
+          <span class="sentinel-value">{{opt.value || 'Select...'}}</span>
+        </button>
+        <div ngbDropdownMenu class="w-100">
+          @for (val of opt.enumValues; track val) {
+            <button ngbDropdownItem (click)="opt.value = val.value">
+              <span class="sentinel-value">{{ val.label }}</span>
+            </button>
+          }
+        </div>
+      </div>
+    }
+    @case ('column') {
+      <column-relation-autocomplete [option]="opt" [tableName]="sentinel.table_name" [triggerVariable]="sentinel.trigger_variable" [variableContext]="variableContext"></column-relation-autocomplete>
+    }
+    @default {
+      <div class="text-muted" i18n="@@i18n.profile.unsupportedFieldType">unsupported field type</div>
+    }
+  }
+</ng-template>

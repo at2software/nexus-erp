@@ -1,0 +1,41 @@
+<div class="problem-autocomplete position-relative">
+    <div class="input-group">
+        <input type="text"
+               class="form-control"
+               [(ngModel)]="searchTerm"
+               (input)="onSearchChange()"
+               (focus)="onFocus()"
+               (blur)="onBlur()"
+               placeholder="Search problems or create new..."
+               i18n-placeholder="@@i18n.debrief.searchProblems">
+        @if (isSearching) {
+            <span class="input-group-text">
+                <span class="spinner-border spinner-border-sm"></span>
+            </span>
+        }
+    </div>
+
+    @if (showDropdown && (searchResults.length > 0 || searchTerm.length >= 2)) {
+        <div class="dropdown-menu show w-100">
+            @for (problem of searchResults; track problem.id) {
+                <button class="dropdown-item d-flex align-items-center gap-2" (mousedown)="selectProblem(problem)">
+                    <span class="category-dot" [style.background-color]="getCategoryColor(problem.debrief_problem_category_id)"></span>
+                    <span class="flex-grow-1">{{ problem.title }}</span>
+                    <small class="text-muted">{{ problem.usage_count }}x</small>
+                </button>
+            }
+
+            @if (searchResults.length === 0 && searchTerm.length >= 2) {
+                <div class="dropdown-item text-muted" i18n="@@i18n.debrief.noProblemsFound">no problems found</div>
+            }
+
+            @if (searchTerm.length >= 2) {
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item text-primary" (mousedown)="onCreateNew()">
+                    <i class="me-2">add</i>
+                    <span i18n="@@i18n.common.create">create</span> "{{ searchTerm }}"
+                </button>
+            }
+        </div>
+    }
+</div>

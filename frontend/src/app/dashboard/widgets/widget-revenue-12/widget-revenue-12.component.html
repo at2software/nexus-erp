@@ -1,0 +1,22 @@
+<div class="card card-chart mb-3">
+
+  <div class="card-header gap-2">
+    <n>project</n>
+    <span class="flex-fill text-truncate" i18n="@@i18n.common.revenue">revenue</span>
+    <span class="badge bg-lighter ms-2 py-1 px-1" ngbTooltip="accumulated revenue of the last 12 months" i18n-ngbTooltip="@@i18n.invoice.revenue12m">12m</span>
+    @if (value) {
+      <div class="chart-title" roles="invoicing">{{(value ? value : 0) | short}}h</div>
+    }
+  </div>
+
+  <chart-card-range
+    type="rangeArea"
+    keyPath="params/INVOICE_REVENUE_12M,INVOICE_DEG_12M"
+    roles="invoicing"
+    [color]="['white','primary']"
+    [computeTrend]="false"
+    [options]="{chart:{height:100}}">
+  </chart-card-range>
+
+  <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+</div>

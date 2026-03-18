@@ -1,0 +1,72 @@
+<scrollbar>
+    <div class="row">
+        <div class="col-md-3">
+            @if (parent.current) {
+            <div class="card mb-3">
+                <div class="card-header p-1 d-flex">
+                    <list-group-item-contact class="flex-fill text-truncate" [contact]="parent.current"
+                        [nx]="parent.current" [showQuickContact]="true" routerLink=".">
+                    </list-group-item-contact>
+                    <div>
+                        <button class="card-header-action btn text-primary" type="submit" (click)="onAddEmployee()"
+                            title="add" i18n-title="@@i18n.common.add">
+                            <i>add</i>
+                        </button>
+                    </div>
+                </div>
+                @for (_ of parent.current.employees; track _.id) {
+                <list-group-item-contact [contact]="_" [nx]="_" [role]="_.role" [showQuickContact]="true"
+                    routerLink="./{{_.id}}">
+                </list-group-item-contact>
+                }
+            </div>
+            }
+        </div>
+        <div class="col-md-6">
+            <router-outlet></router-outlet>
+            <app-vcard [object]="parent.current"></app-vcard>
+        </div>
+        <div class="col-md-3">
+            <!-- <app-at2-connect *ngIf="parent.current?.var.selectedEmployee" [contact]="parent.current.var.selectedEmployee.contact"></app-at2-connect> -->
+            @if (parent.current.var.selectedEmployee) {
+
+            @if (global.settings['AT2CONNECT_ENABLED']) {
+            <at2connect [contact]="parent.current.var.selectedEmployee.contact"></at2connect>
+            }
+
+            <div class="card sticky-side">
+                <div class="card-header" i18n="@@i18n.common.projects">projects</div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        <nx [title]="p.name" *nxFor="let p of parent.current.var.selectedEmployee.projects">
+                            <project [project]="p"></project>
+                        </nx>
+                    </ul>
+                </div>
+            </div>
+            }
+            @if (parent.current && !parent.current.var.selectedEmployee) {
+            <div class="card">
+                <div class="card-header" i18n="@@i18n.common.companyInformation">company information</div>
+                <div class="card-body">
+                    <div class="form-floating w-100 mb-2">
+                        <input type="text" class="form-control" tabindex="1" [autosave]="parent.current"
+                            [(ngModel)]="parent.current.vat_id" placeholder="">
+                        <div i18n="@@i18n.common.VATID">VAT-ID</div>
+                    </div>
+                    <div class="form-floating w-100 mb-2">
+                        <input type="text" class="form-control" tabindex="2" [autosave]="parent.current"
+                            [(ngModel)]="parent.current.commercial_register" placeholder="">
+                        <div i18n="@@i18n.common.commercial_register">commercial_register</div>
+                    </div>
+                    <div class="form-floating w-100 mb-2">
+                        <input type="text" class="form-control" tabindex="2" [autosave]="parent.current"
+                            [(ngModel)]="parent.current.managing_director" placeholder="">
+                        <div i18n="@@i18n.common.managing_director">managing_director</div>
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+    </div>
+</scrollbar>

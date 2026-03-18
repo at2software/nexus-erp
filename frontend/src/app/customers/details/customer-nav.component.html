@@ -1,0 +1,63 @@
+<router-outlet></router-outlet>
+
+<app-header>
+    <div
+        class="logo"
+        [style.background-image]="'url(' + parent.current.icon + ')'"
+        [nx]="parent.current"
+        smartLink="/customers/{{parent.current.id}}"
+        [dnd]="parent.current.getApiPathWithId() + '/avatar'"
+        [dndAllowed]="['image/']"
+        (dndUploaded)="onDndUploaded()"
+    ></div>
+    @if (parent.current.card) {
+    <h1>{{ parent.current.card.name }}</h1>
+    }
+    <ul class="nav">
+        <header-route-nav [context]="parent.current"></header-route-nav>
+        @if (parent.current.base_projects.length) {
+        <li
+            class="nav-item"
+            ngbDropdown
+            [autoClose]="true"
+            placement="bottom-start"
+            #dropdown="ngbDropdown"
+        >
+            <a
+                class="nav-link text-secondary d-flex align-items-center"
+                ngbDropdownToggle
+                (mouseenter)="dropdown.open()"
+            >
+                <i>apps</i>
+            </a>
+            <ul
+                class="dropdown-menu"
+                ngbDropdownMenu
+                (mouseleave)="dropdown.close()"
+            >
+                @for (p of parent.current.base_projects; track p.id) {
+                <li>
+                    <a
+                        class="dropdown-item hstack gap-2"
+                        [routerLink]="['/projects', p.id]"
+                    >
+                        <project [project]="p" [noRouting]="true"></project>
+                        <span>{{ p.name }}</span>
+                    </a>
+                </li>
+                }
+            </ul>
+        </li>
+        }
+    </ul>
+</app-header>
+
+<activity-tab icon="chat" class="list-group list-group-accent ng-star-inserted">
+    <app-tab-comments
+        [quickLinks]="parent.current"
+        path="companies/{{ parent.current!.id }}"
+        [projects]="parent.current.base_projects"
+    >
+        <activity-projects [company]="parent.current"></activity-projects>
+    </app-tab-comments>
+</activity-tab>

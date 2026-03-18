@@ -1,0 +1,58 @@
+<toolbar>
+    <div class="btn-group" ngbDropdown>
+        <button type="button" class="btn btn-outline-primary dropdown-toggle" ngbDropdownToggle>
+            <i class="me-1">calendar_view_month</i>{{currentViewMode}}
+        </button>
+        <div class="dropdown-menu" ngbDropdownMenu>
+            <button class="dropdown-item" (click)="onViewModeChange('Day')"
+                [class.active]="currentViewMode === 'Day'">
+                <i class="me-2">view_day</i>Day
+            </button>
+            <button class="dropdown-item" (click)="onViewModeChange('Week')"
+                [class.active]="currentViewMode === 'Week'">
+                <i class="me-2">view_week</i>Week
+            </button>
+            <button class="dropdown-item" (click)="onViewModeChange('Month')"
+                [class.active]="currentViewMode === 'Month'">
+                <i class="me-2">calendar_view_month</i>Month
+            </button>
+            <button class="dropdown-item" (click)="onViewModeChange('Year')"
+                [class.active]="currentViewMode === 'Year'">
+                <i class="me-2">date_range</i>Year
+            </button>
+        </div>
+    </div>
+</toolbar>
+
+<div class="gantt-container">
+    <!-- Loading state -->
+    @if(loading) {
+    <div class="d-flex align-items-center justify-content-center h-100">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">
+                <span i18n="@@i18n.common.loading">loading</span>
+                <span class="notranslate">...</span>
+            </span>
+        </div>
+    </div>
+    }
+
+    <!-- Error state -->
+    @if(!loading && error) {
+    <div class="alert alert-danger m-3">
+        {{ error }}
+    </div>
+    }
+
+    <!-- Content -->
+    @if(!loading && !error) {
+    <custom-gantt
+        [rows]="ganttRows"
+        [viewMode]="currentViewMode"
+        [milestoneProjectMap]="milestoneProjectMap"
+        [workloadUser]="global.user"
+        (addMilestone)="onAddMilestone($event)"
+        (addTask)="onAddTask($event)">
+    </custom-gantt>
+    }
+</div>

@@ -1,0 +1,311 @@
+@if (selectedWorkflow) {
+<div class="row">
+    <!-- Main Content (col-8) -->
+    <div class="col-8">
+        <scrollbar class="sticky-side">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center gap-2">
+                    <span>{{selectedWorkflow.name}}</span>
+                    <div class="d-flex align-items-center gap-2">
+                        @if (workflowStats && workflowStats.total > 0) {
+                        <div class="progress" style="height: 4px; width: 100px;">
+                            <div class="progress-bar {{STATS_COLORS.completed}}"
+                                [style.width.%]="workflowStats.completed_percentage"
+                                [ngbTooltip]="workflowStats.completed + ' completed'"></div>
+                            <div class="progress-bar {{STATS_COLORS.overdue}}"
+                                [style.width.%]="workflowStats.overdue_percentage"
+                                [ngbTooltip]="workflowStats.overdue + ' overdue'"></div>
+                            <div class="progress-bar {{STATS_COLORS.pending}}"
+                                [style.width.%]="workflowStats.pending_percentage"
+                                [ngbTooltip]="workflowStats.pending + ' pending'"></div>
+                            <div class="progress-bar" [style.background-color]="STATS_COLORS.skipped"
+                                [style.width.%]="workflowStats.skipped_percentage"
+                                [ngbTooltip]="workflowStats.skipped + ' skipped'"></div>
+                        </div>
+                        }
+                        <button class="btn btn-plain" (click)="showActivityModal = true">
+                            <i class="text-primary">add</i>
+                        </button>
+                    </div>
+                </div>
+                @if (selectedWorkflow.description) {
+                <div class="card-body">
+                    <p class="text-muted">{{selectedWorkflow.description}}</p>
+                </div>
+                }
+
+
+                <!-- Activities Table -->
+                @if (selectedWorkflow.marketing_activities && selectedWorkflow.marketing_activities.length > 0) {
+                <activity-table 
+                    [activities]="selectedWorkflow.marketing_activities" 
+                    (activityClicked)="openEditActivityModal($event)">
+                </activity-table>
+                } @else {
+                <empty-state [card]="false" class="marketing" i18n-title="@@i18n.marketing.no_activities_yet" title="no activities yet">
+                    <p class="text-muted small" i18n="@@i18n.marketing.no_activities_yet_body">click "add activity" to create the first step</p>
+                </empty-state>
+                }
+            </div>
+        </scrollbar>
+    </div>
+
+    <!-- Sidebar (col-4) -->
+    <div class="col-4">
+        <div class="sticky-side">
+            <!-- Statistics Card -->
+            <div class="card mb-3">
+                <div class="card-header" i18n="@@i18n.common.statistics">statistics</div>
+                @if (pieChartOptions) {
+                <div class="card-body">
+                    <apx-chart [series]="pieChartOptions.series" [chart]="pieChartOptions.chart"
+                        [labels]="pieChartOptions.labels" [colors]="pieChartOptions.colors"
+                        [legend]="pieChartOptions.legend" [dataLabels]="pieChartOptions.dataLabels"
+                        [stroke]="pieChartOptions.stroke" [plotOptions]="pieChartOptions.plotOptions"></apx-chart>
+                </div>
+                } @else {
+                <div class="card-body">
+                    <p class="small text-muted mb-0" i18n="@@i18n.marketing.no_prospects_yet">no prospects generated yet</p>
+                </div>
+                }
+            </div>
+
+            <!-- Used In Card -->
+            <div class="card">
+                <div class="card-header">
+                    <span i18n="@@i18n.marketing.usedIn">used in</span>
+                    <span class="notranslate">...</span>
+                </div>
+                @if (selectedWorkflow.marketing_initiatives && selectedWorkflow.marketing_initiatives.length > 0) {
+                <ul class="list-group list-group-flush list-group-compact">
+                    @for (initiative of selectedWorkflow.marketing_initiatives; track initiative.id) {
+                    <li class="list-group-item" [class.compacted]="!initiative.pivot?.is_active">
+                        <a [routerLink]="['/marketing/initiatives', initiative.id]" class="text-decoration-none">
+                            {{initiative.name}}
+                        </a>
+                    </li>
+                    }
+                </ul>
+                } @else {
+                <div class="card-body">
+                    <p class="small text-muted mb-0" i18n="@@i18n.marketing.not_used_in_initiatives">not used in any
+                        initiatives</p>
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Add/Edit Activity Offcanvas -->
+<div class="offcanvas offcanvas-end" [class.show]="showActivityModal"
+    tabindex="-1" style="width: 500px;">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title">
+            @if (editingActivity) {
+            <span i18n="@@i18n.marketing.edit_workflow_activity">edit workflow activity</span>
+            } @else {
+            <span i18n="@@i18n.marketing.add_workflow_activity">add workflow activity</span>
+            }
+        </h5>
+        <button type="button" class="btn-close" (click)="resetActivityForm()" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <form>
+            <!-- Name -->
+            <div class="row mb-3 align-items-center">
+                <label for="activityName" class="col-3 col-form-label">
+                    <span i18n="@@i18n.common.name">name</span>
+                    <span class="notranslate text-danger"> *</span>
+                </label>
+                <div class="col-8">
+                    <input type="text" class="form-control" id="activityName" [(ngModel)]="newActivity.name"
+                        name="name" placeholder="e.g., Send Connection Request"
+                        i18n-placeholder="@@i18n.marketing.activity_name_placeholder">
+                </div>
+                <div class="col-1 text-center">
+                    <i class="material-icons text-muted" style="font-size: 1.2rem; cursor: help;" 
+                       ngbTooltip="short name for this activity"
+                       i18n-ngbTooltip="@@i18n.marketing.activity_name_description">info</i>
+                </div>
+            </div>
+
+            <!-- Day Offset -->
+            <div class="row mb-3 align-items-center">
+                <label for="activityDay" class="col-3 col-form-label">
+                    <span i18n="@@i18n.marketing.dayOffset">day offset</span>
+                    <span class="notranslate text-danger"> *</span>
+                </label>
+                <div class="col-8">
+                    <input type="number" class="form-control" id="activityDay" [(ngModel)]="newActivity.day_offset"
+                        name="dayOffset" min="0" placeholder="0">
+                </div>
+                <div class="col-1 text-center">
+                    <i class="material-icons text-muted" style="font-size: 1.2rem; cursor: help;" 
+                       ngbTooltip="number of days after workflow starts"
+                       i18n-ngbTooltip="@@i18n.marketing.day_offset_description">info</i>
+                </div>
+            </div>
+
+            <!-- Depends On -->
+            <div class="row mb-3 align-items-center">
+                <label for="parentActivity" class="col-3 col-form-label" i18n="@@i18n.marketing.depends_on">depends on</label>
+                <div class="col-8">
+                    <select class="form-select" id="parentActivity" [(ngModel)]="newActivity.parent_activity_id" name="parentActivity">
+                        <option [ngValue]="null" i18n="@@i18n.common.none">none</option>
+                        @for (activity of selectedWorkflow?.marketing_activities; track activity.id) {
+                            @if (activity.id !== editingActivity?.id) {
+                                <option [ngValue]="activity.id">Day {{activity.day_offset}}: {{activity.name}}</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-1 text-center">
+                    <i class="material-icons text-muted" style="font-size: 1.2rem; cursor: help;" 
+                       ngbTooltip="this activity will be scheduled after the selected dependency"
+                       i18n-ngbTooltip="@@i18n.marketing.depends_on_description">info</i>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="mb-3">
+                <i18n-textarea [(ngModel)]="newActivity.description" name="description" label="description"
+                    placeholder="Additional details about this activity" [rows]="4"
+                    [showPlaceholderInfo]="true" i18n-placeholder="@@i18n.marketing.additionalDetailsAboutThisActivity"></i18n-textarea>
+            </div>
+
+            <!-- Required Activity -->
+            <div class="row mb-3 align-items-center">
+                <label class="col-3 col-form-label" i18n="@@i18n.marketing.required_activity">required</label>
+                <div class="col-8">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="activityRequired"
+                            [(ngModel)]="newActivity.is_required" name="isRequired">
+                        <label class="form-check-label" for="activityRequired" i18n="@@i18n.marketing.required_activity_check">
+                            this is a required activity
+                        </label>
+                    </div>
+                </div>
+                <div class="col-1 text-center">
+                    <i class="material-icons text-muted" style="font-size: 1.2rem; cursor: help;" 
+                       ngbTooltip="required activities must be completed before moving to next steps"
+                       i18n-ngbTooltip="@@i18n.marketing.required_activity_description">info</i>
+                </div>
+            </div>
+
+            <!-- Quick Action -->
+            <div class="row mb-3 align-items-center">
+                <label for="quickAction" class="col-3 col-form-label" i18n="@@i18n.marketing.quick_action">quick action</label>
+                <div class="col-8">
+                    <select class="form-select" id="quickAction" [(ngModel)]="newActivity.quick_action" name="quickAction">
+                        <option [ngValue]="null" i18n="@@i18n.common.none">none</option>
+                        <option value="EMAIL" i18n="@@i18n.marketing.quick_action_email">send email</option>
+                        <option value="LINKEDIN" i18n="@@i18n.marketing.quick_action_linkedin">open linkedin</option>
+                        <option value="LINKEDIN_SEARCH" i18n="@@i18n.marketing.quick_action_linkedin_search">search linkedin</option>
+                        <option value="CALL" i18n="@@i18n.marketing.quick_action_call">call</option>
+                    </select>
+                </div>
+                <div class="col-1 text-center">
+                    <i class="material-icons text-muted" style="font-size: 1.2rem; cursor: help;" 
+                       ngbTooltip="display a quick action button next to this activity on prospect pages"
+                       i18n-ngbTooltip="@@i18n.marketing.quick_action_description">info</i>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="offcanvas-footer border-top p-3">
+        <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-dark" (click)="resetActivityForm()"
+                i18n="@@i18n.common.cancel">cancel</button>
+            <button type="button" class="btn btn-primary" (click)="createActivity()"
+                [disabled]="!newActivity.name || newActivity.day_offset === undefined">
+                @if (editingActivity) {
+                <span i18n="@@i18n.marketing.update_activity">update activity</span>
+                } @else {
+                <span i18n="@@i18n.marketing.add_activity">add activity</span>
+                }
+            </button>
+        </div>
+    </div>
+</div>
+
+@if (showActivityModal) {
+<div class="modal-backdrop fade show" (click)="resetActivityForm()"></div>
+}
+
+<!-- Recursive Activity Branch Template -->
+<ng-template #activityBranch let-activity="activity" let-level="level">
+    <div class="activity-row">
+        <div class="d-flex align-items-start gap-3 mb-3">
+            <div class="day-badge">
+                <span class="badge bg-dark">Day {{getAbsoluteDay(activity)}}</span>
+            </div>
+            <div class="flex-grow-1">
+                <div class="activity-card" [nx]="activity" [tables]="selectedWorkflow?.marketing_activities || []"
+                    (actionsResolved)="onActivityActionResolved()">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <div class="d-flex align-items-center gap-2 flex-grow-1" style="min-width: 0;">
+                            @if (activity.has_external_dependency) {
+                            <i class="text-warning" style="font-size: 1.2rem;"
+                                ngbTooltip="external dependency - waits for external event"
+                                i18n-ngbTooltip="@@i18n.marketing.external_dependency_tooltip"
+                                placement="top">schedule</i>
+                            }
+                            <span class="text-truncate">{{activity.name}}</span>
+                        </div>
+                        @if (activity.quick_action) {
+                        <i class="text-info ms-2" style="font-size: 1.2rem;"
+                            [ngbTooltip]="'Quick action: ' + activity.quick_action"
+                            placement="top">{{getQuickActionIcon(activity.quick_action)}}</i>
+                        }
+                        @if (activity.is_required) {
+                        <i class="text-warning ms-2" style="font-size: 1.2rem;"
+                            ngbTooltip="required activity - must be completed"
+                            i18n-ngbTooltip="@@i18n.marketing.required_activity_tooltip"
+                            placement="top">priority_high</i>
+                        }
+                    </div>
+                    @if (activity.stats && activity.stats.total > 0) {
+                    <div class="progress" style="height: 4px;">
+                        @if (activity.stats.completed_percentage > 0) {
+                        <div class="progress-bar {{STATS_COLORS.completed}}"
+                            [style.width.%]="activity.stats.completed_percentage"></div>
+                        }
+                        @if (activity.stats.overdue_percentage > 0) {
+                        <div class="progress-bar {{STATS_COLORS.overdue}}"
+                            [style.width.%]="activity.stats.overdue_percentage"></div>
+                        }
+                        @if (activity.stats.pending_percentage > 0) {
+                        <div class="progress-bar {{STATS_COLORS.pending}}"
+                            [style.width.%]="activity.stats.pending_percentage"></div>
+                        }
+                        @if (activity.stats.skipped_percentage > 0) {
+                        <div class="progress-bar" [style.background-color]="STATS_COLORS.skipped"
+                            [style.width.%]="activity.stats.skipped_percentage"></div>
+                        }
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Child branches (outside of flex-grow-1 to prevent indentation) -->
+    @if (getChildActivities(activity.id).length > 0) {
+    @if (getChildActivities(activity.id).length === 1) {
+    <!-- Single child - continue vertically -->
+    <ng-container
+        *ngTemplateOutlet="activityBranch; context: {activity: getChildActivities(activity.id)[0], level: level}"></ng-container>
+    } @else {
+    <!-- Multiple children - branch into columns -->
+    <div class="branches d-flex gap-3">
+        @for (child of getChildActivities(activity.id); track child.id) {
+        <div class="branch-column flex-fill">
+            <ng-container *ngTemplateOutlet="activityBranch; context: {activity: child, level: 0}"></ng-container>
+        </div>
+        }
+    </div>
+    }
+    }
+</ng-template>

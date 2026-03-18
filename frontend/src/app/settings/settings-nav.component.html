@@ -1,0 +1,15 @@
+<router-outlet></router-outlet>
+<app-header>
+	<div class="syn-image">
+		<div class="logo" style="background-image: url(assets/images/settings.jpg);"></div>
+	</div>
+	<h1 i18n="@@i18n.common.settings">settings</h1>
+	<ul class="nav">
+		<header-link-item routerLink="." title="general" i18n-title="@@i18n.common.general"></header-link-item>
+		<header-link-item routerLink="invoices" title="invoices" roles="invoicing" i18n-title="@@i18n.common.invoices"></header-link-item>
+		<header-link-item routerLink="projects" title="projects" roles="user" i18n-title="@@i18n.common.projects"></header-link-item>
+		<header-link-item routerLink="roles" title="users" [exact]="false" roles="admin" i18n-title="@@i18n.common.users"></header-link-item>
+		<header-link-item routerLink="vault" title="connectors" i18n-title="@@i18n.common.connectors"></header-link-item>
+		<header-link-item routerLink="commands" title="commands" roles="admin" i18n-title="@@i18n.settings.commands"></header-link-item>
+	</ul>
+</app-header>

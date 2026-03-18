@@ -1,0 +1,97 @@
+<app-header>
+  <div class="logo" style="background-image: url(assets/images/hr.jpg);"></div>
+  <h1 i18n="@@i18n.common.timeOffRequest">time off request</h1>
+  <ul class="nav">
+    @if (parent.current) {
+      <header-link-item title="{{parent.current.started_at | date}} - {{parent.current.ended_at | date}}" routerLink="."></header-link-item>
+    }
+  </ul>
+</app-header>
+
+<scrollbar #loader>
+  <div class="row">
+    <div class="col-md-3">
+      @if (parent.current) {
+        <div class="card">
+          <div class="card-header" i18n="@@i18n.common.navigation">navigation</div>
+          <ul class="list-group">
+            <li class="list-group-item list-group-item-action text-primary pointer" routerLink="/profile/vacation">
+              <i class="me-2">person</i>
+              <span i18n="@@i18n.profile.myTimeOffRequests">my time off requests</span>
+            </li>
+            @if (global.user?.hasAnyRole(['admin', 'hr'])) {
+              <li class="list-group-item list-group-item-action text-primary pointer" routerLink="/hr/{{parent.current.user.id}}/vacation">
+                <i class="me-2">business</i>
+                <span i18n="@@i18n.hr.timeOffManagement">time off management</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+    <div class="col-md-9">
+      @if (parent.current) {
+        <div class="card">
+          <div class="card-header hstack gap-2">
+            <div class="flex-fill">
+              <div class="fw-bold">{{parent.current.comment || 'Time Off Request'}}</div>
+              <small class="text-muted">{{parent.current.user.name}}</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-dark">{{parent.current.amount}}h</span>
+              <i [ngbTooltip]="parent.current.getStateTooltip()"
+              [class]="parent.current.getStateClass()">{{parent.current.getStateIcon()}}</i>
+            </div>
+          </div>
+          <ul class="list-group">
+            <li class="list-group-item">
+              <div class="d-flex justify-content-between">
+                <span i18n="@@i18n.common.period">period</span>
+                <span>{{parent.current.started_at | date:'dd.MM.yyyy'}} - {{parent.current.ended_at | date:'dd.MM.yyyy'}}</span>
+              </div>
+            </li>
+            <li class="list-group-item">
+              <div class="d-flex justify-content-between">
+                <span i18n="@@i18n.common.status">status</span>
+                <span [class]="parent.current.getStateClass()">{{parent.current.getStateTooltip()}}</span>
+              </div>
+            </li>
+            @if (parent.current.approved_at) {
+              <li class="list-group-item">
+                <div class="d-flex justify-content-between">
+                  <span i18n="@@i18n.vacation.approvedAt">approved at</span>
+                  <span>{{parent.current.approved_at | date:'dd.MM.yyyy HH:mm'}}</span>
+                </div>
+              </li>
+            }
+            @if (parent.current.approved_by) {
+              <li class="list-group-item">
+                <div class="d-flex justify-content-between">
+                  <span i18n="@@i18n.vacation.approvedBy">approved by</span>
+                  <span>{{parent.current.approved_by.name}}</span>
+                </div>
+              </li>
+            }
+          </ul>
+          @if (global.user?.hasAnyRole(['admin', 'hr']) && parent.current.state === 0) {
+            <div class="card-footer">
+              <div class="d-flex gap-2 justify-content-end">
+                <button class="btn btn-outline-danger" (click)="onDeny()" i18n="@@i18n.common.reject">reject</button>
+                <button class="btn btn-success" (click)="onApprove()" i18n="@@i18n.common.approve">approve</button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      @if (parent.current && parent.current.log) {
+        <div class="card mt-3">
+          <div class="card-header" i18n="@@i18n.vacation.calculation">calculation</div>
+          <div class="card-body">
+            <div class="small" [innerHTML]="parent.current.log | safe:'html'"></div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</scrollbar>

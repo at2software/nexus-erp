@@ -1,0 +1,40 @@
+
+<scrollbar>
+  <div class="row" style="height:100%">
+    <div class="col-md-3">
+      <widget-my-working-time></widget-my-working-time>
+      <div class="card mb-3">
+        <div class="card-header" i18n='@@i18n.profile.projectFocus30d'>project focus in the last 30 days</div>
+        @if (focusSum.length === 0) {
+        <empty-state [card]="false" class="profile" i18n-title="@@i18n.profile.noFocusData" title="no tracked time yet">
+          <p class="text-muted small" i18n="@@i18n.profile.noFocusDataBody">Your project focus distribution will appear here once you start tracking time.</p>
+        </empty-state>
+      }
+      <ul class="list-group">
+          @for (i of focusSum; track $index) {
+            <li class="list-group-item">
+              <div class="d-flex">
+                <div class="me-2">
+                  <avatar [object]="i.parent"></avatar>
+                </div>
+                <div class="flex-fill text-truncate">{{i.getParentName()}}</div>
+                <div>{{i.duration | number:'1.1-1'}}<span class="text-muted small">h</span></div>
+              </div>
+              <ngb-progressbar
+                [type]="i.isUnpaid() ? 'warning' : 'primary'"
+                [value]="100 * i.duration / maxFocusSum"
+                height="3px"
+                [striped]="i.isUnpaid()"
+                />
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+      <div class="col-md-9 position-relative">
+        @if (user) {
+          <hr-focus-table [user]="user"></hr-focus-table>
+        }
+      </div>
+    </div>
+  </scrollbar>

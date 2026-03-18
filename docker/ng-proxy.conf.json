@@ -1,0 +1,13 @@
+{
+  "/backend": {
+    "target": "http://127.0.0.1:8000",
+    "secure": false,
+    "pathRewrite": { "^/backend": "" },
+    "changeOrigin": true
+  },
+  "/app": {
+    "target": "ws://127.0.0.1:6001",
+    "ws": true,
+    "changeOrigin": true
+  }
+}

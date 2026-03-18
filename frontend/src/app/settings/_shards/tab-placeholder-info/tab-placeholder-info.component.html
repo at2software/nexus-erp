@@ -1,0 +1,55 @@
+
+	<activity-tab icon="lightbulb" class="list-group list-group-accent ng-star-inserted">
+		<div class="container">
+			<div class="scroll-container">
+				<div class="header" i18n="@@i18n.common.placeholders">placeholders</div>
+                <div ng-non-bindable>
+
+                    <div class="text-muted small px-2 pt-2 pb-1 fw-semibold" i18n="@@i18n.placeholder.groupContact">contact</div>
+                    <ul class="list-group mb-2">
+                        <li class="list-group-item d-flex align-items-start gap-2">
+                            <code class="flex-shrink-0">[salutation]</code>
+                            <span class="text-muted small" i18n="@@i18n.placeholder.salutation">full salutation line, localized and formal/informal based on contact settings</span>
+                        </li>
+                        <li class="list-group-item d-flex align-items-start gap-2">
+                            <code class="flex-shrink-0">[firstName]</code>
+                            <span class="text-muted small" i18n="@@i18n.placeholder.firstName">contact's first name</span>
+                        </li>
+                        <li class="list-group-item d-flex align-items-start gap-2">
+                            <code class="flex-shrink-0">[familyName]</code>
+                            <span class="text-muted small" i18n="@@i18n.placeholder.familyName">contact's family name</span>
+                        </li>
+                        <li class="list-group-item d-flex align-items-start gap-2">
+                            <code class="flex-shrink-0">[r]</code>
+                            <span class="text-muted small" i18n="@@i18n.placeholder.r">"r" if contact is male (e.g. "Sehr geehrte<b>r</b>")</span>
+                        </li>
+                    </ul>
+
+                    <div class="text-muted small px-2 pt-1 pb-1 fw-semibold" i18n="@@i18n.placeholder.groupDates">dates</div>
+                    <ul class="list-group mb-2">
+                        <li class="list-group-item d-flex align-items-start gap-2">
+                            <code class="flex-shrink-0">[dayNow]</code>
+                            <span class="text-muted small" i18n="@@i18n.placeholder.dayNow">today's date</span>
+                        </li>
+                        <li class="list-group-item d-flex align-items-start gap-2">
+                            <code class="flex-shrink-0">[day+due]</code>
+                            <span class="text-muted small" i18n="@@i18n.placeholder.dayDue">quote / invoice due date</span>
+                        </li>
+                        <li class="list-group-item d-flex align-items-start gap-2">
+                            <code class="flex-shrink-0">[payment-duration]</code>
+                            <span class="text-muted small" i18n="@@i18n.placeholder.paymentDuration">payment duration in days (cascades: project → customer → default)</span>
+                        </li>
+                    </ul>
+
+                    <div class="text-muted small px-2 pt-1 pb-1 fw-semibold" i18n="@@i18n.placeholder.groupProject">project</div>
+                    <ul class="list-group mb-2">
+                        <li class="list-group-item d-flex align-items-start gap-2">
+                            <code class="flex-shrink-0">[payment-plan]</code>
+                            <span class="text-muted small" i18n="@@i18n.placeholder.paymentPlan">renders the project's payment plan as a table</span>
+                        </li>
+                    </ul>
+
+                </div>
+			</div>
+		</div>
+	</activity-tab>

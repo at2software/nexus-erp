@@ -1,0 +1,50 @@
+
+@use "colors";
+
+:host {
+    background-color: colors.$bg-body;
+    border-radius: var(--bs-border-radius);
+    &>.btn-group {
+        padding: 0 0 0 0 !important;
+        .form-control {
+            background-color: transparent;
+        }
+    }
+}
+.popover { height: 20rem;}
+.list-group-item {
+    cursor: pointer;
+    &.active {
+        background-color: #0003;
+    }
+}
+// .btn-group { width: 100%;
+//     >span {  background-color: var(--color-darker); border-bottom: 1px var(--color-primary-4) solid; }
+// }
+.dropdown-menu {  
+    margin-top: 38px;
+    max-height: 300px;
+    z-index: 1050;
+    scroll-behavior: smooth;
+    
+    .dropdown-item {
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+        
+        &:hover, &.active {
+            background-color: var(--bs-primary-bg-subtle);
+            color: var(--bs-emphasis-color);
+        }
+        
+        &:active {
+            background-color: var(--bs-primary);
+            color: var(--bs-white);
+        }
+        
+        // Ensure all child elements are non-interactive
+        * {
+            pointer-events: none;
+        }
+    }
+}

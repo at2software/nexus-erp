@@ -1,0 +1,97 @@
+@if (invoice) {
+  <toolbar>
+    @if (!invoice.paid_at) {
+      <button type="button" class="btn btn-primary me-2" i18n="@@i18n.common.addInstalment" (click)="onInstalmentButtonClicked()">add instalment</button>
+    }
+    @if (invoice.needs_reminder) {
+      <button type="button" class="btn btn-primary me-2" i18n="@@i18n.invoice.sendDueReminder">send due reminder</button>
+    }
+  </toolbar>
+}
+
+<scrollbar>
+  @if (invoice) {
+    <div class="row">
+      <div class="col-md-3">
+      </div>
+      <div class="col-md-9 position-relative">
+        <div class="row mb-3">
+          <div class="col-4">
+            <div class="card ratio ratio-21x9">
+              <div>
+                <div class="card-header" i18n="@@i18n.common.information">information</div>
+                <ul class="list-group mt-1">
+                  <li class="list-group-item d-flex py-0 mb-1">
+                    <div class="flex-fill" i18n="@@i18n.common.status">status</div>
+                    <div class="text-{{invoice.colorCss}}">{{invoice.state()}}</div>
+                  </li>
+                  <li class="list-group-item d-flex py-0 mb-1">
+                    <div class="flex-fill" i18n="@@i18n.common.overdraftInterest">overdraft interest</div>
+                    <div>{{invoice.default_interest}}%</div>
+                  </li>
+                  <li class="list-group-item d-flex py-0 mb-1">
+                    <div class="flex-fill" i18n="@@i18n.common.sentTo">sent to</div>
+                    @if (invoice.sent) {
+                      <div ngbTooltip="current email address. real addres may differ!" i18n-ngbTooltip="@@i18n.invoices.currentEmailAddressRealAddres">{{invoice.company.invoice_email}}</div>
+                    }
+                    @if (!invoice.sent) {
+                      <div class="text-warning" i18n="@@i18n.invoice.notSentYet">not sent yet</div>
+                    }
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="card ratio ratio-21x9">
+              <div>
+                <div class="card-header" i18n="@@i18n.common.timing">timing</div>
+                <ul class="list-group mt-1">
+                  <li class="list-group-item d-flex py-0 mb-1">
+                    <div class="flex-fill" i18n="@@i18n.common.created_at">created at</div>
+                    <div>{{invoice.created_at | date}}</div>
+                  </li>
+                  @if (!invoice.paid_at) {
+                    <li class="list-group-item d-flex py-0 mb-1">
+                      <div class="flex-fill" i18n="@@i18n.common.dueAt">due at</div>
+                      <div>{{invoice.due_at | date}}</div>
+                    </li>
+                  }
+                  @if (!invoice.paid_at) {
+                    <li class="list-group-item d-flex py-0 mb-1">
+                      <div class="flex-fill" i18n="@@i18n.common.remindAt">remind at</div>
+                      <div>{{invoice.remind_at | date}}</div>
+                    </li>
+                  }
+                  @if (invoice.paid_at) {
+                    <li class="list-group-item d-flex py-0 mb-1">
+                      <div class="flex-fill" i18n="@@i18n.common.paidAt">paid at</div>
+                      <div>{{invoice.paid_at | date}}</div>
+                    </li>
+                  }
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="card ratio ratio-21x9 bg-gradient">
+              <div class="text-end p-2">
+                <div class="fs-1 lh-1 text-header mb-0">{{invoice.net | mshort}}</div>
+                <div class="mb-2"><span i18n="@@i18n.common.gross">gross</span>: {{invoice.gross | money}}</div>
+                <div>
+                  <n class="ms-2 btn btn-blank text-primary px-2 py-1" ngbTooltip="open invoice" role="button" (click)="openFile(invoice)">invoice</n>
+                  @for (r of invoice.reminders; track r) {
+                    <n class="ms-2 text-warning btn btn-blank text-warning px-2 py-1" ngbTooltip="open reminder" role="button" (click)="openFile(r)" ngbTooltip="{{r.stage}}. Reminder ({{r.created_at | date}})">invoice</n>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <invoice-prepare [parent]="invoice" [showTools]="false" [companyRef]="parent.current.company">
+          {{invoice.name}}
+        </invoice-prepare>
+      </div>
+    </div>
+  }
+</scrollbar>

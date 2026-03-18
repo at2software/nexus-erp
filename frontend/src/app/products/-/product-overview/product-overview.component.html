@@ -1,0 +1,17 @@
+<app-header>
+	<div class="logo" style="background-image: url(assets/images/product.jpg);"></div>
+	<h1 i18n="@@i18n.common.products">products</h1>
+    <ul class="nav">
+        <header-link-item hotkey="CTRL+ALT+1" routerLink="/products/dashboard" [exact]="true" title="dashboard" i18n-title="@@i18n.common.dashboard" icon="dashboard"></header-link-item>
+        <header-link-item hotkey="CTRL+ALT+2" routerLink="/products/stats" i18n-title="@@i18n.common.statistics" title="statistics"></header-link-item>
+    </ul>
+</app-header>
+
+@if (hasGroups === false) {
+  <div class="card mb-3">
+    <empty-state [card]="false" class="products" i18n-title="@@i18n.products.noProductGroupsYet" title="No product groups yet">
+      <p i18n="@@i18n.products.emptyStateDescription">Build your product catalog from the ground up. Use the <strong>create_new_folder</strong> icon in the left panel to add your first product group, then populate it with products. A well-structured catalog is the foundation of every great business.</p>
+    </empty-state>
+  </div>
+}
+<router-outlet></router-outlet>

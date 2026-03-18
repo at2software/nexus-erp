@@ -1,0 +1,184 @@
+<!-- Main Content -->
+ 
+
+<div class="row" col-slider>
+    <div class="col-3">
+        <div class="card" data-tour="initiatives-filter">
+            <div class="card-header">
+                <div><i>filter_alt</i></div>
+                <div i18n="@@i18n.common.filter">filter</div>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    [class.active]="statusFilter === ''"
+                    (click)="filterByStatus('')" tabindex="0" (keydown.enter)="filterByStatus('')">
+                    <span i18n="@@i18n.marketing.total_initiatives">total initiatives</span>
+                    <span class="badge bg-primary rounded-pill">{{stats.total}}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    [class.active]="statusFilter === 'active'"
+                    (click)="filterByStatus('active')" tabindex="0" (keydown.enter)="filterByStatus('active')">
+                    <span i18n="@@i18n.common.active">active</span>
+                    <span class="badge bg-primary rounded-pill">{{stats.active}}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    [class.active]="statusFilter === 'paused'"
+                    (click)="filterByStatus('paused')" tabindex="0" (keydown.enter)="filterByStatus('paused')">
+                    <span i18n="@@i18n.marketing.paused">paused</span>
+                    <span class="badge bg-warning rounded-pill">{{stats.paused}}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    [class.active]="statusFilter === 'completed'"
+                    (click)="filterByStatus('completed')" tabindex="0" (keydown.enter)="filterByStatus('completed')">
+                    <span i18n="@@i18n.common.completed">completed</span>
+                    <span class="badge bg-success rounded-pill">{{stats.completed}}</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <!-- Initiatives List -->
+    <div class="col-md-3">
+        <div class="card sticky-top" data-tour="initiatives-list">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div i18n="@@i18n.marketing.initiatives">initiatives</div>
+                <button data-tour="initiatives-add-btn" class="btn btn-plain text-primary" (click)="showCreateModal = true" tabindex="0" (keydown.enter)="showCreateModal = true" i18n-title="@@i18n.marketing.create_initiative" title="create initiative">
+                    <i class="text-primary">add</i>
+                </button>
+            </div>
+            @if (isLoading) {
+            <div class="card-body">
+                <div class="text-center p-4">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden" i18n="@@i18n.common.loading">loading</span>
+                    </div>
+                </div>
+            </div>
+            }
+
+            @if (!isLoading && initiatives.length === 0) {
+            <empty-state [card]="false" class="marketing" i18n-title="@@i18n.marketing.no_initiatives_found" title="no initiatives yet">
+              <p class="text-muted small" i18n="@@i18n.marketing.create_first_initiative">Create your first marketing initiative to get started.</p>
+            </empty-state>
+            }
+
+            @if (!isLoading && initiatives.length > 0) {
+            <ul class="list-group list-group-flush">
+                @for (initiative of initiatives; track initiative.id) {
+                <li
+                    [nx]="initiative" [tables]="initiatives"
+                    class="list-group-item list-group-item-action"
+                    routerLinkActive="active"
+                    [routerLink]="['/marketing/initiatives', initiative.id]"
+                >
+                    <div class="d-flex justify-content-between align-items-center gap-2">
+                        <div class="flex-grow-1 text-truncate">
+                            <div class="mb-1">{{initiative.name}}</div>
+                            @if (initiative.description) {
+                            <p class="mb-1 text-muted small">
+                                {{initiative.description}}
+                            </p>
+                            }
+                        </div>
+                        <span class="badge bg-dark rounded-pill" [class.text-grey]="initiative.prospects_count === 0">
+                            {{initiative.prospects_count || 0}}
+                        </span>
+                    </div>
+                </li>
+                }
+            </ul>
+            }
+        </div>
+    </div>
+
+    <!-- Initiative Details -->
+    <div class="col-md-6">
+        <router-outlet></router-outlet>
+    </div>
+</div>
+
+<!-- Create Initiative Modal -->
+<div class="modal fade" [class.show]="showCreateModal" [style.display]="showCreateModal ? 'block' : 'none'" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" i18n="@@i18n.marketing.create_new_initiative">create new initiative</span>
+                <button type="button" class="btn-close" (click)="resetCreateForm()" tabindex="0" (keydown.enter)="resetCreateForm()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form (ngSubmit)="createInitiative()">
+                    <div class="mb-3">
+                        <label for="initiativeName" class="form-label">
+                            <span i18n="@@i18n.common.name">name</span>
+                            <span class="notranslate"> *</span>
+                        </label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="initiativeName"
+                            [(ngModel)]="newInitiative.name"
+                            name="name"
+                            required
+                            placeholder="e.g., LinkedIn 3D Software Acquisition"
+                         i18n-placeholder="@@i18n.marketing.egLinkedin3dSoftwareAcquisition">
+                    </div>
+                    <div class="mb-3">
+                        <label for="initiativeDescription" class="form-label" i18n="@@i18n.common.description">description</label>
+                        <textarea
+                            class="form-control"
+                            id="initiativeDescription"
+                            [(ngModel)]="newInitiative.description"
+                            name="description"
+                            rows="3"
+                            placeholder="Describe the goals and scope of this initiative..."
+                         i18n-placeholder="@@i18n.marketing.describeTheGoalsAndScope"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="initiativeStatus" class="form-label" i18n="@@i18n.common.status">status</label>
+                        <select
+                            class="form-select"
+                            id="initiativeStatus"
+                            [(ngModel)]="newInitiative.status"
+                            name="status"
+                        >
+                            <option value="active" i18n="@@i18n.common.active">active</option>
+                            <option value="paused" i18n="@@i18n.marketing.paused">paused</option>
+                            <option value="completed" i18n="@@i18n.common.completed">completed</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" (click)="resetCreateForm()" tabindex="0" (keydown.enter)="resetCreateForm()" i18n="@@i18n.common.cancel">cancel</button>
+                <button type="button" class="btn btn-primary" hotkey="CTRL+ENTER" (click)="createInitiative()" tabindex="0" (keydown.enter)="createInitiative()" [disabled]="!newInitiative.name" i18n="@@i18n.marketing.create_initiative">create initiative</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Backdrop -->
+@if (showCreateModal) {
+<div class="modal-backdrop fade show" (click)="resetCreateForm()" (keyup.enter)="resetCreateForm()" tabindex="0"></div>
+}
+
+<!-- ── Guided Tour Slides ──────────────────────────────────────────────────── -->
+
+<guided-tour
+  id="initiatives-guide-what"
+  i18n-title="@@i18n.guidedTour.initiatives.whatTitle" title="Marketing Initiatives"
+  i18n-content="@@i18n.guidedTour.initiatives.whatContent" content="An initiative is a concrete marketing campaign or project — for example 'LinkedIn Q1 Outreach'. It contains a group of prospects and runs one or more workflow templates to engage them."
+  focusSelector="[data-tour='initiatives-list']">
+</guided-tour>
+
+<guided-tour
+  id="initiatives-guide-filter"
+  i18n-title="@@i18n.guidedTour.initiatives.filterTitle" title="Filter by Status"
+  i18n-content="@@i18n.guidedTour.initiatives.filterContent" content="Filter your initiatives by status: active (running), paused (temporarily stopped), or completed. The badge on each initiative shows how many prospects are enrolled."
+  focusSelector="[data-tour='initiatives-filter']">
+</guided-tour>
+
+<guided-tour
+  id="initiatives-guide-add"
+  i18n-title="@@i18n.guidedTour.initiatives.addTitle" title="Create an Initiative"
+  i18n-content="@@i18n.guidedTour.initiatives.addContent" content="Click + to start a new initiative. Give it a name, set its status, then open it to add prospects, attach a workflow, and track activities and KPI progress."
+  focusSelector="[data-tour='initiatives-add-btn']">
+</guided-tour>

@@ -1,0 +1,19 @@
+@use "colors";
+
+$min-input-height: 62px;
+
+scrollbar { 
+    padding-bottom: $min-input-height + 40px !important;
+    bottom: 0 !important;
+}
+
+.input-container {  
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    min-height: $min-input-height;
+    background-color: rgba(colors.$bg-darker, 0.8);  
+    backdrop-filter: blur(10px);
+    padding-bottom: 20px !important;
+}

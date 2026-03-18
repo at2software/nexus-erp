@@ -1,0 +1,31 @@
+<div class="modal d-block" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">{{title}}</span>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3 d-flex">
+                    <span class="input-group-text" i18n="@@i18n.common.project">project</span>
+                    <search-input class="flex-fill" only="Project,Company" [query]="focus.getParentName()" [selected]="initialParentSerializable" [has_icon]="true"></search-input>
+                </div>
+                <div class="input-group mb-3 d-flex">
+                    <span class="input-group-text" i18n="@@i18n.common.dateTime">date & time</span>
+                    <input class="form-control" [(ngModel)]="dateTimeText">
+                </div>
+                <div class="input-group mb-3 d-flex">
+                    <span class="input-group-text" i18n="@@i18n.common.duration">duration</span>
+                    <input class="form-control" [(ngModel)]="durationText" suffix="h">
+                </div>
+                <div class="input-group mb-3 d-flex">
+                    <span class="input-group-text" i18n="@@i18n.common.comment">comment</span>
+                    <input class="form-control" [(ngModel)]="commentText">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" (click)="decline()" data-bs-dismiss="modal" i18n="@@i18n.common.cancel">cancel</button>
+                <button type="button" class="btn btn-primary" (click)="accept()" hotkey="CTRL+ENTER" i18n="@@i18n.common.ok">ok</button>
+            </div>
+        </div>
+    </div>
+</div>

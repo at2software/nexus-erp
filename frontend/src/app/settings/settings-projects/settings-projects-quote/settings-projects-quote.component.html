@@ -1,0 +1,12 @@
+<toolbar>
+    <toolbar-locale-selector [(locale)]="previewLocale"></toolbar-locale-selector>
+</toolbar>
+<div class="card mb-3 p-3" #PROJECT_PREFIX>
+    <text-param-editor #prefixEditor key="params/PROJECT_PREFIX" [previewLocale]="previewLocale"></text-param-editor>
+</div>
+<div class="card mb-3" #TABLE>
+    <!-- <invoice-ext-prepare [items]="demoInvoices"></invoice-ext-prepare> -->
+</div>
+<div class="card mb-3 p-3" #PROJECT_SUFFIX>
+    <text-param-editor #suffixEditor key="params/PROJECT_SUFFIX" [previewLocale]="previewLocale"></text-param-editor>
+</div>

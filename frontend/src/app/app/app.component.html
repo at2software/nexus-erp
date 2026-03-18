@@ -1,0 +1,26 @@
+
+<nx-contextmenu></nx-contextmenu>
+
+<div class="app-scroll">
+  <div class="container">
+    @if (global.init) {
+      <router-outlet></router-outlet>
+    }
+  </div>
+</div>
+
+<app-navigation></app-navigation>
+<app-activity></app-activity>
+
+<app-toasts aria-live="polite" aria-atomic="true"></app-toasts>
+<!-- <activity-tab-plugins></activity-tab-plugins> -->
+<activity-tab-attention></activity-tab-attention>
+<activity-tab-copypaste></activity-tab-copypaste>
+<activity-tab-tasks></activity-tab-tasks>
+<activity-tab-widgets></activity-tab-widgets>
+<activity-tab-live-sharing></activity-tab-live-sharing>
+
+<mouse-cursor-overlay></mouse-cursor-overlay>
+
+<app-onboarding-wizard></app-onboarding-wizard>
+<guided-tour-overlay></guided-tour-overlay>

@@ -1,0 +1,14 @@
+@if (project.state.isPrepared()) {
+<li class="hstack py-1 px-2">
+    <div class="input-group">
+        <div class="input-group-text input-group-text-darker">
+            <n i18n-ngbTooltip="@@i18n.project.defaultProduct" ngbTooltip="default product">product</n>
+        </div>
+        <div class="form-control">
+            <search-input class="p-0" only="Product" [has_icon]="true" [minSearch]="1"
+                (itemSelected)="onProductSelect($event)" [query]="product ? product.name : ''"
+                [selected]="product"></search-input>
+        </div>
+    </div>
+</li>
+}

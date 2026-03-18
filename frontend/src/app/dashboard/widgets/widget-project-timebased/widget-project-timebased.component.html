@@ -1,0 +1,31 @@
+<div class="card card-chart mb-3">
+
+  <div class="card-header gap-2">
+    <i>schedule</i>
+    <span class="flex-fill text-truncate" i18n="@@i18n.common.timeBased">time based</span>
+    <div class="chart-title" roles="invoicing">{{(value ? (value | short) : (value | loading))}}h</div>
+  </div>
+
+  <chart-card-range type="rangeArea" [chartData]="chartData" [suffix]="' ' + global.currencySymbol()" color="cyan" roles="invoicing"></chart-card-range>
+
+  <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+
+  @if (!getOptions()['chart-only']?.value) {
+    <ul-compact [badge]="this.badgeCount(data) > 0 ? '' + this.badgeCount(data) : undefined">
+      <li class="list-group-item d-flex text-nowrap" [class.compact]="indexExceedsSettings(i)" *nxFor="let _ of data; let i = index">
+        <div>
+          <avatar [object]="_"></avatar>
+        </div>
+        <div class="flex-fill ms-3 text-truncate">
+          <div class="d-flex text-truncate">
+            <div class="flex-fill text-truncate">{{_.name}}</div>
+            <div class="text-muted" roles="invoicing">{{_.uninvoiced_hours | number : '1.1-1'}}h</div>
+          </div>
+          @if (_.isRunning) {
+            <progress-bar [style]="'cyan'" [progress]="(_.uninvoiced_hours! / max)" [title]="_.progress"></progress-bar>
+          }
+        </div>
+      </li>
+    </ul-compact>
+  }
+</div>

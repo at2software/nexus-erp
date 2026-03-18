@@ -1,0 +1,21 @@
+<div class="card mb-3">
+    <div class="card-header" i18n="@@i18n.customers.missing_birthdays">missing birthdays</div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th></th>
+                <th i18n="@@i18n.common.name">name</th>
+                <th i18n="@@i18n.common.birthday">birthday</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *nxFor="let contact of contacts">
+                <td>
+                    <avatar [object]="company" *nxFor="let company of contact.companies"></avatar>
+                </td>
+                <td class="text-truncate">{{contact.name}}</td>
+                <td><input type="text" (blur)="onUpdate(contact)" [(ngModel)]="contact.var.bday" class="form-control" placeholder="YYYY-MM-DD" i18n-placeholder="@@i18n.common.date_format_placeholder"></td>
+            </tr>
+        </tbody>
+    </table>
+</div>

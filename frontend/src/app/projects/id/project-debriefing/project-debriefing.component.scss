@@ -1,0 +1,32 @@
+.category-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.list-group-item {
+    background-color: transparent;
+    border-color: rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+        background-color: rgba(255, 255, 255, 0.03);
+    }
+
+    &.active {
+        background-color: rgba(var(--bs-primary-rgb), 0.15);
+        border-color: rgba(var(--bs-primary-rgb), 0.3);
+    }
+}
+
+.alert-success {
+    background-color: rgba(48, 232, 0, 0.15);
+    border-color: rgba(48, 232, 0, 0.3);
+    color: #30E800;
+}

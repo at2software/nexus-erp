@@ -1,0 +1,63 @@
+<div class="background" [style.backgroundColor]="project.state.color || '#000'"></div>
+<div class="icon">
+  @if (project.state.isPrepared()) {
+    <i [style.color]="project.state.color">search</i>
+  }
+  @if (project.state.isRunning() && project.is_time_based) {
+    <i [style.color]="project.state.color">schedule</i>
+  }
+  @if (project.state.isRunning() && !project.is_time_based) {
+    <i [style.color]="project.state.color">attach_money</i>
+  }
+  @if (project.state.isFinishedSuccessful()) {
+    <i [style.color]="project.state.color">check_circle</i>
+  }
+  @if (project.state.isFinishedFailed()) {
+    <i [style.color]="project.state.color">cancel</i>
+  }
+  @if (project.state.isFinishedIgnored()) {
+    <i [style.color]="project.state.color">swap_horiz</i>
+  }
+</div>
+
+@if (project.progress <= 1) {
+  <div class="outline" style="border-color: #000;">
+    <div class="outline-limit">
+      <div class="outline-limit-height" [style.height.%]="project.progress * 100">
+        <div class="outline" [style.borderColor]="project.state.color"></div>
+      </div>
+    </div>
+  </div>
+}
+
+@if (project.progress > 1) {
+  <div class="outline" [style.borderColor]="project.state.color">
+    <div class="outline-limit">
+      <div class="outline-limit-height" [style.height.%]="(project.progress - 1) * 100">
+        <div class="outline" style="border-color: var(--color-danger);"></div>
+      </div>
+    </div>
+  </div>
+}
+
+@if (!click && !noRouting) {
+  <div
+    class="link cursor-pointer"
+    [ngbTooltip]="tooltip()"
+    smartLink="/projects/{{project.id}}">
+  </div>
+}
+@if (!click && noRouting) {
+  <div
+    class="link cursor-pointer"
+    [ngbTooltip]="tooltip()"
+    >
+  </div>
+}
+@if (click) {
+  <div
+    class="link cursor-pointer"
+    [ngbTooltip]="tooltip()"
+    (click)="click()" tabindex="0" (keydown.enter)="click()">
+  </div>
+}

@@ -1,0 +1,21 @@
+@use './scss/bootstrap-setup';
+@use './scss/layout';
+
+@use './scss/splash-screen';
+@use './scss/fonts';
+
+@use './scss/datepicker';
+@use './scss/dropdown';
+@use './scss/input';
+@use './scss/nexus';
+@use 'node_modules/material-icons/iconfont/material-icons';
+@use 'node_modules/leaflet/dist/leaflet.css';
+
+@use 'node_modules/frappe-gantt/dist/frappe-gantt.css';
+@use './scss/frappe-gantt-dark';
+
+i {
+    @extend .material-icons-outlined;
+    font-size: 1rem;
+    vertical-align: text-bottom;
+}

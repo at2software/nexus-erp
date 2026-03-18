@@ -1,0 +1,34 @@
+<scrollbar>
+  <div class="row">
+    <div class="col-md-3">
+      <div class="card mb-3">
+        <div class="card-header" i18n="@@i18n.common.synchronization">synchronization</div>
+        <ul class="list-group">
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="small" i18n="@@i18n.common.carddav">CardDAV</span>
+              <button class="btn btn-sm btn-plain text-primary" (click)="copyToClipboard(carddavUrl)" ngbTooltip="copy to clipboard" i18n-ngbTooltip="@@i18n.common.copyToClipboard">
+                <i>content_copy</i>
+              </button>
+            </div>
+            <code class="d-block small text-break">{{carddavUrl}}</code>
+          </li>
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="small" i18n="@@i18n.common.caldav">CalDAV</span>
+              <button class="btn btn-sm btn-plain text-primary" (click)="copyToClipboard(caldavUrl)" ngbTooltip="copy to clipboard" i18n-ngbTooltip="@@i18n.common.copyToClipboard">
+                <i>content_copy</i>
+              </button>
+            </div>
+            <code class="d-block small text-break">{{caldavUrl}}</code>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="col-md-9">
+      @if (user) {
+        <app-vcard [object]="user"></app-vcard>
+      }
+    </div>
+  </div>
+</scrollbar>

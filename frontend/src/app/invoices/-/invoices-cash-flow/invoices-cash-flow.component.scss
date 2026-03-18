@@ -1,0 +1,16 @@
+@use 'colors';
+th {
+    vertical-align: bottom;
+    text-align: right;
+    background-color: colors.$bg-darker !important;
+    cursor: default;
+    user-select: none;
+}
+th>div {
+    // text-align: left;
+    // transform-origin: bottom right;
+    // transform: 
+    //   rotate(-90deg)
+    //   translate(88px, 0px);
+}
+td { text-align: right; }

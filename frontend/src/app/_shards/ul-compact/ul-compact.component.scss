@@ -1,0 +1,61 @@
+:host {
+    position: relative;
+
+    .compact-list-row {
+        list-style-type: none;
+        height: 15px;
+        //background-color: #ffffff11;
+        position: relative;
+        cursor: pointer;
+        user-select: none;
+        text-align: center;
+        vertical-align: middle;
+        padding: 3px;
+    }
+
+    .compact-list-toggle-button {
+        position: absolute;
+        margin-top: -6px;
+        color: #999;
+    }
+
+    .compact-list-toggle-badge {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: 10px;
+        padding: 0px 7px 2px;
+        font-size: 12px;
+        font-weight: bold;
+        background-color: var(--color-danger);
+        color: #ffffff;
+
+        box-shadow: 0 0 0 rgba(255, 0, 0, 0.3);
+        z-index: 1;
+    }
+
+    .compact-list-toggle-badge::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 100%;
+        height: 100%;
+        border-radius: 10px;
+        background: rgba(255, 0, 0, 0.2);
+        transform: translate(-50%, -50%);
+        z-index: -1;
+    }
+}
+
+::ng-deep {
+    ul-compact li {
+        padding: 5px .75rem !important;
+        //padding-left: .75rem !important;
+    }
+
+    .compact-list-compacted .compact {
+        display: none !important;
+    }
+}

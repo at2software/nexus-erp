@@ -1,0 +1,42 @@
+.sparkline {
+    display: flex;
+    gap: 2px;
+    height: 24px;
+    align-items: flex-end;
+}
+
+.sparkline-bar {
+    width: 4px;
+    height: 100%;
+    background-color: var(--bs-secondary);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+
+    &:hover {
+        opacity: 0.8;
+    }
+
+    &.success {
+        background-color: var(--bs-success);
+    }
+
+    &.warning {
+        background-color: var(--bs-warning);
+    }
+
+    &.orange {
+        background-color: #fd7e14;
+    }
+
+    &.danger {
+        background-color: var(--bs-danger);
+    }
+}
+
+.table {
+    i.material-icons {
+        font-size: 20px;
+        vertical-align: middle;
+    }
+}

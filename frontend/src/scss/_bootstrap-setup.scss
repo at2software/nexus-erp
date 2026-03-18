@@ -1,0 +1,209 @@
+@use 'sass:color';
+@use 'colors';
+@use 'var';
+@use 'node_modules/bootstrap/scss/bootstrap' with (
+    $border-radius             : var.$border-radius,
+    $card-border-radius        : var.$border-radius,
+    $btn-border-width          : var.$btn-border-width,
+    $card-bg                   : var.$card-bg,
+    $card-cap-bg               : var.$card-cap-bg,
+    $card-border-width         : var.$card-border-width,
+    $dropdown-bg               : var.$dropdown-bg,
+    $form-select-padding-y     : var.$form-select-padding-y,
+    $input-padding-y           : var.$input-padding-y,
+    $input-border-width        : var.$input-border-width,
+    $list-group-bg             : var.$list-group-bg,
+    $list-group-border-width   : var.$list-group-border-width,
+    $list-group-item-padding-y : var.$list-group-item-padding-y,
+    $modal-backdrop-bg         : var.$modal-backdrop-bg,
+    $modal-backdrop-opacity    : var.$modal-backdrop-opacity,
+    $modal-content-border-width: var.$modal-content-border-width,
+    $table-bg                  : var.$table-bg,
+    $table-border-color        : var.$table-border-color,
+    $tooltip-bg                : var.$tooltip-bg,
+    $tooltip-color             : var.$tooltip-color,
+    $primary                   : colors.$primary,
+    $secondary                 : colors.$secondary,
+);
+
+app-root {
+    > router-outlet + * {
+        @extend .d-block, .container;
+    }
+}
+[data-bs-theme='dark'] {
+    --color-bg-default: rgb(20, 20, 20);
+    --light: 255, 255, 255;
+    --shadow: 0, 0, 0;
+    --light-mod: 0.08;
+    --shadow-mod: 2;
+
+    --bs-body-bg: #{colors.$bg-body};
+    --bs-dropdown-bg: #{colors.$bg-card};
+    --bs-tertiary-bg: transparent;
+}
+
+.form-switch .form-check-input {
+    box-shadow: var.light-bottom(), var.dark-top(), inset var.light-top(), inset var.dark-bottom();
+}
+.btn {
+    box-shadow: var.light-bottom(1px), var.dark-top(1px), var.liquid-glass();
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    overflow: hidden;
+
+    &.btn-icon {
+        box-shadow: var.inset-shadow-up(1px);
+        border-radius: 100%;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+    }
+
+
+}
+
+.bg-primary,
+.bg-info {
+    color: black !important;
+}
+
+.card {
+    box-shadow: var.liquid-glass();
+    transition: box-shadow 0.3s ease, transform 0.3s ease, background-position 1s ease;
+    background: gradient(colors.$bg-card);
+    background-position: top left;
+
+    &:hover {
+        box-shadow:
+            inset 0 1px 0 0 #fff3,
+            inset 0 10px 20px -6px #fff1,
+            inset 0 -6px 12px -4px #0005,
+            0 6px 20px -4px #0004;
+        //transform: translateY(-2px);
+        background-position: -3rem top -3rem left;
+        .card-header {
+            n, i {
+                transition: color 0.3s ease;
+                color: #999;
+            }
+        }
+    }
+    & > table:last-child > tr:last-child > td:last-child {
+        border-bottom-right-radius: var(--bs-border-radius);
+    }
+    & > ul.list-group:last-child > li.list-group-item:last-child,
+    & > .card-header:only-child,
+    & > .card-header:last-child {
+        border-bottom-left-radius: var(--bs-border-radius);
+        border-bottom-right-radius: var(--bs-border-radius);
+    }
+}
+.card-header {
+    --bs-card-cap-bg: transparent;
+    text-shadow: 1px 1px 2px #000;
+    cursor: default;
+}
+
+.cursor-default {
+    cursor:default;
+}
+.cursor-help {
+    cursor:help;
+}
+
+ul.list-group:not(:first-child) > li.list-group-item:first-child {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+ul.list-group:not(:last-child) > li.list-group-item:last-child {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.badge {
+    box-shadow: inset var.light-top(), inset var.dark-bottom();
+}
+.input-group-text {
+    box-shadow: inset var.dark-top(1px), inset var.light-bottom(1px);
+}
+.input-group-text-darker {
+    background-color: #0006;
+}
+
+.list-group-dir {
+    .list-group-item {
+        padding: 0 !important;
+        border-radius: 0 !important;
+        & > div {
+            @extend .px-2;
+        }
+        & > ul.list-group {
+            @extend .ps-3;
+        }
+    }
+}
+
+.form-control,
+.form-select {
+    box-shadow: inset var.light-top(), inset var.dark-bottom();
+
+    .form-control {
+        box-shadow: none;
+    }
+    
+    &:focus {
+        box-shadow: inset var.light-top(), inset var.dark-bottom(), inset 0 0 0 1px var(--bs-primary);
+        border-width: var(--bs-border-width);
+    }
+}
+
+.form-floating {
+    > .form-control,
+    > .form-select {
+        height: 58px;
+        padding-top: 1.625rem;
+        padding-bottom: 0.625rem;
+        
+        &:focus,
+        &:not(:placeholder-shown) {
+            padding-top: 1.625rem;
+            padding-bottom: 0.625rem;
+        }
+    }
+    
+    > label {
+        transition: none;
+    }
+}
+
+.form-select {
+    border: none !important;
+    height: 27px !important;
+    
+    .form-floating & {
+        height: 58px !important;
+    }
+}
+
+.modal-backdrop {
+    background-color: #0009;
+    box-shadow: var.shadow() !important;
+}
+
+.flexible-tooltip {
+    max-width: fit-content;
+}
+
+.flexible-tooltip .tooltip-inner {
+    max-width: fit-content;
+}
+
+.list-group-item.active {
+    background-color: transparent !important;
+    border-color: var(--bs-list-group-border-color) !important;
+    color: var(--bs-primary) !important;
+}

@@ -1,0 +1,65 @@
+<div class="row">
+    <div class="col-3">
+        <div class="card">
+            <div class="card-header" i18n="@@i18n.common.settings">settings</div>
+            <ul class="list-group">
+                <li
+                    class="list-group-item list-group-item-action pointer"
+                    [class.active]="tab === 0"
+                    (click)="show(0)" tabindex="0" (keydown.enter)="show(0)"
+                    i18n="@@i18n.common.invoices"
+                >invoices</li>
+                <li
+                    class="list-group-item list-group-item-action pointer"
+                    [class.active]="tab === 1"
+                    (click)="show(1)" tabindex="0" (keydown.enter)="show(1)"
+                    i18n="@@i18n.common.webdav"
+                >WebDAV</li>
+            </ul>
+        </div>
+    </div>
+    <div class="col-9">
+        <div [class.d-none]="tab !== 0" class="row">
+            <div class="card mb-3">
+                <div class="card-header" i18n="@@i18n.common.invoices">invoices</div>
+                <ul class="list-group">
+                    <li class="list-group-item list-group-item-action">
+                        <input-switch-group
+                            [object]="global.user"
+                            key="INVOICE_DOWNLOAD"
+                            [default]="1"
+                            i18n="@@i18n.settings.downloadInvoiceAfterCreation"
+                            >download invoice after creation</input-switch-group
+                        >
+                    </li>
+                    <li class="list-group-item list-group-item-action">
+                        <input-switch-group
+                            [object]="global.user"
+                            key="PROJECTS_POSTPONE_WITH_COMMENT"
+                            [default]="1"
+                            i18n="@@i18n.settings.postponeProjectsWithComment"
+                            >postpone projects with comment</input-switch-group
+                        >
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div [class.d-none]="tab !== 1" class="row">
+            <div class="card mb-3">
+                <div class="card-header" i18n="@@i18n.common.webdav">WebDAV</div>
+                <ul class="list-group">
+                    @if (global.user) {
+                    <li class="list-group-item list-group-item-action">
+                        <input-settings-group
+                            [parent]="global.user"
+                            id="WEBDAV_TOKEN"
+                            i18n="@@i18n.settings.webdavToken"
+                            >WebDAV token</input-settings-group
+                        >
+                    </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

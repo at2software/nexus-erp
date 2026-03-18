@@ -1,0 +1,42 @@
+<div class="card">
+  <div class="card-header">
+    <span i18n="@@i18n.common.connections">connections</span>
+    <div class="card-header-actions">
+      <i class="text-primary pointer"
+        [ngbPopover]="popContent"
+        placement="end"
+        container="body"
+        [autoClose]="'outside'"
+        popoverTitle="Add connection"
+        i18n-popoverTitle="@@i18n.connections.addConnection">add</i>
+
+      <ng-template #popContent>
+        <search-input #popSearch only="Company" (itemSelected)="onCompanySelect($event)">
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-item hstack gap-2 pointer text-primary" (click)="createNewCompany(popSearch)" (keyup.enter)="createNewCompany(popSearch)" tabindex="0">
+            <div><i>add</i></div>
+            <div class="flex-fill">
+              <span i18n="@@i18n.common.createNew">create new</span>
+              @if (popSearch.query) {
+                <span class="fw-bold">"{{popSearch.query}}"</span>
+              }
+            </div>
+          </div>
+        </search-input>
+      </ng-template>
+    </div>
+  </div>
+  <ul class="list-group">
+    @for (con of filteredConnections; track con.id) {
+      <li class="list-group-item d-flex text-nowrap align-items-center" [nx]="con" [tables]="connections" (singleActionResolved)="singleActionResolved()">
+        <div class="me-3"><avatar [object]="con.otherCompany(company)"></avatar></div>
+        <div class="text-truncate flex-fill">{{con.otherCompany(company)?.name}}</div>
+        @if (showAddButton) {
+          <button class="btn btn-sm btn-plain text-primary ms-2" (click)="addConnection(con)">
+            <i>add</i>
+          </button>
+        }
+      </li>
+    }
+  </ul>
+</div>

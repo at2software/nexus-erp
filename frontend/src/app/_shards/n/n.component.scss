@@ -1,0 +1,33 @@
+:host {
+	display: inline-block;
+    //font-size: 16px;
+    position: relative;
+	background-position: center center;
+	background-repeat: no-repeat;
+    font-family: NxIcons;
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1.5;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "liga";
+	&.active { filter: var(--color-primary-filter); }
+    
+    n {
+        position: absolute;
+        left: 0;
+    }
+    
+    // Simple white styling for local_ai icon
+    &.ai-animated {
+        color: #ffffff; // solid white text
+        text-shadow: 0 0 5px #000, 0 0 10px #000;
+    }
+}

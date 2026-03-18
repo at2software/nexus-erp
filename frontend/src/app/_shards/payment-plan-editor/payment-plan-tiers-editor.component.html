@@ -1,0 +1,68 @@
+@if (tiers.length === 0) {
+    <empty-state [card]="false" class="settings" i18n-title="@@i18n.payment.noTiersDefined" title="no payment plan tiers defined yet"></empty-state>
+}
+
+@for (tier of tiers; let i = $index; track i) {
+    <div class="card-header d-flex align-items-center gap-2" [class.border-top]="i > 0">
+        <input
+            [(ngModel)]="tier.label"
+            class="form-control"
+            style="max-width:140px;"
+            placeholder="label"
+            i18n-placeholder="@@i18n.payment.tierLabel"
+            (change)="save()"
+        >
+        <div class="input-group" style="width:160px; flex-shrink:0;">
+            @if (tier.threshold !== null) {
+                <input
+                    [(ngModel)]="tier.threshold"
+                    type="number"
+                    min="0"
+                    class="form-control"
+                    (change)="save()"
+                >
+            } @else {
+                <input class="form-control text-muted" [disabled]="true" value="∞">
+            }
+            <span class="input-group-text">€</span>
+        </div>
+        @if (tier.threshold !== null) {
+            <button class="btn btn-sm btn-plain p-0 ms-auto text-danger" (click)="removeTier(i)" tabindex="0" i18n-ngbTooltip="@@i18n.common.delete" ngbTooltip="delete">
+                <i>delete</i>
+            </button>
+        }
+    </div>
+
+    <div class="card-body">
+        @for (step of tier.steps; let j = $index; track j) {
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <div class="input-group" style="width:100px; flex-shrink:0;">
+                    <input [(ngModel)]="step.percentage" type="number" min="0" max="100" class="form-control text-end" (change)="save()">
+                    <span class="input-group-text">%</span>
+                </div>
+                <select [(ngModel)]="step.trigger" class="form-select flex-fill" (ngModelChange)="onTriggerChange(step); save()">
+                    <option value="project_start"    i18n="@@i18n.payment.triggerProjectStart">upon project start</option>
+                    <option value="feature_complete" i18n="@@i18n.payment.triggerFeatureComplete">upon feature complete</option>
+                    <option value="acceptance"       i18n="@@i18n.payment.triggerAcceptance">upon acceptance</option>
+                    <option value="monthly"          i18n="@@i18n.payment.triggerMonthlyOption">monthly prepayments</option>
+                </select>
+                @if (step.trigger === 'monthly') {
+                    <div class="input-group" style="width:120px; flex-shrink:0;">
+                        <input [(ngModel)]="step.months" type="number" min="1" class="form-control text-end" placeholder="6" (change)="save()">
+                        <span class="input-group-text small" i18n="@@i18n.payment.months">mo.</span>
+                    </div>
+                }
+                <button class="btn btn-sm btn-plain p-0 text-danger" (click)="removeStep(tier, j); save()" tabindex="0"><i>close</i></button>
+            </div>
+        }
+
+        @if (totalPercentage(tier) < 100) {
+            <button class="btn btn-sm btn-outline-primary mt-1" (click)="addStep(tier)">
+                <i>add</i> <span i18n="@@i18n.payment.addStep">add step</span>
+            </button>
+        }
+        @if (totalPercentage(tier) > 100) {
+            <small class="text-warning d-block mt-1"><i>warning</i> <span i18n="@@i18n.payment.totalWarning">total: {{totalPercentage(tier)}}% (must be 100%)</span></small>
+        }
+    </div>
+}

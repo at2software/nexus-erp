@@ -1,0 +1,29 @@
+.node {
+  padding: 10px;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.delete-button {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 10;
+}
+
+.node-body {
+  margin-top: 0;
+}
+
+.trigger {
+  border-top: 8px solid #004cff;
+}
+.condition {
+  border-top: 8px solid #efb31c;
+}
+.command {
+  border-top: 8px solid #760505;
+}

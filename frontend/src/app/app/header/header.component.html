@@ -1,0 +1,19 @@
+<div class="container position-relative hstack gap-2" #content>
+    <div class="flex-fill ng-content text-truncate" #ngContent>
+        <ng-content></ng-content>
+    </div>
+    <div>
+    <div class="toolbar d-flex align-items-center gap-2 flex-shrink-0" #toolbar>
+        <button class="btn btn-plain" id="activity-burger" (click)="onActivityTabClicked()"><i>menu</i></button>
+    </div>
+    </div>
+    <div class="slit"></div>
+</div>
+
+<toolbar>
+    <div class="btn-group" role="group">
+        @if (!globalService.user) {
+        <button id="btnGroupDrop1" type="button" class="btn btn-plain px-2" (click)="logout()" i18n="@@i18n.common.logout">logout</button>
+        }
+    </div>
+</toolbar>

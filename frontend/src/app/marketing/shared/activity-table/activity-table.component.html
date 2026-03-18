@@ -1,0 +1,62 @@
+<div class="table-responsive">
+    <table class="table table-hover table-sm mb-0">
+        <thead>
+            <tr>
+                <th class="text-center" style="width: 60px;" i18n="@@i18n.marketing.day">day</th>
+                <th class="text-center" style="width: 40px;"></th>
+                <th i18n="@@i18n.marketing.activity_name">activity</th>
+                <th class="text-center" style="width: 120px;">&nbsp;</th>
+                <th class="text-center" style="width: 100px;" i18n="@@i18n.marketing.depends_on">depends on</th>
+                <th class="text-center" style="width: 60px;" i18n="@@i18n.marketing.kpi">KPI</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (activity of getSortedActivities(); track activity.id) {
+            <tr
+                [class.table-active]="hoveredActivityId === activity.id"
+                class="cursor-pointer"
+                (click)="onActivityClick(activity)">
+                <td class="text-center text-truncate">{{activity.day_offset}}</td>
+                <td class="text-center text-truncate">
+                    @if (activity.has_external_dependency) {
+                    <i class="text-warning" 
+                        style="font-size: 1rem;" 
+                        ngbTooltip="Has external dependency"
+                        i18n-ngbTooltip="@@i18n.marketing.has_external_dependency"
+                        placement="right">warning</i>
+                    }
+                </td>
+                <td class="text-truncate" [title]="activity.name">{{activity.name}}</td>
+                <td class="text-center text-truncate">
+                    @if (activity.quick_action) {
+                    <i class="text-primary" 
+                        style="font-size: 1.2rem;"
+                        [ngbTooltip]="formatQuickAction(activity.quick_action)"
+                        placement="left">{{getQuickActionIcon(activity.quick_action)}}</i>
+                    }
+                </td>
+                <td class="text-center text-truncate"
+                    [title]="activity.parent_activity_id ? getParentActivityName(activity.parent_activity_id) : ''"
+                    (mouseenter)="hoveredActivityId = activity.parent_activity_id || null"
+                    (mouseleave)="hoveredActivityId = null">
+                    @if (activity.parent_activity_id) {
+                    <span class="text-muted small">
+                        Day {{getParentActivityDay(activity.parent_activity_id)}}
+                    </span>
+                    }
+                </td>
+                <td class="text-center text-truncate">
+                    @if (hasPerformanceMetrics(activity)) {
+                        @if (getFirstMetric(activity); as metric) {
+                            <i class="text-info"
+                                style="font-size: 1.2rem;"
+                                [ngbTooltip]="getMetricsTooltip(getPerformanceMetrics(activity))"
+                                placement="left">{{metric.getIcon()}}</i>
+                        }
+                    }
+                </td>
+            </tr>
+            }
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,230 @@
+<!-- Main Content -->
+<div class="row">
+    <!-- Filter Sidebar -->
+    <div class="col-3">
+        <div class="card" data-tour="metrics-filter">
+            <div class="card-header" i18n="@@i18n.common.filter">filter</div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    [class.active]="typeFilter === ''" (click)="filterByType('')" tabindex="0"
+                    (keydown.enter)="filterByType('')">
+                    <span i18n="@@i18n.marketing.total_metrics">total metrics</span>
+                    <span class="badge bg-primary rounded-pill">{{stats.total}}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    [class.active]="typeFilter === 'counter'" (click)="filterByType('counter')" tabindex="0"
+                    (keydown.enter)="filterByType('counter')">
+                    <span class="d-flex align-items-center gap-1">
+                        <i style="font-size: 1rem; color: #6366f1;">tag</i>
+                        <span i18n="@@i18n.marketing.counters">counters</span>
+                    </span>
+                    <span class="badge bg-dark rounded-pill" style="color: #6366f1;">{{stats.byType.counter}}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    [class.active]="typeFilter === 'percentage'" (click)="filterByType('percentage')" tabindex="0"
+                    (keydown.enter)="filterByType('percentage')">
+                    <span class="d-flex align-items-center gap-1">
+                        <i style="font-size: 1rem; color: #10b981;">percent</i>
+                        <span i18n="@@i18n.marketing.percentages">percentages</span>
+                    </span>
+                    <span class="badge bg-dark rounded-pill" style="color: #10b981;">{{stats.byType.percentage}}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    [class.active]="typeFilter === 'conversion'" (click)="filterByType('conversion')" tabindex="0"
+                    (keydown.enter)="filterByType('conversion')">
+                    <span class="d-flex align-items-center gap-1">
+                        <i style="font-size: 1rem; color: #f59e0b;">trending_up</i>
+                        <span i18n="@@i18n.marketing.conversions">conversions</span>
+                    </span>
+                    <span class="badge bg-dark rounded-pill" style="color: #f59e0b;">{{stats.byType.conversion}}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    [class.active]="typeFilter === 'currency'" (click)="filterByType('currency')" tabindex="0"
+                    (keydown.enter)="filterByType('currency')">
+                    <span class="d-flex align-items-center gap-1">
+                        <i style="font-size: 1rem; color: #06b6d4;">attach_money</i>
+                        <span i18n="@@i18n.common.currency">currency</span>
+                    </span>
+                    <span class="badge bg-dark rounded-pill" style="color: #06b6d4;">{{stats.byType.currency}}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    [class.active]="typeFilter === 'duration'" (click)="filterByType('duration')" tabindex="0"
+                    (keydown.enter)="filterByType('duration')">
+                    <span class="d-flex align-items-center gap-1">
+                        <i style="font-size: 1rem; color: #8b5cf6;">schedule</i>
+                        <span i18n="@@i18n.common.duration">duration</span>
+                    </span>
+                    <span class="badge bg-dark rounded-pill" style="color: #8b5cf6;">{{stats.byType.duration}}</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Performance Metrics Table -->
+    <div class="col-md-9">
+        <div class="card" data-tour="metrics-list">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div i18n="@@i18n.marketing.performance_metrics">performance metrics</div>
+                <button class="btn btn-sm btn-plain text-primary" (click)="openCreateModal()" tabindex="0"
+                    (keydown.enter)="openCreateModal()">
+                    <span class="material-icons" style="font-size: 18px; vertical-align: middle;"
+                        i18n="@@i18n.common.add">add</span>
+                </button>
+            </div>
+            @if (filteredMetrics.length === 0 && !typeFilter) {
+            <empty-state [card]="false" class="marketing" i18n-title="@@i18n.marketing.no_metrics_created" title="no metrics created yet"></empty-state>
+            }
+            @if (filteredMetrics.length === 0 && typeFilter) {
+            <empty-state [card]="false" class="marketing" i18n-title="@@i18n.marketing.no_metrics_match_filter" title="no metrics match your filter"></empty-state>
+            }
+            @if (filteredMetrics.length > 0) {
+            <ul class="list-group">
+                @for (metric of filteredMetrics; track metric.id) {
+                <li class="list-group-item hstack align-items-start gap-2" [nx]="metric" [tables]="filteredMetrics"
+                    [class.table-active]="selectedMetric?.id === metric.id" (click)="selectMetric(metric)" tabindex="0"
+                    (keydown.enter)="selectMetric(metric)" style="cursor: pointer;">
+                    <div>
+                        <i class="align-middle" [style.color]="metric.getIconColor()"
+                            [ngbTooltip]="getMetricTypeInfo(metric.metric_type)?.label">
+                            {{metric.getIcon()}}
+                        </i>
+                    </div>
+                    <div class="flex-fill vstack">
+                        <div>{{metric.name}}</div>
+                        <div class="text-muted small">{{metric.description || '—'}}</div>
+                    </div>
+                    @if (metric!.activity_stats!.total > 0) {
+                    <div class="text-end vstack align-items-end" style="flex: 0 0 15rem; width: 15rem; max-width: 15rem;">
+                        <div class="hstack gap-1 fs-4">
+                            <div class="text-start flex-fill">
+                                {{metric.target_value ? formatTargetValue(metric) : ''}}
+                            </div>
+                            <div class="text-end">{{formatMetricValue(metric)}}</div>
+                        </div>
+                        @if (metric.activity_stats && metric.activity_stats.total > 0) {
+                        <div class="progress mt-1 w-100" style="height: 2px;">
+                            <div class="progress-bar {{STATS_COLORS.completed}}"
+                                [style.width.%]="(metric.activity_stats.completed / metric.activity_stats.total) * 100"
+                                [ngbTooltip]="getCompletedTooltip(metric.activity_stats.completed)"></div>
+                            <div class="progress-bar {{STATS_COLORS.overdue}}"
+                                [style.width.%]="(metric.activity_stats.overdue / metric.activity_stats.total) * 100"
+                                [ngbTooltip]="getOverdueTooltip(metric.activity_stats.overdue)"></div>
+                            <div class="progress-bar {{STATS_COLORS.pending}}"
+                                [style.width.%]="(metric.activity_stats.pending / metric.activity_stats.total) * 100"
+                                [ngbTooltip]="getPendingTooltip(metric.activity_stats.pending)"></div>
+                            <div class="progress-bar" [style.background-color]="STATS_COLORS.skipped"
+                                [style.width.%]="(metric.activity_stats.skipped / metric.activity_stats.total) * 100"
+                                [ngbTooltip]="getSkippedTooltip(metric.activity_stats.skipped)"></div>
+                        </div>
+                        }
+                    </div>
+                    }
+                </li>
+                }
+            </ul>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Metric Modal -->
+<div class="modal fade" [class.show]="showMetricModal" [style.display]="showMetricModal ? 'block' : 'none'"
+    tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">
+                    @if (editingMetric) {
+                    <span i18n="@@i18n.marketing.edit_metric">edit metric</span>
+                    } @else {
+                    <span i18n="@@i18n.marketing.create_performance_metric">create performance metric</span>
+                    }
+                </span>
+                <button type="button" class="btn-close" (click)="resetForm()" tabindex="0" (keydown.enter)="resetForm()"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="mb-3">
+                        <label for="metricName" class="form-label">
+                            <span i18n="@@i18n.marketing.metricName">metric name</span>
+                            <span class="notranslate"> *</span>
+                        </label>
+                        <input type="text" class="form-control" id="metricName" [(ngModel)]="metricForm.name"
+                            name="name" placeholder="e.g., Email Open Rate, Revenue Generated"
+                            i18n-placeholder="@@i18n.marketing.metric_name_placeholder">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="metricDescription" class="form-label"
+                            i18n="@@i18n.common.description">description</label>
+                        <textarea class="form-control" id="metricDescription" [(ngModel)]="metricForm.description"
+                            name="description" rows="2" placeholder="What does this metric measure?"
+                            i18n-placeholder="@@i18n.marketing.metric_description_placeholder"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="metricType" class="form-label">
+                            <span i18n="@@i18n.marketing.metricType">metric type</span>
+                            <span class="notranslate"> *</span>
+                        </label>
+                        <select class="form-select" id="metricType" [(ngModel)]="metricForm.metric_type"
+                            name="metricType">
+                            @for (type of metricTypes; track type.value) {
+                            <option [value]="type.value">
+                                {{type.label}} - {{type.description}}
+                            </option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="metricTarget" class="form-label"
+                            i18n="@@i18n.marketing.default_target_value_optional">default target value
+                            (optional)</label>
+                        <input type="number" class="form-control" id="metricTarget"
+                            [(ngModel)]="metricForm.target_value" name="targetValue" placeholder="e.g., 100"
+                            i18n-placeholder="@@i18n.marketing.target_value_placeholder">
+                        <small class="form-text text-muted">
+                            <span i18n="@@i18n.marketing.metric_target_override_description">this can be overridden per
+                                initiative or activity</span>
+                        </small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="resetForm()" tabindex="0"
+                    (keydown.enter)="resetForm()" i18n="@@i18n.common.cancel">cancel</button>
+                <button type="button" class="btn btn-primary" (click)="saveMetric()" tabindex="0"
+                    (keydown.enter)="saveMetric()" [disabled]="!metricForm.name || !metricForm.metric_type">
+                    @if (editingMetric) {
+                    <span i18n="@@i18n.marketing.update_metric">update metric</span>
+                    } @else {
+                    <span i18n="@@i18n.marketing.create_metric">create metric</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Backdrop -->
+@if (showMetricModal) {
+<div class="modal-backdrop fade show"></div>
+}
+
+<!-- ── Guided Tour Slides ──────────────────────────────────────────────────── -->
+
+<guided-tour
+  id="metrics-guide-what"
+  i18n-title="@@i18n.guidedTour.metrics.whatTitle" title="Performance Metrics (KPIs)"
+  i18n-content="@@i18n.guidedTour.metrics.whatContent" content="KPIs are the key indicators you want to track across your marketing activities. Define metrics once here — they are then automatically tracked and aggregated across all activities in your initiatives."
+  focusSelector="[data-tour='metrics-list']">
+</guided-tour>
+
+<guided-tour
+  id="metrics-guide-types"
+  i18n-title="@@i18n.guidedTour.metrics.typesTitle" title="Metric Types"
+  i18n-content="@@i18n.guidedTour.metrics.typesContent" content="Filter by metric type: counters (absolute numbers), percentages, conversion rates, currency amounts, or time durations. Each type formats its value and progress bar accordingly."
+  focusSelector="[data-tour='metrics-filter']">
+</guided-tour>

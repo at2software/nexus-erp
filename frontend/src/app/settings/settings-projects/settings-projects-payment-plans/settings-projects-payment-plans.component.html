@@ -1,0 +1,19 @@
+<toolbar></toolbar>
+<div class="card mb-3">
+    <div class="card-header d-flex align-items-center">
+        <span i18n="@@i18n.payment.defaultPlansTitle">payment plan tiers</span>
+        <button
+            class="btn btn-sm btn-plain ms-auto p-0"
+            (click)="tiersEditor.addTier()"
+            i18n-ngbTooltip="@@i18n.payment.addTier"
+            ngbTooltip="add tier"
+            container="body"
+        ><i class="text-primary">add</i></button>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small mb-0" i18n="@@i18n.payment.tiersHint">
+            Define global default payment plans by project budget size. Tiers are evaluated in order — the first tier whose threshold exceeds the project's net value is used. The last tier (no threshold) serves as the catch-all. Use <code>[payment-plan]</code> in quote text to insert the plan.
+        </p>
+    </div>
+    <payment-plan-tiers-editor #tiersEditor></payment-plan-tiers-editor>
+</div>

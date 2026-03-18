@@ -1,0 +1,23 @@
+@if (connections.length === 0) {
+  <empty-state class="chart" i18n-title="@@i18n.customers.networkEmpty" title="no customer network yet">
+    <p class="text-muted small" i18n="@@i18n.customers.networkEmptyBody">This view visualises the network between companies. Add network connections in each customer's network tab to see who knows whom.</p>
+  </empty-state>
+}
+@if (connections.length > 0) {
+  <network-chart [data]="connections" [focus]="focusCompanyId" (nodeSelected)="onNodeSelected($event)"></network-chart>
+}
+@if (selectedCompany) {
+  <div class="row">
+    <div class="col-3">
+      <div class="card" (click)="navigateToCompany()" tabindex="0" (keydown.enter)="navigateToCompany()" (keyup.enter)="navigateToCompany()" style="cursor: pointer;">
+        <div class="card-body d-flex align-items-center gap-3">
+          <img [src]="selectedCompany.icon" [alt]="selectedCompany.name" style="width: 48px; height: 48px; object-fit: contain;" />
+          <div>
+            <h6 class="mb-0">{{selectedCompany.name}}</h6>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-9"></div>
+  </div>
+}

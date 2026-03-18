@@ -1,0 +1,51 @@
+// Removed custom asset card styles - using standard Bootstrap cards
+
+.list-group-item {
+  border-left: none;
+  border-right: none;
+
+  &:first-child {
+    border-top: none;
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .material-icons {
+    font-size: 1.2rem;
+    vertical-align: middle;
+  }
+}
+
+.dropdown-toggle-split {
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+// Badge colors for categories
+.badge {
+  &.bg-purple {
+    background-color: #6f42c1 !important;
+  }
+}
+
+// Upload area styling
+.card.border-dashed {
+  border-style: dashed !important;
+  border-width: 2px !important;
+  border-color: #dee2e6 !important;
+
+  &:hover {
+    border-color: var(--bs-primary) !important;
+    background-color: rgba(var(--bs-primary-rgb), 0.03);
+  }
+}
+
+// Tag styling
+.pointer {
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.7;
+  }
+}

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <title>//title//</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=9" />
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <link href="pdf/styles.css" type="style/css" rel="stylesheet" />
+        <link href="pdf/bootstrap.min.css" type="style/css" rel="stylesheet" />
+        <style>
+            .footer .page-number:before {
+                content: "[pageLabel] " counter(page);
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="address">
+            <div class="address-sender">
+                [companyName] | [companyAddress]
+            </div>
+            [address]
+        </div>
+
+        <div class="information">
+            [headerInfo]
+            <br />
+            <br />
+            <div class="placeAndDay">[place], [dayNow]</div>
+            <br />
+            <br />
+            <div class="document-title">[documentTitle]</div>
+        </div>
+
+        <div class="header">
+            <table>
+                <tr>
+                    <td>
+                        Contact:<br />
+                        Web: [companyWeb]<br />
+                        Mail: [companyMail]<br />
+                        Fon: [companyPhone]<br />
+                    </td>
+                    <td>
+                        [companyRegistration]
+                    </td>
+                    <td>
+                        [companyBankDetails]
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <img src="pdf/logo.png" class="logo" />
+
+        <div class="footer">
+            <div class="page-number"></div>
+        </div>
+
+        <div class="content">
+            [content]
+        </div>
+
+    </body>
+
+</html>

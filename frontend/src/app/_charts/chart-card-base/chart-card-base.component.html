@@ -1,0 +1,11 @@
+@if (!chartOptions) {
+  <div class="chart-placeholder" [style.height.px]="100"></div>
+}
+@if (chartOptions) {
+  <div echarts [options]="chartOptions"
+    [initOpts]="{height: 100}"
+    (chartInit)="onChartInit($event)"
+    style="height: 100px;"
+    >
+  </div>
+}

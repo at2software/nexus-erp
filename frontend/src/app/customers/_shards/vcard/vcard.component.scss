@@ -1,0 +1,24 @@
+.hover-button {
+	display:none;
+}
+li:hover .hover-button {
+	display: block;
+}
+.col-desc { width: 10rem; overflow:hidden; text-overflow: ellipsis; white-space:nowrap;  display: inline-block; text-align: left;}
+
+// Map container styles
+.map-container {
+    border-radius: var(--bs-border-radius);
+    overflow: hidden;
+    cursor: pointer;
+    background: transparent;
+    
+    &:hover {
+        opacity: 0.9;
+    }
+    
+    // Override Leaflet's default z-index to prevent it from appearing above header
+    ::ng-deep .leaflet-pane {
+        z-index: 0 !important;
+    }
+}

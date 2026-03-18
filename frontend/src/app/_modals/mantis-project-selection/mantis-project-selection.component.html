@@ -1,0 +1,61 @@
+<div class="modal d-block" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title" i18n="@@i18n.common.select_mantis_project">select MantisBT project</span>
+        <button type="button" class="btn-close" (click)="decline()" tabindex="0" (keydown.enter)="decline()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <input type="text"
+                 class="form-control"
+                 [(ngModel)]="searchTerm"
+                 placeholder="Search projects..."
+                 i18n-placeholder="@@i18n.mantis.search_projects">
+        </div>
+        <div class="project-list" style="max-height: 400px; overflow-y: auto;">
+          @if (getMantisProjects().length === 0) {
+            <div class="text-center text-muted py-4">
+              <p i18n="@@i18n.common.noProjectsFound">no projects found</p>
+            </div>
+          }
+          @for (p of getMantisProjects(); track p.id) {
+            <div class="card mb-2 project-card"
+                 [class.border-primary]="isSelected(p.id)"
+                 [class.selected]="isSelected(p.id)"
+                 (click)="selectProject(p.id)" tabindex="0" (keydown.enter)="selectProject(p.id)"
+                 style="cursor: pointer;">
+              <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center justify-content-between">
+                  <div class="flex-grow-1">
+                    <h6 class="mb-0">{{p.name}}</h6>
+                    @if (p.description) {
+                      <small class="text-muted">{{p.description}}</small>
+                    }
+                  </div>
+                  <div class="ms-3">
+                    @if (isSelected(p.id)) {
+                      <i class="bi bi-check-circle-fill text-primary"></i>
+                    }
+                    @if (p.enabled === false) {
+                      <span class="badge bg-secondary ms-2" i18n="@@i18n.common.disabled">disabled</span>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" (click)="decline()" tabindex="0" (keydown.enter)="decline()" i18n="@@i18n.common.cancel">cancel</button>
+        <button type="button"
+                class="btn btn-primary"
+                (click)="accept()" tabindex="0" (keydown.enter)="accept()"
+                [disabled]="!id"
+                hotkey="CTRL+ENTER"
+                i18n="@@i18n.common.ok">ok</button>
+      </div>
+    </div>
+  </div>
+</div>

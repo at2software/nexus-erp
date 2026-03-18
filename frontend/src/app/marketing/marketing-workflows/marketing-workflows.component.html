@@ -1,0 +1,154 @@
+
+<div class="row" col-slider>
+    <!-- Workflows List -->
+    <div class="col-md-3">
+        <div class="sticky-side">
+            @if (workflows.length === 0) {
+            <div class="card" data-tour="workflows-list">
+                <div class="card-header" i18n="@@i18n.marketing.workflows">workflows</div>
+                <empty-state [card]="false" class="marketing" i18n-title="@@i18n.marketing.no_workflows_created" title="no workflows yet">
+                  <p class="text-muted small" i18n="@@i18n.marketing.create_workflow_to_automate">Create a workflow to automate prospect engagement.</p>
+                </empty-state>
+            </div>
+            }
+
+            @if (workflows.length > 0) {
+            <div class="card" data-tour="workflows-list">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div i18n="@@i18n.marketing.workflows">workflows</div>
+                    <button data-tour="workflows-add-btn" class="btn btn-plain text-primary" (click)="showCreateModal = true" i18n-title="@@i18n.marketing.create_workflow" title="create workflow">
+                        <i class="text-primary">add</i>
+                    </button>
+                </div>
+                <ul class="list-group list-group-flush">
+                    @for (workflow of workflows; track workflow.id) {
+                    <li
+                        [nx]="workflow" [tables]="workflows"
+                        class="list-group-item list-group-item-action cursor-pointer"
+                        [class.active]="isWorkflowActive(workflow.id)"
+                        [routerLink]="['/marketing/workflows', workflow.id]"
+                    >
+                        <div class="d-flex justify-content-between align-items-center mb-0">
+                            <div class="flex-grow-1 text-truncate me-2">
+                                <span class="text-truncate">{{workflow.name}}</span>
+                            </div>
+                            <span class="badge bg-dark rounded-pill" [class.text-grey]="workflow.prospects_count === 0">
+                                {{workflow.prospects_count || 0}}
+                            </span>
+                        </div>
+                        @if (workflow.stats && workflow.stats.total > 0) {
+                        <div class="progress" style="height: 2px;">
+                            <div class="progress-bar {{STATS_COLORS.completed}}"
+                                [style.width.%]="workflow.stats.completed_percentage"
+                                [ngbTooltip]="workflow.stats.completed + ' completed'"></div>
+                            <div class="progress-bar {{STATS_COLORS.overdue}}"
+                                [style.width.%]="workflow.stats.overdue_percentage"
+                                [ngbTooltip]="workflow.stats.overdue + ' overdue'"></div>
+                            <div class="progress-bar {{STATS_COLORS.pending}}"
+                                [style.width.%]="workflow.stats.pending_percentage"
+                                [ngbTooltip]="workflow.stats.pending + ' pending'"></div>
+                            <div class="progress-bar"
+                                [style.background-color]="STATS_COLORS.skipped"
+                                [style.width.%]="workflow.stats.skipped_percentage"
+                                [ngbTooltip]="workflow.stats.skipped + ' skipped'"></div>
+                        </div>
+                        }
+                    </li>
+                    }
+                </ul>
+            </div>
+            }
+        </div>
+    </div>
+
+    <!-- Workflow Detail (Router Outlet) -->
+    <div class="col-md-9">
+        <router-outlet></router-outlet>
+    </div>
+</div>
+
+<!-- Create Workflow Modal -->
+<div class="modal fade" [class.show]="showCreateModal" [style.display]="showCreateModal ? 'block' : 'none'" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" i18n="@@i18n.marketing.create_workflow">create workflow</span>
+                <button type="button" class="btn-close" (click)="resetCreateForm()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="mb-3">
+                        <label for="workflowName" class="form-label">
+                            <span i18n="@@i18n.marketing.workflowName">workflow name</span>
+                            <span class="notranslate"> *</span>
+                        </label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="workflowName"
+                            [(ngModel)]="newWorkflow.name"
+                            name="name"
+                            placeholder="e.g., LinkedIn Nurture Sequence" i18n-placeholder="@@i18n.marketing.workflow_name_placeholder"
+                        >
+                        <small class="text-muted" i18n="@@i18n.marketing.workflow_reusable_template">create a reusable workflow template</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="workflowDescription" class="form-label" i18n="@@i18n.common.description">description</label>
+                        <textarea
+                            class="form-control"
+                            id="workflowDescription"
+                            [(ngModel)]="newWorkflow.description"
+                            name="description"
+                            rows="3"
+                            placeholder="Describe the purpose and steps of this workflow..." i18n-placeholder="@@i18n.marketing.workflow_description_placeholder"
+                        ></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="workflowActive"
+                                [(ngModel)]="newWorkflow.is_active"
+                                name="isActive"
+                            >
+                            <label class="form-check-label" for="workflowActive" i18n="@@i18n.common.active">active</label>
+                        </div>
+                        <small class="text-muted" i18n="@@i18n.marketing.workflow_active_description">active workflows can be attached to initiatives</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="resetCreateForm()" i18n="@@i18n.common.cancel">cancel</button>
+                <button 
+                    type="button" 
+                    class="btn btn-primary" 
+                    (click)="createWorkflow()" 
+                    [disabled]="!newWorkflow.name"
+                >
+                    <span i18n="@@i18n.marketing.create_workflow">create workflow</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (showCreateModal) {
+<div class="modal-backdrop fade show"></div>
+}
+
+<!-- ── Guided Tour Slides ──────────────────────────────────────────────────── -->
+
+<guided-tour
+  id="workflows-guide-what"
+  i18n-title="@@i18n.guidedTour.workflows.whatTitle" title="Marketing Workflows"
+  i18n-content="@@i18n.guidedTour.workflows.whatContent" content="Workflows are reusable activity templates — a predefined sequence of tasks (emails, calls, follow-ups) that you can apply to multiple initiatives. Define a process once, reuse it everywhere."
+  focusSelector="[data-tour='workflows-list']">
+</guided-tour>
+
+<guided-tour
+  id="workflows-guide-add"
+  i18n-title="@@i18n.guidedTour.workflows.addTitle" title="Create a Workflow"
+  i18n-content="@@i18n.guidedTour.workflows.addContent" content="Click the + button to create a new workflow template. Give it a name and description, then open it to add individual activity steps. Active workflows can be attached to any initiative."
+  focusSelector="[data-tour='workflows-add-btn']">
+</guided-tour>

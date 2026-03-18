@@ -1,0 +1,16 @@
+<activity-tab icon="widgets" [hidden]="!isEditMode">
+    <div class="container">
+        <scrollbar>
+            @if (isEditMode) {
+            <div cdkDropList id="widget-list" [cdkDropListData]="allWidgets" class="widget-list"
+                [cdkDropListConnectedTo]="['col-0', 'col-1', 'col-2', 'col-3']">
+                @for (widget of allWidgets; track widget.key) {
+                <div cdkDrag [cdkDragData]="widget" class="widget-preview" [class.widget-used]="isUsedWidget(widget.key)" ngbTooltip="{{isUsedWidget(widget.key) ? 'Widget already in use' : 'Drag to add widget'}}">
+                    <ng-container *ngComponentOutlet="widget.widget; inputs:{options:{}, is_editing:false}"></ng-container>
+                </div>
+                }
+            </div>
+            }
+        </scrollbar>
+    </div>
+</activity-tab>

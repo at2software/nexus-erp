@@ -1,0 +1,26 @@
+@for (user of users; track user.id) {
+  <div class="card mb-3">
+    <div class="card-header" i18n="@@i18n.hr.work_information">work information</div>
+    <div class="card-body">
+      <div class="input-group mb-3">
+        <span class="input-group-text" i18n="@@i18n.hr.workplace_zip">workplace zip</span>
+        <input
+          type="number"
+          class="form-control"
+          [autosave]="user"
+          autosaveKey="work_zip"
+          [(ngModel)]="user.work_zip"
+          placeholder="12345">
+          <input
+            type="text"
+            class="form-control"
+            [value]="getWorkplaceCity(user)"
+            readonly
+            placeholder="City" i18n-placeholder="@@i18n.common.city">
+          </div>
+        </div>
+      </div>
+      @if (user) {
+        <app-vcard [object]="user"></app-vcard>
+      }
+    }

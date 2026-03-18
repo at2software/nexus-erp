@@ -1,0 +1,54 @@
+<toolbar>
+  @if (!loading) {
+    <span class="badge bg-primary me-2">
+      {{customers.length}} customers with locations
+    </span>
+  }
+  @if (loading) {
+    <div class="spinner-border spinner-border-sm text-primary" role="status">
+      <span class="visually-hidden">
+          <span i18n="@@i18n.common.loading">loading</span>
+          <span class="notranslate">...</span>
+      </span>
+    </div>
+  }
+</toolbar>
+
+<div class="customers-map-container">
+
+  <div class="map-wrapper">
+    <div
+      #mapContainer
+      class="world-map"
+      [class.loading]="loading">
+    </div>
+
+    @if (loading) {
+      <div class="loading-overlay">
+        <div class="text-center">
+          <div class="spinner-border text-primary mb-3" role="status">
+            <span class="visually-hidden">
+                <span i18n="@@i18n.customers.loadingCustomers">loading customers</span>
+                <span class="notranslate">...</span>
+            </span>
+          </div>
+          <p class="text-muted">
+              <span i18n="@@i18n.customers.loadingCustomerLocations">loading customer locations</span>
+              <span class="notranslate">...</span>
+          </p>
+        </div>
+      </div>
+    }
+  </div>
+
+
+  @if (!loading && customers.length === 0) {
+    <div class="empty-state text-center py-5">
+      <i class="display-4 text-muted mb-3">location_off</i>
+      <span class="text-muted" i18n="@@i18n.customers.noCustomersWithCoordinatesFound">no customers with coordinates found</span>
+      <p class="text-muted" i18n="@@i18n.customers.customersNeedValidAddressInformation">
+        Customers need valid address information with geographic coordinates to appear on the map.
+      </p>
+    </div>
+  }
+</div>

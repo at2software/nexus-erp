@@ -1,0 +1,34 @@
+@if (parent.current) {
+  <app-header>
+    @if (parent.current.company) {
+      <div class="logo" [style.background-image]="'url(' + parent.current.company.icon + ')'" [smartLink]="`/customers/${parent.current.company_id}`"></div>
+    }
+    <div class="h1 d-flex align-items-center">
+      <div class="me-3">
+        {{parent.current.name}}
+      </div>
+      <div class="h1-small badge bg-{{parent.current.colorCss}} text-black align-bottom" ngbDropdown>
+        <div ngbDropdownToggle style="font-weight: normal; cursor: pointer;">
+          {{ parent.current.state() }}
+        </div>
+        <div ngbDropdownMenu>
+          @if (!parent.current.paid_at) {
+            <button ngbDropdownItem (click)="parent.current.setPaid().subscribe()">
+              <span i18n="@@i18n.invoice.markPaid">mark paid</span>
+            </button>
+          }
+          @if (parent.current.paid_at) {
+            <button ngbDropdownItem (click)="parent.current.setUnpaid().subscribe()">
+              <span i18n="@@i18n.invoice.markUnpaid">mark unpaid</span>
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+        <ul class="nav">
+          <header-link-item hotkey="CTRL+ALT+1" routerLink="." title="Invoice"></header-link-item>
+        </ul>
+      </app-header>
+    }
+
+    <router-outlet></router-outlet>

@@ -1,0 +1,20 @@
+@for (a of actions; track a) {
+  <li (click)="onClick(a)" (keyup.enter)="onClick(a)" tabindex="0" class="dropdown-item nx-menu" nxSubMenu>
+    <a class="d-flex text-decoration-none text-white align-items-center">
+      <div class="flex-fill me-3 text-truncate">{{a.title}}</div>
+      @if (a.hotkey) {
+        <div class="flex-shrink-0">
+          <span class="badge text-secondary">{{a.hotkey}}</span>
+        </div>
+      }
+      @if (a.children) {
+        <div class="flex-shrink-0">
+          <i class="text-muted">chevron_right</i>
+        </div>
+      }
+    </a>
+    @if (a.children) {
+      <nx-dropdown #subMenu class="autoposition autoposition-relative dropdown-menu" [actions]="children(a)!" [hidden]="!a.children" [parent]="this" ngbDropdownMenu></nx-dropdown>
+    }
+  </li>
+}

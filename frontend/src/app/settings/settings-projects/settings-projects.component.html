@@ -1,0 +1,21 @@
+<scrollbar #scroll>
+    <div class="row main">
+        <div class="col-md-3">
+            <div class="card sticky-side">
+                <div class="card-header" i18n="@@i18n.common.index">index</div>
+                
+                <ul class="list-group">
+                    <li class="list-group-item pointer" routerLink="general" routerLinkActive="active" i18n="@@i18n.common.general">general</li>
+                    <li class="list-group-item pointer" routerLink="quote" routerLinkActive="active" i18n="@@i18n.project.quoteText">quote text</li>
+                    <li class="list-group-item pointer" routerLink="payment-plans" routerLinkActive="active" i18n="@@i18n.payment.paymentPlans">payment plans</li>
+                    <li class="list-group-item pointer" routerLink="leads" routerLinkActive="active" i18n="@@i18n.project.leadSources">lead sources</li>
+                    <li class="list-group-item pointer" routerLink="milestones" routerLinkActive="active" i18n="@@i18n.common.milestones">milestones</li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <router-outlet></router-outlet>
+        </div>
+    </div>
+</scrollbar>
+<tab-placeholder-info></tab-placeholder-info>

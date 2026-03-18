@@ -1,0 +1,251 @@
+@font-face { font-family: 'Michroma'; font-style:normal; font-weight: normal; src: url('../fonts/Michroma-Regular.ttf'); }
+
+body {
+    background-color: #000;
+    color: #fff;
+    font-family: 'Michroma';
+    font-size: 36px;
+    padding: 10px;
+}
+
+/* Pill Container */
+.user-pill {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 0 15px;
+    border-radius: 50px;
+    min-height: 84px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.user-pill.user-offline {
+    opacity: 0.6;
+}
+
+/* Left side - User avatar */
+.pill-left {
+    flex-shrink: 0;
+    margin-right: 15px;
+}
+
+.user-image img {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    margin-top: 10px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+}
+
+.user-pill.user-offline .user-image img {
+    filter: grayscale(100%);
+    opacity: 0.7;
+}
+
+/* Middle - User info */
+.pill-content {
+    flex-grow: 1;
+    min-width: 0;
+    margin-right: 15px;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0px;
+    margin-top: -5px;
+}
+
+.user-name {
+    font-size: 32px;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #000;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.user-focus {
+    font-size: 22px;
+    margin-top: -10px;
+    color: rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+/* Right side - Work chart and average */
+.pill-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-shrink: 0;
+    margin-right: 15px;
+}
+
+.work-chart {
+    display: flex;
+    align-items: flex-end;
+    height: 50px;
+    gap: 1px;
+    padding: 0 10px;
+}
+
+.work-bar {
+    width: 5px;
+    border-radius: 2px;
+    transition: transform 0.2s;
+    cursor: pointer;
+}
+
+.work-bar:hover {
+    transform: scaleY(1.1);
+}
+
+.work-bar-default {
+    background-color: rgba(0, 0, 0, 0.9);
+}
+
+.work-bar-holiday {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+.work-bar-danger {
+    background-color: #F9001D;
+}
+
+.work-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0px;
+}
+
+.work-average {
+    font-size: 28px;
+    font-weight: bold;
+    text-align: right;
+    min-width: 100px;
+    color: #000;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.work-average .unit {
+    font-size: 18px;
+    color: rgba(0, 0, 0, 0.7);
+    margin-left: 2px;
+}
+
+.work-required {
+    font-size: 18px;
+    text-align: right;
+    min-width: 100px;
+    color: rgba(0, 0, 0, 0.6);
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.3);
+    margin-top: -8px;
+}
+
+.work-required .unit {
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.5);
+    margin-left: 2px;
+}
+
+.average-okay { color: #000; }
+.average-warning { color: #FFA200; }
+.average-danger { color: #F9001D; }
+
+/* Right side - Focus icon */
+.pill-focus-icon {
+    flex-shrink: 0;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pill-focus-icon img {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+}
+
+.status-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    padding: 12px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 3px solid rgba(255, 255, 255, 0.2);
+}
+
+.status-icon.sick {
+    background-color: transparent;
+    border: none;
+    filter: invert(0.8) sepia(1) saturate(5) hue-rotate(160deg);
+}
+
+.status-icon.vacation {
+    background-color: transparent;
+    border: none;
+    filter: invert(0.8) sepia(1) saturate(3) hue-rotate(180deg);
+}
+
+/* Offline state - black background with grey text */
+.user-pill.user-offline {
+    background-color: #000 !important;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-pill.user-offline .user-name,
+.user-pill.user-offline .user-focus,
+.user-pill.user-offline .work-average,
+.user-pill.user-offline .work-required {
+    color: #999 !important;
+}
+
+/* Sick and vacation pill border colors */
+.user-pill[style*="#00CED1"] {
+    border-color: #00CED1 !important;
+}
+
+.user-pill[style*="#00C000"] {
+    border-color: #00C000 !important;
+}
+
+/* Direct class-based styling for sick and vacation pills */
+.user-pill.pill-sick {
+    border: 3px solid #00CED1 !important;
+}
+
+.user-pill.pill-vacation {
+    border: 3px solid #008080 !important;
+}
+
+/* Override text color for sick (cyan) */
+.user-pill[style*="#00CED1"] .user-name,
+.user-pill[style*="#00CED1"] .user-focus,
+.user-pill.pill-sick .user-name,
+.user-pill.pill-sick .user-focus {
+    color: #00CED1 !important;
+}
+
+/* Override text color for vacation (teal) */
+.user-pill[style*="#00C000"] .user-name,
+.user-pill[style*="#00C000"] .user-focus,
+.user-pill.pill-vacation .user-name,
+.user-pill.pill-vacation .user-focus {
+    color: #008080 !important;
+}
+
+.user-pill.user-offline .work-bar-default {
+    background-color: rgba(153, 153, 153, 0.9) !important;
+}
+
+.user-pill.user-offline .work-bar-holiday {
+    background-color: rgba(153, 153, 153, 0.3) !important;
+}

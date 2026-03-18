@@ -1,0 +1,114 @@
+<div class="modal-header">
+    <h4 class="modal-title" i18n="@@i18n.hr.workingTimesPerDay">working hours per day</h4>
+    <button type="button" class="btn-close" (click)="activeModal.dismiss()" aria-label="Close"></button>
+</div>
+
+<div class="modal-body">
+    @if (user && user.active_employment) {
+      <div>
+          <!-- Current Working Hours (Read-Only) -->
+          <h6 class="mb-2" i18n="@@i18n.hr.currentWorkingHours">current working hours</h6>
+          <div class="d-flex w-100 mb-3">
+              <div class="flex-fill text-center">
+                  <div class="small text-muted" i18n="@@i18n.common.mondayInitial">m</div>
+                  <div>{{user.active_employment.mo}}</div>
+              </div>
+              <div class="flex-fill text-center">
+                  <div class="small text-muted" i18n="@@i18n.common.tuesdayInitial">t</div>
+                  <div>{{user.active_employment.tu}}</div>
+              </div>
+              <div class="flex-fill text-center">
+                  <div class="small text-muted" i18n="@@i18n.common.wednesdayInitial">w</div>
+                  <div>{{user.active_employment.we}}</div>
+              </div>
+              <div class="flex-fill text-center">
+                  <div class="small text-muted" i18n="@@i18n.common.tuesdayInitial">t</div>
+                  <div>{{user.active_employment.th}}</div>
+              </div>
+              <div class="flex-fill text-center">
+                  <div class="small text-muted" i18n="@@i18n.common.fridayInitial">f</div>
+                  <div>{{user.active_employment.fr}}</div>
+              </div>
+          </div>
+
+          <!-- New Working Hours (Editable) -->
+          <h6 class="mb-2" i18n="@@i18n.hr.newWorkingHours">new working hours</h6>
+          <div class="d-flex mb-3">
+              <div class="form-floating me-2">
+                  <input type="number" class="form-control text-end" placeholder="8" [(ngModel)]="newWorkingHours.mo" (ngModelChange)="calculateVacationAdjustment()">
+                  <div class="input-group-text col-4" i18n="@@i18n.common.mondayInitial">m</div>
+              </div>
+              <div class="form-floating me-2">
+                  <input type="number" class="form-control text-end" placeholder="8" [(ngModel)]="newWorkingHours.tu" (ngModelChange)="calculateVacationAdjustment()">
+                  <div class="input-group-text col-4" i18n="@@i18n.common.tuesdayInitial">t</div>
+              </div>
+              <div class="form-floating me-2">
+                  <input type="number" class="form-control text-end" placeholder="8" [(ngModel)]="newWorkingHours.we" (ngModelChange)="calculateVacationAdjustment()">
+                  <div class="input-group-text col-4" i18n="@@i18n.common.wednesdayInitial">w</div>
+              </div>
+              <div class="form-floating me-2">
+                  <input type="number" class="form-control text-end" placeholder="8" [(ngModel)]="newWorkingHours.th" (ngModelChange)="calculateVacationAdjustment()">
+                  <div class="input-group-text col-4" i18n="@@i18n.common.tuesdayInitial">t</div>
+              </div>
+              <div class="form-floating me-2">
+                  <input type="number" class="form-control text-end" placeholder="8" [(ngModel)]="newWorkingHours.fr" (ngModelChange)="calculateVacationAdjustment()">
+                  <div class="input-group-text col-4" i18n="@@i18n.common.fridayInitial">f</div>
+              </div>
+          </div>
+
+          <!-- Change Effective Date -->
+          <div class="mb-3">
+              <div class="form-label" i18n="@@i18n.hr.changeEffectiveDate">change effective date</div>
+              <div class="input-group">
+                  <input class="form-control" placeholder="yyyy-mm-dd" name="effectiveDate" [(ngModel)]="effectiveDate" ngbDatepicker #dp="ngbDatepicker" (ngModelChange)="calculateVacationAdjustment()">
+                  <button class="btn btn-primary" (click)="dp.open()" type="button">
+                      <i>calendar_today</i>
+                  </button>
+              </div>
+          </div>
+
+          <!-- Vacation Days Per Year -->
+          <div class="mb-3">
+              <div class="form-label" i18n="@@i18n.hr.vacationDaysPerYear">vacation days per year</div>
+              <input type="number" class="form-control" [(ngModel)]="vacationDaysPerYear" (ngModelChange)="calculateVacationAdjustment()" placeholder="30">
+          </div>
+
+          <!-- Vacation Calculation Info -->
+          @if (vacationCalculation) {
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h6 i18n="@@i18n.hr.vacationAdjustmentCalculation">vacation hours adjustment calculation</h6>
+                    <div class="small">
+                        <div><strong>
+                            <span i18n="@@i18n.hr.remainingMonthsUntilEndOf">remaining months until end of year</span>
+                            <span class="notranslate">:</span>
+                        </strong> {{vacationCalculation.remainingMonths}}</div>
+                        <div><strong>
+                            <span i18n="@@i18n.hr.averageDailyHoursChange">average daily hours change</span>
+                            <span class="notranslate">:</span>
+                        </strong> {{vacationCalculation.avgHoursChange | number:'1.2-2'}} hours</div>
+                        <div><strong>
+                            <span i18n="@@i18n.hr.vacationHoursAdjustment">vacation hours adjustment</span>
+                            <span class="notranslate">:</span>
+                        </strong>
+                            <span [class]="vacationCalculation.adjustmentHours >= 0 ? 'text-success' : 'text-danger'">
+                                {{vacationCalculation.adjustmentHours >= 0 ? '+' : ''}}{{vacationCalculation.adjustmentHours | number:'1.2-2'}} hours
+                            </span>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted" i18n="@@i18n.hr.calculationFormula">
+                                Formula: {{vacationDaysPerYear}} days × {{vacationCalculation.remainingMonths}}/12 months × {{vacationCalculation.avgHoursChange | number:'1.2-2'}} hours change
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+          }
+      </div>
+    }
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="activeModal.dismiss()" i18n="@@i18n.common.cancel">cancel</button>
+    <button type="button" class="btn btn-primary" [disabled]="!canUpdateHours()" (click)="onUpdateHours()" i18n="@@i18n.hr.updateWorkingHours">update working hours</button>
+</div>

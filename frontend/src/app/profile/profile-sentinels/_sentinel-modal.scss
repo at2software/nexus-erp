@@ -1,0 +1,76 @@
+// Shared VS Code-like Sentinel Modal Styles
+
+.sentinel-dropdown {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+
+  .btn {
+    background: var(--bs-card-bg);
+    border-color: var(--bs-border-color);
+
+    &:hover, &:focus {
+      background: var(--bs-card-cap-bg);
+    }
+  }
+
+  .dropdown-menu {
+    background: var(--bs-card-bg);
+    border-color: var(--bs-border-color);
+    padding: 0.25rem 0;
+  }
+
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+
+    &:hover, &:focus {
+      background: var(--bs-card-cap-bg);
+    }
+  }
+}
+
+.dropdown-menu-scroll {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.sentinel-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+.sentinel-input {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  background: var(--bs-card-bg);
+  border-color: var(--bs-border-color);
+  color: #ce9178;
+
+  &:focus {
+    background: var(--bs-card-bg);
+    border-color: var(--bs-primary);
+    color: #ce9178;
+  }
+}
+
+.sentinel-table {
+  color: #9cdcfe;
+  font-weight: 500;
+}
+
+.sentinel-value {
+  color: #ce9178;
+}
+
+.sentinel-operator {
+  color: #c586c0;
+}
+
+.sentinel-command {
+  color: #dcdcaa;
+  font-weight: 500;
+}

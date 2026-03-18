@@ -1,0 +1,54 @@
+@if (comment.is_mini) {
+<div class="px-3 hstack p-1 gap-2 font-monospace text-muted align-items-start" [nx]="comment">
+    @if (nicon || comment.var?.nicon) {
+    <div class="text-end" style="font-size: 1.2em;">
+        <n>{{ nicon || comment.var.nicon }}</n>
+    </div>
+    } @else {
+    <div class="avatar avatar-xs text-end">
+        <img [src]="comment.icon" class="avatar avatar-xs avatar-img" alt="User avatar" />
+    </div>
+    }
+    <div class="flex-fill small" title="{{comment.created_at | date}}"
+        [innerHTML]="getFormattedTextWithLink() | safe:'html'"></div>
+</div>
+} @else {
+<div class="px-3 hstack p-1 gap-2 align-items-start" title="{{comment.created_at | date}}" [nx]="comment">
+    @if (nicon || comment.var?.nicon) {
+    <div style="font-size: 1.5em; margin-top: 0.25rem;">
+        <n>{{ nicon || comment.var.nicon }}</n>
+    </div>
+    } @else {
+    <div class="callout-avatar">
+        @if (comment.user_id) {
+        <img src="{{comment.icon}}" class="avatar avatar-sm" alt="User avatar">
+        }
+    </div>
+    }
+    <div class="callout flex-fill" [class.callout-myself]="comment.isMyUser">
+        <div [innerHTML]="getFormattedTextWithLink() | safe:'html'"></div>
+        @if (comment.attachments?.length) {
+        <div class="attachments">
+            @for (a of comment.attachments; track a.id) {
+            @if (a.isImage) {
+            <img class="attachment-image" [src]="a.blobUrl" [alt]="a.name" [title]="a.name">
+            } @else {
+            <a class="attachment-file" [href]="a.blobUrl" [download]="a.name" [class.disabled]="!a.blobUrl">
+                <i>attach_file</i>
+                <span class="attachment-name">{{ a.name }}</span>
+                <span class="text-muted ms-auto small">{{ formatFileSize(a.size) }}</span>
+            </a>
+            }
+            }
+        </div>
+        }
+        @if (comment.reactions?.length) {
+        <div class="reactions">
+            @for (r of comment.reactions; track r.emoji) {
+            <span class="reaction bg-dark" title="{{ r.emoji }} {{ r.count }}">{{ r.emoji }} {{ r.count }}</span>
+            }
+        </div>
+        }
+    </div>
+</div>
+}

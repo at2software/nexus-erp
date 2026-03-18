@@ -1,0 +1,14 @@
+
+h1, h4 {
+    z-index: 1;
+    text-shadow: text-outline;
+    pointer-events: none;
+    -webkit-font-smoothing: antialiased;
+}
+.card {
+    position: relative;
+}
+.chart { border-bottom: 1px var(--color-lighter) solid; }
+::ng-deep {
+    .apexcharts-series .apexcharts-rangeArea { stroke-width: 0;}
+}

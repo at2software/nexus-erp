@@ -1,0 +1,132 @@
+@if (parent) {
+<div class="row">
+    @if (!allFoci.length) {
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header hstack gap-2">
+                <i>timer</i>
+                <span i18n="@@i18n.common.unbilledFoci">unbilled foci</span>
+            </div>
+            <empty-state [card]="false" class="invoices" title="all time trackers have been invoiced" [size]="9"></empty-state>
+        </div>
+        <div class="flow-arrow"></div>
+    </div>
+    }
+    @if (allFoci.length) {
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header hstack gap-2">
+                <i>timer</i>
+                <span i18n="@@i18n.common.unbilledFoci">unbilled foci</span>
+                <div class="card-header-actions">
+                    <input type="text" class="form-control" ngxDaterangepickerMd [(ngModel)]="span"
+                        [alwaysShowCalendars]="true" (datesUpdated)="datesUpdated()" [showCustomRangeLabel]="true"
+                        [ranges]="ranges" [showClearButton]="true" [locale]="{applyLabel: 'ok', format: 'DD.MM.YYYY'}"
+                        placeholder="custom date range" i18n-placeholder="@@i18n.common.customDateRange" />
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <table cdk-table [dataSource]="foci" class="table table-fixed foci-table mb-0">
+                    <colgroup>
+                        <col style="width:30px;">
+                        <col style="width:100px;">
+                        <col style="width:75px;">
+                        <col>
+                    </colgroup>
+                    <ng-container cdkColumnDef="user_id">
+                        <th cdk-header-cell *cdkHeaderCellDef class="text-end"></th>
+                        <td cdk-cell *cdkCellDef="let x" class="text-end small">
+                            <div class="avatar float-end">
+                                <img src="{{userIconFor(x.user_id)}}" class="avatar-img" alt="">
+                            </div>
+                        </td>
+                    </ng-container>
+                    <ng-container cdkColumnDef="started_at">
+                        <th cdk-header-cell *cdkHeaderCellDef class="text-end" i18n="@@i18n.common.startedAt">started at</th>
+                        <td cdk-cell *cdkCellDef="let x" class="text-end small">{{x.started_at | date}}</td>
+                    </ng-container>
+                    <ng-container cdkColumnDef="comment">
+                        <th cdk-header-cell *cdkHeaderCellDef class="text-truncate" i18n="@@i18n.common.comment">comment</th>
+                        <td cdk-cell *cdkCellDef="let x" class="text-truncate small">{{x.comment}}</td>
+                    </ng-container>
+                    <ng-container cdkColumnDef="duration">
+                        <th cdk-header-cell *cdkHeaderCellDef class="text-end text-truncate"
+                            i18n="@@i18n.common.duration">duration</th>
+                        <td cdk-cell *cdkCellDef="let x" class="text-end small">{{x.duration | number:'1.1-1'}} h</td>
+                    </ng-container>
+                    <tr cdk-header-row *cdkHeaderRowDef="fociColumns"></tr>
+                    <tr cdk-row class="align-middle border-black text-truncate" [nx]="row"
+                        *cdkRowDef="let row; columns: fociColumns;"></tr>
+                </table>
+            </div>
+        </div>
+        <div class="flow-arrow"></div>
+    </div>
+    }
+    @if (foci.length) {
+    <div class="col-md-3">
+        @if (selection.length === 0) {
+        <div class="card">
+            <div class="card-header hstack gap-2">
+                <i>checklist</i>
+                <span i18n="@@i18n.invoice.noItemsSelected">no items selected</span>
+            </div>
+            <empty-state [card]="false" title="select foci on the left to create invoice items" class="select"
+                [size]="3"></empty-state>
+        </div>
+        }
+        <div class="card" [class.d-none]="selection.length === 0">
+            <div class="card-header hstack gap-2">
+                <i>checklist</i>
+                <span>{{selection.length}} items selected</span>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="form-label" i18n="@@i18n.common.product"
+                        [class.text-warning]="!selectionProduct">product</div>
+                    <search-input class="form-control p-0" only="Product" [query]="selectionProduct?.name ?? ''"
+                        [has_icon]="true" (itemSelected)="onProductSelect($event)"></search-input>
+                </div>
+                <div class="mb-3">
+                    <div for="inputHours" class="form-label" i18n="@@i18n.common.sum">sum</div>
+                    <input type="text" class="form-control" suffix="h" [(ngModel)]="selectionSum">
+                </div>
+                <div class="mb-3">
+                    <div class="form-label" i18n="@@i18n.common.description">description</div>
+                    <input type="text" #desc class="form-control" [(ngModel)]="selectionDescription">
+                </div>
+                @if (company().vat_id) {
+                <div class="mb-3 card card-info" i18n="@@i18n.projects.vatexcemptionApplied">VAT-excemption applied</div>
+                }
+                <div class="text-end">
+                    @if (selectionProduct) {
+                    <button class="btn btn-primary w-100" (click)="onCreateNewItem()" hotkey="CTRL+ALT+ENTER" i18n="@@i18n.projects.createInvoiceItemCtrlaltenter">create
+                        invoice item
+                        (ctrl+alt+enter)</button>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="flow-arrow"></div>
+    </div>
+    }
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header text-truncate">
+                <n class="me-2">invoice</n> {{company().name}}
+                <div class="card-header-actions me-1"><a routerLink="/customers/{{company().id}}/billing">
+                    <i class="text-primary">chevron_right</i></a>
+                </div>
+            </div>
+            <ul class="list-group">
+                <li class="list-group-item d-flex" *nxFor="let x of items">
+                    <div class="flex-fill text-truncate" [innerHTML]="x.text | safe:'html'"></div>
+                    <div>
+                        <span class="badge bg-primary-4">{{x.net | money }}</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+}

@@ -1,0 +1,93 @@
+@use "sass:map";
+@use "sass:color";
+
+$blue        : #135BCD;  // projects
+$indigo      : #391AD2;
+$purple      : #7B0DCF;  // acquisitions
+$pink        : #DC0094;  // products
+$red         : #F9001D;  // customers
+$orange      : #FF6700;
+$yellow      : #FFA200;  // expenses
+$green       : #30E800;  // invoices
+$teal        : #00C9A7;  // prepared invoice stuff
+$cyan        : #0A8BC9;  // time-based-projects
+
+$bg-darker       : #050909;  // Deep, near-black green-gray
+$bg-card         : #101818;  // Deep, near-black green-gray
+$bg-body         : #162020;  // For cards, modals, navbars
+$bg-hover        : #1d2929;  // For hover states
+$bg-muted: #233232;  // For inputs, secondary containers
+
+$primary  : $teal;
+$primary-1: #69d8c5;
+$primary-2: #2bcbb0;
+$primary-3: #008972;
+$primary-4: #005d4e;
+$secondary: $pink;
+$success  : #6bf57e;
+$warning  : #e2f56b;
+$danger   : #f57e6b;
+$info     : #6be2f5;
+
+$custom-colors: (
+    'blue'       : #135BCD,     // projects
+    'indigo'     : #391AD2,
+    'purple'     : #7B0DCF,     // acquisitions
+    'pink'       : #DC0094,     // products
+    'red'        : #F9001D,     // customers
+    'orange'     : #FF6700,
+    'yellow'     : #FFA200,     // expenses
+    'green'      : #30E800,     // invoices
+    'teal'       : #00C9A7,     // prepared invoice stuff
+    'cyan'       : #0A8BC9,     // time-based-projects
+    'cyan-teal'  : #05AAB8,     // customer support (between cyan and teal)
+    'grey'       : #888888,     //
+    'dark-grey'  : #444444,     //
+    primary-0    : #00c9a7,
+    primary-1    : #69d8c5,
+    primary-2    : #2bcbb0,
+    primary-3    : #008972,
+    primary-4    : #005d4e,
+);
+
+$custom-colors: map.merge($custom-colors, (
+    'blue'          : map.get($custom-colors, 'blue'),
+    'indigo'        : map.get($custom-colors, 'indigo'),
+    'purple'        : map.get($custom-colors, 'purple'),
+    'pink'          : map.get($custom-colors, 'pink'),
+    'red'           : map.get($custom-colors, 'red'),
+    'orange'        : map.get($custom-colors, 'orange'),
+    'yellow'        : map.get($custom-colors, 'yellow'),
+    'green'         : map.get($custom-colors, 'green'),
+    'teal'          : map.get($custom-colors, 'teal'),
+    'cyan'          : map.get($custom-colors, 'cyan'),
+    'cyan-teal'     : map.get($custom-colors, 'cyan-teal'),
+    'danger'        : map.get($custom-colors, 'red'),
+    'danger-darker' : color.adjust(map.get($custom-colors, 'red'), $lightness: -30%),
+    'warning'       : map.get($custom-colors, 'yellow'),
+    'warning-darker': color.adjust(map.get($custom-colors, 'yellow'), $lightness: -30%),
+    'success'       : map.get($custom-colors, 'green'),
+    'success-darker': color.adjust(map.get($custom-colors, 'green'), $lightness: -30%),
+    'info'          : map.get($custom-colors, 'teal'),
+    'info-darker'   : color.adjust(map.get($custom-colors, 'teal'), $lightness: -30%),
+    'primary-4'     : color.adjust(map.get($custom-colors, 'primary-0'), $lightness: -30%),
+    'card'   : $bg-card,
+));
+
+@function col($_) { @return map.get($custom-colors, $_); }
+
+$outline-width: 2px;
+
+@each $key, $value in $custom-colors { 
+    .bg-#{$key} { background-color: #{$value} !important; } 
+    .text-#{$key} { color: #{$value} !important; } 
+}
+
+:root {
+    @each $key, $value in $custom-colors {
+        --color-#{$key}: #{$value};
+        --bs-#{$key}: #{$value};
+    }
+    --color-primary-filter: invert(0.5) sepia(1) saturate(5) hue-rotate(130deg); // sepia is 40° hue
+    --text-outline: --color-background-0 0 0 3px, --color-background-0 #{$outline-width} -#{$outline-width} 3px, --color-background-0 #{$outline-width} #{$outline-width} 3px, --color-background-0 -#{$outline-width} -#{$outline-width} 3px, --color-background-0 -#{$outline-width} #{$outline-width} 3px;
+}

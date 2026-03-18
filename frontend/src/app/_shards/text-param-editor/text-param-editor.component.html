@@ -1,0 +1,147 @@
+@if (param && annotations) {
+  <div class="annotation">
+    @if (param.fallback) {
+      <div class="d-flex small text-muted">
+        <div role="button" class="me-1 text-primary" smartLink="/settings/projects"><i>info</i></div>
+        <div class="flex-fill text-muted" i18n="@@i18n.common.defaultText">default text</div>
+      </div>
+    }
+    @if (!param.fallback) {
+      <div class="d-flex small text-muted">
+        <div role="button" class="me-1 text-danger cursor-pointer"><i (click)="resetParam()" (keyup.enter)="resetParam()" tabindex="0">delete</i></div>
+        <div class="flex-fill text-muted" i18n="@@i18n.common.customText">custom text</div>
+      </div>
+    }
+  </div>
+}
+
+@if (param) {
+  <div class="hstack gap-2 btn btn-fancy btn-fancy-te" style="padding: 3px 10px 0 !important; z-index: 1; cursor: default;">
+    @if (showModalLocalizationControls) {
+      @if (isLocalized) {
+        <div class="p-1" ngbTooltip="Localized" i18n-ngbTooltip="@@i18n.common.localized"><i class="text-success">translate</i></div>
+      } @else {
+        <div class="cursor-pointer p-1" (click)="localize()" tabindex="0" (keyup.enter)="localize()" ngbTooltip="localize" i18n-ngbTooltip="@@i18n.common.localize"><i class="text-primary">translate</i></div>
+      }
+    }
+    <div class="cursor-pointer p-1" (click)="open(content)" (keyup.enter)="open(content)" tabindex="0"><i>edit</i></div>
+  </div>
+}
+
+<div class="preview-container" [class.has-max-height]="maxHeight && !isExpanded">
+  <div class="preview" [ngStyle]="getPreviewStyle()">
+    @if (param) {
+      @for (seg of getContentSegments(); track $index) {
+        @if (seg.type === 'html') {
+          <div [innerHTML]="seg.content | safe:'html'"></div>
+        }
+        @if (seg.type === 'payment-plan') {
+          @if (object) {
+            <payment-plan-editor [object]="object"></payment-plan-editor>
+          } @else {
+            <code class="text-muted">[payment-plan]</code>
+          }
+        }
+      }
+    }
+  </div>
+
+  <!-- Accordion toggle button with gradient overlay (only show if maxHeight is set) -->
+  @if (maxHeight) {
+    <div class="accordion-toggle">
+      @if (!isExpanded) {
+        <div class="gradient-overlay"></div>
+      }
+      <i class="text-primary pointer" (click)="toggleExpanded()" (keyup.enter)="toggleExpanded()" tabindex="0">{{isExpanded ? 'expand_less' : 'expand_more'}}</i>
+    </div>
+  }
+</div>
+
+<ng-template #content let-modal>
+  <div class="modal-body">
+    <angular-editor #editor [config]="config" [(ngModel)]="editorValue">
+      <ng-template #customButtons let-executeCommandFn="executeCommandFn">
+        <!-- Localize button (only for global params when not yet localized) -->
+        @if (showModalLocalizationControls && !isLocalized) {
+          <button aeButton
+            title="localize"
+            i18n-title="@@i18n.common.localize"
+            (click)="localize()">
+            <i>translate</i>
+          </button>
+        }
+        <!-- Language selector (only for global params when localized) -->
+        @if (showModalLocalizationControls && isLocalized) {
+          <select
+            class="form-select form-select-sm"
+            style="width: auto; height: 32px; display: inline-block; vertical-align: middle;"
+            [ngModel]="selectedLocaleKey"
+            (ngModelChange)="onLocaleChange($event)"
+          >
+            @for (variant of availableLocales; track variant.language + variant.formality) {
+              <option [value]="variant.language + '-' + variant.formality">
+                {{ variant.label }}
+              </option>
+            }
+            <option value="remove" i18n="@@i18n.common.removeLocalization">remove localization</option>
+          </select>
+        }
+        <button aeButton
+          title="Insert Image from Marketing Assets"
+          (click)="onCustomImageInsert(executeCommandFn)">
+          <i>collections</i>
+        </button>
+      </ng-template>
+    </angular-editor>
+  </div>
+  <button type="button" class="btn btn-fancy btn-fancy-be" (click)="modal.close('Save click')" i18n="@@i18n.common.save">save</button>
+</ng-template>
+
+<!-- Image Selection Modal -->
+<ng-template #imageSelectionModal let-modal>
+  <div class="modal-header">
+    <div class="modal-title" i18n="@@i18n.common.selectImageFromMarketingAssets">select image from marketing assets</div>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <div class="modal-body">
+    @if (loadingImages) {
+      <div class="text-center py-4">
+        <div class="spinner-border" role="status">
+          <span class="visually-hidden">
+              <span i18n="@@i18n.common.loading">loading</span>
+              <span class="notranslate">...</span>
+          </span>
+        </div>
+        <div class="mt-2">
+            <span i18n="@@i18n.common.loadingImages">loading images</span>
+            <span class="notranslate">...</span>
+        </div>
+      </div>
+    }
+
+    @if (!loadingImages) {
+      <div class="row g-3">
+        @for (image of images; track image.id) {
+          <div class="col-6 col-md-4 col-lg-3">
+            <div class="card image-card h-100" (click)="selectImageFromModal(image, modal)" (keyup.enter)="selectImageFromModal(image, modal)" tabindex="0">
+              <img [src]="image.thumbnail || image.preview_url || image.download_url"
+                [alt]="image.name"
+                class="card-img-top"
+                style="height: 120px; object-fit: cover;">
+                <div class="card-body p-2">
+                  <small class="text-muted d-block text-truncate" [title]="image.name">{{image.name}}</small>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      @if (!loadingImages && images.length === 0) {
+        <div class="text-center py-4">
+          <i class="text-muted" style="font-size: 48px;">image</i>
+          <div class="mt-2 text-muted" i18n="@@i18n.common.noImagesAvailable">no images available</div>
+        </div>
+      }
+    </div>
+  </ng-template>

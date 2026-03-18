@@ -1,0 +1,32 @@
+
+
+input {
+  width: 100%;
+  color: white;
+  background-color: transparent;
+  border: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+input::placeholder {
+  color: white;
+}
+
+.header-container {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+button {
+  flex-shrink: 0;
+}
+
+table-header-sort-button {
+  display: none;
+}
+
+.header-container:hover table-header-sort-button {
+  display: block;
+}

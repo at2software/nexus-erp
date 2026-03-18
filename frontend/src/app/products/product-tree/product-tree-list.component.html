@@ -1,0 +1,45 @@
+<div class="tree-row"
+     [class.active]="isCurrentGroup()"
+     [class.deprecated]="!group.is_active"
+     [class.d-none]="!showDeprecated && !group.is_active"
+     [style.padding-left.px]="depth * 16"
+     [nx]="group"
+     [routerLink]="['/products/group', group.id]"
+     routerLinkActive="active">
+  <i class="tree-chevron"
+     [class.expanded]="expanded"
+     [class.invisible]="group.child_groups.length + group.products.length === 0"
+     (click)="expand($event)" (keyup.enter)="expand($event)" tabindex="0">chevron_right</i>
+  <i class="tree-icon" [style.color]="group.color">{{expanded ? 'folder_open' : 'folder'}}</i>
+  <span class="tree-label text-truncate">{{group.name}}</span>
+  @if (group.symbol.length) {
+    <code class="tree-symbol ms-auto ps-2">[{{group.symbol}}]</code>
+  }
+</div>
+
+@if (expanded) {
+  @for (x of group.child_groups; track x.id) {
+    <product-tree-list [group]="x" [showDeprecated]="showDeprecated" [depth]="depth + 1"></product-tree-list>
+  }
+  @for (p of group.products; track p.id) {
+    <div class="tree-row"
+         [class.deprecated]="!p.is_active"
+         [class.d-none]="!showDeprecated && (!p.is_active || !group.is_active)"
+         [class.active]="isCurrentProduct(p.id)"
+         [style.padding-left.px]="(depth + 1) * 16 + 20"
+         [nx]="p"
+         [routerLink]="['/products', p.id]"
+         routerLinkActive="active">
+      @if (hasRecurrence(p)) {
+        <i class="tree-icon text-cyan" ngbTooltip="recurring product" i18n-ngbTooltip="@@i18n.products.recurringProduct">repeat</i>
+      } @else if (p.time_based === 1) {
+        <i class="tree-icon text-teal" ngbTooltip="time based (hour)" i18n-ngbTooltip="@@i18n.products.timeBasedHour">schedule</i>
+      } @else if (p.time_based === 8) {
+        <i class="tree-icon text-cyan" ngbTooltip="time based (day)" i18n-ngbTooltip="@@i18n.products.timeBasedDay">schedule</i>
+      } @else {
+        <i class="tree-icon" [style.color]="p.is_active ? group.color : '#666'" ngbTooltip="budget based" i18n-ngbTooltip="@@i18n.products.budgetBased">attach_money</i>
+      }
+      <span class="tree-label text-truncate">{{p.name}}</span>
+    </div>
+  }
+}

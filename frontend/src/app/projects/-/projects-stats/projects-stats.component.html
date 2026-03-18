@@ -1,0 +1,59 @@
+@if (isLoaded && !hasData) {
+  <div class="card mb-3">
+    <empty-state [card]="false" class="projects" i18n-title="@@i18n.projects.statsEmpty" title="no project statistics yet">
+      <p class="text-muted small" i18n="@@i18n.projects.statsEmptyBody">Statistics will appear once projects with tracked time and budgets are recorded.</p>
+    </empty-state>
+  </div>
+}
+@if (!isLoaded || hasData) {
+<div class="row">
+  <div class="col-4">
+    @if (data.svb) {
+      <div class="card mb-3">
+        <div class="card-header">
+          service vs. budget
+          <div class="card-header-actions">
+            <i class="pointer" ngbTooltip="stacked" [class.text-primary]="data.svb.chart.stacked" [class.text-muted]="!data.svb.chart.stacked" (click)="onSvbStackedToggle()" (keyup.enter)="onSvbStackedToggle()" tabindex="0">stacked_bar_chart</i>
+          </div>
+        </div>
+        <div class="card-body">
+          <apx-chart-x [options]="data.svb"></apx-chart-x>
+        </div>
+      </div>
+    }
+
+    <div class="card mb-3">
+      <div class="card-header" i18n="@@i18n.projects.leadSuccessByDesicionDuration">lead success by desicion duration</div>
+      <div class="card-body">
+        @if (data.project_success_duration) {
+          <apx-chart-x [options]="data.project_success_duration"></apx-chart-x>
+        }
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header" i18n="@@i18n.projects.leadSuccessByBudgetSize">lead success by budget size</div>
+      <div class="card-body">
+        @if (data.project_success_value) {
+          <apx-chart-x [options]="data.project_success_value"></apx-chart-x>
+        }
+      </div>
+    </div>
+  </div>
+  <div class="col-8">
+    <div class="card mb-3">
+      <div class="card-header d-flex">
+        <div class="flex-fill" i18n="@@i18n.projects.infoRealWorkingTimeVsQuoteEstimation">real working time vs. quote estimation (only finished projects)</div>
+        <div>
+          <input type="text" class="form-control" (change)="reloadQuoteAccuracy()" ngxDaterangepickerMd [(ngModel)]="period" [alwaysShowCalendars]="true" [locale]="{applyLabel: 'ok', format: 'YYYY-MM-DD'}">
+        </div>
+      </div>
+      <div class="card-body">
+        @if (data.quote_accuracy) {
+          <apx-chart-x [options]="data.quote_accuracy"></apx-chart-x>
+        }
+      </div>
+    </div>
+  </div>
+</div>
+}

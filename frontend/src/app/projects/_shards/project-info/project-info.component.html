@@ -1,0 +1,130 @@
+@if (shouldShowBudgetChart()) {
+<div class="card mb-3">
+  <div class="card-header" i18n="@@i18n.common.budgetAllocation">budget allocation</div>
+    <div class="budget-chart-wrapper w-100"
+         [class.over-budget]="getTimePercentage() >= 1"
+         [ngStyle]="budgetWrapperStyle">
+      @if (budgetChartOptions) {
+        <apx-chart
+          [series]="budgetChartOptions.series"
+          [chart]="budgetChartOptions.chart"
+          [labels]="budgetChartOptions.labels"
+          [colors]="budgetChartOptions.colors"
+          [stroke]="budgetChartOptions.stroke"
+          [plotOptions]="budgetChartOptions.plotOptions"
+          [tooltip]="budgetChartOptions.tooltip"
+          [legend]="budgetChartOptions.legend"
+          [dataLabels]="budgetChartOptions.dataLabels"
+        ></apx-chart>
+      }
+    </div>
+</div>
+}
+
+<div class="card mb-3">
+  <div class="card-header" i18n="@@i18n.common.analysis">analysis</div>
+  <ul class="list-group">
+    @if (!project.is_internal && global.user?.hasRole('invoicing')) {
+      <li class="list-group-item hstack gap-2">
+        <div class="flex-fill" i18n="@@i18n.common.totalBudget">total budget</div>
+        <div>{{project.net | money}}</div>
+      </li>
+    }
+    @if (project.is_time_based && global.user?.hasRole('invoicing')) {
+      <li class="list-group-item hstack gap-2">
+        <div class="flex-fill" i18n="@@i18n.common.last12Months">last 12 months</div>
+        <div>{{project.revenue_last_12 | money}}</div>
+      </li>
+    }
+    @if (!project.is_internal && !project.is_time_based && !project.state.isPrepared() && global.user?.hasRole('invoicing')) {
+      <li class="list-group-item hstack gap-2"
+        >
+        <div class="flex-fill" i18n="@@i18n.common.remaining">remaining</div>
+        <div>{{project.net_remaining | money}}</div>
+      </li>
+    }
+    @if (!project.is_time_based) {
+      <li class="list-group-item hstack gap-2">
+        @if (!project.is_time_based && !project.is_internal) {
+          <chart-progress class="bg-transparent"
+            [value]="project.hours_invested"
+            [max]="project.work_estimated ?? 0" suffix="h" scss="primary" title="time"
+          i18n-title="@@i18n.common.time"></chart-progress>
+        }
+      </li>
+    }
+    @if (workSharesTotal() > 0) {
+      <li class="list-group-item hstack gap-2">
+        <div class="bg-transparent w-100 d-flex flex-column">
+          <div class="info d-flex w-100">
+            <div class="title text-truncate text-start flex-fill" i18n="@@i18n.common.workShares">work shares</div>
+            <div class="desc text-end">{{project.hours_invested | number: '1.1-1'}}h</div>
+          </div>
+          <div class="progress w-100" style="height:5px;">
+            @for (u of project.var.workshares; track u) {
+              <div class="progress-bar progress-bar-striped bg-gradient" [style.backgroundColor]="u.color"
+                role="progressbar" [style.width.%]="workSharesPerc(u)"
+                ngbTooltip="{{u.name}} ({{ workSharesPerc(u) | number: '1.0-0' }}%)">
+              </div>
+            }
+          </div>
+        </div>
+      </li>
+    }
+    @if (getMilestoneTotal() > 0) {
+      <li class="list-group-item hstack gap-2 cursor-pointer text-primary" routerLink="./milestones">
+        <div class="w-100 d-flex flex-column">
+          <div class="info d-flex w-100">
+            <div class="title text-truncate text-start flex-fill" i18n="@@i18n.common.milestones">milestones</div>
+            <div class="desc text-end hstack gap-1">
+              <span class="text-success" [ngbTooltip]="getMilestoneStateTooltip(2)">{{(project.milestone_state_counts?.done || 0)}}</span>
+              <span class="text-muted">|</span>
+              <span class="text-primary" [ngbTooltip]="getMilestoneStateTooltip(1)">{{(project.milestone_state_counts?.in_progress || 0)}}</span>
+              <span class="text-muted">|</span>
+              <span class="text-muted" [ngbTooltip]="getMilestoneStateTooltip(0)">{{(project.milestone_state_counts?.todo || 0)}}</span>
+            </div>
+          </div>
+          <div class="progress w-100" style="height:5px;">
+            @for (state of getMilestoneStates(); track state) {
+              <div class="progress-bar" [style.backgroundColor]="state.color"
+                role="progressbar" [style.width.%]="getMilestonePerc(state.count)"
+                >
+              </div>
+            }
+          </div>
+        </div>
+      </li>
+    }
+    <li class="list-group-item hstack gap-2">
+      <div class="flex-fill" i18n="@@i18n.common.created_at">created at</div>
+      <div>{{project.created_at | date}}</div>
+    </li>
+    @if (project.finished_at) {
+      <li class="list-group-item hstack gap-2">
+        <div class="flex-fill" i18n="@@i18n.common.finishedAt">finished at</div>
+        <div>{{project.finished_at | date}}</div>
+      </li>
+    }
+  @if (project.is_time_based && !project.is_internal) {
+    <li class="list-group-item hstack gap-2 text-primary cursor-pointer"
+      roles="financial" routerLink="./invoicing">
+      <div class="flex-fill" i18n="@@i18n.common.unbilledFoci">unbilled foci</div>
+      <div class="p3-0">
+        {{project.uninvoiced_hours | number: '1.1-1'}}h
+      </div>
+      <div class="text-primary align-center">
+        <i class="cursor-pointer ">chevron_right</i>
+      </div>
+    </li>
+  }
+  @if (project.state.isPrepared()) {
+    <li class="list-group-item hstack gap-2 text-primary cursor-pointer" (click)="updateLeadProbability()" (keyup.enter)="updateLeadProbability()" tabindex="0">
+      <div class="flex-fill" i18n="@@i18n.project.leadProbability">lead probability</div>
+      <div>{{(project.lead_probability ?? 0) * 100 | number: '1.0-0'}}%</div>
+      <div class="input-group-text bg-transparent text-primary align-center">
+        <i class="cursor-pointer">edit</i>
+      </div>
+    </li>
+  }
+</ul>
+</div>

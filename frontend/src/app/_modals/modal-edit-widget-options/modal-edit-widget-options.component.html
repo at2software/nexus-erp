@@ -1,0 +1,35 @@
+<div class="modal d-block" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title" i18n="@@i18n.common.options">options</span>
+      </div>
+      <div class="modal-body">
+        <div class="widget-options">
+          @for (key of getKeys(); track key) {
+            <div class="hstack gap-2 flex-nowrap">
+              @if (isBoolean(key)) {
+                <div class="form-check form-switch">
+                  <input class="form-check-input me-2" type="checkbox" [checked]="options[key].value" (change)="_onUpdate($event, key)">
+                </div>
+              }
+              <div class="flex-fill text-truncate">
+                <span id="basic-addon1">{{getValue(key).i18n}}</span>
+              </div>
+              @if (isNumber(key)) {
+                <input type="number" class="form-control text-end flex-shrink-0" style="width: 120px;" [ngModel]="options[key].value" (blur)="_onUpdate($event, key)" placeholder="{{key}}">
+              }
+              @if (isString(key)) {
+                <input type="text" class="form-control flex-shrink-0" style="width: 200px;" [ngModel]="options[key].value" (blur)="_onUpdate($event, key)" placeholder="{{key}}">
+              }
+            </div>
+          }
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" (click)="decline()" data-bs-dismiss="modal" i18n="@@i18n.common.cancel">cancel</button>
+        <button type="button" class="btn btn-primary" (click)="accept()" hotkey="CTRL+ENTER" i18n="@@i18n.common.ok">ok</button>
+      </div>
+    </div>
+  </div>
+</div>

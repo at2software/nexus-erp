@@ -1,0 +1,43 @@
+<ng-template #milestonesTemplate let-items="items" let-title="title" let-color="color">
+    @if (items.length) {
+    <div class="header text-{{color}} align-items-center hstack gap-2">
+        <n>nexus</n>
+        <span>{{title}}</span>
+    </div>
+    <ul class="list-group">
+        @for (_ of items; track _.track_id) {
+        <li class="list-group-item d-flex" [ngbTooltip]="_.name" [nx]="_" [tables]="items">
+            <div class="avatar float-end mt-1 d-flex me-3">
+                <avatar [object]="_.project"></avatar>
+            </div>
+            <div class="flex-fill text-truncate">{{_.name}}</div>
+            @if (!_.isCurrentUserAssigned() && _.user) {
+            <avatar [object]="_.user"></avatar>
+            }
+        </li>
+        }
+    </ul>
+    }
+</ng-template>
+
+<ng-container *ngTemplateOutlet="milestonesTemplate; context: { items: milestonesOverdue, title: 'overdue milestones', color: 'danger' }"></ng-container>
+<ng-container *ngTemplateOutlet="milestonesTemplate; context: { items: milestonesNeedStarting, title: 'milestones that need to be started', color: 'warning' }"></ng-container>
+<ng-container *ngTemplateOutlet="milestonesTemplate; context: { items: milestonesNeedAssignment, title: 'milestones that need assignment', color: 'warning' }"></ng-container>
+<ng-container *ngTemplateOutlet="milestonesTemplate; context: { items: milestonesNoDuration, title: 'milestones without work duration', color: 'info' }"></ng-container>
+<ng-container *ngTemplateOutlet="milestonesTemplate; context: { items: milestonesRunning, title: 'running milestones', color: 'muted' }"></ng-container>
+
+@if (projectsNoCoverage.length) {
+<div class="header text-warning align-items-center hstack gap-2">
+    <n>nexus</n>
+    <span i18n="@@i18n.activity.projectsNoCoverage">projects without milestone coverage</span>
+</div>
+<ul class="list-group">
+    @for (project of projectsNoCoverage; track project.id) {
+    <li class="list-group-item hstack gap-2" [nx]="project">
+        <avatar [object]="project"></avatar>
+        <div class="flex-fill text-truncate">{{project.name}}</div>
+        <span class="badge bg-warning text-dark align-self-center" i18n="@@i18n.milestones.noCoverage">no coverage</span>
+    </li>
+    }
+</ul>
+}

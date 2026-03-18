@@ -1,0 +1,33 @@
+@for (user of users; track user.id) {
+  <div class="stats-user-row d-flex align-items-center border-bottom py-1 px-3">
+    <div class="flex-fill pe-3">
+      @if (chartOptions[user.id]) {
+        <div echarts
+          [options]="chartOptions[user.id]"
+          class="w-100"
+          style="height: 130px;"
+          >
+        </div>
+      }
+    </div>
+    @if (user.monthly_accuracy.length > 0) {
+      <div style="width: 130px;">
+        <div class="ratio ratio-1x1">
+          @if (donutChartOptions[user.id]) {
+            <div echarts
+              [options]="donutChartOptions[user.id]"
+              class="w-100 h-100"
+              >
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}
+
+@if (users.length === 0) {
+  <empty-state [card]="false" class="hr" i18n-title="@@i18n.hr.no_prediction_data" title="no prediction data yet">
+    <p class="text-muted small" i18n="@@i18n.hr.prediction_data_note">Data will appear once projects with time predictions are completed.</p>
+  </empty-state>
+}

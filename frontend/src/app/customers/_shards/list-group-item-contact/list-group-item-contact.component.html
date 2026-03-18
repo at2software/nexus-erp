@@ -1,0 +1,64 @@
+@if (hasImage()) {
+  <div>
+    @if (isUser()) {
+      <avatar [object]="asUser()"></avatar>
+    }
+    @if (isCompanyContact()) {
+      <avatar [object]="asCompanyContact()"></avatar>
+    }
+    @if (badgeColor) {
+      <span class="avatar-status" [style.background-color]="badgeColor + ' !important'"></span>
+    }
+  </div>
+}
+@if (isCompanyContact()) {
+  <div class="cursor-pointer align-bottom">
+    <i class="text-{{this.asCompanyContact().is_favorite ? 'yellow' : 'muted'}}" (click)="toggleFav($event)" (keyup.enter)="toggleFav($event)" tabindex="0">star</i>
+  </div>
+}
+<div class="d-flex flex-fill align-items-center">
+  <span class="flex-fill text-truncate">
+    @if (contact.honoraryPrefix.length || false) {
+    <span class="text-muted small">{{contact.honoraryPrefix}} </span>
+    }
+    <span [class.fw-bold]="contact.getPersonal()?.getFormality() !== 'formal'" [class.text-muted]="contact.getPersonal()?.getFormality() !== 'informal'">{{contact.firstName}} </span>
+    <span [class.fw-bold]="contact.getPersonal()?.getFormality() === 'formal'" [class.text-muted]="contact.getPersonal()?.getFormality() === 'informal'">{{contact.familyName}}</span>
+    @if (contact.honorarySuffix.length || false) {
+    <span class="text-muted small"> {{contact.honorarySuffix}}</span>
+    }
+  </span>
+  <div class="d-flex gap-1">
+    @if (getMantisUserId() && mantisInstance) {
+      <a (click)="openMantisProfile($event)" (keyup.enter)="openMantisProfile($event)" tabindex="0" [ngbTooltip]="getMantisTooltip()" container="parent" placement="bottom" style="cursor: pointer;">
+        <n [class]="getMantisIconClass()" style="font-size: 0.7rem;">mantis</n>
+      </a>
+    }
+    @if (getGitUsername() && gitInstance) {
+      <a (click)="openGitProfile($event)" (keyup.enter)="openGitProfile($event)" tabindex="0" [ngbTooltip]="getGitTooltip()" container="parent" placement="bottom" style="cursor: pointer;">
+        <n [class]="getGitIconClass()" style="font-size: 0.7rem;">git</n>
+      </a>
+    }
+    @if (getMattermostUserId() && mattermostInstance) {
+      <a (click)="openMattermostProfile($event)" (keyup.enter)="openMattermostProfile($event)" tabindex="0" [ngbTooltip]="getMattermostTooltip()" container="parent" placement="bottom" style="cursor: pointer;">
+        <n [class]="getMattermostIconClass()" style="font-size: 0.7rem;">mattermost</n>
+      </a>
+    }
+  </div>
+</div>
+<div class="content">
+  <ng-content></ng-content>
+</div>
+@if (contact.card && showQuickContact) {
+  <span class="quickContacts text-nowrap">
+    @for (p of contact.card.get('TEL'); track p.track_id) {
+      <a class="ms-1" href="tel:{{trimmed(p.val())}}" [ngbTooltip]="p.type() + trimmed(p.val())" container="parent" placement="bottom"><i>{{p.contactIcon()}}</i></a>
+      @if (p.isMobile()) {
+        <a class="ms-1" href="https://web.whatsapp.com/send/?phone={{whatsapp(p.val())}}&text&type=phone_number&app_absent=0" target="whatsappweb" ngbTooltip="WhatsApp" container="parent" placement="bottom" i18n-ngbTooltip="@@i18n.common.whatsapp"><i>maps_ugc</i></a>
+      }
+    }
+    @for (p of contact.card.get('EMAIL'); track p.track_id) {
+      <a class="ms-1" href="mailto:{{p.val()}}?subject={{getEncodedSubject()}}" [ngbTooltip]="p.val()" container="parent" placement="bottom"><i>{{p.contactIcon()}}</i></a>
+    }
+  </span>
+}
+<small class="text-truncate smaller text-{{roleColor}} role">{{role}}</small>

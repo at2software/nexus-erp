@@ -1,0 +1,48 @@
+
+<div class="card mb-3">
+  <div class="card-header">
+    <span i18n="@@i18n.common.state">state</span>
+    <div class="card-header-actions d-flex gap-1">
+
+      @for (icon of stateFilters; track $index; let i = $index) {
+        <input type="checkbox" class="btn-check" id="states{{i}}" [(ngModel)]="icon.var.enabled" (change)="onValueChanged(icon)" autocomplete="off">
+        <label class="btn btn-plain px-1 py-0" for="states{{i}}">
+          <project [noRouting]="true" [project]="icon" [class.inactive]="!icon.var.enabled" [title]="icon.state.name"></project>
+        </label>
+      }
+    </div>
+  </div>
+
+  <div class="card-header">
+    <span i18n="@@i18n.project.budgeting">budgeting</span>
+    <div class="card-header-actions d-flex gap-1">
+
+      <input type="checkbox" class="btn-check" id="btn_tb0" [(ngModel)]="filters.timeBased.var.enabled" (change)="onValueChanged(filters.timeBased)" autocomplete="off">
+      <label class="btn btn-plain px-1 py-0" for="btn_tb0">
+        <project [noRouting]="true" [project]="filters.timeBased" [class.inactive]="!filters.timeBased.var.enabled" i18n-title="@@i18n.common.timeBasedProjects" title="time based projects"></project>
+      </label>
+
+      <input type="checkbox" class="btn-check" id="btn_tb1" [(ngModel)]="filters.budgetBased.var.enabled" (change)="onValueChanged(filters.budgetBased)" autocomplete="off">
+      <label class="btn btn-plain px-1 py-0" for="btn_tb1">
+        <project [noRouting]="true" [project]="filters.inProgress" [class.inactive]="!filters.budgetBased.var.enabled" i18n-title="@@i18n.projects.budgetProjects" title="budget projects"></project>
+      </label>
+    </div>
+  </div>
+
+  <div class="card-header">
+    <span i18n="@@i18n.common.internal">internal</span>
+    <div class="card-header-actions d-flex gap-1">
+
+      <input type="checkbox" class="btn-check" id="is_internal0" [(ngModel)]="filters.internal.var.enabled" (change)="onValueChanged(filters.internal)" autocomplete="off">
+      <label class="btn btn-plain px-1 py-0" for="is_internal0">
+        <project [noRouting]="true" [project]="filters.internal" [class.inactive]="!filters.internal.var.enabled" title="internal project"></project>
+      </label>
+
+      <input type="checkbox" class="btn-check" id="is_internal1" [(ngModel)]="filters.external.var.enabled" (change)="onValueChanged(filters.external)" autocomplete="off">
+      <label class="btn btn-plain px-1 py-0" for="is_internal1">
+        <project [noRouting]="true" [project]="filters.inProgress" [class.inactive]="!filters.external.var.enabled" title="external project"></project>
+      </label>
+    </div>
+  </div>
+
+</div>

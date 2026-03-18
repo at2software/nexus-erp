@@ -1,0 +1,10 @@
+:host {
+    position: absolute;
+    right: 0;  
+    top: 50%;
+    transform: translateY(-50%);
+}
+i {
+    font-size: smaller;
+    color: var(--color-primary-0)
+}

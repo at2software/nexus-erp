@@ -1,0 +1,229 @@
+<div class="row">
+
+  <div class="col-3">
+    <div class="card mb-3">
+      <div class="card-header" i18n="@@i18n.common.baseSettings">base settings</div>
+      <div class="card-body">
+        <div class="form-floating mb-3">
+          <select class="form-select" id="countrySelect" [(ngModel)]="selectedCountry" (change)="onCountryChange()">
+            @for (country of availableCountries; track country) {
+              <option [value]="country">
+                {{country}}
+              </option>
+            }
+          </select>
+          <label for="countrySelect" i18n="@@i18n.common.destinationCountry">destination country</label>
+        </div>
+
+        <div class="row g-2">
+          <div class="col-4">
+            <div class="form-floating">
+              <input type="number" class="form-control" id="inputKlein" [value]="pauschSmall" readonly>
+              <label for="inputKlein" i18n="@@i18n.profile.kleinePauschale">kleine pauschale</label>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="form-floating">
+              <input type="number" class="form-control" id="inputGross" [value]="pauschLarge" readonly>
+              <label for="inputGross" i18n="@@i18n.profile.großePauschale">große pauschale</label>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="form-floating">
+              <input type="number" class="form-control" id="inputUP" [value]="pauschSleep" readonly>
+              <label for="inputUP" i18n="@@i18n.common.overnightStay">overnight stay</label>
+            </div>
+          </div>
+        </div>
+
+        <small class="text-muted mt-2 d-block" i18n="@@i18n.profile.pauschalenWerdenAutomatischBasierendAuf">
+          Pauschalen werden automatisch basierend auf dem gewählten Reiseland gesetzt (ARVVwV 2025).
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6" #expenseForm>
+    <div class="card mb-3">
+      <div class="card-header">
+        <span i18n="@@i18n.profile.travelExpenses">travel expenses</span>
+      </div>
+      <div class="card-body">
+        <div class="input-group mb-3">
+          <span class="input-group-text col-3" i18n="@@i18n.common.travelPurpose">travel purpose</span>
+          <input type="text" class="form-control" placeholder="" [(ngModel)]="purpose">
+        </div>
+        <div class="input-group mb-3">
+          <span class="input-group-text col-3" i18n="@@i18n.common.distance">distance</span>
+          <input type="text" class="form-control" placeholder="" [(ngModel)]="way">
+        </div>
+        <div class="input-group mb-3">
+          <span class="input-group-text col-3" i18n="@@i18n.common.start">start</span>
+          <input ngbDatepicker #d="ngbDatepicker" placeholder="yyyy-mm-dd" (click)="d.open()" (dateSelect)="updateDays()" class="form-control" tabindex="-1" [startDate]="startDate" (dateSelect)="d.close()" [(ngModel)]="startDate" [autoClose]="'outside'" />
+          <span class="input-group-text">
+              <span i18n="@@i18n.common.at">at</span>
+              <span class="notranslate">:</span>
+          </span>
+          <input type="text" class="form-control" placeholder="" [(ngModel)]="startTime.hours" (change)="updateDays()">
+          <span class="input-group-text">:</span>
+          <input type="text" class="form-control" placeholder="" [(ngModel)]="startTime.minutes" (change)="updateDays()">
+          <span class="input-group-text" i18n="@@i18n.common.uhr">uhr</span>
+        </div>
+        <div class="input-group mb-3">
+          <span class="input-group-text col-3" i18n="@@i18n.common.end">end</span>
+          <input ngbDatepicker #e="ngbDatepicker" placeholder="yyyy-mm-dd" (click)="e.open()" (dateSelect)="updateDays()" class="form-control" tabindex="-1" [startDate]="endDate" (dateSelect)="e.close()" [(ngModel)]="endDate" [autoClose]="'outside'" />
+          <span class="input-group-text">
+              <span i18n="@@i18n.common.at">at</span>
+              <span class="notranslate">:</span>
+          </span>
+          <input type="text" class="form-control" placeholder="" [(ngModel)]="endTime.hours" (change)="updateDays()">
+          <span class="input-group-text">:</span>
+          <input type="text" class="form-control" placeholder="" [(ngModel)]="endTime.minutes" (change)="updateDays()">
+          <span class="input-group-text" i18n="@@i18n.common.uhr">uhr</span>
+        </div>
+        @if (timeDiff < 8 && timeDiff >= 0) {
+          <div class="card card-info user-select-none" i18n="@@i18n.profile.tagespauschalenKönnenBeiEinerReisedauer">
+            Tagespauschalen können bei einer Reisedauer von weniger als acht Stunden nicht angesetzt werden.
+          </div>
+        }
+        @if (timeDiff < 0) {
+          <div class="card card-danger user-select-none" i18n="@@i18n.profile.reiseendeMussNachDemReiseanfang">
+            Reiseende muss nach dem Reiseanfang liegen.
+          </div>
+        }
+        @if (timeDiff > 24 * 100) {
+          <div class="card card-danger user-select-none" i18n="@@i18n.profile.keineReisekostenabrechnungMitMehrAls">
+            Keine Reisekostenabrechnung mit mehr als 100 Tagen erlaubt.
+          </div>
+        }
+        @if (twoDayTrip && timeDiff >= 8) {
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" (change)="updateDays()" [(ngModel)]="withSleep" id="sleepSwitch">
+            <label class="form-check-label" for="sleepSwitch" i18n="@@i18n.profile.withOvernightStay">with overnight stay</label>
+          </div>
+        }
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-header">
+        <span i18n="@@i18n.profile.travelExpenses">travel expenses</span>
+        <div class="card-header-actions noprint">
+          <div ngbDropdown class="d-inline-block">
+            <button class="btn btn-plain text-primary" type="button" ngbDropdownToggle>
+              <i>add</i>
+            </button>
+            <div ngbDropdownMenu>
+              @for (t of types; track t; let i = $index) {
+                <button ngbDropdownItem (click)="addExpense(i)">
+                  <i class="me-2">{{t[2]}}</i>
+                  {{t[0]}}
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        @if (timeDiff >= 8) {
+          <ul class="list-group mb-3">
+            @for (d of days; track d; let i = $index) {
+              <li class="list-group-item list-group-item-action d-flex">
+                <div>
+                  @if (i === 0) {
+                    <i class="me-2">flight_takeoff</i>
+                  }
+                  @if (i !== 0 && i !== days.length - 1) {
+                    <i class="me-2">more_vert</i>
+                  }
+                  @if (i === days.length - 1) {
+                    <i class="me-2">flight_land</i>
+                  }
+                </div>
+                <div class="flex-fill">{{d.name}}</div>
+                <div class="text-muted small">
+                  @if (i !== 0 && i !== days.length - 1) {
+                    <span class="me-2" i18n="@@i18n.common.gp">GP</span>
+                  }
+                  @if (i === 0 || i === days.length - 1) {
+                    <span class="me-2" i18n="@@i18n.common.kp">KP</span>
+                  }
+                  @if (!d.sleep) {
+                    <span class="me-2" i18n="@@i18n.common.üb">ÜB</span>
+                  }
+                </div>
+                <div class="me-2">
+                  {{d.base + (!d.sleep ? this.pauschSleep : 0) | money}}
+                </div>
+                <div class="me-2 pointer"><i (click)="d.brunch=!d.brunch" (keyup.enter)="d.brunch=!d.brunch" tabindex="0" [class.text-primary]="d.brunch" [class.text-muted]="!d.brunch">free_breakfast</i></div>
+                <div class="me-2 pointer"><i (click)="d.lunch=!d.lunch" (keyup.enter)="d.lunch=!d.lunch" tabindex="0" [class.text-primary]="d.lunch" [class.text-muted]="!d.lunch">lunch_dining</i></div>
+                <div class="me-2 pointer"><i (click)="d.dinner=!d.dinner" (keyup.enter)="d.dinner=!d.dinner" tabindex="0" [class.text-primary]="d.dinner" [class.text-muted]="!d.dinner">local_bar</i></div>
+                @if (i !== days.length - 1) {
+                  <div class="me-2 pointer"><i (click)="d.sleep=!d.sleep" (keyup.enter)="d.sleep=!d.sleep" tabindex="0" [class.text-primary]="d.sleep" [class.text-muted]="!d.sleep">bed</i></div>
+                }
+                @if (i === days.length - 1) {
+                  <div class="me-2"><i class="text-black">bed</i></div>
+                }
+                <div class="me-2 col-2 text-end">
+                  {{sumFor(d) | money}}
+                </div>
+              </li>
+            }
+          </ul>
+        }
+        <ul class="list-group mb-3">
+          @for (e of expenses; track e) {
+            <li class="list-group-item list-group-item-action d-flex">
+              <div>
+                <i class="me-2">{{e.getIcon()}}</i>
+              </div>
+              @if (!e.hasInputField()) {
+                <div class="flex-fill">{{e.name}}</div>
+              }
+              @if (e.hasInputField()) {
+                <div class="flex-fill me-2">
+                  <input type="text" [(ngModel)]="e.name" suffix="">
+                </div>
+              }
+              <div class="col-4">
+                <input type="number" [suffix]="e.suffix" [(ngModel)]="e.value">
+              </div>
+              <div class="me-2 col-2 text-end">
+                {{e.getTotal() | money}}
+              </div>
+            </li>
+          }
+        </ul>
+        @if (timeDiff >= 8 && days.length) {
+          <div class="user-select-none"><i class="me-2">free_breakfast</i> Frühstück vom Arbeitgeber oder Kunden bezahlt</div>
+          <div class="user-select-none"><i class="me-2">lunch_dining</i> Mittagessen vom Arbeitgeber oder Kunden bezahlt</div>
+          <div class="user-select-none"><i class="me-2">local_bar</i> Abendessen vom Arbeitgeber oder Kunden bezahlt</div>
+          <div class="user-select-none"><i class="me-2">bed</i> Übernachtung vom Arbeitgeber oder Kunden bezahlt</div>
+        }
+
+      </div>
+
+      <div class="card-footer mt-3">
+        <div class="card card-info mb-5 mt-3" i18n="@@i18n.profile.infoPdfMussNochManuell">
+          Info: PDF muss noch manuell an die Geschäftsführung für die weitere Verarbeitung weitergeleitet werden. Im NEXUS wird nichts gespeichert.
+        </div>
+        <button class="btn btn-fancy btn-fancy-be" (click)="onSubmit()" i18n="@@i18n.profile.pdfGenerieren">pdf generieren</button>
+      </div>
+    </div>
+  </div>
+  <div class="col-3">
+    <div class="card mb-3" dnd="uploads" [collect]="true" [dndAllowed]="['application/pdf']">
+      <div class="card-header" i18n="@@i18n.common.attachments">attachments</div>
+      @if (hasViewInitialized) {
+        <div class="card-body">
+          <ul class="list-group">
+            @for (file of dragDrop.fileNames; track file) {
+              <li class="list-group-item list-group-item-action">
+                {{file}}
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+  </div>
+</div>

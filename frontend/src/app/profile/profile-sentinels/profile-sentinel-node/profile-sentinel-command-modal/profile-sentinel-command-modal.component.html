@@ -1,0 +1,126 @@
+<div class="modal d-block" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title" i18n="@@i18n.common.command">command</span>
+      </div>
+      <div class="modal-body">
+        <!-- Command Type Dropdown -->
+        <div class="form-group mb-3">
+          <div i18n="@@i18n.common.command">command</div>
+          <div ngbDropdown class="sentinel-dropdown">
+            <button type="button" class="btn btn-outline-secondary w-100 text-start d-flex align-items-center" ngbDropdownToggle>
+              <span class="sentinel-pill bg-warning text-dark" i18n="@@i18n.common.do">do</span>
+              <span class="sentinel-command ms-2">{{selectedCommand.label || 'Select command...'}}</span>
+            </button>
+            <div ngbDropdownMenu class="w-100 dropdown-menu-scroll">
+              @for (command of allCommands; track command) {
+                <button ngbDropdownItem (click)="selectedCommand = command" class="d-flex align-items-center">
+                  <span class="sentinel-pill bg-warning text-dark" i18n="@@i18n.common.do">do</span>
+                  <span class="sentinel-command ms-2">{{command.label}}</span>
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Command options -->
+        @if (selectedCommand) {
+          @for (opt of selectedCommand.options; track opt) {
+            <div class="form-group mb-3">
+              <ng-container *ngTemplateOutlet="renderOption; context: { $implicit: opt }"></ng-container>
+            </div>
+          }
+        }
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" (click)="decline()" i18n="@@i18n.common.cancel">cancel</button>
+        <button type="button" class="btn btn-primary" (click)="accept()" hotkey="CTRL+ENTER" i18n="@@i18n.common.ok">ok</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ng-template #renderOption let-opt>
+  @if (opt.label) {
+    <div>{{ opt.label }}</div>
+  }
+
+  @switch (opt.type) {
+    @case ('boolean') {
+      <input class="form-check-input ms-2" type="checkbox" [(ngModel)]="opt.value" />
+    }
+    @case ('string') {
+      <variable-autocomplete [option]="opt" [tableName]="sentinel.table_name" [triggerVariable]="sentinel.trigger_variable" [loopVariable]="loopVariable" [loopTable]="loopTable"></variable-autocomplete>
+    }
+    @case ('text') {
+      <variable-autocomplete [option]="opt" [tableName]="sentinel.table_name" [triggerVariable]="sentinel.trigger_variable" [loopVariable]="loopVariable" [loopTable]="loopTable" [multiline]="true"></variable-autocomplete>
+    }
+    @case ('relation') {
+      <relation-path-autocomplete [option]="opt" [tableName]="sentinel.table_name" [triggerVariable]="sentinel.trigger_variable" (relationSelected)="onRelationSelected($event)"></relation-path-autocomplete>
+    }
+    @case ('number') {
+      <input class="form-control sentinel-input" type="number" [(ngModel)]="opt.value" />
+    }
+    @case ('enum') {
+      <div ngbDropdown class="sentinel-dropdown">
+        <button type="button" class="btn btn-outline-secondary w-100 text-start" ngbDropdownToggle>
+          <span class="sentinel-value">{{opt.value || 'Select...'}}</span>
+        </button>
+        <div ngbDropdownMenu class="w-100">
+          @for (val of opt.enumValues; track val) {
+            <button ngbDropdownItem (click)="opt.value = val.value">
+              <span class="sentinel-value">{{ val.label }}</span>
+            </button>
+          }
+        </div>
+      </div>
+    }
+    @case ('column') {
+      <div ngbDropdown class="sentinel-dropdown">
+        <button type="button" class="btn btn-outline-secondary w-100 text-start" ngbDropdownToggle>
+          <span class="sentinel-table">{{opt.value || 'Select column...'}}</span>
+        </button>
+        <div ngbDropdownMenu class="w-100 dropdown-menu-scroll">
+          @for (val of getTableColumns(this.sentinel.table_name); track val) {
+            <button ngbDropdownItem (click)="opt.value = val.Field">
+              <span class="sentinel-table">{{ val.Field }}</span>
+            </button>
+          }
+        </div>
+      </div>
+    }
+    @case ('table') {
+      <div ngbDropdown class="sentinel-dropdown">
+        <button type="button" class="btn btn-outline-secondary w-100 text-start" ngbDropdownToggle>
+          <span class="sentinel-table">{{opt.value || 'Select table...'}}</span>
+        </button>
+        <div ngbDropdownMenu class="w-100 dropdown-menu-scroll">
+          @for (val of tables; track val) {
+            <button ngbDropdownItem (click)="opt.value = val.name">
+              <span class="sentinel-table">{{ val.name }}</span>
+            </button>
+          }
+        </div>
+      </div>
+    }
+    @case ('model_fields') {
+      @if (getTargetTable()) {
+        <model-field-editor
+          [targetTable]="getTargetTable()"
+          [sourceTable]="sentinel.table_name"
+          [triggerVariable]="sentinel.trigger_variable"
+          [loopVariable]="loopVariable"
+          [loopTable]="loopTable"
+          [fieldsJson]="opt.value || '{}'"
+          (fieldsJsonChange)="opt.value = $event">
+        </model-field-editor>
+      } @else {
+        <div class="text-muted" i18n="@@i18n.profile.selectAModelFirst">select a model first</div>
+      }
+    }
+    @default {
+      <div class="text-muted" i18n="@@i18n.profile.unsupportedFieldType">unsupported field type</div>
+    }
+  }
+</ng-template>

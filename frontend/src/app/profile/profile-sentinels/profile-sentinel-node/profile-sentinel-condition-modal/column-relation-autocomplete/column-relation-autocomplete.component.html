@@ -1,0 +1,14 @@
+<div class="btn-group dropdown form-control bg-transparent">
+  <input #searchbox [(ngModel)]="option.value" class="form-control show" type="search" placeholder="search" i18n-placeholder="@@i18n.common.search"
+    (keyup)="search($event)">
+    <scrollbar class="dropdown-menu fade start-0 mt-4 overflow-auto" [class.show]="hasResults()"
+      [class.d-none]="!(hasResults())">
+      @for (res of results; track res; let i = $index) {
+        <div class="dropdown-item hstack gap-2 pointer" (click)="open(res)" tabindex="0" (keydown.enter)="open(res)"
+          [class.active]="i===currentIndex">
+          <span class="flex-fill">{{ res.name }}</span>
+          <small class="text-muted">{{ res.type }}</small>
+        </div>
+      }
+    </scrollbar>
+  </div>

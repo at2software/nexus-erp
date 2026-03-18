@@ -1,0 +1,57 @@
+<div class="modal-header">
+    <span class="modal-title">
+        @if (isCreating) {
+        <span i18n="@@i18n.uptime.createMonitor">create uptime monitor</span>
+        } @else {
+        <span i18n="@@i18n.uptime.editMonitor">edit uptime monitor</span>
+        }
+    </span>
+    <button type="button" class="btn-close btn-close-white" (click)="close()" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+    <div class="mb-3">
+        <label for="monitor-name" class="form-label" i18n="@@i18n.common.name">name</label>
+        <input type="text" id="monitor-name" class="form-control" [(ngModel)]="monitor.name" required>
+    </div>
+    <div class="mb-3">
+        <label for="monitor-url" class="form-label" i18n="@@i18n.common.url">URL</label>
+        <input type="url" id="monitor-url" class="form-control" [(ngModel)]="monitor.url" required>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label for="monitor-method" class="form-label" i18n="@@i18n.uptime.method">method</label>
+            <select id="monitor-method" class="form-select" [(ngModel)]="monitor.method">
+                <option value="GET" i18n="@@i18n.common.get">get</option>
+                <option value="POST" i18n="@@i18n.common.post">post</option>
+                <option value="HEAD" i18n="@@i18n.common.head">head</option>
+            </select>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="monitor-status-code" class="form-label" i18n="@@i18n.uptime.expectedStatusCode">expected status code</label>
+            <input type="number" id="monitor-status-code" class="form-control" [(ngModel)]="monitor.expected_status_code">
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label for="monitor-timeout" class="form-label" i18n="@@i18n.uptime.timeout">timeout (seconds)</label>
+            <input type="number" id="monitor-timeout" class="form-control" [(ngModel)]="monitor.timeout">
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="monitor-threshold" class="form-label" i18n="@@i18n.uptime.responseThreshold">response threshold (ms)</label>
+            <input type="number" id="monitor-threshold" class="form-control" [(ngModel)]="monitor.response_time_threshold">
+        </div>
+    </div>
+    <div class="form-check mb-3">
+        <input type="checkbox" class="form-check-input" id="isActive" [(ngModel)]="monitor.is_active">
+        <label class="form-check-label" for="isActive" i18n="@@i18n.common.active">active</label>
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="close()" [disabled]="isSaving" i18n="@@i18n.common.cancel">cancel</button>
+    <button type="button" class="btn btn-primary" (click)="save()" [disabled]="isSaving">
+        @if (isSaving) {
+        <span class="spinner-border spinner-border-sm me-1"></span>
+        }
+        <span i18n="@@i18n.common.save">save</span>
+    </button>
+</div>

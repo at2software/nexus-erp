@@ -1,0 +1,184 @@
+@use 'colors' as *;
+@use 'var' as *;
+
+.activity {
+    display: block;
+    width: $m-activity;
+    height: 100%;
+}
+
+:host {
+    font-size: smaller;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    z-index: 4;
+    overflow: hidden;
+}
+
+::ng-deep {
+    img {
+        max-width: 100% !important;
+    }
+
+    .activity {
+        .nav {
+            height: calc($m-modules + 10px);
+            margin-left: .25 * $m-modules;
+
+            .nav-link {
+                border-radius: (.5 * $border-radius) (.5 * $border-radius) 0 0 !important;
+                background: radial-gradient(ellipse 60% 40% at bottom center, 
+                    rgba(255, 255, 255, 0.08) 0%, 
+                    transparent 70%),
+                    $bg-card;
+                backdrop-filter: blur(10px);
+                color: #ffffff;
+                margin-right: 5px;
+                transition: all .2s ease;
+
+                &.active {
+                    background: radial-gradient(ellipse 80% 50% at bottom center, 
+                        rgba($primary-4, 0.9) 0%, 
+                        rgba($primary-4, 0.4) 40%,
+                        transparent 80%),
+                        $bg-card;
+                    backdrop-filter: blur(15px);
+                }
+
+                &.active, &:hover {
+                    padding-bottom: 15px;
+                    box-shadow: liquid-glass();
+                }
+
+                &:hover {
+                    background: radial-gradient(ellipse 70% 45% at bottom center,
+                        rgba($primary-3, 0.6) 0%,
+                        rgba($primary-3, 0.2) 50%,
+                        transparent 80%),
+                        $bg-card;
+                    backdrop-filter: blur(12px);
+                }
+
+                &.has-badge {
+                    background: radial-gradient(ellipse 60% 40% at bottom center,
+                        rgba($danger, 0.5) 0%,
+                        transparent 70%),
+                        $bg-card;
+                }
+
+                &.active.has-badge {
+                    background: radial-gradient(ellipse 80% 50% at bottom center,
+                        rgba($danger, 0.9) 0%,
+                        rgba($danger, 0.4) 40%,
+                        transparent 80%),
+                        $bg-card;
+                }
+            }
+        }
+
+        .tab-content {
+            top: $m-modules;
+            color: #ffffff;
+            display: block;
+            height: 100%;
+
+            .tab-pane {
+                height: 100%;
+            }
+        }
+
+        .container {
+            box-shadow: liquid-glass();
+            background-color: $bg-card;
+            border-radius: (.5 * $border-radius) 0 0 0;
+            overflow: hidden;
+            height: calc(100vh - $m-modules);
+            position: relative;
+
+            & > * {
+                position: absolute;
+            }
+
+            .scroll-container {
+                top: 0;
+                bottom: 0;
+                left: 0;
+                right: 0;
+            }
+        }
+
+        scrollbar {
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            bottom: 0;
+            white-space: pre-wrap;
+            overflow-x: hidden;
+        }
+
+        .f-icon {
+            margin-top: 0.2rem;
+            float: left;
+        }
+
+        .callout {
+            margin: .25rem .25rem .25rem 2rem;
+
+            img.avatar {
+                float: left;
+                margin-left: -1.5rem;
+                margin-top: .25rem;
+            }
+        }
+
+        .system {
+            margin: 0 .25rem;
+            color: #999;
+        }
+
+        .header {
+            background-color: #0006;
+            padding-top: 2px;
+            padding-bottom: 2px;
+            color: #999;
+        }
+    }
+
+    // Responsivity
+    body.activity-collapsed {
+        app-activity {
+            display: none;
+        }
+
+        app-root {
+            margin-right: 0;
+        }
+
+        app-header {
+            right: 0;
+        }
+    }
+
+    body.activity-hidden:not(.activity-collapsed) {
+        app-activity::before {
+            content: '';
+            position: fixed;
+            left: 0;
+            right: $m-activity;
+            top: 0;
+            bottom: 0;
+            background-color: #000c;
+        }
+
+        app-root {
+            margin-right: 0;
+        }
+
+        app-header {
+            right: 0;
+        }
+    }
+}

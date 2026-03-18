@@ -1,0 +1,23 @@
+// Inherits base widget styles from ./../base.widget.component.scss
+
+// Ensure card and list don't clip dropdowns
+:host ::ng-deep {
+    .card {
+        overflow: visible !important;
+    }
+    ul-compact, .list-group {
+        overflow: visible !important;
+    }
+    .list-group-item {
+        overflow: visible !important;
+    }
+}
+
+.badge-invoice-type {
+    color: #000 !important;
+
+    // Make button badge match span badge styling
+    &[ngbDropdownToggle] {
+        border: none;
+    }
+}

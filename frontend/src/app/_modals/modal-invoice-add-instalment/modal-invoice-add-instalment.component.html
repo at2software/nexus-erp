@@ -1,0 +1,23 @@
+<div class="modal d-block" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" i18n="@@i18n.common.addInstalment">add instalment</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="instalmentDescription" placeholder="description" [(ngModel)]="item.text" i18n-placeholder="@@i18n.common.description">
+                    <label for="instalmentDescription" i18n="@@i18n.common.description">description</label>
+                </div>
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="instalmentValue" placeholder="100" [(ngModel)]="item.price">
+                    <label for="instalmentValue" i18n="@@i18n.common.valuePositive">value (positive)</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" (click)="decline()" data-bs-dismiss="modal" i18n="@@i18n.common.cancel">cancel</button>
+                <button type="button" class="btn btn-primary" (click)="accept()" hotkey="CTRL+ENTER" i18n="@@i18n.common.ok">ok</button>
+            </div>
+        </div>
+    </div>
+</div>

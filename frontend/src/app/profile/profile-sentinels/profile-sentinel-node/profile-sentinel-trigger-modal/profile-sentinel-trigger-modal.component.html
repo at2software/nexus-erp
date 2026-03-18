@@ -1,0 +1,75 @@
+<div class="modal d-block" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title" i18n="@@i18n.common.trigger">trigger</span>
+      </div>
+      <div class="modal-body">
+        <!-- Trigger Type Dropdown -->
+        <div class="form-group mb-3">
+          <div i18n="@@i18n.common.trigger">trigger</div>
+          <div ngbDropdown class="sentinel-dropdown">
+            <button type="button" class="btn btn-outline-secondary w-100 text-start d-flex align-items-center" ngbDropdownToggle>
+              <span class="sentinel-pill bg-{{getTriggerColor(sentinel.trigger)}}">{{ObserverTrigger[sentinel.trigger]}}</span>
+            </button>
+            <div ngbDropdownMenu class="w-100">
+              @for (option of triggerOptions; track option) {
+                <button ngbDropdownItem (click)="sentinel.trigger = option.value; onTriggerTypeChange()" class="d-flex align-items-center">
+                  <span class="sentinel-pill bg-{{getTriggerColor(option.value)}}">{{option.label}}</span>
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Table Selection (Model-based triggers) -->
+        @if (triggerIsModelBased()) {
+          <div class="form-group mb-3">
+            <div i18n="@@i18n.common.table">table</div>
+            <div ngbDropdown class="sentinel-dropdown">
+              <button type="button" class="btn btn-outline-secondary w-100 text-start d-flex align-items-center" ngbDropdownToggle>
+                <span class="sentinel-table">{{sentinel.table_name || 'Select table...'}}</span>
+              </button>
+              <div ngbDropdownMenu class="w-100 dropdown-menu-scroll">
+                @for (table of tables; track table) {
+                  <button ngbDropdownItem (click)="selectTable(table.name)">
+                    <span class="sentinel-table">{{table.name}}</span>
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group mb-3">
+            <div i18n="@@i18n.profile.variableName">variable name</div>
+            <input type="text" class="form-control" [(ngModel)]="sentinel.trigger_variable" placeholder="e.g. pps, project, user" i18n-placeholder="@@i18n.profile.egPpsProjectUser">
+            <small class="text-muted">Used in templates: {{"{{" + (sentinel.trigger_variable || 'var') + ".field}}"}}</small>
+          </div>
+        }
+
+        <!-- Time Selection (Schedule-based triggers) -->
+        @if (triggerIsTimeBased()) {
+          <div class="form-group mb-3">
+            <div i18n="@@i18n.common.time">time</div>
+            <div ngbDropdown class="sentinel-dropdown">
+              <button type="button" class="btn btn-outline-secondary w-100 text-start d-flex align-items-center" ngbDropdownToggle>
+                <span class="sentinel-value">{{sentinel.table_name || 'Select time...'}}</span>
+              </button>
+              <div ngbDropdownMenu class="w-100">
+                @for (time of allowedTimes; track time) {
+                  <button ngbDropdownItem (click)="sentinel.table_name = time">
+                    <span class="sentinel-value">{{time}}</span>
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" (click)="decline()" i18n="@@i18n.common.cancel">cancel</button>
+        <button type="button" class="btn btn-primary" (click)="accept()" hotkey="CTRL+ENTER" i18n="@@i18n.common.ok">ok</button>
+      </div>
+    </div>
+  </div>
+</div>

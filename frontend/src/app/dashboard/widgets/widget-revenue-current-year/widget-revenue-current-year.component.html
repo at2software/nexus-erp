@@ -1,0 +1,57 @@
+<div class="card card-chart mb-3">
+
+  <div class="card-header gap-2">
+    <n>invoice</n>
+    <span class="flex-fill text-truncate" i18n="@@i18n.invoice.revenueCurrentYear">revenue current year</span>
+    @if (data) {
+      <div class="chart-title">{{ data.revenue | mshort}}</div>
+    }
+  </div>
+
+  @if (data) {
+    <div class="card-body">
+      @if (chartOptions) {
+        <div echarts [options]="chartOptions"
+          [initOpts]="{height: 100}"
+          (chartInit)="onChartInit($event)"
+          style="height: 100px;"
+          >
+        </div>
+      }
+      <div class="pt-2" [ngbTooltip]="tipContent" tooltipClass="flexible-tooltip">
+        <progress-bar [progress]="data.revenue / data.expenses" [style]="'primary'" overStyle="success"></progress-bar>
+      </div>
+      <ng-template #tipContent>
+        <ul class="list-group" style="width:auto !important;">
+          <li class="list-group-item hstack text-nowrap gap-2">
+            <div class="text-truncate flex-fill text-start">
+                <span i18n="@@i18n.dashboard.revenueThisYear">revenue this year</span>
+                <span class="notranslate">:</span>
+            </div><div class="font-monospace text-end">{{data.revenue | money}}</div>
+          </li>
+          <li class="list-group-item hstack text-nowrap gap-2">
+            <div class="text-truncate flex-fill text-start">
+                <span class="notranslate">Ø </span>
+                <span i18n="@@i18n.widget-revenue-monthly">monthly revenue</span>
+                <span class="notranslate">:</span>
+            </div><div class="font-monospace text-end">{{data.revenue / yearProgress() | money}}</div>
+          </li>
+          <li class="list-group-item hstack text-nowrap gap-2">
+            <div class="text-truncate flex-fill text-start">
+                <span class="notranslate">Ø </span>
+                <span i18n="@@i18n.dashboard.monthlyEarnings">monthly earnings</span>
+                <span class="notranslate">:</span>
+            </div><div class="font-monospace text-end">{{data.revenue / yearProgress() - avgCost | money}}</div>
+          </li>
+          <li class="list-group-item hstack text-nowrap gap-2">
+            <div class="text-truncate flex-fill text-start">
+                <span i18n="@@i18n.dashboard.estimatedEarningsThisYear">estimated earnings this year</span>
+                <span class="notranslate">:</span>
+            </div><div class="font-monospace text-end">{{(data.revenue / yearProgress() - avgCost) * 12 | money}}</div>
+          </li>
+        </ul>
+      </ng-template>
+    </div>
+  }
+  <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+</div>

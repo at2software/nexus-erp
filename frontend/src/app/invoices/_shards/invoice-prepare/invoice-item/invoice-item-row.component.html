@@ -1,0 +1,171 @@
+@if (item) {
+  @switch (item.type) {
+    @case (0) {
+      <ng-container *ngTemplateOutlet="activeItemTemplate"></ng-container>
+    }
+    @case (43) {
+      <ng-container *ngTemplateOutlet="activeItemTemplate"></ng-container>
+    }
+    @case (1) {
+      <!-- Inactive -->
+      @if (annotationType!=='none') {
+        <td tr-annotation [mode]="annotationType" [company]="company" [item]="item"></td>
+      } @else {
+        <td></td>
+      }
+      <td class="text-muted text-end small"></td>
+      <td class="text-muted" [innerHTML]="item.text| safe:'html'"></td>
+      <ng-content *ngTemplateOutlet="priceCol context:{ $implicit: item }"></ng-content>
+      <ng-content *ngTemplateOutlet="changeableQty context: { $implicit: item }"></ng-content>
+      <ng-content *ngTemplateOutlet="instaTotal context: { $implicit: item }"></ng-content>
+    }
+    @case (2) {
+      <!-- Optional -->
+      @if (annotationType!=='none') {
+        <td tr-annotation [mode]="annotationType" [company]="company" [item]="item"></td>
+      } @else {
+        <td></td>
+      }
+      <td class="text-end text-muted small">({{item.var?.pos}})</td>
+      <td [innerHTML]="item.text| safe:'html'"></td>
+      <ng-content *ngTemplateOutlet="priceCol context:{ $implicit: item }"></ng-content>
+      <ng-content *ngTemplateOutlet="changeableQty context: { $implicit: item }"></ng-content>
+      <ng-content *ngTemplateOutlet="instaTotal context: { $implicit: item }"></ng-content>
+    }
+    @case (10) {
+      <!-- Paydown -->
+      @if (annotationType!=='none') {
+        <td tr-annotation [mode]="annotationType" [company]="company" [item]="item" text="paydown"></td>
+      } @else {
+        <td></td>
+      }
+      <td class="text-end text-muted small">{{item.var?.pos}}</td>
+      <td [innerHTML]="item.text| safe:'html'"></td>
+      <ng-content *ngTemplateOutlet="priceCol context:{ $implicit: item }"></ng-content>
+      @if (item.qty!==-1) {
+        <td class="text-end">{{item.qty | number:'1.0-5'}}&nbsp;<span class="text-muted">{{item.unit_name}}</span></td>
+      }
+      <ng-content *ngTemplateOutlet="instaTotal context: { $implicit: item }"></ng-content>
+    }
+    @case (11) {
+      <!-- Manual Discount -->
+      @if (annotationType!=='none') {
+        <td tr-annotation [mode]="annotationType" [company]="company" [item]="item" text="manual discount"></td>
+      } @else {
+        <td></td>
+      }
+      <td class="text-end text-muted small">{{item.var?.pos}}</td>
+      <td [innerHTML]="item.text| safe:'html'"></td>
+      <ng-content *ngTemplateOutlet="priceCol context:{ $implicit: item }"></ng-content>
+      <td class="text-end">{{item.qty | number:'1.0-5'}}&nbsp;<span class="text-muted">{{item.unit_name}}</span></td>
+      <ng-content *ngTemplateOutlet="instaTotal context: { $implicit: item }"></ng-content>
+    }
+    @case (20) {
+      <!-- group -->
+      <td class="header" colspan="2"></td>
+      <td class="header" colspan="2">{{item.text}}</td>
+      <td class="header small text-end">{{item.var?.pt | number}} PT</td>
+      <td class="header small text-end">{{item.var?.sum | money}}</td>
+    }
+    @case (40) {
+      <!-- prepared Instalment -->
+      <td></td>
+      <td class="text-end text-muted small">{{item.var?.pos}}</td>
+      <td [innerHTML]="item.text| safe:'html'"></td>
+      <ng-content *ngTemplateOutlet="priceCol context:{ $implicit: item }"></ng-content>
+      <ng-content *ngTemplateOutlet="changeableQty context: { $implicit: item }"></ng-content>
+      <ng-content *ngTemplateOutlet="instaTotal context: { $implicit: item }"></ng-content>
+    }
+    @case (41) {
+      <ng-container *ngTemplateOutlet="activeItemTemplate"></ng-container>
+    }
+    @case (30) {
+      <ng-content *ngTemplateOutlet="repeating context: { $implicit: item }"></ng-content>
+    }
+    @case (31) {
+      <ng-content *ngTemplateOutlet="repeating context: { $implicit: item }"></ng-content>
+    }
+    @case (32) {
+      <ng-content *ngTemplateOutlet="repeating context: { $implicit: item }"></ng-content>
+    }
+    @case (33) {
+      <ng-content *ngTemplateOutlet="repeating context: { $implicit: item }"></ng-content>
+    }
+    @case (34) {
+      <ng-content *ngTemplateOutlet="repeating context: { $implicit: item }"></ng-content>
+    }
+    @default {
+      <tr>
+        <td colspan="6">Unsupported Type {{item.type}}
+        </td>
+      </tr>
+    }
+  }
+}
+
+<ng-template #activeItemTemplate>
+  @if (annotationType!=='none') {
+    <td tr-annotation [mode]="annotationType" [company]="company" [item]="item"></td>
+  } @else {
+    <td></td>
+  }
+  <td class="text-end text-muted small">{{item.var?.pos}}</td>
+  <td [innerHTML]="item.text| safe:'html'"></td>
+  <ng-content *ngTemplateOutlet="priceCol context:{ $implicit: item }"></ng-content>
+  <ng-content *ngTemplateOutlet="changeableQty context: { $implicit: item }"></ng-content>
+  <ng-content *ngTemplateOutlet="instaTotal context: { $implicit: item }"></ng-content>
+</ng-template>
+
+<ng-template #repeating let-item>
+  @if (annotationType!=='none') {
+    @if (annotationType==='quote' && !item.next_recurrence_at) {
+      <td tr-annotation [mode]="'quote'" [item]="item" [company]="company" text="starts to repeat on project start"></td>
+    } @else if (annotationType==='quote' && item.next_recurrence_at) {
+      <td tr-annotation [mode]="'quote'" [item]="item" [company]="company" text="next repeat: {{item.next_recurrence_at | date}}"></td>
+    } @else {
+      <td tr-annotation [mode]="annotationType" [item]="item" [company]="company" text="starts to repeat on invoice"></td>
+    }
+  } @else {
+    <td></td>
+  }
+  <td class="text-end text-muted small">{{item.var.pos}}</td>
+  <td [innerHTML]="item.text| safe:'html'" class="text-decoration-none"></td>
+  <ng-content *ngTemplateOutlet="priceCol context:{ $implicit: item }"></ng-content>
+  <td colspan="2" class="{{item.getRepeatColor()}} text-end">{{item.getRepeatString()}}</td>
+</ng-template>
+
+<ng-template #priceCol let-item>
+  <td class="text-end" [ngbTooltip]="(item.unit_name === '%') ? 'automatically calculated' : undefined">
+    <span
+      [class.text-muted]="item.type === 1"
+      [class.badge]="item.unit_name === '%'"
+      [class.bg-info-darker]="item.unit_name === '%'">
+      {{f(item.price * (1-0.01*item.discount)) | money}}
+    </span>
+  </td>
+</ng-template>
+
+<ng-template #changeableQty let-item>
+  @if (annotationType==='quote') {
+    <td>
+      <input type="number" class="form-control text-end" style="width: 50px;" [autosave]="item" [ngModel]="item.qty" autosaveKey="qty" (ngModelChange)="_onQuickQtyChange($event)" i18n-placeholder="@@i18n.common.qty" suffix="{{item.unit_name}}">
+    </td>
+  }
+  @if (annotationType==='invoice' || annotationType==='support' || annotationType==='none') {
+    <td  class="text-end text-muted small" style="white-space: nowrap;">
+      {{f(item.qty)}} {{item.unit_name}}
+    </td>
+  }
+</ng-template>
+
+<ng-template #instaTotal let-item>
+  @if (item.class==='InvoiceItem') {
+    <td class="text-end"
+      [attr.colspan]="item.qty===-1 ? 3 : 1"
+      [class.text-primary]="!item.frontendEqualsBackend()"
+      [ngbTooltip]="item.frontendEqualsBackendHover()"
+      >
+      {{item._total | money}}
+    </td>
+  }
+</ng-template>

@@ -1,0 +1,70 @@
+@use 'colors';
+
+.stats-card {
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  }
+
+  &.active {
+    border-left: 4px solid #007bff;
+    box-shadow: 0 4px 8px rgba(0,123,255,0.25);
+  }
+}
+
+.stats-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  i {
+    color: white;
+    font-size: 24px;
+  }
+}
+
+.team-member {
+  height: 150px !important;
+  min-height: 150px;
+  max-height: 150px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #dee2e6;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.avatar img {
+  object-fit: cover;
+  border: 2px solid #dee2e6;
+}
+
+.status-indicator {
+  min-width: 70px;
+  text-align: center;
+}
+
+.cursor-pointer {
+  &.active {
+    color: colors.$primary;
+  }
+}
+::ng-deep .stats-user-row {
+    height: 150px;
+}
+.card-header {
+    position: sticky;
+    top: 0;
+    z-index: 550;
+}

@@ -1,0 +1,20 @@
+<activity-tab icon="check_box">
+    <div class="container">
+        @if (user) {
+        <scrollbar>
+            @if (user.hasRole('hr')) {
+                <tab-tasks-hr (countChanged)="onCount('hr', $event)"></tab-tasks-hr>
+            }
+            <tab-tasks-sentinels (countChanged)="onCount('sentinels', $event)"></tab-tasks-sentinels>
+            @if (user.hasRole('marketing')) {
+                <tab-tasks-remarketing></tab-tasks-remarketing>
+            }
+            <tab-tasks-milestones (countChanged)="onCount('milestones', $event)"></tab-tasks-milestones>
+            <tab-tasks-plugin-tasks></tab-tasks-plugin-tasks>
+            @if (user.hasRole('invoicing')) {
+                <tab-tasks-invoiceable></tab-tasks-invoiceable>
+            }
+        </scrollbar>
+        }
+    </div>
+</activity-tab>

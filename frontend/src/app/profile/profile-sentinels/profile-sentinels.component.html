@@ -1,0 +1,30 @@
+<toolbar>
+  <button type="button" class="btn btn-primary me-3" (click)="store()" ngbTooltip="Ctrl+Space" placement="bottom" hotkey="CTRL+ALT+N">
+    <i>add</i><span i18n="@@i18n.common.sentinel">sentinel</span>
+  </button>
+</toolbar>
+<div class="row">
+  <div class="col-3">
+    <div class="card">
+      <div class="card-header" i18n="@@i18n.common.sentinels">sentinels</div>
+      @if (sentinels.length === 0) {
+        <empty-state [card]="false" class="settings" i18n-title="@@i18n.profile.noSentinels" title="no sentinels yet">
+          <p class="text-muted small" i18n="@@i18n.profile.noSentinelsBody">Sentinels are automated workflows that react to events in the system — like a project state change or a new invoice. Define triggers, conditions, and actions to automate repetitive tasks.</p>
+        </empty-state>
+      }
+      <ul class="list-group">
+        @for (x of sentinels; track x.id) {
+          <li class="list-group-item list-group-item-action pointer text-nowrap"
+            [nx]="x" [tables]="sentinels"
+            [routerLink]="[x.id]"
+            routerLinkActive="active">
+            <div class="text-truncate">{{x.name}}</div>
+          </li>
+        }
+      </ul>
+    </div>
+  </div>
+  <div class="col-9">
+    <router-outlet></router-outlet>
+  </div>
+</div>

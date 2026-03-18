@@ -1,0 +1,124 @@
+<!-- Chart only mode -->
+@if (onlyChart && user && data) {
+<div class="d-flex align-items-center">
+    <ng-container *ngTemplateOutlet="visuChart"></ng-container>
+</div>
+}
+
+<!-- Full card mode -->
+@if (user && !onlyChart) {
+<div class="card mb-3" id="user-{{user.id}}">
+    <div class="card-header d-flex">
+        <div class="flex-fill text-truncate">
+            {{title ? title : user.name}}
+        </div>
+        @if (user.active_employment) {
+        <div class="chart-title">{{user.active_employment.hpw}} h</div>
+        }
+    </div>
+    @if (isError) {
+    <empty-state [card]="false" class="hr" i18n-title="@@i18n.hr.workloadNoEmployment" title="no active employment">
+      <p class="text-muted small" i18n="@@i18n.hr.workloadNoEmploymentBody">Workload planning requires an active employment record. Please add an employment entry first.</p>
+    </empty-state>
+    }
+    @if (!isError && data) {
+    <div class="d-flex align-items-center">
+        <ng-container *ngTemplateOutlet="visuChart"></ng-container>
+    </div>
+    }
+    @if (!isError && data && data.subscriptions) {
+    <ul class="list-group">
+        @for (p of data.subscriptions; track p.pivot?.id ?? 0) {
+        @if (p.pivot) {
+        <li [nx]="p.pivot" (singleActionResolved)="onContextMenuAction($event, p)"
+            class="list-group-item d-flex align-items-center text-nowrap gap-2 {{markerClassFor(p.pivot)}}">
+            <avatar [object]="p"></avatar>
+            @if (isProject(p)) {
+            <div>
+                <project [project]="asProject(p)!" i18n="@@i18n.common.project">project</project>
+            </div>
+            }
+            <div class="flex-fill text-truncate"
+                style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;">{{p.name}}</div>
+            @if (p.has_time_budget) {
+            <div>
+                <div class="input-group hstack flex-nowrap">
+                    <span class="input-group-text text-dark" [class.text-primary]="p.pivot.hours_planned > 0"
+                        i18n-ngbTooltip="@@i18n.info.estimatedRemainingTimeToComplete"
+                        ngbTooltip="estimated remaining time to complete (without weekly)"
+                        i18n="@@i18n.common.budget">budget</span>
+
+                    <input type="text" class="form-control" roles="hr" style="width:75px;"
+                        [(ngModel)]="p.pivot.hours_planned" (change)="updateAssignment(p.pivot)">
+
+                    <span class="input-group-text" 
+                        i18n-ngbTooltip="@@i18n.info.estimated-recurring-workload-per-week"
+                        ngbTooltip="estimated recurring workload per week" i18n="@@i18n.common.weekly">weekly</span>
+                    <input type="text" class="form-control" style="width:75px;"
+                        ngbTooltip="computed: {{p.pivot.avg_hpd * 5}}"
+                        [(ngModel)]="p.pivot.hours_weekly" (change)="updateAssignment(p.pivot)">
+                </div>
+            </div>
+            }
+            @if (!p.has_time_budget) {
+            <div>
+                <div class="input-group hstack flex-nowrap">
+                    <span class="input-group-text" [class.text-primary]="p.pivot.hours_planned > 0"
+                        i18n-ngbTooltip="@@i18n.info.estimatedRemainingTimeToComplete"
+                        ngbTooltip="estimated remaining time to complete (without weekly)"
+                        i18n="@@i18n.common.budget">budget</span>
+                    <input type="text" class="form-control" style="width:75px;" [(ngModel)]="p.pivot.hours_planned"
+                        (change)="updateAssignment(p.pivot)">
+                    <span class="input-group-text text-dark" [class.text-primary]="p.pivot.hours_weekly > 0"
+                        i18n-ngbTooltip="@@i18n.info.estimated-recurring-workload-per-week"
+                        [class.text-danger]="p.pivot.hours_weekly > 0"
+                        ngbTooltip="estimated recurring workload per week" i18n="@@i18n.common.weekly">weekly</span>
+                    <input type="text" class="form-control" style="width:75px;" [(ngModel)]="p.pivot.hours_weekly"
+                        ngbTooltip="computed: {{p.pivot.avg_hpd * 5}}"
+                        (change)="updateAssignment(p.pivot)">
+                    
+                </div>
+            </div>
+            }
+        </li>
+        }
+        }
+    </ul>
+    }
+</div>
+}
+
+<!-- Reusable visualization template -->
+<ng-template #visuChart>
+    <div class="visu" [style.height.px]="chartHeight">
+
+        <div class="visu-planned" [style.height.%]="100 * data.remaining_hpw / data.hpw">
+            @for (p of data.timeline_planned; track p) {
+            <div class="visu-planned-project {{ stripesForSub(getSubscriptionFor(p)) ? 'bg-unpaid' : '' }}" ngbTooltip="{{p.name}}" placement="bottom"
+                [style.backgroundColor]="colorFor(p)" [style.left.%]="100 * p.left" [routerLink]="p.link"
+                [style.width.%]="100 * p.width">
+            </div>
+            }
+        </div>
+
+        @for (p of getWeekly(); track $index) {
+        <div class="visu-recurring-project {{ stripesForSub(p) ? 'bg-unpaid' : '' }}" [routerLink]="p.ngLink" ngbTooltip="{{ p?.name }}" placement="bottom"
+            [style.backgroundColor]="colorForSub(p)" [style.height.%]="100 * p.pivot!.hours_weekly / data.hpw">
+        </div>
+        }
+
+        @for (_ of data.timeline_leaves; track $index) {
+        <div class="visu-break visu-{{_.type}} bg-striped" [style.left.%]="100 * _.left" [style.width.%]="100 * _.width"
+            ngbTooltip="{{_.name}}" placement="right">
+        </div>
+        }
+
+        <!-- Labels -->
+        @for (_ of monthLabels; track $index) {
+        <div class="visu-month-label" [style.left.%]="100*_.percent">
+            <div class="visu-month-label-text">{{_.label}}</div>
+        </div>
+        }
+
+    </div>
+</ng-template>

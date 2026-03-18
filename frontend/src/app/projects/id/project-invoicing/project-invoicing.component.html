@@ -1,0 +1,211 @@
+<toolbar>
+    @if (invoicingType > 0 && (!project.company.requires_po || project.po_number?.length)) {
+    <button class="btn"
+        [class.btn-primary]="!isCreatingInvoice && !hasBillingConcerns"
+        [class.btn-danger]="!isCreatingInvoice && hasBillingConcerns"
+        [class.btn-dark]="isCreatingInvoice"
+        role="alert"
+        (click)="makeInvoice()"
+        [disabled]="isCreatingInvoice"
+        [ngbTooltip]="hasBillingConcerns ? billingConcernsTooltip : ''">
+        <n>invoice</n>
+        <div i18n="@@i18n.invoice.create{invoiceNumber}">create {{ invoiceNumber }}</div>
+    </button>
+    }
+
+    @if (invoicingType > 0 && (project.company.requires_po && !project.po_number?.length)) {
+    <button class="btn btn-dark" role="alert" ngbTooltip="requires PO#" i18n-ngbTooltip="@@i18n.projects.requiresPo">
+        <n>invoice</n>
+        <div i18n="@@i18n.invoice.create{invoiceNumber}">create {{ invoiceNumber }}</div>
+    </button>
+    }
+
+    @if (invoicingType === 2) {
+    <div ngbDropdown>
+        <button class="btn btn-plain dropdown-toggle-simple" ngbDropdownToggle>
+            <i>more_vert</i>
+        </button>
+        <div ngbDropdownMenu>
+            <button ngbDropdownItem (click)="onCreateNewSupportItem()" class="hstack gap-2">
+                <i>add</i>
+                <span i18n="@@i18n.projects.createSupportItem">create support item</span>
+            </button>
+            @if (supportItems.length) {
+            <button ngbDropdownItem (click)="moveSupportToCustomer()" class="hstack gap-2">
+                <i>call_made</i>
+                <span i18n="@@i18n.projects.moveToCustomer">move to customer</span>
+            </button>
+            }
+        </div>
+    </div>
+    }
+
+    @if (finalItems.length && invoicingType !== 2) {
+    <div ngbDropdown>
+        <button class="btn btn-plain dropdown-toggle-simple" ngbDropdownToggle>
+            <i>more_vert</i>
+        </button>
+        <div ngbDropdownMenu>
+            <button ngbDropdownItem (click)="prepareInvoice()" class="hstack gap-2">
+                <i>call_made</i>
+                <span i18n="@@i18n.projects.moveToCustomer">move to customer</span>
+            </button>
+        </div>
+    </div>
+    }
+
+    @if (invoicingType === 0) {
+    <button id="btnGroupDrop2" type="button" class="btn"
+        [class.btn-primary]="!warningMissingContact() && !isCreatingInvoice"
+        [class.btn-dark]="isCreatingInvoice"
+        [class.btn-dark]="warningMissingContact() && !isCreatingInvoice"
+        [disabled]="warningMissingContact() || isCreatingInvoice"
+        [ngbTooltip]="warningMissingContact() ? 'requires contact person' : 'create quote'"
+        i18n-ngbTooltip="@@i18n.project.createQuote" (click)="makeInvoice()" hotkey="CTRL+ALT+Q">
+        <i>{{isCreatingInvoice ? 'progress_activity' : 'picture_as_pdf'}}</i>
+        <span i18n="@@i18n.common.quote">quote</span>
+    </button>
+    }
+</toolbar>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="card" ngbDropdown>
+            <button class="btn bg-primary-4 text-white text-start d-flex justify-content-between align-items-center" ngbDropdownToggle>
+                <div class="d-flex align-items-center gap-2">
+                    <i>view_list</i>
+                    <span>
+                        @if (invoicingType === 0) {
+                        <span i18n="@@i18n.common.quote">quote</span>
+                        }
+                        @if (invoicingType === 1) {
+                        <span i18n="@@i18n.invoices.downpayment-invoice">downpayment invoice</span>
+                        }
+                        @if (invoicingType === 2) {
+                        <span i18n="@@i18n.invoices.support-invoice">support invoice</span>
+                        }
+                        @if (invoicingType === 3) {
+                        <span i18n="@@i18n.invoices.final-invoice">final invoice</span>
+                        }
+                    </span>
+                </div>
+            </button>
+            <ul class="dropdown-menu w-100" ngbDropdownMenu>
+                <li><a class="dropdown-item" (click)="onInvoicingTypeChange(0)" (keyup.enter)="onInvoicingTypeChange(0)" tabindex="0" i18n="@@i18n.common.quote">quote</a></li>
+                <li><a class="dropdown-item" (click)="onInvoicingTypeChange(1)" (keyup.enter)="onInvoicingTypeChange(1)" tabindex="0" i18n="@@i18n.invoices.downpayment-invoice">downpayment invoice</a></li>
+                <li><a class="dropdown-item" (click)="onInvoicingTypeChange(2)" (keyup.enter)="onInvoicingTypeChange(2)" tabindex="0" i18n="@@i18n.invoices.support-invoice">support invoice</a></li>
+                <li><a class="dropdown-item" (click)="onInvoicingTypeChange(3)" (keyup.enter)="onInvoicingTypeChange(3)" tabindex="0" i18n="@@i18n.invoices.final-invoice">final invoice</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="col-md-9 annotate annotate-left">
+
+        @if (invoicingType > 0) {
+        <div>
+            <!-- downpayment invoice -->
+            @if (invoicingType === 1) {
+            <invoice-prepare-wrapper
+                [parent]="project"
+                [items]="downpaymentItems"
+                [annotationType]="'invoice'"
+                [allowedNewItems]="[]"
+                [withInstalments]="false"
+                [additionalBillingConsiderations]="backendConsiderations"
+                [additionalItems]="projectPaymentDetails"
+                [projectPaymentDuration]="project.getParam('INVOICE_PAYMENT_DURATION')"
+                [onChangeProjectPaymentDuration]="onChangePaymentDuration"
+                [onRemoveProjectPaymentDuration]="removePaymentDuration"
+                (considerationsChanged)="onConsiderationsChanged($event)">
+            </invoice-prepare-wrapper>
+            }
+            <!-- support invoice -->
+            @if (invoicingType === 2) {
+            <invoice-prepare-wrapper
+                [parent]="project"
+                [items]="supportItems"
+                [annotationType]="'support'"
+                [allowedNewItems]="[]"
+                [additionalBillingConsiderations]="backendConsiderations"
+                [additionalItems]="projectPaymentDetails"
+                [projectPaymentDuration]="project.getParam('INVOICE_PAYMENT_DURATION')"
+                [onChangeProjectPaymentDuration]="onChangePaymentDuration"
+                [onRemoveProjectPaymentDuration]="removePaymentDuration"
+                (considerationsChanged)="onConsiderationsChanged($event)">
+            </invoice-prepare-wrapper>
+            }
+            <!-- final invoice -->
+            @if (invoicingType === 3) {
+            <invoice-prepare-wrapper
+                [parent]="project"
+                [items]="finalItems"
+                [annotationType]="'invoice'"
+                [additionalBillingConsiderations]="backendConsiderations"
+                [additionalItems]="projectPaymentDetails"
+                [projectPaymentDuration]="project.getParam('INVOICE_PAYMENT_DURATION')"
+                [onChangeProjectPaymentDuration]="onChangePaymentDuration"
+                [onRemoveProjectPaymentDuration]="removePaymentDuration"
+                (considerationsChanged)="onConsiderationsChanged($event)">
+            </invoice-prepare-wrapper>
+            }
+        </div>
+        }
+
+        @if (invoicingType === 0) {
+        <div>
+            <!-- quote -->
+            <invoice-prepare-wrapper
+                [parent]="project"
+                [items]="project.invoice_items"
+                [mode]="'quote'"
+                [annotationType]="'invoice'"
+                [additionalBillingConsiderations]="backendConsiderations"
+                [additionalItems]="projectPaymentDetails"
+                [projectPaymentDuration]="project.getParam('INVOICE_PAYMENT_DURATION')"
+                [onChangeProjectPaymentDuration]="onChangePaymentDuration"
+                [onRemoveProjectPaymentDuration]="removePaymentDuration"
+                (considerationsChanged)="onConsiderationsChanged($event)">
+            </invoice-prepare-wrapper>
+        </div>
+        }
+    </div>
+</div>
+
+<ng-template #projectPaymentDetails>
+    @if (project.company.requires_po) {
+    <li class="list-group-item list-group-item-action d-flex py-1">
+        <div class="text-muted me-2" ngbTooltip="PO#" i18n-ngbTooltip="@@i18n.project.purchaseOrderNumber">
+            <i>confirmation_number</i>
+        </div>
+        <div (click)="onChangePO()" (keyup.enter)="onChangePO()" tabindex="0" class="text-truncate pointer flex-fill" [ngbTooltip]="project.po_number">
+            {{project.po_number || 'not set'}}
+        </div>
+    </li>
+    }
+
+    <li class="list-group-item list-group-item-action d-flex py-1" ngbDropdown>
+        <div class="text-muted me-2" ngbTooltip="addressee" i18n-ngbTooltip="@@i18n.common.addressee">
+            <i>person</i>
+        </div>
+        <div class="flex-fill pointer" [class.text-danger]="warningMissingContact()" [class.text-primary]="!warningMissingContact()" ngbDropdownToggle>
+            {{adresseeName()}}
+        </div>
+        <ul ngbDropdownMenu>
+            @for (x of getAssignedContacts(); track x.id) {
+            <li>
+                <a class="dropdown-item d-flex align-items-center gap-2" (click)="onAddCompanyContact(x)" (keyup.enter)="onAddCompanyContact(x)" tabindex="0">
+                    <div class="avatar avatar-sm">
+                        <img class="avatar-img" [src]="x.icon" alt="">
+                    </div>
+                    <span>{{x.name}}</span>
+                </a>
+            </li>
+            }
+            @if (getAssignedContacts().length === 0) {
+            <li>
+                <span class="dropdown-item text-muted" i18n="@@i18n.project.noEmployeesAvailable">no employees available</span>
+            </li>
+            }
+        </ul>
+    </li>
+</ng-template>

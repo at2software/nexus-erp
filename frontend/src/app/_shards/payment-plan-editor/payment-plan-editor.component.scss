@@ -1,0 +1,9 @@
+:host {
+    display: block;
+}
+
+.payment-steps {
+    .border-bottom:last-child {
+        border-bottom: none !important;
+    }
+}

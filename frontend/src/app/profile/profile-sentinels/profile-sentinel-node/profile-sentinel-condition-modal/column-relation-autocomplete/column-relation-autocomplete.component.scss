@@ -1,0 +1,31 @@
+@use 'colors' as *;
+
+.autocomplete-container {
+  position: relative;
+  width: 100%;
+}
+
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: gradient($bg-darker);
+  border: 1px solid #ddd;
+  max-height: 200px;
+  overflow-y: auto;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.autocomplete-dropdown li {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+.autocomplete-dropdown li.active,
+.autocomplete-dropdown li:hover {
+  background-color: #f0f0f0;
+}

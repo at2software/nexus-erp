@@ -1,0 +1,14 @@
+<div class="card card-chart mb-3">
+    <div class="card-header">
+        {{getOptions().title.value}}
+    </div>
+    <div class="chart-body mb-3">
+        <div echarts [options]="chartOptions" 
+             [initOpts]="{height: 100}" 
+             (chartInit)="onChartInit($event)"
+             style="height: 100px;">
+        </div>
+        <div class="chart-title">{{value}}</div>
+    </div>
+    <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+</div>

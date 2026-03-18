@@ -1,0 +1,137 @@
+<toolbar>
+  @if (project.id) {
+    <div class="btn-group" ngbDropdown>
+      <button type="button" class="btn btn-primary" (click)="onAddButton()">
+        <i>add</i><span i18n="@@i18n.common.milestone">milestone</span>
+      </button>
+      <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"
+        ngbDropdownToggle aria-expanded="false">
+        <span class="visually-hidden" i18n="@@i18n.invoices.toggleDropdown">toggle dropdown</span>
+      </button>
+      <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+        @if (project.invoice_items && project.invoice_items.length > 0) {
+          <button class="dropdown-item" (click)="onConvertInvoiceItems()"
+            ngbTooltip="Track invoice items with milestones" i18n-ngbTooltip="@@i18n.projects.trackInvoiceItemsWithMilestones">
+            <i class="me-2">auto_awesome</i>Track Invoice Items
+          </button>
+        }
+        @if (!project.invoice_items || project.invoice_items.length === 0) {
+          <div class="dropdown-item disabled text-muted">
+            <i class="me-2">auto_awesome</i>Track Invoice Items
+            <small class="d-block" i18n="@@i18n.projects.noInvoiceItemsAvailable">no invoice items available</small>
+          </div>
+        }
+        @if (project.milestones && project.milestones.length > 0) {
+          <div class="dropdown-divider"></div>
+        }
+        @if (project.milestones && project.milestones.length > 0) {
+          <button class="dropdown-item text-danger" (click)="onWipeBoard()"
+            ngbTooltip="Delete all milestones" i18n-ngbTooltip="@@i18n.projects.deleteAllMilestones">
+            <i class="me-2">delete_sweep</i>Wipe Board
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  @if (project.milestones.length) {
+    <div class="btn-group ms-2" ngbDropdown>
+      <button type="button" class="btn btn-outline-primary dropdown-toggle" ngbDropdownToggle>
+        <i class="me-1">calendar_view_month</i>{{currentViewMode}}
+      </button>
+      <div class="dropdown-menu" ngbDropdownMenu>
+        <button class="dropdown-item" (click)="onViewModeChange('Day')"
+          [class.active]="currentViewMode === 'Day'">
+          <i class="me-2">view_day</i>Day
+        </button>
+        <button class="dropdown-item" (click)="onViewModeChange('Week')"
+          [class.active]="currentViewMode === 'Week'">
+          <i class="me-2">view_week</i>Week
+        </button>
+        <button class="dropdown-item" (click)="onViewModeChange('Month')"
+          [class.active]="currentViewMode === 'Month'">
+          <i class="me-2">calendar_view_month</i>Month
+        </button>
+        <button class="dropdown-item" (click)="onViewModeChange('Year')"
+          [class.active]="currentViewMode === 'Year'">
+          <i class="me-2">date_range</i>Year
+        </button>
+      </div>
+    </div>
+  }
+</toolbar>
+
+@if (project) {
+  <div class="container-fluid h-100 d-flex flex-column p-0">
+    @if (isLoading) {
+      <div class="flex-grow-1 d-flex align-items-center justify-content-center">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">
+              <span i18n="@@i18n.common.loading">loading</span>
+              <span class="notranslate">...</span>
+          </span>
+        </div>
+      </div>
+    }
+    @if (!isLoading && project.milestones.length) {
+      <div class="flex-grow-1 overflow-hidden d-flex">
+        <custom-gantt
+          class="flex-fill"
+          [rows]="ganttRows"
+          [viewMode]="currentViewMode"
+          (addMilestone)="onAddButton()"
+          (addTask)="onAddTask($event)"
+          [showProjectHeaders]="false"
+          >
+        </custom-gantt>
+      </div>
+    }
+    @if (!isLoading && !project.milestones.length) {
+      <div class="container">
+        <div class="card mx-auto" style="width:36rem;">
+          <div class="row align-items-center g-0">
+            <div class="col-md-6">
+              <img src="assets/images/empty-milestones.png"
+                alt="No milestones"
+                class="img-fluid"
+                style="max-height: 300px; width: 100%; object-fit: cover; border-radius: var(--bs-border-radius) 0 0 var(--bs-border-radius);">
+              </div>
+              <div class="col-md-6">
+                <div class="card-body">
+                  <h4 class="mb-3">
+                      <span i18n="@@i18n.projects.noMilestonesYet">no milestones yet</span>
+                      <span class="notranslate">...</span>
+                  </h4>
+                  <p class="text-muted mb-4" i18n="@@i18n.projects.noMilestonesSubtitle">
+                              Add milestones manually or track your invoice items with milestones to get started.
+                          </p>
+                  <div class="d-flex flex-column gap-2">
+                    <button type="button" class="btn btn-primary" (click)="onAddButton()">
+                      <i class="me-2">add</i>
+                      <span i18n="@@i18n.common.addMilestone">add milestone</span>
+                    </button>
+                    @if (project.invoice_items && project.invoice_items.length > 0) {
+                      <button type="button"
+                        class="btn btn-outline-primary"
+                        (click)="onConvertInvoiceItems()"
+                        >
+                        <i class="me-2">auto_awesome</i>
+                        <span i18n="@@i18n.projects.trackInvoiceItems">track invoice items</span>
+                      </button>
+                    }
+                    @if (!project.invoice_items || project.invoice_items.length === 0) {
+                      <div class="text-muted small"
+                        >
+                        <i class="me-1">info</i>
+                        <span i18n="@@i18n.projects.noInvoiceItemsAvailableToTrack">no invoice items available to track</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }

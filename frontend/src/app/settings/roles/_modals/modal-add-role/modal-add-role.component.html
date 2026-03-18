@@ -1,0 +1,19 @@
+<div class="modal d-block" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" i18n="@@i18n.role.addNewRole">add new role</span>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <span class="input-group-text" i18n="@@i18n.common.name">name</span>
+                    <input type="text" class="form-control" #title [(ngModel)]="roleName">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" (click)="decline()" data-bs-dismiss="modal" i18n="@@i18n.common.cancel">cancel</button>
+                <button type="button" class="btn btn-primary" (click)="accept()" hotkey="CTRL+ENTER" i18n="@@i18n.common.add">add</button>
+            </div>
+        </div>
+    </div>
+</div>

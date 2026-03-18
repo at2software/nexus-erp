@@ -1,0 +1,74 @@
+<div class="modal d-block" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" i18n="@@i18n.invoices.combineItems">combine items</span>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3" i18n="@@i18n.invoices.combineItemsDescription">
+                    Select the description to use for the combined item, or enter a custom description.
+                </p>
+
+                <div class="mb-3">
+                    <span class="form-label" i18n="@@i18n.invoices.selectDescription">select description</span>
+                    <div class="list-group">
+                        @for (item of items; track item.id) {
+                            <button
+                                type="button"
+                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-start"
+                                [class.active]="!useCustom && selectedDescription === item.text"
+                                (click)="selectDescription(item.text)">
+                                <div class="me-auto">
+                                    <div [innerHTML]="item.text | safe:'html'"></div>
+                                    <small class="text-muted">{{item.qty}} {{item.unit_name}}</small>
+                                </div>
+                            </button>
+                        }
+                        <button
+                            type="button"
+                            class="list-group-item list-group-item-action"
+                            [class.active]="useCustom"
+                            (click)="enableCustom()">
+                            <em>
+                                <span i18n="@@i18n.common.enterCustomDescription">enter custom description</span>
+                                <span class="notranslate">...</span>
+                            </em>
+                        </button>
+                    </div>
+                </div>
+
+                @if (useCustom) {
+                    <div class="mb-3">
+                        <label class="form-label" for="customDescription" i18n="@@i18n.invoices.customDescription">custom description</label>
+                        <input
+                            #customInput
+                            id="customDescription"
+                            type="text"
+                            class="form-control"
+                            [(ngModel)]="customDescription"
+                            placeholder="Enter description" i18n-placeholder="@@i18n.common.enterDescription">
+                    </div>
+                }
+
+                <div class="alert alert-info">
+                    <strong>
+                        <span i18n="@@i18n.common.combinedResult">combined result</span>
+                        <span class="notranslate">:</span>
+                    </strong><br>
+                    <span [innerHTML]="finalDescription | safe:'html'"></span><br>
+                    <small>{{items[0]?.price | number:'1.2-2'}} x {{combinedQty}} {{items[0]?.unit_name}} = {{combinedTotal | number:'1.2-2'}}</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" (click)="decline()" i18n="@@i18n.common.cancel">cancel</button>
+                <button
+                    type="button"
+                    class="btn btn-primary"
+                    (click)="accept()"
+                    hotkey="CTRL+ENTER"
+                    [disabled]="!finalDescription.trim()"
+                    i18n="@@i18n.invoices.combine">combine</button>
+            </div>
+        </div>
+    </div>
+</div>
