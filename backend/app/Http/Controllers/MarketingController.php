@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\I18n;
+use App\Models\LeadSource;
 use App\Models\MarketingActivity;
 use App\Models\MarketingInitiative;
 use App\Models\MarketingInitiativeActivity;
@@ -10,15 +12,69 @@ use App\Models\MarketingProspect;
 use App\Models\MarketingProspectActivity;
 use App\Models\MarketingWorkflow;
 use App\Models\Project;
+use App\Models\User;
 use App\Services\MarketingFunnelService;
-use App\Services\MarketingInitiativeService;
 use App\Services\MarketingMetricsService;
-use App\Services\MarketingProspectService;
 use App\Services\MarketingRemarketingService;
 use App\Services\MarketingWorkflowService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class MarketingController extends Controller {
+    // ===== Private Helpers =====
+
+    private function assertBelongsTo($child, string $foreignKey, int $parentId, string $message, int $status = 422): ?JsonResponse {
+        return $parentId !== $child->$foreignKey
+            ? response()->json(['error' => $message], $status)
+            : null;
+    }
+    private function activityUpdateRules(string $parentTable): array {
+        return [
+            'name'                    => 'string|max:255',
+            'day_offset'              => 'integer|min:1',
+            'description'             => 'nullable',
+            'description.*.language'  => 'sometimes|string|max:10',
+            'description.*.formality' => 'sometimes|string|max:20',
+            'description.*.text'      => 'sometimes|string',
+            'description.language'    => 'sometimes|string|max:10',
+            'description.formality'   => 'sometimes|string|max:20',
+            'description.text'        => 'sometimes|string',
+            'is_required'             => 'boolean',
+            'has_external_dependency' => 'boolean',
+            'parent_activity_id'      => "nullable|exists:{$parentTable},id",
+            'quick_action'            => 'nullable|in:EMAIL,LINKEDIN,LINKEDIN_SEARCH,CALL',
+        ];
+    }
+    private function metricAttachRules(): array {
+        return [
+            'metric_id'    => 'required|exists:marketing_performance_metrics,id',
+            'target_value' => 'nullable|numeric|min:0',
+        ];
+    }
+    private function prospectActivityStatusRules(): array {
+        return [
+            'status'            => 'required|in:completed,skipped,failed,pending,overdue',
+            'notes'             => 'nullable|string',
+            'performance_value' => 'nullable|numeric',
+        ];
+    }
+    private function applyActivityStatusUpdate(MarketingProspectActivity $activity, MarketingProspect $prospect, array $validated): bool {
+        if ($validated['status'] === 'completed') {
+            return (bool)$prospect->markActivityCompleted(
+                $activity->id,
+                $validated['notes'] ?? null,
+                $validated['performance_value'] ?? null
+            );
+        }
+        return $activity->update([
+            'status' => $validated['status'],
+            'notes'  => $validated['notes'] ?? null,
+        ]);
+    }
+
+    // ===== Public Methods =====
+
     public function getFunnelChart(Request $request) {
         $query = Project::whereBudgetBased();
         MarketingFunnelService::applyRequestFilters($query, $request);
@@ -87,10 +143,7 @@ class MarketingController extends Controller {
             ->get();
     }
     public function attachInitiativeMetric(Request $request, MarketingInitiative $marketingInitiative) {
-        $validated = $request->validate([
-            'metric_id'    => 'required|exists:marketing_performance_metrics,id',
-            'target_value' => 'nullable|numeric|min:0',
-        ]);
+        $validated = $request->validate($this->metricAttachRules());
 
         $result = MarketingMetricsService::attachMetricToInitiative(
             $marketingInitiative,
@@ -128,10 +181,7 @@ class MarketingController extends Controller {
             ->get();
     }
     public function attachActivityMetric(Request $request, MarketingActivity $marketingActivity) {
-        $validated = $request->validate([
-            'metric_id'    => 'required|exists:marketing_performance_metrics,id',
-            'target_value' => 'nullable|numeric|min:0',
-        ]);
+        $validated = $request->validate($this->metricAttachRules());
 
         $result = MarketingMetricsService::attachMetricToActivity(
             $marketingActivity,
@@ -161,17 +211,18 @@ class MarketingController extends Controller {
 
     // Marketing Initiatives
     public function indexInitiatives(Request $request) {
-        return MarketingInitiativeService::getInitiatives($request);
+        return MarketingInitiative::filteredQuery($request);
     }
     public function showInitiative(MarketingInitiative $marketingInitiative) {
         $marketingInitiative->load([
             'parent',
             'children.children',
             'channels',
-            'workflows.marketingActivities',
+            'workflows.marketingActivities.i18n',
             'initiativeActivities.parentActivity',
             'initiativeActivities.childActivities',
             'initiativeActivities.performanceMetrics',
+            'initiativeActivities.i18n',
             'users',
         ]);
 
@@ -196,7 +247,7 @@ class MarketingController extends Controller {
             'channels.*.is_primary'      => 'boolean',
             'channels.*.custom_settings' => 'nullable|array',
         ]);
-        return MarketingInitiativeService::createInitiative($validated, $request->user());
+        return MarketingInitiative::createWithUser($validated, $request->user());
     }
     public function updateInitiative(Request $request, MarketingInitiative $marketingInitiative) {
         $validated = $request->validate([
@@ -212,7 +263,7 @@ class MarketingController extends Controller {
         return $marketingInitiative->load(['channels', 'parent', 'performanceMetrics']);
     }
     public function destroyInitiative(MarketingInitiative $marketingInitiative) {
-        $error = MarketingInitiativeService::canDeleteInitiative($marketingInitiative);
+        $error = $marketingInitiative->getDeletionBlocker();
         if ($error) {
             return response()->json(['error' => $error], 422);
         }
@@ -230,14 +281,14 @@ class MarketingController extends Controller {
             'custom_settings' => 'nullable|array',
         ]);
 
-        $result = MarketingInitiativeService::addChannel($marketingInitiative, $validated);
+        $result = $marketingInitiative->addChannel($validated);
         if ($result === null) {
             return response()->json(['error' => 'Channel already added to this initiative'], 422);
         }
         return $result;
     }
-    public function removeInitiativeChannel(MarketingInitiative $marketingInitiative, \App\Models\LeadSource $leadSource) {
-        $result = MarketingInitiativeService::removeChannel($marketingInitiative, $leadSource);
+    public function removeInitiativeChannel(MarketingInitiative $marketingInitiative, LeadSource $leadSource) {
+        $result = $marketingInitiative->removeChannel($leadSource);
         if ($result === null) {
             return response()->json(['error' => 'Channel not found in this initiative'], 404);
         }
@@ -250,7 +301,7 @@ class MarketingController extends Controller {
             'channels.*.is_primary'      => 'boolean',
             'channels.*.custom_settings' => 'nullable|array',
         ]);
-        return MarketingInitiativeService::updateChannels($marketingInitiative, $validated['channels']);
+        return $marketingInitiative->updateChannels($validated['channels']);
     }
     public function indexInitiativeWorkflows(MarketingInitiative $marketingInitiative) {
         return $marketingInitiative->workflows()->withPivot(['is_active'])->get();
@@ -273,8 +324,7 @@ class MarketingController extends Controller {
 
         // Copy workflow activities to initiative activities
         $workflow = MarketingWorkflow::with('orderedActivities')->find($validated['marketing_workflow_id']);
-        MarketingInitiativeService::copyWorkflowActivitiesToInitiative($marketingInitiative, $workflow);
-
+        $marketingInitiative->copyWorkflowActivities($workflow);
         return $marketingInitiative->workflows()->withPivot(['is_active'])->get();
     }
     public function detachWorkflowFromInitiative(Request $request, MarketingInitiative $marketingInitiative, MarketingWorkflow $marketingWorkflow) {
@@ -365,18 +415,26 @@ class MarketingController extends Controller {
             ];
         }
 
-        $activityIds = $marketingInitiative->workflows()
-            ->with('marketingActivities')
+        $initiativeActivityIds = $marketingInitiative->initiativeActivities()->pluck('id')->toArray();
+        $perActivityStats      = DB::table('marketing_prospect_activities')
+            ->whereIn('marketing_initiative_activity_id', $initiativeActivityIds)
+            ->selectRaw('marketing_initiative_activity_id,
+                COUNT(*) as total,
+                SUM(CASE WHEN status = "completed" THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status = "skipped" THEN 1 ELSE 0 END) as skipped,
+                SUM(CASE WHEN status = "pending" AND scheduled_at < NOW() THEN 1 ELSE 0 END) as overdue,
+                SUM(CASE WHEN status = "pending" AND (scheduled_at IS NULL OR scheduled_at >= NOW()) THEN 1 ELSE 0 END) as pending')
+            ->groupBy('marketing_initiative_activity_id')
             ->get()
-            ->flatMap(fn ($workflow) => $workflow->marketingActivities->pluck('id'))
-            ->toArray();
+            ->keyBy('marketing_initiative_activity_id');
+
         return [
             'prospects' => [
                 'total'     => $marketingInitiative->prospects()->count(),
                 'by_status' => $marketingInitiative->getProspectsCountByStatus(),
                 'recent'    => $marketingInitiative->prospects()->where('created_at', '>=', now()->subDays(7))->count(),
             ],
-            'activities' => MarketingWorkflowService::calculateActivityStats($activityIds),
+            'activities' => $perActivityStats,
             'metrics'    => $marketingInitiative->performanceMetrics->map(fn ($metric) => [
                 'id'                  => $metric->id,
                 'name'                => $metric->name,
@@ -387,6 +445,16 @@ class MarketingController extends Controller {
             ]),
             'timeline' => $timeline,
         ];
+    }
+    public function indexInitiativeRecentActivity(MarketingInitiative $marketingInitiative) {
+        return MarketingProspectActivity::whereHas('marketingInitiativeActivity',
+            fn ($q) => $q->where('marketing_initiative_id', $marketingInitiative->id)
+        )
+            ->where('status', '!=', 'pending')
+            ->with(['marketingProspect', 'marketingInitiativeActivity'])
+            ->latest('updated_at')
+            ->limit(20)
+            ->get();
     }
     public function indexInitiativesForAddon(Request $request) {
         // Return only active initiatives that the current user is subscribed to
@@ -403,54 +471,35 @@ class MarketingController extends Controller {
             ->orderedByDay()
             ->get();
     }
-
     public function storeInitiativeActivity(Request $request, MarketingInitiative $marketingInitiative) {
         $validated = $request->validate([
-            'marketing_workflow_id'    => 'nullable|exists:marketing_workflows,id',
-            'name'                     => 'required|string|max:255',
-            'day_offset'               => 'required|integer|min:1',
-            'description'              => 'nullable|string',
-            'is_required'              => 'boolean',
-            'has_external_dependency'  => 'boolean',
-            'parent_activity_id'       => 'nullable|exists:marketing_initiative_activities,id',
-            'metric_ids'               => 'array',
-            'metric_ids.*'             => 'exists:marketing_performance_metrics,id',
-            'quick_action'             => 'nullable|in:EMAIL,LINKEDIN,LINKEDIN_SEARCH,CALL',
+            'marketing_workflow_id'   => 'nullable|exists:marketing_workflows,id',
+            'name'                    => 'required|string|max:255',
+            'day_offset'              => 'required|integer|min:1',
+            'description'             => 'nullable|string',
+            'is_required'             => 'boolean',
+            'has_external_dependency' => 'boolean',
+            'parent_activity_id'      => 'nullable|exists:marketing_initiative_activities,id',
+            'metric_ids'              => 'array',
+            'metric_ids.*'            => 'exists:marketing_performance_metrics,id',
+            'quick_action'            => 'nullable|in:EMAIL,LINKEDIN,LINKEDIN_SEARCH,CALL',
         ]);
-        return MarketingInitiativeService::createInitiativeActivity($marketingInitiative, $validated);
+        return $marketingInitiative->createActivity($validated);
     }
-
     public function updateInitiativeActivity(Request $request, MarketingInitiative $marketingInitiative, MarketingInitiativeActivity $marketingInitiativeActivity) {
-        // Verify the activity belongs to this initiative
-        if ($marketingInitiativeActivity->marketing_initiative_id !== $marketingInitiative->id) {
-            return response()->json(['error' => 'Activity does not belong to this initiative'], 422);
+        if ($error = $this->assertBelongsTo($marketingInitiativeActivity, 'marketing_initiative_id', $marketingInitiative->id, 'Activity does not belong to this initiative')) {
+            return $error;
         }
 
-        $validated = $request->validate([
-            'name'                     => 'string|max:255',
-            'day_offset'               => 'integer|min:1',
-            'description'              => 'nullable',
-            'description.*.language'   => 'sometimes|string|max:10',
-            'description.*.formality'  => 'sometimes|string|max:20',
-            'description.*.text'       => 'sometimes|string',
-            'description.language'     => 'sometimes|string|max:10',
-            'description.formality'    => 'sometimes|string|max:20',
-            'description.text'         => 'sometimes|string',
-            'is_required'              => 'boolean',
-            'has_external_dependency'  => 'boolean',
-            'parent_activity_id'       => 'nullable|exists:marketing_initiative_activities,id',
-            'quick_action'             => 'nullable|in:EMAIL,LINKEDIN,LINKEDIN_SEARCH,CALL',
-        ]);
-
-        return MarketingInitiativeService::updateInitiativeActivity($marketingInitiativeActivity, $validated);
+        $validated = $request->validate($this->activityUpdateRules('marketing_initiative_activities'));
+        return $marketingInitiativeActivity->updateWithRelations($validated);
     }
-
     public function destroyInitiativeActivity(MarketingInitiative $marketingInitiative, MarketingInitiativeActivity $marketingInitiativeActivity) {
-        if ($marketingInitiativeActivity->marketing_initiative_id !== $marketingInitiative->id) {
-            return response()->json(['error' => 'Activity does not belong to this initiative'], 422);
+        if ($error = $this->assertBelongsTo($marketingInitiativeActivity, 'marketing_initiative_id', $marketingInitiative->id, 'Activity does not belong to this initiative')) {
+            return $error;
         }
 
-        MarketingInitiativeService::deleteInitiativeActivity($marketingInitiativeActivity);
+        $marketingInitiativeActivity->deleteWithReparent();
         return response()->json(['message' => 'Activity deleted successfully']);
     }
 
@@ -503,46 +552,31 @@ class MarketingController extends Controller {
     }
     public function storeWorkflowActivity(Request $request, MarketingWorkflow $marketingWorkflow) {
         $validated = $request->validate([
-            'name'                     => 'required|string|max:255',
-            'day_offset'               => 'required|integer|min:1',
-            'description'              => 'nullable|string',
-            'is_required'              => 'boolean',
-            'has_external_dependency'  => 'boolean',
-            'parent_activity_id'       => 'nullable|exists:marketing_activities,id',
-            'metric_ids'               => 'array',
-            'metric_ids.*'             => 'exists:marketing_performance_metrics,id',
-            'quick_action'             => 'nullable|in:EMAIL,LINKEDIN,LINKEDIN_SEARCH,CALL',
+            'name'                    => 'required|string|max:255',
+            'day_offset'              => 'required|integer|min:1',
+            'description'             => 'nullable|string',
+            'is_required'             => 'boolean',
+            'has_external_dependency' => 'boolean',
+            'parent_activity_id'      => 'nullable|exists:marketing_activities,id',
+            'metric_ids'              => 'array',
+            'metric_ids.*'            => 'exists:marketing_performance_metrics,id',
+            'quick_action'            => 'nullable|in:EMAIL,LINKEDIN,LINKEDIN_SEARCH,CALL',
         ]);
         return MarketingWorkflowService::createWorkflowActivity($marketingWorkflow, $validated);
     }
     public function updateWorkflowActivity(Request $request, MarketingWorkflow $marketingWorkflow, MarketingActivity $marketingActivity) {
-        // Verify the activity belongs to this workflow
-        if ($marketingActivity->marketing_workflow_id !== $marketingWorkflow->id) {
-            return response()->json(['error' => 'Activity does not belong to this workflow'], 422);
+        if ($error = $this->assertBelongsTo($marketingActivity, 'marketing_workflow_id', $marketingWorkflow->id, 'Activity does not belong to this workflow')) {
+            return $error;
         }
 
-        $validated = $request->validate([
-            'name'                     => 'string|max:255',
-            'day_offset'               => 'integer|min:1',
-            'description'              => 'nullable', // Can be string, single i18n object, or array of i18n objects
-            'description.*.language'   => 'sometimes|string|max:10',
-            'description.*.formality'  => 'sometimes|string|max:20',
-            'description.*.text'       => 'sometimes|string',
-            'description.language'     => 'sometimes|string|max:10',
-            'description.formality'    => 'sometimes|string|max:20',
-            'description.text'         => 'sometimes|string',
-            'is_required'              => 'boolean',
-            'has_external_dependency'  => 'boolean',
-            'parent_activity_id'       => 'nullable|exists:marketing_activities,id',
-            'quick_action'             => 'nullable|in:EMAIL,LINKEDIN,LINKEDIN_SEARCH,CALL',
-        ]);
+        $validated = $request->validate($this->activityUpdateRules('marketing_activities'));
 
         $marketingActivity->update($validated);
         return $marketingActivity->load(['performanceMetrics', 'parentActivity', 'childActivities', 'i18n']);
     }
     public function destroyWorkflowActivity(MarketingWorkflow $marketingWorkflow, MarketingActivity $marketingActivity) {
-        if ($marketingActivity->marketing_workflow_id !== $marketingWorkflow->id) {
-            return response()->json(['error' => 'Activity does not belong to this workflow'], 422);
+        if ($error = $this->assertBelongsTo($marketingActivity, 'marketing_workflow_id', $marketingWorkflow->id, 'Activity does not belong to this workflow')) {
+            return $error;
         }
 
         MarketingWorkflowService::deleteWorkflowActivity($marketingActivity);
@@ -551,10 +585,10 @@ class MarketingController extends Controller {
 
     // Prospects
     public function indexProspects(Request $request) {
-        return MarketingProspectService::getProspects($request);
+        return MarketingProspect::filteredQuery($request);
     }
     public function showProspectStats(Request $request) {
-        return MarketingProspectService::getProspectStats();
+        return MarketingProspect::getStats();
     }
     public function showProspect(MarketingProspect $marketingProspect) {
         return $marketingProspect->load([
@@ -569,11 +603,11 @@ class MarketingController extends Controller {
     public function storeProspect(Request $request) {
         $validated = $request->validate([
             'marketing_initiative_id' => 'required|exists:marketing_initiatives,id',
-            'lead_source_id'          => 'required|exists:lead_sources,id',
+            'lead_source_id'          => 'nullable|exists:lead_sources,id',
             'user_id'                 => 'nullable|exists:users,id',
             'company_id'              => 'nullable|exists:companies,id',
             'company_contact_id'      => 'nullable|exists:company_contacts,id',
-            'name'                    => 'required|string|max:255',
+            'name'                    => 'nullable|string|max:255',
             'vcard'                   => 'nullable|string',
             'email'                   => 'nullable|email|max:255',
             'linkedin_url'            => 'nullable|url|max:500',
@@ -602,7 +636,7 @@ class MarketingController extends Controller {
             'external_data'           => 'nullable|array',
         ]);
 
-        $result = MarketingProspectService::createProspectFromAddon($validated, $request->user());
+        $result = MarketingProspect::createFromAddon($validated, $request->user());
 
         if (isset($result['error'])) {
             return response()->json($result, 409);
@@ -658,7 +692,7 @@ class MarketingController extends Controller {
         $validated = $request->validate([
             'company_id' => 'required|exists:companies,id',
         ]);
-        return MarketingProspectService::linkProspectToCompany($marketingProspect, $validated['company_id']);
+        return $marketingProspect->linkToCompany($validated['company_id']);
     }
     public function convertProspect(Request $request, MarketingProspect $marketingProspect) {
         $validated = $request->validate([
@@ -667,8 +701,7 @@ class MarketingController extends Controller {
             'company_name' => 'nullable|string',
         ]);
 
-        $result = MarketingProspectService::convertProspect(
-            $marketingProspect,
+        $result = $marketingProspect->convert(
             $validated['create_new'],
             $validated['company_id'] ?? null,
             $validated['company_name'] ?? null
@@ -685,7 +718,7 @@ class MarketingController extends Controller {
         $initiativeId = $request->get('marketing_initiative_id');
 
         // Step 1: Find all prospects that have at least one overdue task
-        $prospectsWithOverdueTasks = \DB::table('marketing_prospect_activities as mpa')
+        $prospectsWithOverdueTasks = DB::table('marketing_prospect_activities as mpa')
             ->join('marketing_prospects as mp', 'mp.id', '=', 'mpa.marketing_prospect_id')
             ->select('mp.id')
             ->where('mp.user_id', $request->user()->id)
@@ -698,7 +731,7 @@ class MarketingController extends Controller {
             ->pluck('id');
 
         // Step 2: For those prospects, get the OLDEST pending task (by ID)
-        $oldestActivityIds = \DB::table('marketing_prospect_activities as mpa')
+        $oldestActivityIds = DB::table('marketing_prospect_activities as mpa')
             ->select('mpa.id', 'mpa.marketing_prospect_id')
             ->whereIn('mpa.marketing_prospect_id', $prospectsWithOverdueTasks)
             ->where('mpa.status', 'pending')
@@ -709,11 +742,11 @@ class MarketingController extends Controller {
 
         // Load the activities with relations
         $activities = MarketingProspectActivity::with([
-            'marketingProspect' => fn ($q) => $q->select(['id', 'vcard', 'user_id', 'lead_source_id', 'marketing_initiative_id', 'status', 'created_at', 'company_contact_id'])
+            'marketingProspect' => fn ($q) => $q->select(['id', 'vcard', 'notes', 'user_id', 'lead_source_id', 'marketing_initiative_id', 'status', 'created_at', 'company_contact_id'])
                 ->withMax('completedActivities as last_completed_activity', 'completed_at')
                 ->with('leadSource:id,name')
                 ->with('companyContact.contact'),
-            'marketingActivity' => fn ($q) => $q->select(['id', 'name', 'description', 'has_external_dependency', 'parent_activity_id', 'quick_action']),
+            'marketingInitiativeActivity' => fn ($q) => $q->select(['id', 'name', 'description', 'has_external_dependency', 'parent_activity_id', 'quick_action']),
         ])
             ->whereIn('id', $oldestActivityIds)
             ->orderBy('scheduled_at')
@@ -722,11 +755,11 @@ class MarketingController extends Controller {
         // Load ALL other pending tasks for these prospects (for accordion)
         $prospectIds     = $activities->pluck('marketing_prospect_id')->unique();
         $allPendingTasks = MarketingProspectActivity::with([
-            'marketingProspect' => fn ($q) => $q->select(['id', 'vcard', 'lead_source_id', 'created_at', 'company_contact_id'])
+            'marketingProspect' => fn ($q) => $q->select(['id', 'vcard', 'notes', 'lead_source_id', 'created_at', 'company_contact_id'])
                 ->withMax('completedActivities as last_completed_activity', 'completed_at')
                 ->with('leadSource:id,name')
                 ->with('companyContact.contact'),
-            'marketingActivity' => fn ($q) => $q->select(['id', 'description', 'has_external_dependency', 'parent_activity_id', 'quick_action']),
+            'marketingInitiativeActivity' => fn ($q) => $q->select(['id', 'name', 'description', 'has_external_dependency', 'parent_activity_id', 'quick_action']),
         ])
             ->whereIn('marketing_prospect_id', $prospectIds)
             ->where('status', 'pending')
@@ -745,14 +778,14 @@ class MarketingController extends Controller {
 
         // Expand i18n descriptions: convert @@i18n marker to array of localized variants
         $expandI18n = function ($activity) {
-            if ($activity->marketingActivity && $activity->marketingActivity->description === '@@i18n') {
-                $i18nRecords = \App\Models\I18n::where([
-                    'parent_type' => \App\Models\MarketingActivity::class,
-                    'parent_id'   => $activity->marketingActivity->id,
+            if ($activity->marketingInitiativeActivity && $activity->marketingInitiativeActivity->description === '@@i18n') {
+                $i18nRecords = I18n::where([
+                    'parent_type' => MarketingInitiativeActivity::class,
+                    'parent_id'   => $activity->marketingInitiativeActivity->id,
                 ])->get();
 
                 if ($i18nRecords->isNotEmpty()) {
-                    $activity->marketingActivity->setAttribute('description', $i18nRecords->map(fn ($record) => [
+                    $activity->marketingInitiativeActivity->setAttribute('description', $i18nRecords->map(fn ($record) => [
                         'language'  => $record->language,
                         'formality' => $record->formality,
                         'text'      => $record->text,
@@ -768,11 +801,7 @@ class MarketingController extends Controller {
         return $activities;
     }
     public function updateProspectActivityStatus(Request $request, MarketingProspect $marketingProspect, int $activityId) {
-        $validated = $request->validate([
-            'status'            => 'required|in:completed,skipped,failed,pending,overdue',
-            'notes'             => 'nullable|string',
-            'performance_value' => 'nullable|numeric',
-        ]);
+        $validated = $request->validate($this->prospectActivityStatusRules());
 
         $activity = $marketingProspect->activities()->find($activityId);
 
@@ -780,30 +809,13 @@ class MarketingController extends Controller {
             return response()->json(['error' => 'Activity not found'], 404);
         }
 
-        if ($validated['status'] === 'completed') {
-            $success = $marketingProspect->markActivityCompleted(
-                $activityId,
-                $validated['notes'] ?? null,
-                $validated['performance_value'] ?? null
-            );
-        } else {
-            $success = $activity->update([
-                'status' => $validated['status'],
-                'notes'  => $validated['notes'] ?? null,
-            ]);
-        }
-
-        if (! $success) {
+        if (! $this->applyActivityStatusUpdate($activity, $marketingProspect, $validated)) {
             return response()->json(['error' => 'Failed to update activity'], 422);
         }
         return $activity->fresh(['marketingActivity']);
     }
     public function updateProspectActivityById(Request $request, int $activityId) {
-        $validated = $request->validate([
-            'status'            => 'required|in:completed,skipped,failed,pending,overdue',
-            'notes'             => 'nullable|string',
-            'performance_value' => 'nullable|numeric',
-        ]);
+        $validated = $request->validate($this->prospectActivityStatusRules());
 
         $activity = MarketingProspectActivity::find($activityId);
 
@@ -811,66 +823,40 @@ class MarketingController extends Controller {
             return response()->json(['error' => 'Activity not found'], 404);
         }
 
-        $marketingProspect = $activity->marketingProspect;
-
-        // Calculate time difference for adjusting succeeding tasks
+        $marketingProspect   = $activity->marketingProspect;
         $originalScheduledAt = $activity->scheduled_at;
-        $now                 = now();
 
+        if (! $this->applyActivityStatusUpdate($activity, $marketingProspect, $validated)) {
+            return response()->json(['error' => 'Failed to update activity'], 422);
+        }
+
+        // When completed, shift succeeding pending tasks by the same number of days late/early
         if ($validated['status'] === 'completed') {
-            $success = $marketingProspect->markActivityCompleted(
-                $activityId,
-                $validated['notes'] ?? null,
-                $validated['performance_value'] ?? null
-            );
-
-            // Calculate how many days late (positive) or early (negative) we are
+            $now        = now();
             $daysOffset = $now->startOfDay()->diffInDays($originalScheduledAt->startOfDay());
-            if ($now->startOfDay() > $originalScheduledAt->startOfDay()) {
-                // Completed late, postpone succeeding tasks (positive offset)
-                $daysDifference = -$daysOffset;
-            } else {
-                // Completed early, move succeeding tasks earlier (negative offset)
-                $daysDifference = $daysOffset;
-            }
-            // Adjust succeeding tasks' due dates
-            // Postpone if completed late, move earlier if completed early
+            // Negative = completed late (postpone), positive = completed early (move earlier)
+            $daysDifference = $now->startOfDay() > $originalScheduledAt->startOfDay()
+                ? -$daysOffset
+                : $daysOffset;
+
             if ($daysDifference != 0) {
                 MarketingProspectActivity::where('marketing_prospect_id', $marketingProspect->id)
                     ->where('status', 'pending')
                     ->where('scheduled_at', '>', $originalScheduledAt)
-                    ->update(['scheduled_at' => \DB::raw("DATE_ADD(scheduled_at, INTERVAL {$daysDifference} DAY)")]);
+                    ->update(['scheduled_at' => DB::raw("DATE_ADD(scheduled_at, INTERVAL {$daysDifference} DAY)")]);
             }
-        } else {
-            $success = $activity->update([
-                'status' => $validated['status'],
-                'notes'  => $validated['notes'] ?? null,
-            ]);
-        }
-
-        if (! $success) {
-            return response()->json(['error' => 'Failed to update activity'], 422);
         }
         return $activity->fresh(['marketingActivity', 'marketingProspect']);
     }
 
     // Performance Metrics
     public function indexMetrics(Request $request) {
-        $query = MarketingPerformanceMetric::with(['marketingInitiative']);
-
-        if ($request->has('marketing_initiative_id')) {
-            $query->where('marketing_initiative_id', $request->marketing_initiative_id);
-        }
-
-        if ($request->has('metric_type')) {
-            $query->where('metric_type', $request->metric_type);
-        }
-
-        if ($request->has('is_inherited')) {
-            $query->where('is_inherited', $request->boolean('is_inherited'));
-        }
-
-        $metrics = $query->latest()->get();
+        $metrics = MarketingPerformanceMetric::with(['marketingInitiative'])
+            ->when($request->has('marketing_initiative_id'), fn ($q) => $q->where('marketing_initiative_id', $request->marketing_initiative_id))
+            ->when($request->has('metric_type'), fn ($q) => $q->where('metric_type', $request->metric_type))
+            ->when($request->has('is_inherited'), fn ($q) => $q->where('is_inherited', $request->boolean('is_inherited')))
+            ->latest()
+            ->get();
 
         // Append statistics to each metric
         return $metrics->map(function ($metric) {
@@ -902,6 +888,146 @@ class MarketingController extends Controller {
             'progress_percentage' => round($marketingPerformanceMetric->getProgressPercentage(), 2),
             'is_target_met'       => $marketingPerformanceMetric->isTargetMet(),
             'activities_count'    => $marketingPerformanceMetric->marketingActivities()->count(),
+        ];
+    }
+    public function getDashboardStats() {
+        $heatmapStart  = now()->subDays(3)->startOfDay();
+        $heatmapEnd    = now()->addDays(6)->endOfDay();
+        $thirtyDaysAgo = now()->subDays(30);
+
+        // 1. Activity schedule heatmap: past 3 days through next 6 days
+        $heatmap = MarketingProspectActivity::query()
+            ->whereBetween('scheduled_at', [$heatmapStart, $heatmapEnd])
+            ->selectRaw("
+                DATE(scheduled_at) as date,
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status = 'pending'   THEN 1 ELSE 0 END) as pending
+            ")
+            ->groupByRaw('DATE(scheduled_at)')
+            ->orderBy('date')
+            ->get();
+
+        // 2. Recent conversions
+        $recentConversions = MarketingProspect::with([
+            'marketingInitiative:id,name',
+            'leadSource:id,name',
+        ])
+            ->where('status', 'converted')
+            ->latest('updated_at')
+            ->limit(8)
+            ->get(['id', 'vcard', 'marketing_initiative_id', 'lead_source_id', 'updated_at'])
+            ->map(fn ($p) => [
+                'id'           => $p->id,
+                'name'         => $p->vcard->getFirstValue('FN') ?? 'Unknown',
+                'company'      => $p->vcard->getFirstValue('ORG'),
+                'initiative'   => $p->marketingInitiative?->name,
+                'source'       => $p->leadSource?->name,
+                'converted_at' => $p->updated_at?->toDateString(),
+            ]);
+
+        // 3. Lead source breakdown using LeadSource model
+        $leadSources = LeadSource::withCount([
+            'marketingProspects as total',
+            'marketingProspects as converted' => fn ($q) => $q->where('status', 'converted'),
+        ])
+            ->orderByDesc('total')
+            ->get(['id', 'name']);
+
+        // 4. Prospect aging — active pipeline only
+        $aging = MarketingProspect::whereNotIn('status', ['converted', 'disqualified'])
+            ->selectRaw('
+                SUM(CASE WHEN DATEDIFF(NOW(), created_at) <= 7             THEN 1 ELSE 0 END) as fresh,
+                SUM(CASE WHEN DATEDIFF(NOW(), created_at) BETWEEN 8 AND 30 THEN 1 ELSE 0 END) as warm,
+                SUM(CASE WHEN DATEDIFF(NOW(), created_at) BETWEEN 31 AND 90 THEN 1 ELSE 0 END) as cooling,
+                SUM(CASE WHEN DATEDIFF(NOW(), created_at) > 90             THEN 1 ELSE 0 END) as stale
+            ')
+            ->first();
+
+        // 5. Team performance over the last 30 days
+        // Query stats per user_id first (avoids raw column vs. vcard accessor name mismatch)
+        $userStats = MarketingProspectActivity::query()
+            ->join('marketing_prospects as mp', 'mp.id', '=', 'marketing_prospect_activities.marketing_prospect_id')
+            ->select('mp.user_id')
+            ->selectRaw("
+                SUM(CASE WHEN marketing_prospect_activities.status = 'completed' AND marketing_prospect_activities.completed_at >= ? THEN 1 ELSE 0 END) as completed_30d,
+                SUM(CASE WHEN marketing_prospect_activities.status = 'pending'
+                    AND marketing_prospect_activities.scheduled_at < NOW()
+                    AND mp.status NOT IN ('unresponsive', 'disqualified', 'on_hold') THEN 1 ELSE 0 END) as overdue
+            ", [$thirtyDaysAgo])
+            ->groupBy('mp.user_id')
+            ->orderByDesc('completed_30d')
+            ->limit(6)
+            ->get()
+            ->keyBy('user_id');
+
+        // Load User models to use the name accessor (resolves FN from vcard)
+        $teamUsers       = User::whereIn('id', $userStats->keys())->get()->keyBy('id');
+        $teamPerformance = $userStats->map(fn ($stat) => [
+            'id'            => $stat->user_id,
+            'name'          => $teamUsers->get($stat->user_id)?->name ?? 'Unknown',
+            'completed_30d' => (int)$stat->completed_30d,
+            'overdue'       => (int)$stat->overdue,
+        ])->values();
+
+        // 6. Top initiatives ranked by conversion
+        $topInitiatives = MarketingInitiative::withCount([
+            'prospects as total_prospects',
+            'prospects as converted' => fn ($q) => $q->where('status', 'converted'),
+        ])
+            ->orderByDesc('converted')
+            ->limit(6)
+            ->get(['id', 'name', 'status'])
+            ->map(function ($i) {
+                $i->conversion_rate = $i->total_prospects > 0
+                    ? round(($i->converted / $i->total_prospects) * 100, 1)
+                    : 0;
+                return $i;
+            });
+
+        // 7. Workflow effectiveness — completion rate + prospect conversion rate per workflow
+        $workflowEffectiveness = MarketingWorkflow::select('id', 'name', 'is_active')
+            ->withCount([
+                'prospectActivities as total_activities',
+                'prospectActivities as completed_activities' => fn ($q) => $q->where('status', 'completed'),
+            ])
+            ->selectRaw('(
+                SELECT COUNT(DISTINCT mp2.id)
+                FROM marketing_initiative_activities mia2
+                JOIN marketing_prospect_activities mpa2 ON mpa2.marketing_initiative_activity_id = mia2.id
+                JOIN marketing_prospects mp2 ON mp2.id = mpa2.marketing_prospect_id
+                WHERE mia2.marketing_workflow_id = marketing_workflows.id
+            ) as total_workflow_prospects')
+            ->selectRaw('(
+                SELECT COUNT(DISTINCT mp2.id)
+                FROM marketing_initiative_activities mia2
+                JOIN marketing_prospect_activities mpa2 ON mpa2.marketing_initiative_activity_id = mia2.id
+                JOIN marketing_prospects mp2 ON mp2.id = mpa2.marketing_prospect_id
+                WHERE mia2.marketing_workflow_id = marketing_workflows.id
+                AND mp2.status = \'converted\'
+            ) as converted_prospects')
+            ->having('total_activities', '>', 0)
+            ->orderByDesc('completed_activities')
+            ->limit(6)
+            ->get()
+            ->map(function ($w) {
+                $w->completion_rate = $w->total_activities > 0
+                    ? round(($w->completed_activities / $w->total_activities) * 100, 1)
+                    : 0;
+                $w->prospect_conversion_rate = $w->total_workflow_prospects > 0
+                    ? round(($w->converted_prospects / $w->total_workflow_prospects) * 100, 1)
+                    : 0;
+                return $w;
+            });
+
+        return [
+            'heatmap'                => $heatmap,
+            'recent_conversions'     => $recentConversions,
+            'lead_sources'           => $leadSources,
+            'aging'                  => $aging,
+            'team_performance'       => $teamPerformance,
+            'top_initiatives'        => $topInitiatives,
+            'workflow_effectiveness' => $workflowEffectiveness,
         ];
     }
 }

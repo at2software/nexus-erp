@@ -50,8 +50,8 @@ export class CustomersKnownSequiturSearchComponent implements OnInit {
     setPhoneNumber = (c: Company) => {
         const row = VcardRow.fromString('TEL;type=work,CELL:' + this.number)
         if (row) {
-            c.card?.rows.push(row)
-            c.update({ 'vcard': c.card?.toString() }).subscribe((_) => {
+            c.card.rows.push(row)
+            c.update({ 'vcard': c.card.toString() }).subscribe((_) => {
                 this.openKnownSequitur(_)
             })
         }

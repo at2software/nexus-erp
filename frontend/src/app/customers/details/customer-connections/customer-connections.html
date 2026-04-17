@@ -20,8 +20,8 @@
                   <div><i>add</i></div>
                   <div class="flex-fill">
                     <span i18n="@@i18n.common.createNew">create new</span>
-                    @if (popSearch.query) {
-                      <span class="fw-bold">"{{popSearch.query}}"</span>
+                    @if (popSearch.query()) {
+                      <span class="fw-bold">"{{popSearch.query()}}"</span>
                     }
                   </div>
                 </div>

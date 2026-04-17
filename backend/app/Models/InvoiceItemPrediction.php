@@ -8,7 +8,7 @@ class InvoiceItemPrediction extends BaseModel {
     use HasFactory;
 
     protected $fillable = ['user_id', 'invoice_item_id', 'qty', 'flags'];
-    protected $access   = ['admin' => '*', 'project_manager'=>'crud', 'user'=>'crud'];
+    protected $access   = ['admin' => '*', 'project_manager' => 'crud', 'user' => 'crud'];
 
     public function user() {
         return $this->belongsTo(User::class);
@@ -17,7 +17,7 @@ class InvoiceItemPrediction extends BaseModel {
         return $this->belongsTo(InvoiceItem::class);
     }
     public static function _w($uid, $iid) {
-        return ['user_id' => $uid, 'invoice_item_id'=>$iid];
+        return ['user_id' => $uid, 'invoice_item_id' => $iid];
     }
     public static function find($uid, $iid) {
         return InvoiceItemPrediction::where(self::_w($uid, $iid));

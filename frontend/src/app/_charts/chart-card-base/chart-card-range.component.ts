@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { Component, input, OnChanges } from '@angular/core';
 import { LineChartParamComponent } from './chart-card-base.component';
 import { Color } from 'src/constants/Color';
 import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS } from '../ChartOptions';
@@ -17,8 +17,8 @@ import { MoneyPipe } from 'src/pipes/money.pipe';
 })
 export class LineChartRangeComponent extends LineChartParamComponent implements OnChanges {
 
-    @Input() computeTrend:boolean = true
-    @Input() seriesCount: number = 1
+    computeTrend = input<boolean>(true)
+    seriesCount  = input<number>(1)
 
     moneyPipe = new MoneyPipe()
 
@@ -71,7 +71,7 @@ export class LineChartRangeComponent extends LineChartParamComponent implements 
             // For single series: find individual max
             result.forEach((_: any, i: number) => {
                 _['data'].forEach((__: any) => {
-                    if (this.offset == 'none' || i == 0) {
+                    if (this.offset() == 'none' || i == 0) {
                         maxVal = Math.max(maxVal, __.max)
                     }
                 })
@@ -155,7 +155,7 @@ export class LineChartRangeComponent extends LineChartParamComponent implements 
             result.forEach((serie: any, seriesIndex: number) => {
                 const lineColor = Color.fromVar(this.getColor(seriesIndex)).toHexString()
                 echartsData.push({
-                    name: seriesIndex >= this.seriesCount ? 'Vergleichszeitraum' : CASHFLOW_I18N(serie['name']),
+                    name: seriesIndex >= this.seriesCount() ? 'Vergleichszeitraum' : CASHFLOW_I18N(serie['name']),
                     type: 'line',
                     symbol: 'none',
                     lineStyle: {
@@ -186,7 +186,7 @@ export class LineChartRangeComponent extends LineChartParamComponent implements 
         }
 
         // Add trend lines if computeTrend is enabled and not stacked (trend lines don't make sense for stacked charts)
-        if (this.computeTrend && !useSharedStack) {
+        if (this.computeTrend() && !useSharedStack) {
             // Only add trend lines for the main data series (not range areas)
             echartsData.forEach((series) => {
                 if (series.type === 'line' && series.data.length > 10 && series.lineStyle?.color && !series.name.includes('Base') && !series.name.includes('Range')) {
@@ -236,7 +236,6 @@ export class LineChartRangeComponent extends LineChartParamComponent implements 
                     const originalSeries = params.filter((p: any) => !p.seriesName.includes('Trend') && !p.seriesName.includes('Range') && !p.seriesName.includes('Base'));
 
                     // Header with date
-                    const headerTextColor = (new Color(headerColor)).bestBW().toHexString();
                     let html = `<div class="text-center d-flex justify-content-between align-items-center" style="color: ${headerColor}; padding: 4px;">`;
                     html += `<span class="fw-bold">${moment(xValue).format('YYYY-MM')}</span>`;
                     html += `</div>`;
@@ -264,10 +263,9 @@ export class LineChartRangeComponent extends LineChartParamComponent implements 
 
                             html += `<div class="f-b p-0 hstack gap-2">`;
                             html += `<div class="flex-fill">${name}:</div>`;
-                            html += `<div class="text-end font-monospace" style="color:${headerColor};">${this.moneyPipe.transform(param.value[1] || param.value)}${this.suffix}</div></div>`;
+                            html += `<div class="text-end font-monospace" style="color:${headerColor};">${this.moneyPipe.transform(param.value[1] || param.value)}${this.suffix()}</div></div>`;
                         });
                     }
-
                     return `<div class="arrow_box">${html}</div>`;
                 }
             },

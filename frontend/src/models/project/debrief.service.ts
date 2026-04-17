@@ -6,6 +6,8 @@ import { DebriefProblem } from './debrief-problem.model'
 import { DebriefSolution } from './debrief-solution.model'
 import { DebriefProjectDebrief } from './debrief-project-debrief.model'
 import { DebriefPositive } from './debrief-positive.model'
+import { Company } from '@models/company/company.model'
+import { Project } from './project.model'
 
 export interface DebriefStats {
     total_debriefs: number
@@ -26,7 +28,7 @@ export interface CategoryBreakdown {
     total_problems: number
     severity_counts: { low: number, medium: number, high: number, critical: number }
     weighted_score: number
-    problems?: { id: string, title: string, severity?: string, usage_count?: number }[]
+    problems?: { id: string, title: string, severity?: string, usage_count?: number, projects?: { id: string, name: string, icon: string }[] }[]
 }
 
 export interface TopSolution {
@@ -64,7 +66,7 @@ export class DebriefService extends NexusHttpService<DebriefProjectDebrief> {
         this.paginate('debriefs/problems', filters)
 
     searchProblems = (q: string, categoryId?: string): Observable<DebriefProblem[]> =>
-        this.aget('debriefs/problems/search', categoryId ? { q, category_id: categoryId } : { q }, DebriefProblem)
+        this.aget('debriefs/problems', categoryId ? { q, category_id: categoryId, limit: 20 } : { q, limit: 20 }, DebriefProblem)
 
     storeProblem = (data: Partial<DebriefProblem>): Observable<DebriefProblem> =>
         this.post('debriefs/problems', data, DebriefProblem)
@@ -83,7 +85,7 @@ export class DebriefService extends NexusHttpService<DebriefProjectDebrief> {
         this.paginate('debriefs/solutions', filters)
 
     searchSolutions = (q: string): Observable<DebriefSolution[]> =>
-        this.aget('debriefs/solutions/search', { q }, DebriefSolution)
+        this.aget('debriefs/solutions', { q, limit: 20 }, DebriefSolution)
 
     storeSolution = (data: Partial<DebriefSolution>): Observable<DebriefSolution> =>
         this.post('debriefs/solutions', data, DebriefSolution)
@@ -144,7 +146,13 @@ export class DebriefService extends NexusHttpService<DebriefProjectDebrief> {
     detachProblem = (debriefId: string, problemId: string): Observable<void> =>
         this.delete(`debriefs/${debriefId}/problems/${problemId}`)
 
+    detachPositive = (debriefId: string, positiveId: string): Observable<void> =>
+        this.delete(`debriefs/${debriefId}/positives/${positiveId}`)
+
     // Positives
+    searchPositives = (q: string): Observable<DebriefPositive[]> =>
+        this.aget('debriefs/positives/search', { q }, DebriefPositive)
+
     storePositive = (debriefId: string, data: Partial<DebriefPositive>): Observable<DebriefPositive> =>
         this.post(`debriefs/${debriefId}/positives`, data, DebriefPositive)
 
@@ -181,6 +189,7 @@ export class DebriefService extends NexusHttpService<DebriefProjectDebrief> {
                 p.var.category_name = raw.category
                 p.var.category_color = raw.category_color
                 p.var.count = raw.count
+                p.var.projects = (raw.projects || []).map((proj: any) => Project.fromJson(proj))
                 return p
             }))
         )
@@ -190,4 +199,15 @@ export class DebriefService extends NexusHttpService<DebriefProjectDebrief> {
 
     getStatsTrends = (months?: number): Observable<TrendData[]> =>
         this.aget('debriefs/stats/trends', { months }) as Observable<TrendData[]>
+
+    combineProblems = (keepId: string, mergeIds: string[], title: string): Observable<void> =>
+        this.post('debriefs/problems/combine', { keep_id: keepId, merge_ids: mergeIds, title }) as Observable<void>
+
+    combinePositives = (ids: string[], title: string): Observable<void> =>
+        this.post('debriefs/positives/combine', { ids, title }) as Observable<void>
+
+    getStatsTopCustomers = (type: 'worst' | 'best', limit?: number, filters?: any): Observable<Company[]> =>
+        (this.aget(`debriefs/stats/top-customers-${type}`, { limit, ...filters }) as Observable<any[]>).pipe(
+            map(items => items.map(raw => { const c = Company.fromJson(raw); c.var.count = raw.count; return c }))
+        )
 }

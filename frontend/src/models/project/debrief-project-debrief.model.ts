@@ -33,6 +33,11 @@ export class DebriefProjectDebrief extends Serializable {
         return this.status === 'draft'
     }
 
+    override serialize(_?: any) {
+        this.problems.forEach(p => p.debrief_project_debrief_id = this.id)
+        this.positives.forEach(p => p.debrief_project_debrief_id = this.id)
+    }
+
     getProblemsByCategory(): Map<string, DebriefProblem[]> {
         const map = new Map<string, DebriefProblem[]>()
         this.problems.forEach(problem => {

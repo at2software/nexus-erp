@@ -1,7 +1,8 @@
 @for (sentinels of response; track sentinels.id) {
 @if (sentinels.items.length) {
 <div class="header">{{sentinels.sentinel.name}}</div>
-<div *nxFor="let o of sentinels.items"
+@for (o of sentinels.items; track o.id) {
+<div [nx]="o" [tables]="sentinels.items"
     class="accent-danger list-group-item list-group-item-divider px-3 text-truncate">
     <div class="avatar float-end mt-1 d-flex">
         <img class="avatar-img" src="{{o.icon}}" alt="">
@@ -9,5 +10,6 @@
     <span class="text-muted small float-end mx-3">{{secondaryLabel(sentinels.sentinel, o)}}</span>
     <div>{{primaryLabel(sentinels.sentinel, o)}}</div>
 </div>
+}
 }
 }

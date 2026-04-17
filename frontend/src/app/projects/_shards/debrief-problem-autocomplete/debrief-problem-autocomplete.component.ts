@@ -1,8 +1,8 @@
-import { Component, EventEmitter, Input, OnInit, Output, inject, ChangeDetectorRef } from '@angular/core'
-import { CommonModule } from '@angular/common'
+import { Component, inject, input, output, signal } from '@angular/core'
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap'
-import { Subject, debounceTime, distinctUntilChanged, switchMap, of } from 'rxjs'
+import { debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs'
 import { DebriefService } from '@models/project/debrief.service'
 import { DebriefProblem } from '@models/project/debrief-problem.model'
 import { DebriefProblemCategory } from '@models/project/debrief-problem-category.model'
@@ -10,83 +10,80 @@ import { DebriefProblemCategory } from '@models/project/debrief-problem-category
 @Component({
     selector: 'debrief-problem-autocomplete',
     standalone: true,
-    imports: [CommonModule, FormsModule, NgbDropdownModule, NgbTooltipModule],
+    imports: [FormsModule, NgbDropdownModule, NgbTooltipModule],
     templateUrl: './debrief-problem-autocomplete.component.html',
     styleUrls: ['./debrief-problem-autocomplete.component.scss']
 })
-export class DebriefProblemAutocompleteComponent implements OnInit {
-    @Input() categories: DebriefProblemCategory[] = []
-    @Input() selectedCategoryId?: string
-    @Input() excludeProblemIds: string[] = []
-    @Output() problemSelected = new EventEmitter<DebriefProblem>()
-    @Output() createProblem = new EventEmitter<{ title: string, categoryId: string }>()
+export class DebriefProblemAutocompleteComponent {
+    categories = input<DebriefProblemCategory[]>([])
+    selectedCategoryId = input<string>()
+    excludeProblemIds = input<string[]>([])
+    problemSelected = output<DebriefProblem>()
+    createProblem = output<{ title: string, categoryId: string }>()
 
-    searchTerm = ''
-    searchResults: DebriefProblem[] = []
-    isSearching = false
-    showDropdown = false
+    searchTerm = signal('')
+    createCategoryId = signal<string | null>(null)
+    searchResults = signal<DebriefProblem[]>([])
+    isSearching = signal(false)
+    showDropdown = signal(false)
 
-    #service = inject(DebriefService)
-    #searchSubject = new Subject<string>()
-    #cdr = inject(ChangeDetectorRef)
+    readonly #service = inject(DebriefService)
 
-    ngOnInit() {
-        this.#searchSubject.pipe(
+    constructor() {
+        toObservable(this.searchTerm).pipe(
             debounceTime(300),
             distinctUntilChanged(),
             switchMap(term => {
                 if (!term || term.length < 2) {
-                    this.searchResults = []
-                    this.showDropdown = false
+                    this.searchResults.set([])
+                    this.showDropdown.set(false)
                     return of(null)
                 }
-                this.isSearching = true
-                return this.#service.searchProblems(term, this.selectedCategoryId)
-            })
+                this.isSearching.set(true)
+                return this.#service.searchProblems(term, this.selectedCategoryId())
+            }),
+            takeUntilDestroyed()
         ).subscribe(results => {
             if (results) {
-                this.searchResults = results.filter(p => !this.excludeProblemIds.includes(p.id))
-                this.showDropdown = true
+                this.searchResults.set(results.filter(p => !this.excludeProblemIds().includes(p.id)))
+                this.showDropdown.set(true)
             }
-            this.isSearching = false
-            this.#cdr.detectChanges()
+            this.isSearching.set(false)
         })
     }
 
-    onSearchChange() {
-        this.#searchSubject.next(this.searchTerm)
-    }
-
     onFocus() {
-        if (this.searchTerm.length >= 2) {
-            this.showDropdown = true
-        }
+        if (this.searchTerm().length >= 2) this.showDropdown.set(true)
     }
 
     onBlur() {
-        setTimeout(() => this.showDropdown = false, 200)
+        setTimeout(() => this.showDropdown.set(false), 200)
     }
 
     selectProblem(problem: DebriefProblem) {
         this.problemSelected.emit(problem)
-        this.searchTerm = ''
-        this.searchResults = []
-        this.showDropdown = false
+        this.searchTerm.set('')
+        this.searchResults.set([])
+        this.showDropdown.set(false)
     }
 
     onCreateNew() {
-        if (!this.searchTerm.trim()) return
-
-        const categoryId = this.selectedCategoryId || this.categories[0]?.id
+        const term = this.searchTerm().trim()
+        if (!term) return
+        const categoryId = this.createCategoryId() || this.selectedCategoryId() || this.categories()[0]?.id
         if (!categoryId) return
-
-        this.createProblem.emit({ title: this.searchTerm.trim(), categoryId })
-        this.searchTerm = ''
-        this.searchResults = []
-        this.showDropdown = false
+        this.createProblem.emit({ title: term, categoryId })
+        this.searchTerm.set('')
+        this.searchResults.set([])
+        this.showDropdown.set(false)
+        this.createCategoryId.set(null)
     }
 
     getCategoryColor(categoryId: string): string {
-        return this.categories.find(c => c.id === categoryId)?.color || '#888888'
+        return this.categories().find(c => c.id === categoryId)?.color || '#888888'
+    }
+
+    getCategoryName(categoryId: string): string {
+        return this.categories().find(c => c.id === categoryId)?.name || ''
     }
 }

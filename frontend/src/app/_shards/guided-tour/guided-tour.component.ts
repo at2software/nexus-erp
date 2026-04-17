@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, Input, OnInit } from '@angular/core';
+import { Component, ElementRef, inject, input, OnInit } from '@angular/core';
 import { GuidedTourService } from './guided-tour.service';
 
 /**
@@ -29,12 +29,11 @@ import { GuidedTourService } from './guided-tour.service';
 })
 export class GuidedTourComponent implements OnInit {
 
-    @Input({ required: true }) id!: string;
-    @Input() title?: string;
-    @Input({ required: true }) content!: string;
-    @Input() focusSelector?: string;
-    /** Native HTMLElement from a template ref (#myEl) or Angular ElementRef */
-    @Input() focusElement?: HTMLElement | ElementRef;
+    id            = input.required<string>();
+    content       = input.required<string>();
+    title         = input<string|undefined>();
+    focusSelector = input<string|undefined>();
+    focusElement  = input<HTMLElement | ElementRef | undefined>();
 
     #service = inject(GuidedTourService);
     #el = inject(ElementRef);
@@ -43,11 +42,11 @@ export class GuidedTourComponent implements OnInit {
         setTimeout(() => {
             if (this.#service.isDisabled) return;
             this.#service.register([{
-                id: this.id,
-                title: this.title,
-                content: this.content,
-                focusSelector: this.focusSelector,
-                focusElement: this.focusElement
+                id: this.id(),
+                title: this.title(),
+                content: this.content(),
+                focusSelector: this.focusSelector(),
+                focusElement: this.focusElement()
             }], this.#getDomDepth());
         });
     }

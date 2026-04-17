@@ -1,4 +1,4 @@
-import { Component, inject, Input, OnInit } from '@angular/core';
+import { Component, inject, input, OnInit } from '@angular/core';
 import { Company } from 'src/models/company/company.model';
 import { Project } from 'src/models/project/project.model';
 import { ProjectService } from 'src/models/project/project.service';
@@ -15,16 +15,17 @@ import { ProjectState } from '@models/project/project-state.model';
     imports: [NexusModule, ProjectComponent]
 })
 export class ActivityProjectsComponent implements OnInit {
-    @Input() project:Project|undefined
-    @Input() company:Company|undefined
+    project = input<Project|undefined>();
+    company = input<Company|undefined>();
 
     pp?: Project[]
     #ps = inject(ProjectService)
 
     ngOnInit(): void {
-        if (this.company) {
+        const company = this.company()
+        if (company) {
             const preparedOrRunningStates = [...ProjectState.idsPrepared(), ...ProjectState.idsRunning()]
-            this.#ps.index({ company_id: this.company.id, state: preparedOrRunningStates }).subscribe((x:any) => this.pp = x.data)
+            this.#ps.index({ company_id: company.id, state: preparedOrRunningStates }).subscribe((x:any) => this.pp = x.data)
         }
     }
 }

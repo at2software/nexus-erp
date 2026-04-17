@@ -11,6 +11,7 @@ import { DebriefPositive } from '@models/project/debrief-positive.model'
 import { User } from '@models/user/user.model'
 import { ProjectDetailGuard } from '@app/projects/project-details.guard'
 import { DebriefProblemAutocompleteComponent } from '@app/projects/_shards/debrief-problem-autocomplete/debrief-problem-autocomplete.component'
+import { DebriefPositiveAutocompleteComponent } from '@app/projects/_shards/debrief-positive-autocomplete/debrief-positive-autocomplete.component'
 import { DebriefSolutionInlineComponent } from '@app/projects/_shards/debrief-solution-inline/debrief-solution-inline.component'
 import { DebriefRadarChartComponent } from '@app/projects/_shards/debrief-radar-chart/debrief-radar-chart.component'
 import { NexusModule } from '@app/nx/nexus.module'
@@ -18,8 +19,17 @@ import { ToolbarComponent } from '@app/app/toolbar/toolbar.component'
 import { Toast } from '@shards/toast/toast'
 import { AutosaveDirective } from '@directives/autosave.directive'
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component'
+import { PluginInstanceFactory } from '@models/http/plugin.instance.factory'
+import { LocalAIPlugin } from '@models/http/plugin.localai'
 
 type Severity = 'low' | 'medium' | 'high' | 'critical'
+
+interface AISuggestion {
+    type: 'problem' | 'positive'
+    title: string
+    category?: string
+    severity?: Severity
+}
 
 @Component({
     selector: 'project-debriefing',
@@ -32,6 +42,7 @@ type Severity = 'low' | 'medium' | 'high' | 'critical'
         NexusModule,
         ToolbarComponent,
         DebriefProblemAutocompleteComponent,
+        DebriefPositiveAutocompleteComponent,
         DebriefSolutionInlineComponent,
         DebriefRadarChartComponent,
         AutosaveDirective,
@@ -49,11 +60,14 @@ export class ProjectDebriefingComponent implements OnInit {
 
     // Per-debrief state keyed by debrief ID
     severityMap: Record<string, Severity> = {}
-    positiveTitleMap: Record<string, string> = {}
-    positiveCategoryMap: Record<string, string | null> = {}
+
+    // Local AI state
+    aiLoadingMap: Record<string, boolean> = {}
+    aiSuggestionsMap: Record<string, AISuggestion[]> = {}
 
     #service = inject(DebriefService)
     #guard = inject(ProjectDetailGuard)
+    #pluginFactory = inject(PluginInstanceFactory)
 
     get projectId(): string {
         return this.#guard.current?.id || ''
@@ -61,6 +75,13 @@ export class ProjectDebriefingComponent implements OnInit {
 
     get projectUsers() {
         return this.#guard.current?.getAssignedUsers().map(a => a.assignee as User) || []
+    }
+
+    get localAiPlugin(): LocalAIPlugin | null {
+        const encs = this.#pluginFactory.getPluginEncryptionsOfType('local_ai')
+        if (!encs.length) return null
+        const plugin = this.#pluginFactory.instanceFor(encs[0]) as LocalAIPlugin
+        return plugin?.state === 'connected' ? plugin : null
     }
 
     ngOnInit() {
@@ -128,7 +149,7 @@ export class ProjectDebriefingComponent implements OnInit {
         return debrief.problems.map(p => p.id)
     }
 
-    reloadDebrief(debriefId: string) {
+    reloadDebrief(_debriefId: string) {
         this.#service.indexProjectDebriefs(this.projectId).subscribe(debriefs => {
             this.debriefs = debriefs || []
         })
@@ -176,16 +197,12 @@ export class ProjectDebriefingComponent implements OnInit {
         })
     }
 
-    addPositive(debrief: DebriefProjectDebrief) {
-        const title = (this.positiveTitleMap[debrief.id] || '').trim()
-        if (!title) return
-
+    onAddPositive(debrief: DebriefProjectDebrief, event: { title: string, categoryId?: string, existingId?: string }) {
         this.#service.storePositive(debrief.id, {
-            title,
-            debrief_problem_category_id: this.positiveCategoryMap[debrief.id] || undefined
-        }).subscribe(() => {
-            this.positiveTitleMap[debrief.id] = ''
-            this.positiveCategoryMap[debrief.id] = null
+            title: event.title,
+            debrief_problem_category_id: event.categoryId || undefined,
+            ...(event.existingId ? { existing_id: event.existingId } : {})
+        } as any).subscribe(() => {
             this.reloadDebrief(debrief.id)
             Toast.success($localize`:@@i18n.debrief.positiveAdded:Positive added`)
         })
@@ -248,5 +265,126 @@ export class ProjectDebriefingComponent implements OnInit {
             case 'low': return 'bg-grey'
             default: return 'bg-grey'
         }
+    }
+
+    // ── Local AI ──
+
+    runLocalAI(debrief: DebriefProjectDebrief) {
+        const plugin = this.localAiPlugin
+        if (!plugin) return
+
+        const localAiEnc = this.#pluginFactory.getPluginEncryptionsOfType('local_ai')[0]
+        const configuredModel = localAiEnc?.value?.model?.trim()
+        const selectedModel = configuredModel || plugin.getDefaultModel()?.id
+
+        this.aiLoadingMap[debrief.id] = true
+        this.aiSuggestionsMap[debrief.id] = []
+
+        const categoryNames = this.categories.map(c => c.name).join(', ')
+
+        const problemLines = debrief.problems.map(p =>
+            `- ${p.title} (category: ${this.getCategoryName(p.debrief_problem_category_id)}, severity: ${p.severity || 'medium'})`
+        ).join('\n')
+
+        const positiveLines = debrief.positives.map(p =>
+            `- ${p.title}${p.category ? ` (category: ${p.category.name})` : ''}`
+        ).join('\n')
+
+        const prompt = `You are analyzing a project debrief. Based on the existing data, suggest additional problems and positives that could be added.
+
+Available categories: ${categoryNames}
+
+Summary notes: ${debrief.summary_notes || '(none)'}
+
+Existing problems:
+${problemLines || '(none)'}
+
+Existing positives (what went well):
+${positiveLines || '(none)'}
+
+Respond with ONLY a JSON array of suggestions. Each item must have:
+- "type": "problem" or "positive"
+- "title": short descriptive title
+- "category": one of the available categories (or omit if unsure)
+- "severity": "low", "medium", "high", or "critical" (only for problems)
+
+Do not output reasoning, analysis, XML tags, markdown, code fences, or any text before/after JSON.
+
+Suggest 4-8 items that are NOT already listed. Return raw JSON only, no explanation.
+
+Example format:
+[{"type":"problem","title":"Unclear requirements","category":"Process","severity":"high"},{"type":"positive","title":"Good team communication","category":"Process"}]`
+
+        plugin.generateText(prompt, selectedModel).subscribe({
+            next: (text) => {
+                this.aiLoadingMap[debrief.id] = false
+                try {
+                    const suggestions = this.#parseAiSuggestions(text)
+                    this.aiSuggestionsMap[debrief.id] = suggestions
+                    if (!suggestions.length) {
+                        throw new Error('No suggestions parsed from AI response')
+                    }
+                } catch {
+                    Toast.error($localize`:@@i18n.debrief.aiParseError:Could not parse AI response`)
+                }
+            },
+            error: (err) => {
+                this.aiLoadingMap[debrief.id] = false
+                Toast.error(err?.message || $localize`:@@i18n.debrief.aiError:AI request failed`)
+            }
+        })
+    }
+
+    #parseAiSuggestions(text: string): AISuggestion[] {
+        try {
+            const parsed = JSON.parse(text.trim())
+            if (!Array.isArray(parsed)) return []
+            return parsed
+                .filter(item => item && typeof item.title === 'string' && item.title.trim()
+                    && (item.type === 'problem' || item.type === 'positive'))
+                .map(item => {
+                    const suggestion: AISuggestion = { type: item.type, title: item.title.trim() }
+                    if (item.category?.trim()) suggestion.category = item.category.trim()
+                    if (item.type === 'problem') {
+                        const sev = item.severity?.toLowerCase()
+                        suggestion.severity = (['low', 'medium', 'high', 'critical'].includes(sev) ? sev : 'medium') as Severity
+                    }
+                    return suggestion
+                })
+        } catch {
+            return []
+        }
+    }
+
+    applySuggestion(debrief: DebriefProjectDebrief, suggestion: AISuggestion) {
+        const categoryId = suggestion.category
+            ? this.categories.find(c => c.name.toLowerCase() === suggestion.category!.toLowerCase())?.id
+            : undefined
+
+        if (suggestion.type === 'problem') {
+            this.#service.storeProblem({
+                title: suggestion.title,
+                debrief_problem_category_id: categoryId || this.categories[0]?.id
+            }).subscribe(problem => {
+                this.#service.attachProblem(debrief.id, problem.id, suggestion.severity || 'medium').subscribe(() => {
+                    this.reloadDebrief(debrief.id)
+                    this.removeSuggestion(debrief.id, suggestion)
+                    Toast.success($localize`:@@i18n.debrief.problemCreated:Problem created and added`)
+                })
+            })
+        } else {
+            this.#service.storePositive(debrief.id, {
+                title: suggestion.title,
+                debrief_problem_category_id: categoryId || undefined
+            }).subscribe(() => {
+                this.reloadDebrief(debrief.id)
+                this.removeSuggestion(debrief.id, suggestion)
+                Toast.success($localize`:@@i18n.debrief.positiveAdded:Positive added`)
+            })
+        }
+    }
+
+    removeSuggestion(debriefId: string, suggestion: AISuggestion) {
+        this.aiSuggestionsMap[debriefId] = (this.aiSuggestionsMap[debriefId] || []).filter(s => s !== suggestion)
     }
 }

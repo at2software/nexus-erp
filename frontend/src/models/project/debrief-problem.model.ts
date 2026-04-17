@@ -5,12 +5,42 @@ import { DebriefSolution } from './debrief-solution.model'
 import { User } from '@models/user/user.model'
 import { AutoWrap, AutoWrapArray } from '@constants/autowrap'
 import { NxAction, NxActionType } from '@app/nx/nx.actions'
+import { tap } from 'rxjs'
+import { NxGlobal, TBroadcast } from '@app/nx/nx.global'
+import { ModalBaseService } from '@app/_modals/modal-base-service'
+import { ModalInputComponent } from '@app/_modals/modal-input/modal-input.component'
+import { ModalCombineDebriefItemsComponent } from '@app/_modals/modal-combine-debrief-items/modal-combine-debrief-items.component'
 
 export class DebriefProblem extends Serializable {
     static override API_PATH = (): string => 'debriefs/problems'
+    static DB_TABLE_NAME = (): string => 'debrief_problems';
     override SERVICE = DebriefService
 
     actions: NxAction[] = [
+        {
+            title: $localize`:@@i18n.common.rename:rename`,
+            group: false,
+            action: (success) => {
+                ModalBaseService.open(ModalInputComponent, { title: $localize`:@@i18n.common.rename:rename`, initialValue: this.title })
+                    .then((result: any) => { if (result?.text?.trim()) this.update({ title: result.text }).subscribe(() => success?.(undefined)) })
+                    .catch(() => { /* noop */ })
+            }
+        },
+        {
+            title: $localize`:@@i18n.common.combine:combine`,
+            group: true,
+            on: () => NxGlobal.nxService.selected.length >= 2,
+            action: (success) => {
+                const items = NxGlobal.nxService.selected.map(s => s.nx as DebriefProblem)
+                if (items[0] !== this) return
+                ModalBaseService.open(ModalCombineDebriefItemsComponent, items.map(i => ({ id: i.id, title: i.title })))
+                    .then((result: any) => {
+                        if (!result?.title?.trim()) return
+                        NxGlobal.getService(DebriefService).combineProblems(items[0].id, items.slice(1).map(i => i.id), result.title)
+                            .subscribe(() => success?.(undefined))
+                    }).catch(() => { /* noop */ })
+            }
+        },
         {
             title: $localize`:@@i18n.debrief.setCategory:set category`,
             group: true,
@@ -37,6 +67,7 @@ export class DebriefProblem extends Serializable {
     description?: string
     debrief_problem_category_id: string = ''
     created_by_user_id?: string
+    debrief_project_debrief_id?: string
     usage_count: number = 0
 
     // Pivot fields from debrief_problem_project_debrief (populated from pivot)
@@ -56,5 +87,14 @@ export class DebriefProblem extends Serializable {
             if (this.pivot.severity) this.severity = this.pivot.severity as any
             if (this.pivot.context_notes) this.context_notes = this.pivot.context_notes
         }
+    }
+
+    override delete() {
+        if (this.debrief_project_debrief_id) {
+            return NxGlobal.getService(DebriefService)
+                .detachProblem(this.debrief_project_debrief_id, this.id)
+                .pipe(tap(() => NxGlobal.broadcast({ type: TBroadcast.Delete, data: this })))
+        }
+        return super.delete()
     }
 }

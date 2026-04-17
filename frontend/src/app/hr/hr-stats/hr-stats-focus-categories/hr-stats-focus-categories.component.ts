@@ -65,7 +65,6 @@ export class HrStatsFocusCategoriesComponent implements OnInit {
         const months = this.#getAllMonths(user);
         const series = this.#createSeries(user, months);
         const requiredHoursLine = this.#createRequiredHoursLine(user, months);
-
         return {
             ...EChartsSimpleOptions,
             xAxis: {
@@ -110,7 +109,6 @@ export class HrStatsFocusCategoriesComponent implements OnInit {
                         const requiredValue = requiredParam.value.toFixed(1);
                         tooltipContent += `<div class="d-flex justify-content-between"><span style="color: ${requiredColor};">${requiredParam.seriesName}</span><span class="ms-2">${requiredValue}h</span></div>`;
                     }
-
                     return tooltipContent + '</div>';
                 }
             },
@@ -128,7 +126,6 @@ export class HrStatsFocusCategoriesComponent implements OnInit {
                 });
             }
         });
-
         return Array.from(monthSet).sort();
     }
 
@@ -154,7 +151,6 @@ export class HrStatsFocusCategoriesComponent implements OnInit {
                 });
             }
         });
-
         return series;
     }
 
@@ -162,7 +158,6 @@ export class HrStatsFocusCategoriesComponent implements OnInit {
         const requiredHoursData = months.map(month => {
             return this.#calculateRequiredHoursForMonth(user, month);
         });
-
         return {
             name: $localize`@@i18n.hr.required_hours`,
             type: 'line',
@@ -179,67 +174,9 @@ export class HrStatsFocusCategoriesComponent implements OnInit {
     }
 
     #calculateRequiredHoursForMonth(user: FocusCategoryData, monthStr: string): number {
-        // Find the user's employment data - try both string and number matching
         const teamUser = this.#global.team.find(u => u.id === user.id.toString() || parseInt(u.id) === user.id);
-        if (!teamUser?.active_employment) {
-            return 0;
-        }
-
-        const employment = teamUser.active_employment;
-
-        const [year, month] = monthStr.split('-').map(Number);
-
-        // Get number of days in the month
-        const daysInMonth = new Date(year, month, 0).getDate();
-
-        // Try daily calculation first, fallback to weekly average
-        let totalRequiredHours = 0;
-
-        // Check if we have daily hour properties
-        const dailyProps = ['mo', 'tu', 'we', 'th', 'fr', 'sa', 'su'];
-        const hasDailyHours = dailyProps.some(prop => employment[prop as keyof typeof employment] !== undefined);
-
-        if (hasDailyHours) {
-            // Calculate based on daily requirements
-            for (let day = 1; day <= daysInMonth; day++) {
-                const date = new Date(year, month - 1, day);
-                const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-
-                // Map day of week to employment properties
-                const dayNames = ['su', 'mo', 'tu', 'we', 'th', 'fr', 'sa'];
-                const dayName = dayNames[dayOfWeek];
-
-                // Add required hours for this day
-                const dailyHours = employment[dayName as keyof typeof employment] as number;
-                if (dailyHours) {
-                    totalRequiredHours += dailyHours;
-                }
-            }
-        } else if (employment.hpw) {
-            // Fallback: estimate based on hours per week
-            // Assume working days = Monday-Friday (5 days)
-            const workingDaysInMonth = this.#countWorkingDays(year, month - 1);
-            totalRequiredHours = (employment.hpw / 5) * workingDaysInMonth;
-        }
-
-        return totalRequiredHours;
-    }
-
-    #countWorkingDays(year: number, month: number): number {
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        let workingDays = 0;
-
-        for (let day = 1; day <= daysInMonth; day++) {
-            const date = new Date(year, month, day);
-            const dayOfWeek = date.getDay();
-
-            // Count Monday (1) through Friday (5) as working days
-            if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-                workingDays++;
-            }
-        }
-
-        return workingDays;
+        if (!teamUser?.active_employment) return 0;
+        return teamUser.active_employment.calculateRequiredHoursForMonth(monthStr);
     }
 
     #formatCategoryName(categoryName: string): string {
@@ -251,7 +188,6 @@ export class HrStatsFocusCategoriesComponent implements OnInit {
             budget_projects: $localize`@@i18n.hr.budget_projects`,
             internal_projects: $localize`@@i18n.hr.internal_projects`
         };
-
         return nameMap[categoryName] || categoryName;
     }
 
@@ -279,7 +215,6 @@ export class HrStatsFocusCategoriesComponent implements OnInit {
                     color: this.#getCategoryColor(categoryName)
                 }
             }));
-
         return {
             backgroundColor: 'transparent',
             animation: false,
@@ -374,7 +309,6 @@ export class HrStatsFocusCategoriesComponent implements OnInit {
                 }
             }
         });
-
         return totals;
     }
 
@@ -387,7 +321,6 @@ export class HrStatsFocusCategoriesComponent implements OnInit {
             budget_projects: this.#categoryColors.budget_projects,
             internal_projects: this.#categoryColors.internal_projects
         };
-
         return colorMap[categoryName] || '#999999';
     }
 

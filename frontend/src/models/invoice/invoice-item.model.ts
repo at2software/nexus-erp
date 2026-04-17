@@ -50,6 +50,7 @@ export class InvoiceItem extends Serializable implements IHasMarker {
     discount: number = 0
     wage: number = 0
     type: InvoiceItemType = InvoiceItemType.Default
+    stage: number = 0
     vat_calculation: InvoiceVatHandling = InvoiceVatHandling.Net
     my_prediction: number | null = null
     predictions: Prediction[] = []
@@ -61,7 +62,7 @@ export class InvoiceItem extends Serializable implements IHasMarker {
     billed_foci_sum_duration?:number
     progress?: number
     marker: number | null = null
-    foci_by_user?: Array<{user_id: string, duration: number}>
+    foci_by_user?: {user_id: string, duration: number}[]
 
     canModifyQuantity:boolean
     qtyMultiplicator:number = 1
@@ -83,7 +84,7 @@ export class InvoiceItem extends Serializable implements IHasMarker {
     actions = getInvoiceItemActions(this)
 
     serialize = () => {
-        this.canModifyQuantity = [0, 40, 41, 43].contains(this.type)
+        this.canModifyQuantity = this.type === 0
         if (this.unit_name === '%') {
             this.qtyMultiplicator = .01
         }
@@ -96,8 +97,8 @@ export class InvoiceItem extends Serializable implements IHasMarker {
         console.error('setting parent class ' + _.class + ' is not implemented yet for model InvoiceItem')
     }
 
-    isRegularItem = () => [InvoiceItemType.Default, InvoiceItemType.Optional, InvoiceItemType.Inactive, InvoiceItemType.PreparedSupport].includes(this.type)
-    willAddToSum = () => [InvoiceItemType.Default, InvoiceItemType.Discount, InvoiceItemType.Paydown, InvoiceItemType.Instalment, InvoiceItemType.PreparedSupport, InvoiceItemType.PreparedRepeating, InvoiceItemType.PreparedInstalment].includes(this.type)
+    isRegularItem = () => [InvoiceItemType.Default, InvoiceItemType.Optional, InvoiceItemType.Inactive].includes(this.type)
+    willAddToSum = () => [InvoiceItemType.Default, InvoiceItemType.Discount, InvoiceItemType.Paydown, InvoiceItemType.Instalment].includes(this.type)
     hasNumbering = () => this.willAddToSum() || this.type === InvoiceItemType.Optional
 
     hasVatExceptionWithoutId = (company?: Company) => this.vat_rate === 0 && (company?.needs_vat_handling && !((company ?? this.company).vat_id))

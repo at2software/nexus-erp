@@ -1,23 +1,38 @@
 <div class="problem-autocomplete position-relative">
     <div class="input-group">
+        <div ngbDropdown>
+            <button ngbDropdownToggle class="btn btn-sm btn-outline-light">
+                @if (createCategoryId()) {
+                    {{ getCategoryName(createCategoryId()!) }}
+                } @else {
+                    <span i18n="@@i18n.debrief.noCategory">no category</span>
+                }
+            </button>
+            <div ngbDropdownMenu>
+                <button ngbDropdownItem (click)="createCategoryId.set(null)" i18n="@@i18n.debrief.noCategory">no category</button>
+                @for (cat of categories(); track cat.id) {
+                    <button ngbDropdownItem (click)="createCategoryId.set(cat.id)">{{ cat.name }}</button>
+                }
+            </div>
+        </div>
         <input type="text"
                class="form-control"
-               [(ngModel)]="searchTerm"
-               (input)="onSearchChange()"
+               [ngModel]="searchTerm()"
+               (ngModelChange)="searchTerm.set($event)"
                (focus)="onFocus()"
                (blur)="onBlur()"
                placeholder="Search problems or create new..."
                i18n-placeholder="@@i18n.debrief.searchProblems">
-        @if (isSearching) {
+        @if (isSearching()) {
             <span class="input-group-text">
                 <span class="spinner-border spinner-border-sm"></span>
             </span>
         }
     </div>
 
-    @if (showDropdown && (searchResults.length > 0 || searchTerm.length >= 2)) {
+    @if (showDropdown() && (searchResults().length > 0 || searchTerm().length >= 2)) {
         <div class="dropdown-menu show w-100">
-            @for (problem of searchResults; track problem.id) {
+            @for (problem of searchResults(); track problem.id) {
                 <button class="dropdown-item d-flex align-items-center gap-2" (mousedown)="selectProblem(problem)">
                     <span class="category-dot" [style.background-color]="getCategoryColor(problem.debrief_problem_category_id)"></span>
                     <span class="flex-grow-1">{{ problem.title }}</span>
@@ -25,15 +40,15 @@
                 </button>
             }
 
-            @if (searchResults.length === 0 && searchTerm.length >= 2) {
+            @if (searchResults().length === 0 && searchTerm().length >= 2) {
                 <div class="dropdown-item text-muted" i18n="@@i18n.debrief.noProblemsFound">no problems found</div>
             }
 
-            @if (searchTerm.length >= 2) {
+            @if (searchTerm().length >= 2) {
                 <div class="dropdown-divider"></div>
                 <button class="dropdown-item text-primary" (mousedown)="onCreateNew()">
                     <i class="me-2">add</i>
-                    <span i18n="@@i18n.common.create">create</span> "{{ searchTerm }}"
+                    <span i18n="@@i18n.common.create">create</span> "{{ searchTerm() }}"
                 </button>
             }
         </div>

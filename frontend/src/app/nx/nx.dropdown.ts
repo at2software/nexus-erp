@@ -1,8 +1,7 @@
-import { Component, ElementRef, inject, Input, OnChanges, OnDestroy } from "@angular/core";
+import { Component, ElementRef, inject, input, effect } from "@angular/core";
 import { NxAction } from "./nx.actions";
 import { NxService } from "./nx.service";
 import { AutopositionDirective } from "src/directives/autoposition.directive";
-
 import { NxSubMenu } from "./ns.submenu.directive";
 
 @Component({
@@ -24,35 +23,24 @@ import { NxSubMenu } from "./ns.submenu.directive";
         }
     `]
 })
-export class NxDropdown implements OnChanges, OnDestroy {
+export class NxDropdown {
 
-    resolvedChildren?:NxAction[]
+    actions = input.required<NxAction[]>();
+    parent  = input<NxDropdown | undefined>(undefined);
 
-    @Input() actions: NxAction[]
-    @Input() parent?:NxDropdown
+    el       = inject(ElementRef);
+    #service = inject(NxService);
 
-    el = inject(ElementRef)
-    #service = inject(NxService)
-
-    #observer!: IntersectionObserver;
-
-    ngOnChanges(c:any) {
-        if ('actions' in c) {
-            this.actions.forEach(_ => {
-                if (typeof _.children === 'function') {
-                    _.children = _.children()   // resolve
+    constructor() {
+        effect(() => {
+            this.actions().forEach(a => {
+                if (typeof a.children === 'function') {
+                    a.children = a.children();
                 }
-            })
-        }
+            });
+        });
     }
 
-    children = (a: NxAction): NxAction[]|undefined => a.children as NxAction[]
-
-    onClick = (a: NxAction) => this.#service.triggerAction(a)
-
-    ngOnDestroy() {
-        if (this.#observer) {
-            this.#observer.disconnect();
-        }
-    }
+    children = (a: NxAction): NxAction[] | undefined => a.children as NxAction[];
+    onClick  = (a: NxAction) => this.#service.triggerAction(a);
 }

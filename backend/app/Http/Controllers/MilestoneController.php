@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Enums\MilestoneState;
-use App\Helpers\NLog;
 use App\Jobs\ChatSendMessageJob;
 use App\Models\InvoiceItem;
 use App\Models\Milestone;
 use App\Models\Param;
 use App\Models\Project;
 use App\Traits\ControllerHasPermissionsTrait;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class MilestoneController extends Controller {
@@ -67,7 +67,6 @@ class MilestoneController extends Controller {
                 $deviation = $estimatedHours > 0
                     ? round((($milestoneHours - $estimatedHours) / $estimatedHours) * 100, 1)
                     : ($milestoneHours > 0 ? 100 : 0);
-
                 return [
                     'id'               => $project->id,
                     'icon'             => $project->icon,
@@ -83,7 +82,6 @@ class MilestoneController extends Controller {
             })
             ->sortByDesc(fn ($p) => abs($p['deviation']))
             ->values();
-
         return [
             'unassigned'  => $unassigned,
             'overdue'     => $overdue,
@@ -111,7 +109,7 @@ class MilestoneController extends Controller {
 
         // Calculate duration and due date
         $estimatedHours = $invoiceItem->assumedWorkload();
-        $hoursPerDay    = \App\Models\Param::get('INVOICE_HPD')->value;
+        $hoursPerDay    = Param::get('INVOICE_HPD')->value;
 
         // Duration = raw estimated hours (without param factor)
         $duration = $estimatedHours;
@@ -126,7 +124,7 @@ class MilestoneController extends Controller {
         }
 
         if (! $milestone->due_at && $milestone->started_at) {
-            $startDate            = \Carbon\Carbon::parse($milestone->started_at);
+            $startDate            = Carbon::parse($milestone->started_at);
             $updateData['due_at'] = $startDate->addDays($estimatedDays)->toDateString();
         }
 
@@ -192,20 +190,19 @@ class MilestoneController extends Controller {
                     'from_webhook'         => 'true',
                     'webhook_display_name' => $milestone->user->name ?? 'NEXUS',
                     'override_username'    => $milestone->user->name ?? 'NEXUS',
-                    'override_icon_url'    => env('API_URL') . ($milestone->user->icon ?? ''),
+                    'override_icon_url'    => env('API_URL').($milestone->user->icon ?? ''),
                 ];
-                $state = MilestoneState::from($milestone->state);
-                $stateName = $state->getName();
+                $state         = MilestoneState::from($milestone->state);
+                $stateName     = $state->getName();
                 $utf8StateIcon = match ($state) {
-                    MilestoneState::TODO => '⏳',
+                    MilestoneState::TODO        => '⏳',
                     MilestoneState::IN_PROGRESS => '⚒️',
-                    MilestoneState::DONE => '✅',
+                    MilestoneState::DONE        => '✅',
                 };
-                $message   = "{$utf8StateIcon} **{$request->user()->name}** changed milestone **{$milestone->name}** to **{$stateName}** (Project: {$milestone->project->name})";
+                $message = "{$utf8StateIcon} **{$request->user()->name}** changed milestone **{$milestone->name}** to **{$stateName}** (Project: {$milestone->project->name})";
                 ChatSendMessageJob::dispatch($message, user: $pm, props: $props);
             }
         }
-
         return $milestone->fresh(['dependees', 'dependants']);
     }
     public function reorder(Request $request) {

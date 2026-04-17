@@ -1,9 +1,13 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { Router, ActivatedRoute, RouterModule } from '@angular/router';
+import { Router, ActivatedRoute, RouterModule, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs';
 import { MarketingService } from '@models/marketing/marketing.service';
 import { MarketingInitiative } from '@models/marketing/marketing-initiative.model';
+import { MarketingProspectActivity } from '@models/marketing/marketing-prospect-activity.model';
 import { FormsModule } from '@angular/forms';
+import { DatePipe } from '@angular/common';
 import { NexusModule } from 'src/app/nx/nexus.module';
+import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { GuidedTourComponent } from '@shards/guided-tour/guided-tour.component';
 
@@ -12,7 +16,7 @@ import { GuidedTourComponent } from '@shards/guided-tour/guided-tour.component';
     templateUrl: './marketing-initiatives.component.html',
     styleUrls: ['./marketing-initiatives.component.scss'],
     standalone: true,
-    imports: [FormsModule, RouterModule, NexusModule, EmptyStateComponent, GuidedTourComponent]
+    imports: [FormsModule, RouterModule, NexusModule, NgbTooltipModule, DatePipe, EmptyStateComponent, GuidedTourComponent]
 })
 export class MarketingInitiativesComponent implements OnInit {
 
@@ -29,6 +33,11 @@ export class MarketingInitiativesComponent implements OnInit {
     // Search and filter
     searchTerm = '';
     statusFilter = 'active';
+
+    // Recent activity panel
+    selectedInitiativeId: string | null = null;
+    recentActivities: MarketingProspectActivity[] = [];
+    isLoadingRecent = false;
 
     // New initiative form
     newInitiative: Partial<MarketingInitiative> = {
@@ -47,6 +56,15 @@ export class MarketingInitiativesComponent implements OnInit {
 
     ngOnInit() {
         this.loadInitiatives();
+        this.#router.events
+            .pipe(filter(e => e instanceof NavigationEnd))
+            .subscribe(() => {
+                const id = this.#route.firstChild?.snapshot?.params['id'];
+                if (id && id !== this.selectedInitiativeId) {
+                    this.selectedInitiativeId = id;
+                    this.loadRecentActivity(id);
+                }
+            });
     }
 
     loadInitiatives() {
@@ -60,7 +78,11 @@ export class MarketingInitiativesComponent implements OnInit {
                 this.isLoading = false;
 
                 // Auto-route to first initiative if no subroute selected
-                if (this.initiatives.length > 0 && !this.#route.firstChild) {
+                const existingId = this.#route.firstChild?.snapshot?.params['id'];
+                if (existingId) {
+                    this.selectedInitiativeId = existingId;
+                    this.loadRecentActivity(existingId);
+                } else if (this.initiatives.length > 0) {
                     this.#router.navigate(['/marketing/initiatives', this.initiatives[0].id]);
                 }
             });
@@ -145,6 +167,32 @@ export class MarketingInitiativesComponent implements OnInit {
         this.statusFilter = status;
         this.#applyFilters();
     };
+
+    loadRecentActivity(id: string) {
+        this.isLoadingRecent = true;
+        this.#marketingService.indexInitiativeRecentActivity(id)
+            .subscribe({
+                next: (activities: MarketingProspectActivity[]) => {
+                    this.recentActivities = activities;
+                    this.isLoadingRecent = false;
+                },
+                error: () => {
+                    this.recentActivities = [];
+                    this.isLoadingRecent = false;
+                }
+            });
+    }
+
+    getActivityStatusClass(status: string): string {
+        switch (status) {
+            case 'completed': return 'bg-success';
+            case 'skipped':   return 'bg-dark text-muted';
+            case 'overdue':   return 'bg-danger';
+            case 'failed':    return 'bg-danger';
+            case 'pending':   return 'bg-dark';
+            default:          return 'bg-dark';
+        }
+    }
 
     resetCreateForm() {
         this.newInitiative = {

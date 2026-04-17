@@ -73,11 +73,11 @@ class CreateInvoiceAction {
     private function getPaymentDuration(?Project $project, Company $company): int {
         // Cascade: project -> customer -> global default
         if ($project && $projectDuration = $project->param('INVOICE_PAYMENT_DURATION')?->value) {
-            return (int) $projectDuration;
+            return (int)$projectDuration;
         }
         if ($customerDuration = $company->param('INVOICE_PAYMENT_DURATION')?->value) {
-            return (int) $customerDuration;
+            return (int)$customerDuration;
         }
-        return (int) (Param::get('INVOICE_PAYMENT_DURATION')->value ?? '14');
+        return (int)(Param::get('INVOICE_PAYMENT_DURATION')->value ?? '14');
     }
 }

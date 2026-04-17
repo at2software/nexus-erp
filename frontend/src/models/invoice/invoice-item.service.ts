@@ -12,7 +12,7 @@ export class InvoiceItemService extends NexusHttpService<InvoiceItem> {
     public TYPE = () => InvoiceItem
 
     getInvoiceItems = (parent: Serializable, data?: Dictionary | undefined) => this.aget(parent.getApiPathWithId() + '/invoice-items', data)
-    getSupportItems = (parent: Serializable, data?: Dictionary | undefined) => this.aget(parent.getApiPathWithId() + '/support-items', data)
+    getSupportItems = (parent: Serializable, data?: Dictionary | undefined) => this.aget(parent.getApiPathWithId() + '/invoice-items', { support_only: true, ...data })
     
     indexStandingOrders = (company?:Company) => this.aget('invoice_items/standing-orders', company ? { company_id: company.id } : {})
 

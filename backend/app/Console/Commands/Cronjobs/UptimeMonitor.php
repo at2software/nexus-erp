@@ -51,7 +51,6 @@ class UptimeMonitor extends Command {
             $deleted = $checkService->cleanupOldChecks((int)$cleanupDays);
             $this->info("Cleaned up {$deleted} old check records.");
         }
-
         return 0;
     }
 }

@@ -1,33 +1,33 @@
 import { Injectable } from '@angular/core';
 import { CdkTable } from '@angular/cdk/table';
-import * as XLSX from 'xlsx';
+import { Workbook } from 'exceljs';
 
 @Injectable({
     providedIn: 'root'
 })
 export class TableExportService {
 
-    exportAnyTableToCSV(table: HTMLTableElement | CdkTable<any>, filenamePrefix: string = '') {
+    async exportAnyTableToCSV(table: HTMLTableElement | CdkTable<any>, filenamePrefix: string = '') {
         if (table instanceof HTMLTableElement) {
-            this.#exportTableAsCsv(table, filenamePrefix);
+            await this.#exportTableAsCsv(table, filenamePrefix);
         } else if (table instanceof CdkTable) {
             this.#exportCdkTableAsCsv(table, filenamePrefix);
         }
     }
-    
-    #exportTableAsCsv(table: HTMLTableElement, filenamePrefix: string = ''): void {
+
+    async #exportTableAsCsv(table: HTMLTableElement, filenamePrefix: string = ''): Promise<void> {
         if (!table) {
             console.error('Table empty');
             return;
         }
 
-        const csvData = this.#convertTableToCsv(table);
-        const ws = XLSX.utils.aoa_to_sheet(csvData)
-        const wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, ws, "Daten")
+        const rows = this.#convertTableToCsv(table);
+        const wb = new Workbook();
+        const ws = wb.addWorksheet('Daten');
+        ws.addRows(rows);
 
-        const excelBuffer: any = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-        const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const buffer = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         const filename = this.#generateFilename(filenamePrefix);
@@ -107,7 +107,6 @@ export class TableExportService {
         const formattedDate = `${now.getFullYear()}_${(now.getMonth() + 1).toString().padStart(2, '0')}_${now.getDate().toString().padStart(2, '0')}`;
         const formattedTime = `${now.getHours().toString().padStart(2, '0')}_${now.getMinutes().toString().padStart(2, '0')}_${now.getSeconds().toString().padStart(2, '0')}`;
         const dateTime = `${formattedDate}_${formattedTime}`;
-
         return filenamePrefix ? `${filenamePrefix}_${dateTime}` : dateTime;
     }
 }

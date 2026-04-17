@@ -11,6 +11,8 @@ import { SmartLinkDirective } from 'src/directives/smart-link.directive';
 import { Subject } from 'rxjs';
 import { getCookie, setCookie } from 'src/constants/cookies';
 import { objectMap, objectRemoveEmpty } from 'src/constants/objectMap';
+import { NxActionType } from './nx.actions';
+import { ModalConfirmComponent } from 'src/app/_modals/modal-confirm/modal-confirm.component';
 
 type TClipDict<T> = Record<string, T[]>;
 
@@ -76,6 +78,36 @@ export class NxGlobal {
     }
 
     static hasClip        = (_:Serializable) => (this.#clips[_.class] ?? []).findIndex(x => x.getApiPathWithId() === _.getApiPathWithId()) !== -1
+
+    static deleteAction(self: any, message: string, options?: { roles?: string | null, on?: () => boolean, action?: () => void }) {
+        return {
+            title: $localize`:@@i18n.common.delete:delete`,
+            interrupt: { service: ModalConfirmComponent, args: { message, title: $localize`:@@i18n.common.attention:attention` } },
+            action: options?.action ?? (() => self.delete()),
+            type: NxActionType.Destructive,
+            group: true,
+            hotkey: 'CTRL+DELETE',
+            ...(options?.roles !== undefined ? { roles: options.roles } : {}),
+            ...(options?.on ? { on: options.on } : {}),
+        }
+    }
+
+    static clipboardActions(_: Serializable, addContext?: string) {
+        return [
+            {
+                title: $localize`:@@i18n.common.addToClipboard:add to clipboard`,
+                group: true,
+                ...(addContext ? { context: addContext } : {}),
+                action: () => NxGlobal.clip(_)
+            },
+            {
+                title: $localize`:@@i18n.common.removeFromClipboard:remove from clipboard`,
+                group: true,
+                on: (): boolean => NxGlobal.hasClip(_),
+                action: () => NxGlobal.unclip(_)
+            },
+        ]
+    }
     static getClips       = () => this.#clips
     static getClipKeys    = () => Object.keys(this.#clips)
     static setCurrentRoot = (_?:Serializable) => this.#currentRoot = _

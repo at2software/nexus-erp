@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Traits;
 
 use App\Models\Company;
+use App\Models\InvoiceItem;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 trait HasFociController {
     public function _indexFoci(Request $request, Project|Company $model) {
-        $query = $model->foci()->with('invoiceItem:id,text', 'invoiceItem', 'invoicedInItem:id,text');
+        $query = $model->foci()->with('invoiceItem', 'invoicedInItem:id,text');
 
         // Add user filtering if users parameter is provided
         if ($request->has('users')) {
@@ -54,7 +55,7 @@ trait HasFociController {
 
         $pages->getCollection()->transform(function ($_) {
             if ($_->invoiceItem) {
-                $_->invoiceItem = $_->invoiceItem?->setVisible(\App\Models\InvoiceItem::INFO_REDUCED);
+                $_->invoiceItem = $_->invoiceItem?->setVisible(InvoiceItem::INFO_REDUCED);
             }
             return $_;
         });

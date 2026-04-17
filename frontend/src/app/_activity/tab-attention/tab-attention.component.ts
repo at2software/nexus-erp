@@ -1,5 +1,7 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, inject, OnInit, OnDestroy, AfterViewInit, ViewChild } from '@angular/core';
+import { timer } from 'rxjs';
+import { AfterViewInit, Component, DestroyRef, OnInit, ViewChild, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { NexusModule } from '@app/nx/nexus.module';
 import { PermissionsDirective } from '@directives/permissions.directive';
@@ -9,7 +11,6 @@ import { REFLECTION } from 'src/constants/constants';
 import { GlobalService } from 'src/models/global.service';
 import { WidgetService } from 'src/models/widget.service';
 import { MoneyShortPipe } from 'src/pipes/mshort.pipe';
-import { Subject, takeUntil } from 'rxjs';
 import { SafePipe } from 'src/pipes/safe.pipe';
 
 @Component({
@@ -19,9 +20,9 @@ import { SafePipe } from 'src/pipes/safe.pipe';
     standalone: true,
     imports: [ActivityTabComponent, ScrollbarComponent, NexusModule, CommonModule, DatePipe, NgbTooltipModule, MoneyShortPipe, PermissionsDirective, SafePipe]
 })
-export class TabAttentionComponent implements OnInit, AfterViewInit, OnDestroy {
+export class TabAttentionComponent implements OnInit, AfterViewInit {
 
-    #destroy$ = new Subject<void>()
+    #destroyRef = inject(DestroyRef)
 
     // Expose the component class for type-safe tab switching
     readonly componentType = TabAttentionComponent
@@ -35,30 +36,21 @@ export class TabAttentionComponent implements OnInit, AfterViewInit, OnDestroy {
     #widgetService = inject(WidgetService)
     #knownItemCount = 0
     #initialized    = false
-    interval: any
 
     ngAfterViewInit(): void {
         this.tabComponent.onFocus = () => {
-            this.tabComponent.badge = undefined
+            this.tabComponent.badge.set(undefined)
             this.#knownItemCount = this.newItems?.length ?? 0
         }
     }
 
     ngOnInit(): void {
-        this.global.init.pipe(takeUntil(this.#destroy$)).subscribe(() => {
-            this.interval = setInterval(() => this.reload, 5000)
-            this.reload()
+        this.global.init.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(() => {
+            timer(0, 60000).pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(() => this.reload())
         })
     }
-    ngOnDestroy() {
-        if (this.interval) {
-            clearInterval(this.interval)
-        }
-        this.#destroy$.next()
-        this.#destroy$.complete()
-    }
     reload() {
-        this.#widgetService.indexNewItems().pipe(takeUntil(this.#destroy$)).subscribe(r => {
+        this.#widgetService.indexNewItems().pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(r => {
             if (r) {
                 this.newItems = r.map(_ => REFLECTION(_))
                 this.groupItemsByDay()
@@ -67,7 +59,7 @@ export class TabAttentionComponent implements OnInit, AfterViewInit, OnDestroy {
                     this.#initialized = true
                     this.#knownItemCount = count
                 } else if (count > this.#knownItemCount) {
-                    this.tabComponent.badge = '!'
+                    this.tabComponent.badge.set('!')
                 }
             }
         })
@@ -104,7 +96,6 @@ export class TabAttentionComponent implements OnInit, AfterViewInit, OnDestroy {
                 } else {
                     displayDate = itemDate.toLocaleDateString()
                 }
-
                 return {
                     date: dateKey,
                     displayDate,

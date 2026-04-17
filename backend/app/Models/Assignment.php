@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Builders\AssignmentBuilder;
+use App\Enums\CommentType;
 use App\Traits\HasParams;
 use App\Traits\HasTasksTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,7 +17,7 @@ class Assignment extends BaseModel {
     const FLAG_MAIN_CONTACT = 1 << 0; // Binary flag: 1 (for main contact used in quotes/invoices)
 
     protected $fillable = ['role_id', 'parent_id', 'parent_type', 'assignee_id', 'assignee_type', 'hours_planned', 'flags'];
-    protected $access   = ['admin' => '*', 'project_manager'=>'crud', 'user'=>'cru'];
+    protected $access   = ['admin' => '*', 'project_manager' => 'crud', 'user' => 'cru'];
     protected $appends  = ['avg_hpd'];
 
     public function getAvgHpdAttribute() {
@@ -30,6 +31,26 @@ class Assignment extends BaseModel {
     }
     public function assignee() {
         return $this->morphTo();
+    }
+    public function createHoursChangeComment(float $oldTime, float $newTime): void {
+        $difference         = $newTime - $oldTime;
+        $sign               = $difference > 0 ? 'added' : 'removed';
+        $absoluteDifference = abs($difference);
+        $assigneeName       = $this->assignee ? $this->assignee->name : 'Unknown';
+
+        Comment::create([
+            'text'    => "{$sign} {$absoluteDifference} hours for {$assigneeName}",
+            'type'    => CommentType::Info,
+            'is_mini' => true,
+            'user_id' => request()->user()->id,
+            ...$this->parent->toPoly(),
+        ]);
+    }
+    public static function canChangeHoursPlanned($parent): bool {
+        if (! $parent->has_time_budget) {
+            return true;
+        }
+        return request()->user()->hasAnyRole(['hr', 'project_manager']);
     }
     public function links($parent_type, $assignee_type) {
         return $this->parent_type === $parent_type && $this->assignee_type === $assignee_type;

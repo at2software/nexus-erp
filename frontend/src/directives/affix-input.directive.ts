@@ -1,35 +1,43 @@
-import { Directive, ElementRef, Input, Renderer2, AfterViewInit } from "@angular/core";
+import { afterNextRender, Directive, ElementRef, inject, input, Renderer2 } from "@angular/core";
+
 @Directive({
-    selector: 'input.[suffix],input.[prefix]',
+    selector: 'input[suffix],input[prefix]',
     standalone: true
 })
-export class AffixInputDirective implements AfterViewInit {
-    @Input() prefix:string;
-    @Input() suffix:string;
-    constructor(private el: ElementRef, private re:Renderer2) {}
+export class AffixInputDirective {
+    readonly prefix = input<string>()
+    readonly suffix = input<string>()
 
-    ngAfterViewInit():void {
-        const el = this.el.nativeElement
-        const parent = el.parentNode
-        const wrapper = this.re.createElement('div')
+    readonly #el = inject(ElementRef)
+    readonly #re = inject(Renderer2)
 
-        this.re.removeChild(parent, el)
-        this.re.appendChild(wrapper, el)
-        this.re.appendChild(parent, wrapper)
+    constructor() {
+        afterNextRender(() => {
+            const el = this.#el.nativeElement
+            this.#re.addClass(el, 'form-control')
+            const parent = el.parentNode
+            const wrapper = this.#re.createElement('div')
+            this.#re.addClass(wrapper, 'input-group')
 
-        this.re.addClass(wrapper, 'input-affix-wrapper')
-        this.re.addClass(wrapper, 'form-control')
-        if (this.prefix) {
-            this.re.setAttribute(wrapper, 'data-prefix', this.prefix)
-            this.re.addClass(wrapper, 'has-prefix')
-        }
-        if (this.suffix) {
-            this.re.setAttribute(wrapper, 'data-suffix', this.suffix)
-            this.re.addClass(wrapper, 'has-suffix')
-        }
+            this.#re.removeChild(parent, el)
 
-        this.re.listen(wrapper, 'click', (e) => {
-            if (e.target !== el) el.focus()
+            if (this.prefix()) {
+                const span = this.#re.createElement('span')
+                this.#re.addClass(span, 'input-group-text')
+                this.#re.appendChild(span, this.#re.createText(this.prefix()!))
+                this.#re.appendChild(wrapper, span)
+            }
+
+            this.#re.appendChild(wrapper, el)
+
+            if (this.suffix()) {
+                const span = this.#re.createElement('span')
+                this.#re.addClass(span, 'input-group-text')
+                this.#re.appendChild(span, this.#re.createText(this.suffix()!))
+                this.#re.appendChild(wrapper, span)
+            }
+
+            this.#re.appendChild(parent, wrapper)
         })
     }
 }

@@ -1,5 +1,5 @@
 
-import { Component, inject, Input, OnInit } from '@angular/core';
+import { Component, effect, inject, input } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgbCalendar, NgbDatepickerModule, NgbDate, NgbDateAdapter } from '@ng-bootstrap/ng-bootstrap';
 import { NgbDateCarbonAdapter } from '@directives/ngb-date.adapter';
@@ -20,25 +20,31 @@ import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
     standalone: true,
     imports: [MoneyPipe, NexusModule, FormsModule, NgbDatepickerModule, SafePipe, EmptyStateComponent]
 })
-export class InvoicesStandingComponent implements OnInit {
+export class InvoicesStandingComponent {
 
-    @Input() parent?:Company
+    parent = input.required<Company>()
 
     isLoaded: boolean = false
     items:InvoiceItem[] = []
     sum:number = 0
     selection:InvoiceItem[] = []
     selectionSum = 0
-    itemService = inject(InvoiceItemService)
-    global = inject(GlobalService)
-    calendar = inject(NgbCalendar)
 
-    ngOnInit() {
-        this.reload()
+    itemService = inject(InvoiceItemService)
+    global      = inject(GlobalService)
+    calendar    = inject(NgbCalendar)
+
+    constructor() {
+        effect(() => {
+            if (this.parent()) {
+                this.reload()
+            }
+        })
+
         this.global.onSelectionIn(() => this.items, 'yearlyPrice').subscribe(_ => { [this.selection, this.selectionSum] = _ })
     }
     reload() {
-        this.itemService.indexStandingOrders(this.parent).subscribe(items => {
+        this.itemService.indexStandingOrders(this.parent()).subscribe(items => {
             this.isLoaded = true
             this.items = items
             this.sum = items.reduce((a, b) => a + b.getYearlyPrice(), 0)

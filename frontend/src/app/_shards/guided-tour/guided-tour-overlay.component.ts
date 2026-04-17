@@ -108,7 +108,6 @@ export class GuidedTourOverlayComponent implements OnInit, OnDestroy {
         const elBottom = r.bottom + PAD;
 
         const { style: card, centered: cardCentered } = this.#computeCardPosition(r, sw, sh);
-
         return {
             top:    { top: '0', left: '0', right: '0', height: `${Math.max(0, elTop)}px` },
             bottom: { top: `${Math.min(sh, elBottom)}px`, left: '0', right: '0', bottom: '0' },

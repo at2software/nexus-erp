@@ -1,15 +1,15 @@
 <div class="info d-flex text-medium-emphasis">
-  <div class="title text-truncate text-start flex-fill">{{title}}</div>
-  <div class="desc text-end" [class.text-danger]="value > max">{{value/max | percent}}</div>
+  <div class="title text-truncate text-start flex-fill">{{title()}}</div>
+  <div class="desc text-end" [class.text-danger]="value() > max()">{{value()/max() | percent}}</div>
 </div>
-<div class="position-relative bar-container w-auto" ngbTooltip="{{value | short}}{{suffix}} / {{max | short}}{{suffix}}">
+<div class="position-relative bar-container w-auto" ngbTooltip="{{value() | short}}{{suffix()}} / {{max() | short}}{{suffix()}}">
   <div class="bar-tooltip-inside">
     <div class="progress position-absolute" style="height:5px;">
-      <div class="progress-bar bg-{{scss}} bg-gradient" [class.text-danger]="value > max" [style.width]="(100*value / max)+'%'" [style.backgroundColor]="color ?? ''"></div>
+      <div class="progress-bar bg-{{scss()}} bg-gradient" [class.text-danger]="value() > max()" [style.width]="(100*value() / max())+'%'" [style.backgroundColor]="color() ?? ''"></div>
     </div>
-    @if (value>max) {
+    @if (value()>max()) {
       <div class="progress position-absolute bg-transparent" style="overflow-y: visible; height:5px;">
-        <div class="progress-bar bg-danger bg-gradient" [style.width]="(100*(value/max-1)) + '%'"></div>
+        <div class="progress-bar bg-danger bg-gradient" [style.width]="(100*(value()/max()-1)) + '%'"></div>
       </div>
     }
   </div>

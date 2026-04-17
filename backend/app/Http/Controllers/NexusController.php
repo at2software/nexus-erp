@@ -11,7 +11,9 @@ use Illuminate\Http\Request;
  */
 class NexusController extends Controller {
     public function attention(Request $request) {
-        $fnStr   = function ($fs, $o) { return is_callable($fs) ? $fs($o) : $fs; };
+        $fnStr = function ($fs, $o) {
+            return is_callable($fs) ? $fs($o) : $fs;
+        };
         $fnMerge = function (&$array, $with, $title = '', $label = '') use ($fnStr) {
             $with = $with
                 ->get()
@@ -28,12 +30,16 @@ class NexusController extends Controller {
         $return = [];
         // add overdue invoices
         $fnMerge($return, Invoice::where('due_at', '<', now())->where('paid_at', null),
-            function ($x) { return $x->name; },
+            function ($x) {
+                return $x->name;
+            },
             'Overdue invoice'
         );
         // add overdue projects
         $fnMerge($return, Project::where('due_at', '<', now())->where('state', 'in_progress'),
-            function ($x) { return $x->name; },
+            function ($x) {
+                return $x->name;
+            },
             'Deadline overdue'
         );
         return $return;

@@ -11,7 +11,7 @@ class StringParam extends BaseModel {
 
     protected $fillable = ['created_at', 'updated_at', 'value', 'parent_id', 'parent_type', 'language', 'param_id'];
     protected $hidden   = ['created_at', 'updated_at'];
-    protected $access   = ['admin' => '*', 'project_manager'=>'cru', 'user'=>'cru'];
+    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
     protected $casts    = [
         'value' => I18n::class,
     ];

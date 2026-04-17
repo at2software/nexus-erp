@@ -1,4 +1,4 @@
-import { Component, inject, Input, OnChanges } from '@angular/core';
+import { Component, inject, input, OnChanges } from '@angular/core';
 import { Assignee, I18N_REMOVE_FROM_TEAM, T_ASSIGNEE_TARGET } from 'src/models/assignee/assignee.model';
 import { Project } from 'src/models/project/project.model';
 import { User } from 'src/models/user/user.model';
@@ -45,10 +45,10 @@ const D_END = D_START.clone().add(60, 'days').endOf('day')
 })
 export class HrWorkloadComponent implements OnChanges {
     
-    @Input() user:User
-    @Input() title?:string = undefined
-    @Input() onlyChart:boolean = false
-    @Input() chartHeight:number = 160 // Default height in pixels
+    user        = input.required<User>()
+    title       = input<string>()
+    onlyChart   = input<boolean>()
+    chartHeight = input<number>(100)      // Default height in pixels
 
     data: TData
     isError = false
@@ -65,16 +65,17 @@ export class HrWorkloadComponent implements OnChanges {
     #userService = inject(UserService)
     
     ngOnChanges(changes:any) {
-        if ('user' in changes && this.user) {
+        if ('user' in changes && this.user()) {
             this.reload()
         }
     }
 
     reload() {
-        if (!this.user) return
+        const user = this.user()
+        if (!user) return
         const getLink = (_:TWeekly) => _.type === 'Project' ? `/projects/${_.id}` : _.type === 'Company' ? `/customers/${_.id}` : undefined
         this.isError = false
-        this.#userService.showProjectLoad(this.user).subscribe({
+        this.#userService.showProjectLoad(user).subscribe({
             next: (response: any) => {
                 if (!response?.subscriptions) return
                 const data = response as TData
@@ -96,7 +97,7 @@ export class HrWorkloadComponent implements OnChanges {
 
     onContextMenuAction ($event:ActionEmitterType, _:T_ASSIGNEE_TARGET) {
         if ($event.action.title === I18N_REMOVE_FROM_TEAM) {
-            this.user.active_projects.remove(_)
+            this.user()?.active_projects.remove(_)
         }
     }
 

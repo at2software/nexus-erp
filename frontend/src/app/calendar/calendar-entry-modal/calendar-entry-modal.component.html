@@ -1,40 +1,40 @@
+@let _calendarEntry = calendarEntry;
+
 @if (isSetUp) {
   <div>
     <div class="modal-header">
-      <span class="modal-title">{{calendarEntry!.id ? "Edit calendar entry" : "Add calendar entry"}}</span>
+      <span class="modal-title">
+        @if (_calendarEntry!.id) {
+          <span i18n="@@i18n.calendar.editEntry">Edit calendar entry</span>
+        } @else {
+          <span i18n="@@i18n.calendar.addEntry">Add calendar entry</span>
+        }
+      </span>
     </div>
     <div class="modal-body">
       <div class="input-group mb-2">
-        <div class="input-group-prepend">
-          <span class="input-group-text" i18n="@@i18n.common.title">title</span>
-        </div>
-        <input type="titel" class="text-end form-control" [(ngModel)]="calendarEntry!.vcalendar_event.title" [disabled]="!calendarEntry!.is_editable">
+        <span class="input-group-text" i18n="@@i18n.common.title">title</span>
+        <input type="text" class="text-end form-control" [(ngModel)]="_calendarEntry!.vcalendar_event.title" [disabled]="!_calendarEntry!.is_editable">
       </div>
       <div class="input-group mb-2">
-        <div class="input-group-prepend">
-          <span class="input-group-text" i18n="@@i18n.common.description">description</span>
-        </div>
-        <input type="description" class="text-end form-control" [(ngModel)]="calendarEntry!.vcalendar_event.description" [disabled]="!calendarEntry!.is_editable">
+        <span class="input-group-text" i18n="@@i18n.common.description">description</span>
+        <input type="text" class="text-end form-control" [(ngModel)]="_calendarEntry!.vcalendar_event.description" [disabled]="!_calendarEntry!.is_editable">
       </div>
       <div class="row">
         <div class="col-6">
           <div class="input-group mb-2">
-            <div class="input-group-prepend">
-              <span class="input-group-text" i18n="@@i18n.common.from">from</span>
-            </div>
-            <input ngbDatepicker #d1="ngbDatepicker" placeholder="yyyy-mm-dd" class="form-control" [displayMonths]="2" [autoClose]="'outside'" [(ngModel)]="editedStartDate" (ngModelChange)="onEditedStartDateChange($event)" [disabled]="!calendarEntry!.is_editable" />
+            <span class="input-group-text" i18n="@@i18n.common.from">from</span>
+            <input ngbDatepicker #d1="ngbDatepicker" placeholder="yyyy-mm-dd" class="form-control" [displayMonths]="2" [autoClose]="'outside'" [(ngModel)]="editedStartDate" (ngModelChange)="onEditedStartDateChange($event)" [disabled]="!_calendarEntry!.is_editable" />
             <button class="btn btn-outline-primary" (click)="d1.toggle()" type="button"><i>calendar_month</i></button>
           </div>
         </div>
-        @if (!calendarEntry!.vcalendar_event.entire_day) {
+        @if (!_calendarEntry!.vcalendar_event.entire_day) {
           <div class="col-6">
             <div class="input-group mb-2">
-              <div class="input-group-prepend">
-                <span class="input-group-text" i18n="@@i18n.common.time">time</span>
-              </div>
-              <input type="number" class="text-end form-control" [(ngModel)]="editedStartTime.hour" (ngModelChange)="onEditedStartTimeChange()" (blur)="onEditedStartTimeBlur()" [disabled]="!calendarEntry!.is_editable">
+              <span class="input-group-text" i18n="@@i18n.common.time">time</span>
+              <input type="number" class="text-end form-control" [(ngModel)]="editedStartTime.hour" (ngModelChange)="onEditedStartTimeChange()" (blur)="onEditedStartTimeBlur()" [disabled]="!_calendarEntry!.is_editable">
               <span class="input-group-text">:</span>
-              <input type="number" class="text-end form-control" [(ngModel)]="editedStartTime.minute" (ngModelChange)="onEditedStartTimeChange()" (blur)="onEditedStartTimeBlur()" [disabled]="!calendarEntry!.is_editable">
+              <input type="number" class="text-end form-control" [(ngModel)]="editedStartTime.minute" (ngModelChange)="onEditedStartTimeChange()" (blur)="onEditedStartTimeBlur()" [disabled]="!_calendarEntry!.is_editable">
             </div>
           </div>
         }
@@ -42,90 +42,85 @@
       <div class="row">
         <div class="col-6">
           <div class="input-group mb-2">
-            <div class="input-group-prepend">
-              <span class="input-group-text" i18n="@@i18n.common.till">till</span>
-            </div>
-            <input ngbDatepicker #d2="ngbDatepicker" placeholder="yyyy-mm-dd" class="form-control" [displayMonths]="2" [autoClose]="'outside'" [(ngModel)]="editedEndDate" (blur)="onEditedEndDateBlur()" [minDate]="editedStartDate!" [disabled]="!calendarEntry!.is_editable" />
+            <span class="input-group-text" i18n="@@i18n.common.till">till</span>
+            <input ngbDatepicker #d2="ngbDatepicker" placeholder="yyyy-mm-dd" class="form-control" [displayMonths]="2" [autoClose]="'outside'" [(ngModel)]="editedEndDate" (blur)="onEditedEndDateBlur()" [minDate]="editedStartDate!" [disabled]="!_calendarEntry!.is_editable" />
             <button class="btn btn-outline-primary" (click)="d2.toggle()" type="button"><i>calendar_month</i></button>
           </div>
         </div>
-        @if (!calendarEntry!.vcalendar_event.entire_day) {
+        @if (!_calendarEntry!.vcalendar_event.entire_day) {
           <div class="col-6">
             <div class="input-group mb-2">
-              <div class="input-group-prepend">
-                <span class="input-group-text" i18n="@@i18n.common.time">time</span>
-              </div>
-              <input type="number" class="text-end form-control" [(ngModel)]="editedEndTime.hour" (blur)="onEditedEndTimeBlur()" [disabled]="!calendarEntry!.is_editable">
+              <span class="input-group-text" i18n="@@i18n.common.time">time</span>
+              <input type="number" class="text-end form-control" [(ngModel)]="editedEndTime.hour" (blur)="onEditedEndTimeBlur()" [disabled]="!_calendarEntry!.is_editable">
               <span class="input-group-text">:</span>
-              <input type="number" class="text-end form-control" [(ngModel)]="editedEndTime.minute" (blur)="onEditedEndTimeBlur()" [disabled]="!calendarEntry!.is_editable">
+              <input type="number" class="text-end form-control" [(ngModel)]="editedEndTime.minute" (blur)="onEditedEndTimeBlur()" [disabled]="!_calendarEntry!.is_editable">
             </div>
           </div>
         }
       </div>
       <div class="form-check form-switch">
-        <input class="form-check-input" type="checkbox" role="switch" id="entireDay" [(ngModel)]="calendarEntry!.vcalendar_event.entire_day" [disabled]="!calendarEntry!.is_editable">
+        <input class="form-check-input" type="checkbox" role="switch" id="entireDay" [(ngModel)]="_calendarEntry!.vcalendar_event.entire_day" [disabled]="!_calendarEntry!.is_editable">
         <label class="form-check-label" for="entireDay" i18n="@@i18n.customers.entireDay">entire day</label>
       </div>
       <div class="form-group mb-2">
         <label for="recurrenceSelect" i18n="@@i18n.common.recurrence">recurrence</label>
-        <select class="form-control form-select" id="recurrenceSelect" [(ngModel)]="calendarEntry!.vcalendar_event.rrule" [disabled]="!calendarEntry!.is_editable">
+        <select class="form-control form-select" id="recurrenceSelect" [(ngModel)]="_calendarEntry!.vcalendar_event.rrule" [disabled]="!_calendarEntry!.is_editable">
           <option [ngValue]="recurrenceOptions.None" i18n="@@i18n.common.none">none</option>
           <option [ngValue]="recurrenceOptions.Weekly" i18n="@@i18n.common.weekly">weekly</option>
           <option [ngValue]="recurrenceOptions.Monthly" i18n="@@i18n.common.monthly">monthly</option>
           <option [ngValue]="recurrenceOptions.Yearly" i18n="@@i18n.common.yearly">yearly</option>
         </select>
       </div>
-      @if (calendarEntry!.vcalendar_event.rrule === recurrenceOptions.Monthly) {
+      @if (_calendarEntry!.vcalendar_event.rrule === recurrenceOptions.Monthly) {
         <div class="form-group">
           <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" role="switch" id="weekdayDependent" [(ngModel)]="calendarEntry!.vcalendar_event.isWeekdayDependent">
+            <input class="form-check-input" type="checkbox" role="switch" id="weekdayDependent" [(ngModel)]="_calendarEntry!.vcalendar_event.isWeekdayDependent">
             <label class="form-check-label" for="weekdayDependent" i18n="@@i18n.customers.weekday">weekday</label>
           </div>
-          @if (calendarEntry!.vcalendar_event.isWeekdayDependent) {
+          @if (_calendarEntry!.vcalendar_event.isWeekdayDependent) {
             <div class="row">
               <div class="col-6">
                 <label for="weekSelect" i18n="@@i18n.common.week">week</label>
                 <select
                   class="form-control form-select"
                   id="weekSelect"
-                  [(ngModel)]="calendarEntry!.vcalendar_event.byDayOccurence"
-                  [disabled]="!calendarEntry!.vcalendar_event.isWeekdayDependent">
+                  [(ngModel)]="_calendarEntry!.vcalendar_event.byDayOccurence"
+                  [disabled]="!_calendarEntry!.vcalendar_event.isWeekdayDependent">
                   @for (week of recurringSelectableWeeks; track week) {
                     <option [ngValue]="week.asNumber">{{ week.label }}</option>
                   }
                 </select>
               </div>
-              @if (!calendarEntry!.vcalendar_event.entire_day) {
-                <div class="col-6">
-                  <label for="daySelect" i18n="@@i18n.common.day">day</label>
-                  <select
-                    class="form-control form-select"
-                    id="daySelect"
-                    [(ngModel)]="calendarEntry!.vcalendar_event.byDayWeekday"
-                    [disabled]="!calendarEntry!.vcalendar_event.isWeekdayDependent">
-                    @for (day of daysOfWeekLong; track day; let i = $index) {
-                      <option [ngValue]="daysOfWeekEn[i]">{{ day }}</option>
-                    }
-                  </select>
-                </div>
-              }
+              <div class="col-6">
+                <label for="daySelect" i18n="@@i18n.common.day">day</label>
+                <select
+                  class="form-control form-select"
+                  id="daySelect"
+                  [(ngModel)]="_calendarEntry!.vcalendar_event.byDayWeekday"
+                  [disabled]="!_calendarEntry!.vcalendar_event.isWeekdayDependent">
+                  @for (day of daysOfWeekLong; track day; let i = $index) {
+                    <option [ngValue]="daysOfWeekEn[i]">{{ day }}</option>
+                  }
+                </select>
+              </div>
             </div>
           }
         </div>
       }
     </div>
-    @if (calendarEntry?.is_editable) {
+    @if (_calendarEntry?.is_editable) {
       <div class="modal-footer hstack gap-3">
-        <!-- Delete button - only show when editing existing event -->
-        @if (calendarEntry!.id) {
+        @if (_calendarEntry!.id) {
           <button class="btn btn-danger" (click)="onDelete()" i18n="@@i18n.common.delete">delete</button>
         }
         <div class="ms-auto d-flex gap-2">
-          <!-- Cancel button - always show -->
           <button class="btn btn-secondary" (click)="activeModal.dismiss()" i18n="@@i18n.common.cancel">cancel</button>
-          <!-- Save/Add button -->
           <button class="btn btn-primary" (click)="close()">
-            {{calendarEntry!.id ? "Save" : "Add"}}
+            @if (_calendarEntry!.id) {
+              <span i18n="@@i18n.common.save">Save</span>
+            } @else {
+              <span i18n="@@i18n.common.add">Add</span>
+            }
           </button>
         </div>
       </div>

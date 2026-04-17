@@ -38,9 +38,11 @@
                 <div class="card-header" i18n="@@i18n.common.projects">projects</div>
                 <div class="card-body">
                     <ul class="list-group">
-                        <nx [title]="p.name" *nxFor="let p of parent.current.var.selectedEmployee.projects">
+                        @for (p of parent.current.var.selectedEmployee.projects; track p.id) {
+                        <nx [title]="p.name" [nx]="p" [tables]="parent.current.var.selectedEmployee.projects">
                             <project [project]="p"></project>
                         </nx>
+                        }
                     </ul>
                 </div>
             </div>

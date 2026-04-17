@@ -1,6 +1,6 @@
 import { NxAction, NxActionType } from "src/app/nx/nx.actions"
 import { Task } from "./task.model"
-import { ModalConfirmComponent } from "@app/_modals/modal-confirm/modal-confirm.component"
+import { NxGlobal } from "src/app/nx/nx.global"
 
 export function getTaskActions(self: Task): NxAction[] {
     return [
@@ -30,14 +30,6 @@ export function getTaskActions(self: Task): NxAction[] {
                 { title: _.name, action: () => self.httpService.removeLabel(self, _.name), group: true }
             )) ?? []
         },
-        {
-            title: $localize`:@@i18n.common.delete:delete`,
-            interrupt: { service: ModalConfirmComponent, args: { message: $localize`:@@i18n.tasks.reallyDeleteThisTask:really delete this task?`, title: $localize`:@@i18n.common.attention:attention` } },
-            action: () => self.httpService.destroy(self),
-            type: NxActionType.Destructive,
-            group: true,
-            hotkey: 'CTRL+DELETE',
-            roles: 'admin'
-        }
+        NxGlobal.deleteAction(self, $localize`:@@i18n.tasks.reallyDeleteThisTask:really delete this task?`, { roles: 'admin', action: () => self.httpService.destroy(self) })
     ]
 }

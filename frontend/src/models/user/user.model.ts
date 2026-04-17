@@ -44,7 +44,7 @@ export class User extends VcardClass {
     @AutoWrapArray('Vacation') approvedVacations      : Vacation[]
     @AutoWrapArray('Vacation') currentSickNotes       : Vacation[]
         
-    @Accessor(REFLECTION) current_focus:Company|Project
+    @Accessor(REFLECTION) current_focus:Company|Project|undefined
     @AccessorArray(REFLECTION) active_projects:T_ASSIGNEE_TARGET[]
 
     actions:NxAction[] = getUserActions(this)

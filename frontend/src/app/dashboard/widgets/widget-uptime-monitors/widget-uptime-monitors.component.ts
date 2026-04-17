@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { BaseWidgetComponent } from '../base.widget.component';
 import { UptimeMonitor } from '@models/uptime/uptime-monitor.model';
 import { UptimeMonitorService } from '@models/uptime/uptime-monitor.service';
@@ -16,15 +16,7 @@ import moment from 'moment';
 export class WidgetUptimeMonitorsComponent extends BaseWidgetComponent implements OnInit {
     monitors: UptimeMonitor[] = [];
     chartOptions: any = {};
-
-    constructor(private service: UptimeMonitorService) {
-        super();
-    }
-
-    ngOnInit() {
-        super.ngOnInit();
-        this.reload();
-    }
+    service = inject(UptimeMonitorService)
 
     reload() {
         this.service.index().subscribe({

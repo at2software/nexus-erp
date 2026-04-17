@@ -1,5 +1,5 @@
 import { GlobalService } from 'src/models/global.service';
-import { Component, EventEmitter, inject, Input, OnChanges, OnInit } from '@angular/core';
+import { Component, EventEmitter, inject, input, OnChanges, OnInit } from '@angular/core';
 import { Serializable } from 'src/models/serializable';
 import { ToastService } from '../toast/toast.service';
 import { Observable, OperatorFunction } from 'rxjs';
@@ -18,11 +18,11 @@ import { NgbTypeaheadModule } from '@ng-bootstrap/ng-bootstrap';
 })
 export class InputGroupComponent implements OnChanges {
 
-    @Input() object?: Serializable
-    @Input() key: string
-    @Input() suffix?: string
-    @Input() typeahead?: { key: string, name: string }[]
-    @Input() placeholder: string = ''
+    object      = input<Serializable|undefined>();
+    key         = input<string>('');
+    suffix      = input<string|undefined>();
+    typeahead   = input<{ key: string, name: string }[]|undefined>();
+    placeholder = input<string|undefined>();
 
     #originalValue: any
     protected onUpdate = new EventEmitter<any>()
@@ -31,7 +31,7 @@ export class InputGroupComponent implements OnChanges {
     protected toast = inject(ToastService)
 
     ngOnChanges() {
-        if (this.object) {
+        if (this.object()) {
             this.#originalValue = this.model
         }
     }
@@ -42,13 +42,13 @@ export class InputGroupComponent implements OnChanges {
     taSelect = (x: any) => this.updateModel(x.item.key)
     search: OperatorFunction<string, readonly { key: string, name: string }[]> = (text$: Observable<string>) => text$.pipe(
         debounceTime(200),
-        map((x: any) => (x === '') ? [] : this.typeahead!.filter(v => v.name.toLowerCase().indexOf(x.toLowerCase() || v.key.toLowerCase().indexOf(x.toLowerCase())) > -1).slice(0, 10))
+        map((x: any) => (x === '') ? [] : this.typeahead()!.filter(v => v.name.toLowerCase().indexOf(x.toLowerCase() || v.key.toLowerCase().indexOf(x.toLowerCase())) > -1).slice(0, 10))
     )
 
     // general
-    get value() { return this.typeahead ? this.typeahead.find(x => x.key == this.model)?.name : this.model }
-    get model() { return (this.object as any)[this.key] }
-    set model(value: any) { (this.object as any)[this.key] = value }
+    get value() { return this.typeahead() ? this.typeahead()!.find(x => x.key == this.model)?.name : this.model }
+    get model() { return (this.object() as any)[this.key()!] }
+    set model(value: any) { (this.object() as any)[this.key()!] = value }
 
     onBlur = (event: any) => {
         this.updateModel(event.target.value)
@@ -56,7 +56,7 @@ export class InputGroupComponent implements OnChanges {
     updateModel(s: string) {
         if (s === this.#originalValue) return
         this.model = s
-        this.object?.update(this.object.getPrimitives()).subscribe()
+        this.object()?.update(this.object()?.getPrimitives()).subscribe()
     }
 }
 
@@ -69,10 +69,11 @@ export class InputGroupComponent implements OnChanges {
 })
 export class InputSettingsGroupComponent extends InputGroupComponent implements OnInit, OnChanges {
 
-    @Input() id: string
-    @Input() parent?: Serializable
+    id = input.required<string>()
+    parent = input<Serializable|undefined>()
 
-    key = 'value'
+    override get model() { return (this.object() as any)?.['value'] }
+    override set model(value: any) { if (this.object()) (this.object() as any)['value'] = value }
     taKey = (x: any) => x.name
 
     #global = inject(GlobalService)
@@ -82,19 +83,21 @@ export class InputSettingsGroupComponent extends InputGroupComponent implements 
     }
 
     async ngOnChanges() {
-        if(!this.parent){
-            this.object = await this.#global.settingParam(this.id)
-            if (!this.object) {
-                this.service.get('params/' + this.id).subscribe(_ => {
-                    this.object = Param.fromJson(_)
+        let object = this.object()
+        const parent = this.parent()
+        if(!parent) {
+            object = await this.#global.settingParam(this.id())
+            if (!object) {
+                this.service.get('params/' + this.id()).subscribe(_ => {
+                    object = Param.fromJson(_)
                 })
             }
         } else {
-            const p = this.parent.getParam(this.id)
+            const p = parent.getParam(this.id())
             if (p !== undefined) {
-                this.object = Param.fromJson({key: this.id, value: p})
+                object = Param.fromJson({key: this.id(), value: p})
             } else {
-                this.object = Param.fromJson({key: this.id, value: ''})
+                object = Param.fromJson({key: this.id(), value: ''})
             }
         }
         super.ngOnChanges()
@@ -103,11 +106,12 @@ export class InputSettingsGroupComponent extends InputGroupComponent implements 
 
 
     updateModel(s: string) {
-        if(!this.parent){
+        const parent = this.parent()
+        if(!parent){
             super.updateModel(s)
         } else {
-            this.parent.params![this.id] = s
-            this.parent.updateParam(this.id, { value: s }).subscribe()
+            parent.params![this.id()] = s
+            parent.updateParam(this.id(), { value: s }).subscribe()
         }
     }
 

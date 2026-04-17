@@ -6,72 +6,33 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
+use Symfony\Component\Process\Process;
 
 class GeneratePdfThumbnailWithGhostscript {
-    private const ALLOWED_GS_COMMANDS = [
-        'gs',
-        'gswin64c',
-        'gswin32c',
-        '/usr/bin/gs',
-        '/usr/local/bin/gs',
-    ];
-
     public function execute(string $sourceDir, string $thumbnailPath): bool {
-        $gsCommand = $this->selectGhostscriptCommand();
-
-        if (! $this->validateGsCommand($gsCommand)) {
+        if (! $this->isGhostscriptAvailable()) {
             return false;
         }
-
-        if (! $this->isGhostscriptAvailable($gsCommand)) {
-            return false;
-        }
-        return $this->generateThumbnail($gsCommand, $sourceDir, $thumbnailPath);
+        return $this->generateThumbnail($sourceDir, $thumbnailPath);
     }
-    private function selectGhostscriptCommand(): string {
+    private function gsExecutable(): string {
         return (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? 'gswin64c' : 'gs';
     }
-    private function validateGsCommand(string $gsCommand): bool {
-        if (! in_array($gsCommand, self::ALLOWED_GS_COMMANDS, true)) {
-            Log::warning("Ghostscript command not in whitelist: {$gsCommand}");
-            return false;
-        }
-        return true;
-    }
-    private function isGhostscriptAvailable(string $gsCommand): bool {
-        $descriptorspec = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w'],
-        ];
-
-        $process = proc_open(
-            [$gsCommand, '-version'],
-            $descriptorspec,
-            $pipes,
-            null,
-            null
-        );
-
-        if (! is_resource($process)) {
+    private function isGhostscriptAvailable(): bool {
+        $process = new Process([$this->gsExecutable(), '-version']);
+        try {
+            $process->run();
+        } catch (\Exception $e) {
             Log::info('Ghostscript not available for PDF thumbnail generation');
             return false;
         }
-
-        $output = stream_get_contents($pipes[1]);
-        $error  = stream_get_contents($pipes[2]);
-        fclose($pipes[0]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-        $returnVar = proc_close($process);
-
-        if ($returnVar !== 0) {
+        if (! $process->isSuccessful()) {
             Log::info('Ghostscript not available for PDF thumbnail generation');
             return false;
         }
         return true;
     }
-    private function generateThumbnail(string $gsCommand, string $sourceDir, string $thumbnailPath): bool {
+    private function generateThumbnail(string $sourceDir, string $thumbnailPath): bool {
         try {
             $sourceContent = Storage::get($sourceDir);
             $tempPdfFile   = tempnam(sys_get_temp_dir(), 'pdf_source').'.pdf';
@@ -83,7 +44,7 @@ class GeneratePdfThumbnailWithGhostscript {
 
             file_put_contents($tempPdfFile, $sourceContent);
 
-            $result = $this->executeGhostscript($gsCommand, $tempPdfFile, $tempImageFile);
+            $result = $this->executeGhostscript($tempPdfFile, $tempImageFile);
 
             if ($result && file_exists($tempImageFile)) {
                 $this->convertToWebp($tempImageFile, $thumbnailPath);
@@ -106,11 +67,31 @@ class GeneratePdfThumbnailWithGhostscript {
             Log::error('Invalid temp file path detected');
             return false;
         }
+        if (! $this->isSafePath($tempPdfFile) || ! $this->isSafePath($tempImageFile)) {
+            Log::error('Temp file path contains disallowed characters');
+            return false;
+        }
         return true;
     }
-    private function executeGhostscript(string $gsCommand, string $tempPdfFile, string $tempImageFile): bool {
-        $command = [
-            $gsCommand,
+    private function isSafePath(string $path): bool {
+        return (bool)preg_match('/^[a-zA-Z0-9_\-\/\\\\.]+$/', $path);
+    }
+    private function executeGhostscript(string $tempPdfFile, string $tempImageFile): bool {
+        $realPdfFile = realpath($tempPdfFile);
+        $imgDir      = realpath(dirname($tempImageFile));
+        $imgBasename = basename($tempImageFile);
+
+        if ($realPdfFile === false || $imgDir === false ||
+            ! $this->isSafePath($realPdfFile) ||
+            ! $this->isSafePath($imgDir) ||
+            ! $this->isSafePath($imgBasename)) {
+            return false;
+        }
+
+        $safeImageFile = $imgDir.DIRECTORY_SEPARATOR.$imgBasename;
+
+        $process = new Process([
+            $this->gsExecutable(),
             '-dNOPAUSE',
             '-dBATCH',
             '-dSAFER',
@@ -121,36 +102,17 @@ class GeneratePdfThumbnailWithGhostscript {
             '-dTextAlphaBits=4',
             '-dGraphicsAlphaBits=4',
             '-dBackgroundColor=16#ffffff',
-            '-sOutputFile='.$tempImageFile,
-            $tempPdfFile,
-        ];
+            '-sOutputFile='.$safeImageFile,
+            $realPdfFile,
+        ]);
 
-        $descriptorspec = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w'],
-        ];
-
-        $process = proc_open(
-            $command,
-            $descriptorspec,
-            $pipes,
-            null,
-            null
-        );
-
-        if (! is_resource($process)) {
-            Log::warning('Failed to execute Ghostscript');
+        try {
+            $process->run();
+        } catch (\Exception $e) {
+            Log::warning('Failed to execute Ghostscript: '.$e->getMessage());
             return false;
         }
-
-        fclose($pipes[0]);
-        $output = stream_get_contents($pipes[1]);
-        $error  = stream_get_contents($pipes[2]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-        $returnVar = proc_close($process);
-        return $returnVar === 0;
+        return $process->isSuccessful();
     }
     private function convertToWebp(string $tempImageFile, string $thumbnailPath): void {
         $manager = new ImageManager(new Driver);

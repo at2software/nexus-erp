@@ -25,7 +25,7 @@ export class CompanyContact extends VcardClass {
     @AutoWrapArray('Project') projects: Project
 
     get name(): string {
-        return this.contact?.card?.name || ''
+        return this.contact?.card.name || ''
     }
 
     serialize (_json: any) {

@@ -1,11 +1,11 @@
 import { Component, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, DatePipe } from '@angular/common';
 import { NexusModule } from '@app/nx/nexus.module';
 import { ActionEmitterType } from '@app/nx/nx.directive';
 import { Vacation } from '@models/vacation/vacation.model';
 import { VacationService } from '@models/vacation/vacation.service';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { takeUntil } from 'rxjs';
 import { TabTasksBaseComponent } from '../tab-tasks-base.component';
 
 @Component({
@@ -22,11 +22,11 @@ export class TabTasksHrComponent extends TabTasksBaseComponent {
     #vacationService = inject(VacationService)
 
     override reload() {
-        this.#vacationService.indexPendingRequests().pipe(takeUntil(this.destroy$)).subscribe(_ => {
+        this.#vacationService.indexPendingRequests().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(_ => {
             this.vacationRequests = _
             this.countChanged.emit(this.vacationRequests.length + this.sickNotes.length)
         })
-        this.#vacationService.indexSickNotes().pipe(takeUntil(this.destroy$)).subscribe(_ => {
+        this.#vacationService.indexSickNotes().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(_ => {
             this.sickNotes = _
             this.countChanged.emit(this.vacationRequests.length + this.sickNotes.length)
         })

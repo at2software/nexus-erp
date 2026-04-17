@@ -3,13 +3,15 @@
         <div class="scroll-container">
             <div class="header" i18n="@@i18n.invoices.lastPayments">last payments</div>
             <ul class="list-group">
-                <li class="list-group-item d-flex" *nxFor="let _ of invoices">
+                @for (_ of invoices; track _.id) {
+                <li class="list-group-item d-flex" [nx]="_" [tables]="invoices">
                     <div class="avatar float-end mt-1 me-3" style="min-width:24px;">
                         <avatar [object]="_"></avatar>
                     </div>
                     <div class="flex-fill">{{_.name}}</div>
                     <span ngbTooltip="paid at: {{_.paid_at | date}} (gross value)">{{_.gross | money}}</span>
                 </li>
+                }
             </ul>
         </div>
     </scrollbar>

@@ -63,9 +63,7 @@
               "apexcharts",
               "moment"
             ],
-            "scripts": [
-              "node_modules/tinycolor2/tinycolor.js"
-            ],
+            "scripts": [],
             "stylePreprocessorOptions": {
               "includePaths": [
                 "src/scss",

@@ -1,17 +1,17 @@
+@let _user = user();
+
 <activity-tab icon="bar_chart">
     <div class="container">
         <scrollbar>
             <div class="p-3">
 
                 <!-- User header -->
-                @if (user) {
                 <div class="text-center mb-3">
                     @for (_ of [userKey]; track _) {
-                        <avatar [object]="user" size="lg" class="d-inline-block my-4 mb-6"></avatar>
+                        <avatar [object]="_user" size="lg" class="d-inline-block my-4 mb-6"></avatar>
                     }
-                    <div class="fw-semibold">{{ user.name }}</div>
+                    <div class="fw-semibold">{{ _user.name }}</div>
                 </div>
-                }
 
                 <!-- Date range -->
                 <div class="small text-muted mb-3 text-center">

@@ -1,8 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { Project } from 'src/models/project/project.model';
 import { ProjectService } from 'src/models/project/project.service';
-import { BaseWidgetComponent } from '../base.widget.component';
-import { OptionType } from '../widget-options/widget-options.component';
+import { BaseWidgetComponent, WidgetOptions } from '../base.widget.component';
 import { WidgetsModule } from '../widgets.module';
 
 @Component({
@@ -17,14 +16,7 @@ export class WidgetMissingGitComponent extends BaseWidgetComponent {
     data: Project[] = []
     #projectService = inject(ProjectService)
 
-    defaultOptions = () => ({
-        'max-items': {type: OptionType.Number, value: 999, i18n: $localize`:@@i18n.common.maxItems:max items`},
-    })
-
-    override ngOnInit() {
-        super.ngOnInit()
-        this.reload()
-    }
+    defaultOptions = () => ({ ...WidgetOptions.maxItems })
 
     reload(): void {
         this.#projectService.aget('projects/missing-git').subscribe((projects: any[]) => {

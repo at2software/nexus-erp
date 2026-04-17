@@ -8,8 +8,10 @@ use App\Models\StringParam;
 use App\Models\TextParam;
 use App\Traits\ControllerHasPermissionsTrait;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
-use Str;
+use Illuminate\Support\Str;
 
 class ParamController extends Controller {
     use ControllerHasPermissionsTrait;
@@ -42,9 +44,9 @@ class ParamController extends Controller {
             if ($param) {
                 $historyResponse = $param->historyResponse();
                 // If it's a JsonResponse, get the original data
-                if ($historyResponse instanceof \Illuminate\Http\JsonResponse) {
+                if ($historyResponse instanceof JsonResponse) {
                     $result[] = $historyResponse->getData(true);
-                } elseif ($historyResponse instanceof \Illuminate\Http\Response) {
+                } elseif ($historyResponse instanceof Response) {
                     $result[] = json_decode($historyResponse->getContent(), true);
                 } else {
                     $result[] = $historyResponse;
@@ -61,7 +63,7 @@ class ParamController extends Controller {
     }
     public function store($key, $type = null, $id = null) {
         request()->validate([
-            'value'=> 'required',
+            'value' => 'required',
         ]);
         return $this->saveParam($key, $type, $id, request('value'));
     }

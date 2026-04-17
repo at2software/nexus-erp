@@ -4,7 +4,8 @@ namespace App\Casts;
 
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Database\Eloquent\Model;
-use Str;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class Precomputed implements CastsAttributes {
     // provide matching precompution methods `protected function precomputeFooAttribute()` in models
@@ -23,7 +24,7 @@ class Precomputed implements CastsAttributes {
         }
         $newValue = $model->{$methodName}($key);
 
-        \DB::table($model->getTable())->where('id', $model->getKey())->update([$key => $newValue]);
+        DB::table($model->getTable())->where('id', $model->getKey())->update([$key => $newValue]);
         return floatval($newValue);
     }
     public function set(Model $model, string $key, mixed $value, array $attributes): mixed {

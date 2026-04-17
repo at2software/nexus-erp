@@ -48,8 +48,8 @@ export class ModalEditFocusComponent extends ModalBaseComponent<Focus> {
             'duration'  : parseFloat(this.durationText),
             'comment'   : this.commentText
         }
-        if (this.project.selected) {
-            payload['parent_path'] = this.project.selected.getApiPathWithId()
+        if (this.project.selected()) {
+            payload['parent_path'] = this.project.selected()?.getApiPathWithId()
         }
         this.focus.update(payload).subscribe()
         return this.focus

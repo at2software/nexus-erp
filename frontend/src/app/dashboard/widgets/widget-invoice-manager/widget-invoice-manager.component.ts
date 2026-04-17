@@ -1,10 +1,9 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { NgbTooltipModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { Project } from 'src/models/project/project.model';
 import { Company } from 'src/models/company/company.model';
-import { BaseWidgetComponent } from '../base.widget.component';
-import { OptionType } from '../widget-options/widget-options.component';
+import { BaseWidgetComponent, WidgetOptions } from '../base.widget.component';
 import { WidgetsModule } from '../widgets.module';
 import { PermissionsDirective } from '@directives/permissions.directive';
 import { WidgetService } from '@models/widget.service';
@@ -23,7 +22,7 @@ interface TGroupedItem {
     templateUrl: './widget-invoice-manager.component.html',
     styleUrls: ['./widget-invoice-manager.component.scss', './../base.widget.component.scss'],
     standalone: true,
-    imports: [CommonModule, NgbTooltipModule, NgbDropdownModule, WidgetsModule, PermissionsDirective]
+    imports: [NgbTooltipModule, NgbDropdownModule, WidgetsModule, PermissionsDirective]
 })
 export class WidgetInvoiceManagerComponent extends BaseWidgetComponent {
 
@@ -34,14 +33,9 @@ export class WidgetInvoiceManagerComponent extends BaseWidgetComponent {
     #router = inject(Router)
 
     defaultOptions = () => ({
-        'only-mine': {type: OptionType.Boolean, value: false, i18n: $localize`:@@i18n.common.onlyMine:only mine`},
-        'chart-only': {type: OptionType.Boolean, value: false, i18n: $localize`:@@i18n.common.chartOnly:chart only`}
+        ...WidgetOptions.onlyMine,
+        ...WidgetOptions.chartOnly,
     })
-
-    override ngOnInit() {
-        super.ngOnInit()
-        this.reload()
-    }
 
     reload(): void {
         if (!this.hasInvoicesExpenses) return
@@ -113,7 +107,6 @@ export class WidgetInvoiceManagerComponent extends BaseWidgetComponent {
 
                 // Aggregate all badge warnings from all objects in this group
                 this.aggregateBadges(group)
-
                 return group
             }).sort((a, b) => {
                 const aTotal = a.items.reduce((sum, item) => sum + item.value, 0)
@@ -133,13 +126,13 @@ export class WidgetInvoiceManagerComponent extends BaseWidgetComponent {
             // Combine chart data from all sources for stacked display
             const chartSeries = []
             if (responses.timebased.history) {
-                chartSeries.push(Array.isArray(responses.timebased.history) ? responses.timebased.history[0] : responses.timebased.history)
+                chartSeries.push([responses.timebased.history].flat()[0])
             }
             if (responses.support.history) {
-                chartSeries.push(Array.isArray(responses.support.history) ? responses.support.history[0] : responses.support.history)
+                chartSeries.push([responses.support.history].flat()[0])
             }
             if (responses.prepared.history) {
-                chartSeries.push(Array.isArray(responses.prepared.history) ? responses.prepared.history[0] : responses.prepared.history)
+                chartSeries.push([responses.prepared.history].flat()[0])
             }
             if (chartSeries.length > 0) {
                 this.chartData = chartSeries

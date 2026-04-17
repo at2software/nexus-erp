@@ -8,7 +8,9 @@ use App\Actions\User\GetPredictionAccuracyData;
 use App\Actions\User\GetUserAddressBook;
 use App\Builders\UserBuilder;
 use App\Casts\Permission;
+use App\Enums\MilestoneState;
 use App\Enums\VacationState;
+use App\Http\Controllers\VacationController;
 use App\Queries\TimeBasedEmploymentQuery;
 use App\Traits\CustomModelTrait;
 use App\Traits\HasFocusDisplay;
@@ -18,6 +20,7 @@ use App\Traits\HasTasksTrait;
 use App\Traits\VcardGenderTrait;
 use App\Traits\VcardTrait;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -136,9 +139,9 @@ class User extends BaseAuthenticatable {
 
     /**
      * Check if user has specific role(s)
-     * Admin always returns true  
+     * Admin always returns true
      */
-    public function hasRole($roles, string $guard = null): bool {
+    public function hasRole($roles, ?string $guard = null): bool {
         return $this->hasAnyRole($roles, $guard);
     }
 
@@ -146,17 +149,17 @@ class User extends BaseAuthenticatable {
      * Check if user has any of the specified roles
      * Admin always returns true
      */
-    public function hasAnyRole($roles, string $guard = null): bool {
+    public function hasAnyRole($roles, ?string $guard = null): bool {
         // Normalize input to array
         if (is_string($roles)) {
             $roles = explode('|', $roles);
         }
-        
+
         // Admin has all roles
         if ($this->roles()->where('name', 'admin')->exists()) {
             return true;
         }
-        
+
         // Check if user has any of the specified roles
         return $this->roles()->whereIn('name', $roles)->exists();
     }
@@ -256,6 +259,103 @@ class User extends BaseAuthenticatable {
     }
     public function milestones() {
         return $this->hasMany(Milestone::class);
+    }
+    public function getBreakDays(Carbon $startDate, Carbon $endDate): array {
+        $breakMap = [];
+
+        $approvedVacations = $this->approvedVacations($startDate->copy()->subDay(), $endDate->copy()->addDay())->get();
+        foreach ($approvedVacations as $vac) {
+            foreach (CarbonPeriod::create($vac->started_at, $vac->ended_at) as $date) {
+                $breakMap[$date->format('Y-m-d')] = ['type' => 'vacation', 'name' => $vac->comment ?: 'Vacation'];
+            }
+        }
+
+        $sickNotes = $this->currentSickNotes($startDate->copy()->subDay(), $endDate->copy()->addDay())->get();
+        foreach ($sickNotes as $sick) {
+            foreach (CarbonPeriod::create($sick->started_at, $sick->ended_at) as $date) {
+                $breakMap[$date->format('Y-m-d')] = ['type' => 'sick', 'name' => 'Sick leave'];
+            }
+        }
+
+        $holidays = app(VacationController::class)->indexHolidays($this->work_zip ?? '87435');
+        foreach ($holidays as $holiday) {
+            $holidayDate = Carbon::parse($holiday->datum);
+            if ($holidayDate->between($startDate, $endDate)) {
+                $breakMap[$holidayDate->format('Y-m-d')] = ['type' => 'holiday', 'name' => $holiday->name];
+            }
+        }
+        return $breakMap;
+    }
+    public function getWeeklyAssignments(): array {
+        $assignments = [];
+        $meId        = (int)Param::get('ME_ID')->value;
+
+        $allAssignments = Assignment::where('assignee_id', $this->id)
+            ->where('assignee_type', self::class)
+            ->where('hours_weekly', '>', 0)
+            ->with('parent')
+            ->get();
+
+        foreach ($allAssignments as $assignment) {
+            $parent    = $assignment->parent;
+            $isProject = $assignment->parent_type === Project::class;
+            $isCompany = $assignment->parent_type === Company::class;
+
+            if (! $parent) {
+                continue;
+            }
+            if ($isCompany && ((int)$parent->id) === $meId) {
+                continue;
+            }
+            if ($isProject && ((int)$parent->company_id) === $meId) {
+                continue;
+            }
+
+            $assignments[] = [
+                'id'           => $assignment->id,
+                'name'         => $parent->name ?? 'Unknown',
+                'hours_weekly' => $assignment->hours_weekly,
+                'project'      => $isProject ? $parent : null,
+                'project_id'   => $isProject ? $parent->id : null,
+                'project_path' => $isProject ? '/projects/'.$parent->id : '/customers/'.$parent->id,
+            ];
+        }
+        return $assignments;
+    }
+    public function milestonesInRange(Carbon $startDate, Carbon $endDate) {
+        $meId = (int)Param::get('ME_ID')->value;
+        return Milestone::where('user_id', $this->id)
+            ->whereNot('state', MilestoneState::DONE)
+            ->where(function ($query) use ($startDate, $endDate) {
+                $query->whereDate('due_at', '>=', $startDate)
+                    ->where(function ($q) use ($endDate) {
+                        $q->whereDate('started_at', '<=', $endDate)->orWhereNull('started_at');
+                    });
+            })
+            ->with(['project', 'invoiceItems'])
+            ->whereHas('project', fn ($q) => $q->where('company_id', '!=', $meId))
+            ->get();
+    }
+    public function getUnconfiguredMilestones(): array {
+        return Milestone::where('user_id', $this->id)
+            ->where(function ($query) {
+                $query->whereNull('workload_hours')->orWhere('workload_hours', 0);
+            })
+            ->whereNot('state', MilestoneState::DONE)
+            ->whereDoesntHave('invoiceItems')
+            ->whereHas('project', fn ($q) => $q->where('is_time_based', false))
+            ->with('project')
+            ->get()
+            ->map(fn ($m) => [
+                'id'           => $m->id,
+                'name'         => $m->name,
+                'project'      => $m->project,
+                'project_id'   => $m->project_id,
+                'project_name' => $m->project?->name,
+                'due_at'       => $m->due_at,
+                'started_at'   => $m->started_at,
+            ])
+            ->toArray();
     }
     public function getAddressBook(): array {
         return app(GetUserAddressBook::class)->execute($this);

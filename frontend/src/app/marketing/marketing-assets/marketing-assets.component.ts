@@ -106,7 +106,6 @@ export class MarketingAssetsComponent implements OnInit {
     if (type.startsWith('video/')) return 'Video Content';
     if (['pdf', 'doc', 'docx'].includes(extension || '')) return 'Documents';
     if (['ppt', 'pptx'].includes(extension || '')) return 'Presentations';
-
     return 'Documents';
   }
 

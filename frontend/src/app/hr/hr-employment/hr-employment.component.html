@@ -31,7 +31,8 @@
             </div>
           </div>
           <ul-compact>
-            <li class="list-group-item" *nxFor="let employment of employments">
+            @for (employment of employments; track employment.id) {
+            <li class="list-group-item" [nx]="employment" [tables]="employments">
               <div class="d-flex">
                 <div class="flex-fill">{{employment.description}}</div>
                 <div>{{employment.hpw}} h / week</div>
@@ -42,6 +43,7 @@
                 </div>
               </div>
             </li>
+            }
           </ul-compact>
         </div>
         @if (hasTimebasedEmployment()) {

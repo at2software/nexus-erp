@@ -1,19 +1,21 @@
 <!-- Chart only mode -->
-@if (onlyChart && user && data) {
+@let _user = user();
+
+@if (onlyChart() && _user && data) {
 <div class="d-flex align-items-center">
     <ng-container *ngTemplateOutlet="visuChart"></ng-container>
 </div>
 }
 
 <!-- Full card mode -->
-@if (user && !onlyChart) {
-<div class="card mb-3" id="user-{{user.id}}">
+@if (_user && !onlyChart()) {
+<div class="card mb-3" id="user-{{_user.id}}">
     <div class="card-header d-flex">
         <div class="flex-fill text-truncate">
-            {{title ? title : user.name}}
+            {{title() ? title() : _user.name}}
         </div>
-        @if (user.active_employment) {
-        <div class="chart-title">{{user.active_employment.hpw}} h</div>
+        @if (_user.active_employment) {
+        <div class="chart-title">{{_user.active_employment.hpw}} h</div>
         }
     </div>
     @if (isError) {
@@ -90,7 +92,7 @@
 
 <!-- Reusable visualization template -->
 <ng-template #visuChart>
-    <div class="visu" [style.height.px]="chartHeight">
+    <div class="visu" [style.height.px]="chartHeight()">
 
         <div class="visu-planned" [style.height.%]="100 * data.remaining_hpw / data.hpw">
             @for (p of data.timeline_planned; track p) {

@@ -67,13 +67,52 @@ import { Project } from '@models/project/project.model';
                     },
                     {
                         path: 'invoicing',
-                        component: ProjectInvoicingComponent,
                         data: {
                             nav: {
                                 title: $localize`:@@i18n.common.invoicing:invoicing`,
-                                roles: 'financial|project_manager|invoicing'
+                                roles: 'financial|project_manager|invoicing',
+                                exact: false
                             }
-                        }
+                        },
+                        children: [
+                            { path: '', pathMatch: 'full', redirectTo: 'quote' },
+                            { 
+                                path: 'quote', 
+                                component: ProjectInvoicingComponent,
+                                data: {
+                                    nav: {
+                                        title: $localize`:@@i18n.invoicing.quote:quote`
+                                    }
+                                }
+                            },
+                            { 
+                                path: 'downpayment', 
+                                component: ProjectInvoicingComponent,
+                                data: {
+                                    nav: {
+                                        title: $localize`:@@i18n.invoicing.downPayment:down payment`
+                                    }
+                                }
+                            },
+                            { 
+                                path: 'support', 
+                                component: ProjectInvoicingComponent,
+                                data: {
+                                    nav: {
+                                        title: $localize`:@@i18n.invoicing.support:support`
+                                    }
+                                }
+                            },
+                            { 
+                                path: 'final', 
+                                component: ProjectInvoicingComponent,
+                                data: {
+                                    nav: {
+                                        title: $localize`:@@i18n.invoicing.final:final invoice`
+                                    }
+                                }
+                            },
+                        ]
                     },
                     {
                         path: 'time-tracking',
@@ -134,9 +173,33 @@ import { Project } from '@models/project/project.model';
                             }
                         },
                         children: [
-                            { path: 'general', component: ProjectDetailSettingsGeneralComponent },
-                            { path: 'participants', component: ProjectDetailSettingsParticipantsComponent },
-                            { path: 'plugin-links', component: ProjectDetailSettingsPluginLinksComponent },
+                            { 
+                                path: 'general', 
+                                component: ProjectDetailSettingsGeneralComponent,
+                                data: {
+                                    nav: {
+                                        title: $localize`:@@i18n.settings.general:general`
+                                    }
+                                }
+                            },
+                            { 
+                                path: 'participants', 
+                                component: ProjectDetailSettingsParticipantsComponent,
+                                data: {
+                                    nav: {
+                                        title: $localize`:@@i18n.settings.participants:participants`
+                                    }
+                                }
+                            },
+                            { 
+                                path: 'plugin-links', 
+                                component: ProjectDetailSettingsPluginLinksComponent,
+                                data: {
+                                    nav: {
+                                        title: $localize`:@@i18n.settings.pluginLinks:plugin links`
+                                    }
+                                }
+                            },
                             { path: '**', redirectTo: 'general' }
                         ]
                     },

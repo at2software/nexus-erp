@@ -7,13 +7,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Foundation\Bus\DispatchesJobs;
-use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
 
 class Controller extends BaseController {
-    use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
+    use AuthorizesRequests;
 
     protected $exceptedMiddlewares = [];
 
@@ -32,7 +30,7 @@ class Controller extends BaseController {
         return $model;
     }
     public function addRequestVariablesToBuilder(Builder $builder, Request $request) {
-        return $builder->where($request->all() + ['index'=>'value']);
+        return $builder->where($request->all() + ['index' => 'value']);
     }
     protected function applyCarbon(Builder $query, Request $request, string $field, string $input, string $cmp = '>') {
         if ($request->$input && $request->$input != 'undefined') {

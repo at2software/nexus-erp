@@ -1,5 +1,5 @@
-import { Component, Input, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, effect, inject, input } from '@angular/core';
+
 import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { Project } from '@models/project/project.model';
 import { UptimeMonitor } from '@models/uptime/uptime-monitor.model';
@@ -11,12 +11,12 @@ import { UptimeMonitorModalService } from '@app/_modals/modal-uptime-monitor/mod
 @Component({
     selector: 'project-uptime-card',
     standalone: true,
-    imports: [CommonModule, NgbDropdownModule, NgbTooltipModule, NexusModule, CollapsibleDirective],
+    imports: [NgbDropdownModule, NgbTooltipModule, NexusModule, CollapsibleDirective],
     templateUrl: './project-uptime-card.component.html',
     styleUrls: ['./project-uptime-card.component.scss']
 })
-export class ProjectUptimeCardComponent implements OnInit {
-    @Input() project!: Project;
+export class ProjectUptimeCardComponent {
+    project = input.required<Project>();
 
     monitors: UptimeMonitor[] = [];
     allMonitors: UptimeMonitor[] = [];
@@ -25,13 +25,13 @@ export class ProjectUptimeCardComponent implements OnInit {
     #service = inject(UptimeMonitorService);
     #modalService = inject(UptimeMonitorModalService);
 
-    ngOnInit() {
-        this.loadMonitors();
+    constructor() { 
+        effect(() => this.loadMonitors(this.project()))
         this.loadAllMonitors();
     }
 
-    loadMonitors() {
-        this.#service.indexForProject(this.project).subscribe({
+    loadMonitors(project: Project = this.project()) {
+        this.#service.index({ project_id: project.id }).subscribe({
             next: (monitors) => {
                 this.monitors = monitors;
                 this.setupMonitorCallbacks();
@@ -79,7 +79,7 @@ export class ProjectUptimeCardComponent implements OnInit {
     }
 
     createNew() {
-        this.#modalService.open(undefined, [this.project.id]).then(() => {
+        this.#modalService.open(undefined, [this.project().id]).then(() => {
             this.loadMonitors();
             this.loadAllMonitors();
         }).catch(() => {
@@ -88,7 +88,7 @@ export class ProjectUptimeCardComponent implements OnInit {
     }
 
     linkExisting(monitor: UptimeMonitor) {
-        const projectIds = [...(monitor.projects?.map(p => p.id) || []), this.project.id];
+        const projectIds = [...(monitor.projects?.map(p => p.id) || []), this.project().id];
         this.#service.update(monitor.id, { project_ids: projectIds } as any).subscribe(() => {
             this.loadMonitors();
             this.loadAllMonitors();
@@ -96,7 +96,7 @@ export class ProjectUptimeCardComponent implements OnInit {
     }
 
     unlinkMonitor(monitor: UptimeMonitor) {
-        const projectIds = (monitor.projects?.map(p => p.id) || []).filter(id => id !== this.project.id);
+        const projectIds = (monitor.projects?.map(p => p.id) || []).filter(id => id !== this.project().id);
         this.#service.update(monitor.id, { project_ids: projectIds } as any).subscribe(() => {
             this.loadMonitors();
             this.loadAllMonitors();

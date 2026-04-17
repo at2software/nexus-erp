@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 import { MattermostPlugin } from '@models/http/plugin.mattermost';
 import { User } from '@models/user/user.model';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
@@ -10,7 +10,7 @@ import { ModalBaseComponent } from '@app/_modals/modal-base.component';
     templateUrl: './mattermost-user-selection.component.html',
     styleUrls: ['./mattermost-user-selection.component.scss'],
     standalone: true,
-    imports: [FormsModule, CommonModule]
+    imports: [FormsModule]
 })
 export class MattermostUserSelectionComponent extends ModalBaseComponent<string> {
 

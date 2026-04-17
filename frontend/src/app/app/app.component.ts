@@ -1,4 +1,4 @@
-import { Component, HostListener, inject, OnInit } from '@angular/core';
+import { Component, HostListener, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { NxContextMenu } from '@app/nx/nx.contextmenu';
 import { NgbTooltipConfig } from '@ng-bootstrap/ng-bootstrap';
@@ -39,7 +39,7 @@ const BREAKPOINT_ACTIVITY = 1700
     GuidedTourOverlayComponent
 ]
 })
-export class AppComponent implements OnInit {
+export class AppComponent {
 
     title = 'NEXUS';
 
@@ -59,7 +59,5 @@ export class AppComponent implements OnInit {
         }
     }
 
-    ngOnInit() {
-    }
 
 }

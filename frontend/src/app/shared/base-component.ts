@@ -1,5 +1,4 @@
-import { OnDestroy, Directive } from '@angular/core';
-import { Subject } from 'rxjs';
+import { DestroyRef, Directive, inject, OnDestroy } from '@angular/core';
 
 export interface EventListenerConfig {
     element: Element | Document | Window;
@@ -10,7 +9,7 @@ export interface EventListenerConfig {
 
 @Directive()
 export abstract class BaseComponent implements OnDestroy {
-    protected destroy$ = new Subject<void>();
+    protected readonly destroyRef = inject(DestroyRef);
 
     // Event listeners registry for cleanup
     #eventListeners: EventListenerConfig[] = [];
@@ -84,10 +83,6 @@ export abstract class BaseComponent implements OnDestroy {
     }
 
     ngOnDestroy(): void {
-        // Complete the destroy subject
-        this.destroy$.next();
-        this.destroy$.complete();
-
         // Clean up event listeners
         this.#eventListeners.forEach(({ element, event, handler, options }) => {
             try {

@@ -2,14 +2,13 @@
 
 namespace App\Traits;
 
-use App\Http\Controllers\PluginChatController;
-use App\Http\Controllers\PluginController;
 use App\Http\Middleware\Auth;
+use App\Jobs\ChatAddUsersJob;
 use App\Models\Assignment;
 use App\Models\CompanyContact;
 use App\Models\Project;
 use App\Models\User;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 trait HasAssignmentsTrait {
     public function assignees() {
@@ -45,7 +44,7 @@ trait HasAssignmentsTrait {
         }
 
         if ($newAssignment->links(Project::class, User::class)) {
-            \App\Jobs\ChatAddUsersJob::dispatch($this, [$newAssignment->assignee->id]);
+            ChatAddUsersJob::dispatch($this, [$newAssignment->assignee->id]);
         }
         return $newAssignment;
     }
@@ -74,11 +73,11 @@ trait HasAssignmentsTrait {
     public function setMainContactByAssignment(Assignment $assignment) {
         // Clear main contact flag from all assignments for this parent
         Assignment::where($this->toPoly())
-            ->update(['flags' => \DB::raw('flags & ~'.Assignment::FLAG_MAIN_CONTACT)]);
+            ->update(['flags' => DB::raw('flags & ~'.Assignment::FLAG_MAIN_CONTACT)]);
 
         // Set main contact flag on specified assignment
         Assignment::where('id', $assignment->id)
-            ->update(['flags' => \DB::raw('flags | '.Assignment::FLAG_MAIN_CONTACT)]);
+            ->update(['flags' => DB::raw('flags | '.Assignment::FLAG_MAIN_CONTACT)]);
         return $assignment;
     }
 }

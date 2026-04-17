@@ -1,5 +1,7 @@
-@if (!user.public_key) {
-  <rsa-settings-empty [user]="user"></rsa-settings-empty>
+@let _user = user();
+
+@if (!_user.public_key) {
+  <rsa-settings-empty [user]="_user"></rsa-settings-empty>
 }
 
 <div class="header d-flex">
@@ -16,7 +18,7 @@
     <!-- <div class="card card-info" i18n="@@i18n.encryption.warningNoSave">important: your private keys are NOT saved to the database. Make sure you store them to your disk to import them later</div> -->
     <div>
       <div class="form-check form-switch">
-        <input class="form-check-input" type="checkbox" role="switch" id="saveKeysAsCookies" [ngModel]="user.savesEncryptionCookie" (ngModelChange)="user.toggleEncryptionCookie()">
+        <input class="form-check-input" type="checkbox" role="switch" id="saveKeysAsCookies" [ngModel]="_user.savesEncryptionCookie" (ngModelChange)="_user.toggleEncryptionCookie()">
         <label class="form-check-label" for="saveKeysAsCookies" i18n="@@i18n.encryption.saveAsCookies">save keys to local browser storage</label>
       </div>
     </div>
@@ -28,7 +30,7 @@
     <div class="alert alert-warning" i18n="@@i18n.encryption.warningInvalidKeypair">Unable to decrypt your plugin links. Probably you are using a wrong RSA keypair. Either remove this keypair and import the correct PEM or recreate your plugin links.</div>
     <div>
       <div class="form-check form-switch">
-        <input class="form-check-input" type="checkbox" role="switch" id="saveKeysAsCookies" [ngModel]="user.savesEncryptionCookie" (ngModelChange)="user.toggleEncryptionCookie()">
+        <input class="form-check-input" type="checkbox" role="switch" id="saveKeysAsCookies" [ngModel]="_user.savesEncryptionCookie" (ngModelChange)="_user.toggleEncryptionCookie()">
         <label class="form-check-label" for="saveKeysAsCookies" i18n="@@i18n.encryption.saveAsCookies">save keys to local browser storage</label>
       </div>
     </div>

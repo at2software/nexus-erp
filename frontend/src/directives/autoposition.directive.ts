@@ -67,7 +67,6 @@ export class AutopositionDirective implements AfterViewInit {
                         correction |= ECorrection.Top
                     }
                 }
-
                 return [{ top: targetTop - orig.top, left: targetLeft, maxHeight }, correction]
             }
         } else {

@@ -9,8 +9,10 @@
     <empty-state class="settings" title="no lead sources defined yet"></empty-state>
   }
   <ul class="list-group">
-    <li class="list-group-item" *nxFor="let source of global.lead_sources">
+    @for (source of global.lead_sources; track source.id) {
+    <li class="list-group-item" [nx]="source" [tables]="global.lead_sources">
       {{source.name}}
     </li>
+    }
   </ul>
 </div>

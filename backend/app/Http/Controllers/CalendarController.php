@@ -6,12 +6,13 @@ use App\DAV\OwnCalDAVBackend;
 use App\Models\CalendarEntry;
 use App\Traits\ControllerHasPermissionsTrait;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CalendarController extends Controller {
     use ControllerHasPermissionsTrait;
 
     public function index() {
-        $pdo               = \DB::connection()->getPdo();
+        $pdo               = DB::connection()->getPdo();
         $ownCalDAVBackend  = new OwnCalDAVBackend($pdo);
         $calendarObjects   = $ownCalDAVBackend->getCalendarObjects([0, 0]);
         $calendarDataArray = [];
@@ -60,7 +61,7 @@ class CalendarController extends Controller {
     }
     public function update(Request $request, CalendarEntry $calendarEntry) {
         $request->validate([
-            'vcalendar'  => 'required|string',
+            'vcalendar' => 'required|string',
         ]);
         $calendarEntry->vcalendar = request('vcalendar');
         $calendarEntry->save();

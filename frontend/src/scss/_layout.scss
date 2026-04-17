@@ -173,7 +173,7 @@ ngb-tooltip-window {
     &::after, & > td:last-child::after, & > th:last-child::after {
         content: '';
         position: absolute;
-        right: -43px;
+        right: -33px;
         width: 43px;
         height: 43px;
         z-index: 1;

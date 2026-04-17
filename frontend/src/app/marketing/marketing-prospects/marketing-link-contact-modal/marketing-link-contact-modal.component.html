@@ -44,9 +44,9 @@
                   {{contact.company.name}}
                 </small>
                 }
-                @if (contact.card?.get('EMAIL')?.[0]?.vals?.[0]) {
+                @if (contact.card.get('EMAIL')[0]?.vals?.[0]) {
                 <small class="text-muted d-block">
-                  {{contact.card?.get('EMAIL')?.[0]?.vals?.[0]}}
+                  {{contact.card.get('EMAIL')[0]?.vals?.[0]}}
                 </small>
                 }
               </div>

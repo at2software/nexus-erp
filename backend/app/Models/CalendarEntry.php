@@ -8,7 +8,7 @@ class CalendarEntry extends BaseModel {
     use HasFactory;
 
     protected $fillable = ['vcalendar', 'user_id'];
-    protected $access   = ['admin' => '*', 'project_manager'=>'cru', 'user'=>'cru'];
+    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
     public function user() {
         return $this->belongsTo(User::class);

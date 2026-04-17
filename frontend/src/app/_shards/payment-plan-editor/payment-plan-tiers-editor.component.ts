@@ -1,5 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
@@ -17,7 +17,7 @@ export interface PaymentPlanTier {
     templateUrl: './payment-plan-tiers-editor.component.html',
     styleUrls: ['./payment-plan-editor.component.scss'],
     standalone: true,
-    imports: [CommonModule, FormsModule, NgbTooltipModule, EmptyStateComponent],
+    imports: [FormsModule, NgbTooltipModule, EmptyStateComponent],
     host: { style: 'display:contents' }
 })
 export class PaymentPlanTiersEditorComponent implements OnInit {

@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class Expense extends BaseModel {
     use HasFactory;
 
-    protected $casts   = ['price' => 'double'];
-    protected $access  = ['admin' => '*', 'project_manager'=>'', 'user'=>''];
+    protected $casts  = ['price' => 'double'];
+    protected $access = ['admin' => '*', 'project_manager' => '', 'user' => ''];
 
     public function category() {
         return $this->belongsTo(ExpenseCategory::class);

@@ -61,7 +61,6 @@ export class HrStatsInvoiceFocusComponent implements OnInit {
             const monthData = user.monthly_focus_accuracy.find(item => item.month === month);
             return monthData ? monthData.focused_percentage_duration : null;
         });
-
         return {
             ...EChartsSimpleOptions,
             backgroundColor: 'transparent',
@@ -93,7 +92,6 @@ export class HrStatsInvoiceFocusComponent implements OnInit {
                     tooltipContent += `<div class="d-flex justify-content-between"><span>Total Duration:</span><span class="ms-2">${monthData.total_duration.toFixed(1)}h</span></div>`;
                     tooltipContent += `<div class="d-flex justify-content-between"><span>Focused Duration:</span><span class="ms-2">${monthData.focused_duration.toFixed(1)}h</span></div>`;
                     tooltipContent += `<div class="d-flex justify-content-between"><span>Duration %:</span><span class="ms-2">${monthData.focused_percentage_duration.toFixed(1)}%</span></div>`;
-
                     return `<div class="card">${tooltipContent}</div>`;
                 }
             },
@@ -142,7 +140,6 @@ export class HrStatsInvoiceFocusComponent implements OnInit {
 
         const deviation = overallCountAccuracy;
         const remaining = 100 - deviation;
-
         return {
             ...EChartsSimpleOptions,
             backgroundColor: 'transparent',

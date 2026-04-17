@@ -13,7 +13,7 @@
             <button class="btn btn-sm btn-plain p-0 text-primary" (click)="startEdit()" (keyup.enter)="startEdit()" tabindex="0" i18n-ngbTooltip="@@i18n.common.edit" ngbTooltip="edit">
                 <i>edit</i>
             </button>
-            @if (!isFallback && object) {
+            @if (!isFallback && object()) {
                 <button class="btn btn-sm btn-plain p-0 text-muted" (click)="revertToDefault()" (keyup.enter)="revertToDefault()" tabindex="0" i18n-ngbTooltip="@@i18n.payment.revertToDefault" ngbTooltip="revert to default">
                     <i>undo</i>
                 </button>

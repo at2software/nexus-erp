@@ -59,7 +59,6 @@ function extractClassNames(filePath) {
     for (const match of classMatches) {
         classNames.push(match[1]);
     }
-
     return classNames;
 }
 
@@ -95,7 +94,6 @@ function generateRegistry() {
             obj[key] = registry[key];
             return obj;
         }, {});
-    
     return sortedRegistry;
 }
 

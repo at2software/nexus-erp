@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, Input, ViewChild, OnInit, OnChanges } from '@angular/core';
+import { Component, ElementRef, inject, ViewChild, input, effect, computed } from '@angular/core';
 import { GlobalService } from '@models/global.service';
 import { ToastService } from '@shards/toast/toast.service';
 import { Project } from '@models/project/project.model';
@@ -26,6 +26,7 @@ import { NComponent } from '@shards/n/n.component';
 import { MoneyPipe } from '../../../../pipes/money.pipe';
 import { NexusModule } from '@app/nx/nexus.module';
 import { SafePipe } from '../../../../pipes/safe.pipe';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
     selector: 'project-billing',
@@ -35,11 +36,11 @@ import { SafePipe } from '../../../../pipes/safe.pipe';
     standalone: true,
     imports: [EmptyStateComponent, CommonModule, FormsModule, NgxDaterangepickerMd, CdkTableModule, SearchInputComponent, NgbDatepickerModule, NComponent, RouterModule, MoneyPipe, NexusModule, SafePipe]
 })
-export class ProjectBillingComponent implements OnInit, OnChanges {
+export class ProjectBillingComponent {
 
     @ViewChild('desc') descField:ElementRef
 
-    @Input() parent:Project|Company
+    parent = input.required<Project|Company>()
 
     ranges        : any = DATESPAN_RANGE
     span          : StartEnd
@@ -61,49 +62,49 @@ export class ProjectBillingComponent implements OnInit, OnChanges {
     #focusService       = inject(FocusService)
     #invoiceItemService = inject(InvoiceItemService)
     #router             = inject(Router)
+    
+    isProject = computed(() => this.parent() instanceof Project)
+    company = computed(():Company => this.isProject() ? (this.parent() as Project).company : this.parent() as Company)
 
-    ngOnInit() {
-        this.#global.onObjectSelected.subscribe((_) => this.onSelection(_))
-    }
-    ngOnChanges(changes:any): void {
-        if ('parent' in changes) {
-            if (this.parent instanceof Project && this.parent.product_id) {
-                this.#productService.show(this.parent.product_id!).subscribe(data => this.selectionProduct = data)
+    constructor() { 
+        this.#global.onObjectSelected.pipe(takeUntilDestroyed()).subscribe((_) => this.onSelection(_))
+        effect(() => {
+            const parent = this.parent()
+            if (parent instanceof Project && parent.product_id) {
+                this.#productService.show(parent.product_id!).subscribe(data => this.selectionProduct = data)
             }
-            if (this.parent instanceof Company && this.parent.default_product_id) {
-                this.#productService.show(this.parent.default_product_id!).subscribe(data => this.selectionProduct = data)
+            if (parent instanceof Company && parent.default_product_id) {
+                this.#productService.show(parent.default_product_id!).subscribe(data => this.selectionProduct = data)
             }
             this.invoicedUntil = undefined
             this.reloadFoci()
             this.reloadItems()
-        }
+        })
     }
 
     reloadFoci()  {        
         this.allFoci = []
         this.foci = []
-        this.#focusService.uninvoicedFoci(this.parent).subscribe(_ => {
+        this.#focusService.uninvoicedFoci(this.parent()).subscribe(_ => {
             this.allFoci = _
             this.filterFoci()
         })
     }
     reloadItems() {
         this.items = []
-        this.#invoiceItemService.getSupportItems(this.parent).subscribe(_ => this.items = _.filter((x:any)=>x.type == 0))
+        this.#invoiceItemService.getSupportItems(this.parent()).subscribe(_ => this.items = _.filter((x:any)=>x.type == 0))
     }
 
     filterFoci = () => {
-        if (this.span && this.span.startDate && this.span.endDate) {
-            const sb = (_:Focus) => this.span.startDate!.diff(_.time_started(), 'seconds') < 0
-            const se = (_:Focus) => this.span.endDate!.diff(_.time_started(), 'seconds') >= 0
-            this.foci = this.allFoci.filter(_ => sb(_) && se(_))
+        if (this.span?.startDate && this.span?.endDate) {
+            this.foci = Focus.filterByDateRange(this.allFoci, this.span.startDate, this.span.endDate)
         } else {
             this.foci = this.allFoci
         }
     }
     userIconFor = (user_id:string) => User.iconPathFor(user_id)
     onSelection(_:any) {
-        const selected = Array.isArray(_) ? _ : [_]
+        const selected = [_].flat()
         this.selection = selected.length && (selected[0] instanceof Focus) ? selected : []
         this.selectionSum = this.selection.reduce((b:number, a:Focus) => a.duration + b, 0)
         this.selection.forEach((s:Focus) => { if ((s.comment ?? '').length) this.selectionDescription = s.comment!})
@@ -111,9 +112,10 @@ export class ProjectBillingComponent implements OnInit, OnChanges {
     }
     onProductSelect = (_:Product) => {
         this.selectionProduct = _
-        if (this.parent instanceof Project) {
-            this.parent.product_id = _.id
-            this.parent.update({product_id: _.id}).subscribe()
+        const parent = this.parent()
+        if (parent instanceof Project) {
+            parent.product_id = _.id
+            parent.update({product_id: _.id}).subscribe()
         }
         this.descField?.nativeElement.focus()
     }
@@ -138,18 +140,17 @@ export class ProjectBillingComponent implements OnInit, OnChanges {
         if (this.selectionProduct) {
             let desc = this.selectionDescription
             desc += '<br>' + $localize`:@@i18n.invoices.performancePeriod:performance period` + ' ' + min!.format('DD.MM.YYYY') + ' - ' + max!.format('DD.MM.YYYY')
-            this.#focusService.createInvoiceItemsFor(this.parent, selectedIds, desc, parseFloat(this.selectionSum), this.selectionProduct.id).subscribe((newItem) => {
+            this.#focusService.createInvoiceItemsFor(this.parent(), selectedIds, desc, parseFloat(this.selectionSum), this.selectionProduct.id).subscribe((newItem) => {
                 this.items.push(InvoiceItem.fromJson(newItem))
             })
 
         }
     }
     onPrepareInvoice() {
-        this.#invoiceItemService.prepareInvoice(this.parent as Project).subscribe(() => {
-            this.#router.navigate(['/customers/' + (this.parent as Project).company_id + '/billing'])
+        const parent = this.parent()
+        this.#invoiceItemService.prepareInvoice(parent as Project).subscribe(() => {
+            this.#router.navigate(['/customers/' + (parent as Project).company_id + '/billing'])
         })
     }
-    isProject = () => this.parent instanceof Project
-    company = ():Company => this.isProject() ? (this.parent as Project).company : this.parent as Company
 
 }

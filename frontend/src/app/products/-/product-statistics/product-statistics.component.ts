@@ -90,10 +90,11 @@ export class ProductStatisticsComponent implements OnInit, AfterViewInit {
         this.productService.showStatistics(filters).subscribe({
             next: (data: any) => {
                 // Convert plain JSON objects to Product instances
+                const toProducts = (arr: any) => Array.isArray(arr) ? arr.map((item: any) => Product.fromJson(item)) : []
                 this.statistics = {
-                    top_products: Array.isArray(data.top_products) ? data.top_products.map((item: any) => Product.fromJson(item)) : [],
-                    fastest_sellers: Array.isArray(data.fastest_sellers) ? data.fastest_sellers.map((item: any) => Product.fromJson(item)) : [],
-                    most_repurchased: Array.isArray(data.most_repurchased) ? data.most_repurchased.map((item: any) => Product.fromJson(item)) : [],
+                    top_products: toProducts(data.top_products),
+                    fastest_sellers: toProducts(data.fastest_sellers),
+                    most_repurchased: toProducts(data.most_repurchased),
                     timeline: data.timeline || {}
                 };
                 this.updateChart();

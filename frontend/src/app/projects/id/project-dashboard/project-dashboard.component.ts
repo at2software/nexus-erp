@@ -1,4 +1,4 @@
-import { Component, ViewChild, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ProjectService } from '@models/project/project.service';
 import { AssignmentService } from '@models/assignee/assignment.service';
 import { GlobalService } from '@models/global.service';
@@ -12,7 +12,6 @@ import { Focus } from '@models/focus/focus.model';
 import { User } from '@models/user/user.model';
 import { NgbDate, NgbDateAdapter, NgbDatepickerModule, NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { NgbDateCarbonAdapter } from '@directives/ngb-date.adapter';
-import { clone } from '@constants/clone';
 import { Color } from '@constants/Color';
 import { Dictionary } from '@constants/constants';
 import { ProjectDetailGuard } from '@app/projects/project-details.guard';
@@ -33,7 +32,6 @@ import { CommonModule } from '@angular/common';
 import { PermissionsDirective } from '@directives/permissions.directive';
 import { CollapsibleDirective } from '@directives/collapsible.directive';
 import { ListGroupItemContactComponent } from '@app/customers/_shards/list-group-item-contact/list-group-item-contact.component';
-import { NxForDirective } from '@app/nx/nxFor.directive';
 import { ProjectDefaultProductComponent } from '@app/projects/_shards/project-default-product/project-default-product.component';
 import { ProjectPlanningComponent } from '@app/projects/id/project-planning/project-planning.component';
 import { RteComponent } from '@shards/rte/rte.component';
@@ -47,6 +45,7 @@ import { NexusModule } from '@app/nx/nexus.module';
 import { MediaPreviewComponent } from '../project-media/media-preview/media-preview.component';
 import { ProjectUptimeCardComponent } from '@app/projects/_shards/project-uptime-card/project-uptime-card.component';
 import { NgxEchartsDirective } from 'ngx-echarts';
+import { SearchInputComponent } from '@app/_shards/search-input/search-input.component';
 import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS } from '@charts/ChartOptions';
 
 @Component({
@@ -62,7 +61,6 @@ import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS } from '@charts/ChartOptions';
     ListGroupItemContactComponent,
     NexusModule,
     NgbTooltipModule,
-    NxForDirective,
     ProjectDefaultProductComponent,
     ProjectPlanningComponent,
     RteComponent,
@@ -76,7 +74,8 @@ import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS } from '@charts/ChartOptions';
     NgbDropdownModule,
     SafePipe,
     AvatarComponent,
-    ProjectUptimeCardComponent
+    ProjectUptimeCardComponent,
+    SearchInputComponent
 ]
 })
 export class ProjectDashboardComponent implements OnInit {
@@ -92,6 +91,7 @@ export class ProjectDashboardComponent implements OnInit {
     name: string
     description: string
     focusItems: InvoiceItem[] = []
+    parentProjectQuery = ''
 
     global = inject(GlobalService)
     projectService = inject(ProjectService)
@@ -119,13 +119,15 @@ export class ProjectDashboardComponent implements OnInit {
             this.#loadFocusItems()
             this.setWorkload(this.parent.current)
             this.parseAssignments()
+            this.parentProjectQuery = this.parent.current?.parent_project?.name ?? ''
         })
-        
+
         // Initialize focusItems if project data is already available
         if (this.parent.current) {
             this.#loadFocusItems()
             this.setWorkload(this.parent.current)
             this.parseAssignments()
+            this.parentProjectQuery = this.parent.current.parent_project?.name ?? ''
         }
     }
 
@@ -197,7 +199,6 @@ export class ProjectDashboardComponent implements OnInit {
             const b = Math.round(primary.b + (danger.b - primary.b) * ratio)
             return `rgb(${r}, ${g}, ${b})`
         }
-        
         return dangerColor.toHexString()
     }
 
@@ -273,7 +274,6 @@ export class ProjectDashboardComponent implements OnInit {
                 const hoursWorked = parseFloat(d.sum) || 0
                 const availableHours = hpd * workingDaysPerCluster
                 const percentage = availableHours > 0 ? (hoursWorked / availableHours) * 100 : 0
-                
                 return {
                     value: [dateIdx, userIdx, percentage],
                     itemStyle: { color: this.getHeatmapColor(percentage) },
@@ -401,7 +401,6 @@ export class ProjectDashboardComponent implements OnInit {
                             <span style="color: #999; margin-left: 5px; font-size: 10px;">(${percentage}%)</span>
                         </div>`
                     })
-                    
                     return html + '</div>'
                 }
             },
@@ -417,6 +416,19 @@ export class ProjectDashboardComponent implements OnInit {
             const val = _.data.reduce((sum: number, d: any) => sum + (parseFloat(d.sum) || 0), 0)
             if (_.user) _.user.hours_invested = val
             return { name: _.user?.name || 'Unknown', color: _.user?.color || '#cccccc', val }
+        })
+    }
+
+    toggleTimeBased() {
+        const val = this.parent.current.is_time_based ? 0 : 1
+        this.parent.current.update({ is_time_based: val }).subscribe(() => {
+            this.parent.current.is_time_based = val
+        })
+    }
+
+    onParentProjectSelected(project: any) {
+        this.parent.current.update({ project_id: project.id }).subscribe(() => {
+            this.parent.current.project_id = project.id
         })
     }
 
@@ -486,7 +498,6 @@ export class ProjectDashboardComponent implements OnInit {
                 }
             })
         }
-
         return contactGroups
     }
 
@@ -510,7 +521,7 @@ export class ProjectDashboardComponent implements OnInit {
         return ''
     }
 
-    getUserContributions(item: InvoiceItem): Array<{user: any, hours: number, percentage: number, color: string}> {
+    getUserContributions(item: InvoiceItem): {user: any, hours: number, percentage: number, color: string}[] {
         if (!item.foci_by_user || item.foci_by_user.length === 0) return []
         
         // Calculate total and max value for percentage calculation
@@ -529,7 +540,6 @@ export class ProjectDashboardComponent implements OnInit {
                 color: user?.color || '#cccccc'
             }
         })
-        
         return result.sort((a, b) => b.hours - a.hours) // Sort by hours descending
     }
 

@@ -47,7 +47,6 @@ class ResetFinishedProjectAssignments extends Command {
         } else {
             $this->info('No assignments to reset');
         }
-
         return Command::SUCCESS;
     }
 }

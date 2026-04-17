@@ -1,11 +1,11 @@
 import { ProjectService } from '@models/project/project.service';
-import { Component, inject, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { firstOrDefault } from '@constants/constants';
 import { Project } from '@models/project/project.model';
 import { Assignee } from '@models/assignee/assignee.model';
 import { Milestone } from '@models/milestones/milestone.model';
 import { ProjectDetailGuard } from '@app/projects/project-details.guard';
-import { Subject, takeUntil } from 'rxjs';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { NgbTooltipModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
@@ -25,9 +25,9 @@ interface T_ASSIGNMENT { assignee: Assignee, tasks: Task[] }
     host: { class: 'container-full'},
     imports: [ToolbarComponent, CustomGanttComponent, NgbTooltipModule, NgbDropdownModule]
 })
-export class ProjectMilestonesComponent implements OnDestroy, OnInit {
+export class ProjectMilestonesComponent implements OnInit {
 
-    @ViewChild(CustomGanttComponent) ganttComponent?: CustomGanttComponent;
+    ganttComponent = viewChild(CustomGanttComponent);
 
     project: Project
     assignees: T_ASSIGNMENT[] = []
@@ -38,7 +38,7 @@ export class ProjectMilestonesComponent implements OnDestroy, OnInit {
 
     parent = inject(ProjectDetailGuard)
 
-    #destroy$ = new Subject<void>()
+    #destroyRef = inject(DestroyRef)
     #projectService = inject(ProjectService)
     #inputModalService = inject(InputModalService)
     #confirmationService = inject(ConfirmationService)
@@ -55,13 +55,12 @@ export class ProjectMilestonesComponent implements OnDestroy, OnInit {
     }
 
     loadMilestones() {
-        console.trace('Loading milestones for project:', this.project?.id);
         if (!this.project?.id) {
             return;
         }
 
         this.isLoading = true;
-        this.#projectService.indexMilestones(this.project.id).pipe(takeUntil(this.#destroy$)).subscribe({
+        this.#projectService.indexMilestones(this.project.id).pipe(takeUntilDestroyed(this.#destroyRef)).subscribe({
             next: (response: any) => {
                 const milestonesWithTasks = response.milestones || [];
                 const projectTasks = response.project_tasks || [];
@@ -132,7 +131,7 @@ export class ProjectMilestonesComponent implements OnDestroy, OnInit {
                 if (result?.text?.trim()) {
                     this.#projectService.createMilestone(this.project.id, {
                         name: result.text.trim()
-                    }).pipe(takeUntil(this.#destroy$))
+                    }).pipe(takeUntilDestroyed(this.#destroyRef))
                         .subscribe({
                             next: () => {
                                 Toast.success($localize`:@@i18n.milestone.created:milestone created`);
@@ -166,7 +165,7 @@ export class ProjectMilestonesComponent implements OnDestroy, OnInit {
 
         // Use bulk conversion endpoint
         this.#projectService.convertInvoiceItemsToMilestones(this.project.id)
-            .pipe(takeUntil(this.#destroy$))
+            .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe({
                 next: (response: any) => {
                     if (response.milestones_created > 0) {
@@ -201,7 +200,7 @@ export class ProjectMilestonesComponent implements OnDestroy, OnInit {
         .then(() => {
             // User confirmed - proceed with deletion
             this.#projectService.wipeMilestones(this.project.id.toString())
-                .pipe(takeUntil(this.#destroy$))
+                .pipe(takeUntilDestroyed(this.#destroyRef))
                 .subscribe({
                     next: () => {
                         Toast.success($localize`:@@i18n.milestones.allMilestonesDeleted:All milestones deleted successfully`);
@@ -226,7 +225,7 @@ export class ProjectMilestonesComponent implements OnDestroy, OnInit {
                         name: result.text.trim(),
                         parent_type: 'App\\Models\\Project',
                         parent_id: project.id
-                    }).pipe(takeUntil(this.#destroy$))
+                    }).pipe(takeUntilDestroyed(this.#destroyRef))
                         .subscribe({
                             next: () => {
                                 Toast.success($localize`:@@i18n.task.created:Task created`);
@@ -242,11 +241,6 @@ export class ProjectMilestonesComponent implements OnDestroy, OnInit {
             .catch(() => {
                 // User cancelled
             });
-    }
-
-    ngOnDestroy() {
-        this.#destroy$.next();
-        this.#destroy$.complete();
     }
 
 }

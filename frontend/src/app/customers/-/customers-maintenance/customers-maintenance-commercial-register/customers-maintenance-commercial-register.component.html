@@ -13,7 +13,8 @@
       </tr>
     </thead>
     <tbody>
-      <tr *nxFor="let company of companies">
+      @for (company of companies; track company.id) {
+      <tr [nx]="company" [tables]="companies">
         <td><avatar [object]="company"></avatar></td>
         <td class="text-truncate">{{company.name}}</td>
         <td>@if (company.url) {
@@ -26,6 +27,7 @@
           <a href="customers/{{company.id}}/contacts" class="pointer text-primary"><i>chevron_right</i></a>
         </td>
       </tr>
+      }
     </tbody>
   </table>
 </div>

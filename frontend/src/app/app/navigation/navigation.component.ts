@@ -1,5 +1,5 @@
 import { GlobalService } from 'src/models/global.service';
-import { Component, HostListener, inject, ViewChild, OnInit, OnDestroy } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, ViewChild, OnInit, OnDestroy } from '@angular/core';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
 import { Router, RouterModule } from '@angular/router';
 import { fromEvent, Subscription } from 'rxjs';
@@ -16,7 +16,8 @@ import { GuidedTourComponent } from '@shards/guided-tour/guided-tour.component';
 })
 export class NavigationComponent implements OnInit, OnDestroy {
 
-    @ViewChild(SearchInputComponent) searchbox: any
+    @ViewChild('search', { read: SearchInputComponent }) searchbox?: SearchInputComponent
+    @ViewChild('search', { read: ElementRef }) searchboxEl?: ElementRef<HTMLElement>
 
     searchExpanded: boolean = false
     isMobile: boolean = false
@@ -36,16 +37,16 @@ export class NavigationComponent implements OnInit, OnDestroy {
     onSearchExpand() {
         this.searchExpanded = !this.searchExpanded
         if (this.searchExpanded) {
-            this.searchbox.focus()
+            this.searchbox?.focus()
         } else {
             this.clearSearch()
         }
     }
 
     clearSearch() {
-        this.searchbox.blur()
-        this.searchbox.clear()
-        this.searchbox.empty()
+        this.searchbox?.blur()
+        this.searchbox?.clear()
+        this.searchbox?.empty()
         this.searchExpanded = false
     }
 
@@ -95,7 +96,10 @@ export class NavigationComponent implements OnInit, OnDestroy {
     }
 
     @HostListener('document:click', ['$event']) onDocumentClick(event: MouseEvent) {
-        if (this.searchbox && !this.searchbox.el.nativeElement.contains(event.target)) {
+        const searchboxElement = this.searchboxEl?.nativeElement
+        const target = event.target as Node | null
+
+        if (searchboxElement && target && !searchboxElement.contains(target)) {
             const totalOffset = event.layerX + event.layerY + event.clientX + event.clientY
             if (totalOffset > 0) {
                 this.clearSearch()

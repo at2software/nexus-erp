@@ -1,0 +1,24 @@
+.budget-chart-wrapper {
+    position: relative;
+
+    &.over-budget::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-90deg);
+        width: 190px;
+        height: 190px;
+        border-radius: 50%;
+        background: conic-gradient(
+            var(--budget-danger-color, #dc3545) 0deg,
+            var(--budget-danger-color, #dc3545) var(--budget-over-percentage, 0deg),
+            transparent var(--budget-over-percentage, 0deg),
+            transparent 360deg
+        );
+        -webkit-mask: radial-gradient(circle, transparent 0%, transparent 82%, black 82%, black 100%);
+        mask: radial-gradient(circle, transparent 0%, transparent 82%, black 82%, black 100%);
+        pointer-events: none;
+        z-index: 10;
+    }
+}

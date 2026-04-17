@@ -2,7 +2,6 @@ import { Serializable } from '../serializable';
 import { MarketingService } from './marketing.service';
 import { AutoWrap } from '@constants/autowrap';
 import { MarketingProspect } from './marketing.prospect.model';
-import { MarketingActivity } from './marketing-activity.model';
 import { MarketingInitiativeActivity } from './marketing-initiative-activity.model';
 
 export class MarketingProspectActivity extends Serializable {
@@ -27,16 +26,61 @@ export class MarketingProspectActivity extends Serializable {
         return this.marketing_initiative_activity;
     }
 
+    isOverdue = () => new Date(this.scheduled_at) < new Date()
+    override getName = () => this.marketing_initiative_activity?.name || $localize`:@@i18n.marketing.prospectActivity:prospect activity`
+
+    #postpone(days: number) {
+        this.httpService.post(`marketing/prospects/${this.marketing_prospect_id}/postpone-activities`, { days }).subscribe()
+    }
+    #postponeDays(days: number) { this.#postpone(days) }
+    #postponeMonths(months: number) { this.#postpone(months * 30) }
+
     doubleClickAction = 0;
     actions = [
         {
-            title: $localize`:@@i18n.common.edit:edit`,
+            title: $localize`:@@i18n.common.view:view`,
             action: () => {
                 const context = (this as any).__nxContext;
-                if (context?.component) {
-                    context.component.openEditActivityModal?.(this);
+                if (context?.router) {
+                    context.router.navigate(['/marketing/prospects', this.marketing_prospect_id]);
+                } else if (typeof window !== 'undefined') {
+                    window.location.href = `/marketing/prospects/${this.marketing_prospect_id}`;
                 }
             }
+        },
+        {
+            title: $localize`:@@i18n.common.reopen:reopen`,
+            on: () => this.status !== 'pending',
+            group: true,
+            action: () => this.update({ status: 'pending' }).subscribe()
+        },
+        {
+            title: $localize`:@@i18n.marketing.mark_as_completed:mark as completed`,
+            on: () => this.status === 'pending',
+            group: true,
+            action: () => this.update({ status: 'completed' }).subscribe()
+        },
+        // {
+        //     title: $localize`:@@i18n.common.edit:edit`,
+        //     action: () => {
+        //         const context = (this as any).__nxContext;
+        //         if (context?.component) {
+        //             context.component.openEditActivityModal?.(this);
+        //         }
+        //     }
+        // },
+        {
+            title: $localize`:@@i18n.marketing.postpone:postpone`,
+            group: true,
+            children: [
+                { group:true, title: $localize`:@@i18n.marketing.postpone_1w:1 week`, action: () => this.#postponeDays(7) },
+                { group:true, title: $localize`:@@i18n.marketing.postpone_2w:2 weeks`, action: () => this.#postponeDays(14) },
+                { group:true, title: $localize`:@@i18n.marketing.postpone_1m:1 month`, action: () => this.#postponeMonths(1) },
+                { group:true, title: $localize`:@@i18n.marketing.postpone_2m:2 months`, action: () => this.#postponeMonths(2) },
+                { group:true, title: $localize`:@@i18n.marketing.postpone_3m:3 months`, action: () => this.#postponeMonths(3) },
+                { group:true, title: $localize`:@@i18n.marketing.postpone_6m:6 months`, action: () => this.#postponeMonths(6) },
+                { group:true, title: $localize`:@@i18n.marketing.postpone_12m:12 months`, action: () => this.#postponeMonths(12) },
+            ]
         },
         {
             title: $localize`:@@i18n.common.change_state:change state`,

@@ -41,6 +41,7 @@ class InvoiceStatisticsService {
                     'max'    => 0,
                     'avg'    => 0,
                 ];
+
                 continue;
             }
 

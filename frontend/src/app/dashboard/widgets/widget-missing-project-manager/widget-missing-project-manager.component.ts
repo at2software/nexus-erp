@@ -1,8 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { Project } from 'src/models/project/project.model';
 import { ProjectService } from 'src/models/project/project.service';
-import { BaseWidgetComponent } from '../base.widget.component';
-import { OptionType } from '../widget-options/widget-options.component';
+import { BaseWidgetComponent, WidgetOptions } from '../base.widget.component';
 import { WidgetsModule } from '../widgets.module';
 import { PermissionsDirective } from '@directives/permissions.directive';
 import { ProjectState } from '@models/project/project-state.model';
@@ -25,14 +24,9 @@ export class WidgetMissingProjectManagerComponent extends BaseWidgetComponent {
     #projectService = inject(ProjectService)
 
     defaultOptions = () => ({
-        'max-items': {type: OptionType.Number, value: 999, i18n: $localize`:@@i18n.common.maxItems:max items`},
-        'only-mine-as-pm': {type: OptionType.Boolean, value: false, i18n: $localize`:@@i18n.common.onlyMineAsProjectManager:only mine as project manager`}
+        ...WidgetOptions.maxItems,
+        ...WidgetOptions.onlyMineAsPm
     })
-
-    override ngOnInit() {
-        super.ngOnInit()
-        this.reload()
-    }
 
     reload(): void {
         this.#projectService.index(Object.assign({}, this.FILTERS, this.getOptionsURI())).subscribe((_: Project[]) => {

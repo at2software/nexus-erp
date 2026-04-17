@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit } from '@angular/core';
+import { Component, input, OnChanges, OnInit } from '@angular/core';
 import { Color } from 'src/constants/Color';
 
 @Component({
@@ -7,11 +7,12 @@ import { Color } from 'src/constants/Color';
     standalone: true
 })
 export abstract class ChartBaseComponent implements OnChanges, OnInit {
-    @Input() card: boolean = true
-    @Input() title: string = 'Chart'
-    @Input() series: any[]
-    @Input() color: string = Color.fromVar('primary').toString()
-    @Input() options: any = {}
+
+    card    = input<boolean>(true)
+    title   = input<string>('Chart')
+    series  = input<any[]>([])
+    color   = input<string>(Color.fromVar('primary').toString())
+    options = input<any>({})
 
     updateFlag: boolean = false
 

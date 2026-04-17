@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { Serializable } from 'src/models/serializable';
 
 
@@ -11,6 +11,6 @@ import { Serializable } from 'src/models/serializable';
     standalone: true
 })
 export class NxComponent {
-    @Input() nx:Serializable
-    @Input() title:string
+    nx = input<Serializable>()
+    title = input<string>()
 }

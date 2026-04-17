@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { ActivityTabComponent } from '@app/_activity/activity-tab.component';
@@ -15,8 +15,8 @@ import { TFocusDay } from '../hr-focus-table.component';
 })
 export class HrFocusSummaryTabComponent implements OnChanges {
 
-    @Input() days: TFocusDay[] = []
-    @Input() user: User
+    days = input<TFocusDay[]>()
+    user = input.required<User>()
 
     dateFrom     = ''
     dateTo       = ''
@@ -37,13 +37,14 @@ export class HrFocusSummaryTabComponent implements OnChanges {
     }
 
     compute() {
-        if (!this.days.length || !this.user) return
+        const days = this.days() ?? []
+        if (!days.length || !this.user()) return
 
-        const sorted = [...this.days].sort((a, b) => a.moment.diff(b.moment))
+        const sorted = [...days].sort((a, b) => a.moment.diff(b.moment))
         this.dateFrom = sorted[0].date
         this.dateTo   = sorted[sorted.length - 1].date
 
-        const hpwArray = this.user.getHpwArray() // [mo, tu, we, th, fr, sa, su]
+        const hpwArray = this.user().getHpwArray() // [mo, tu, we, th, fr, sa, su]
 
         let paid = 0, unpaid = 0, expected = 0, vacation = 0, sick = 0
         for (const day of sorted) {

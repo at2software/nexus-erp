@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
+import { Component, EventEmitter, inject, input, Output } from '@angular/core';
 import { TOptions } from '../base.widget.component';
 import { ModalEditWidgetOptionsComponent } from '@app/_modals/modal-edit-widget-options/modal-edit-widget-options.component';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
@@ -16,11 +16,13 @@ export enum OptionType {
     standalone : true
 })
 export class WidgetOptionsComponent {
-    @Input() options: TOptions
+    
+    options = input<TOptions>()
+
     @Output() updated = new EventEmitter<any>()
     @Output() deleted = new EventEmitter<any>()
     
     #modal = inject(ModalBaseService)
 
-    onOptionsClicked = () => this.#modal.open(ModalEditWidgetOptionsComponent, this.options, this.updated)
+    onOptionsClicked = () => this.#modal.open(ModalEditWidgetOptionsComponent, this.options(), this.updated)
 }

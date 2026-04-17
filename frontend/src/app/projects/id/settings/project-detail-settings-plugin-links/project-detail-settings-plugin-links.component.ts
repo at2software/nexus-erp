@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ProjectDetailGuard } from '@app/projects/project-details.guard';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { PluginLink } from '@models/pluginLink/plugin-link.model';
@@ -12,7 +12,7 @@ import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
     templateUrl: './project-detail-settings-plugin-links.component.html',
     styleUrls: ['./project-detail-settings-plugin-links.component.scss'],
     standalone: true,
-    imports: [CommonModule, NgbTooltipModule, NexusModule, EmptyStateComponent]
+    imports: [NgbTooltipModule, NexusModule, EmptyStateComponent]
 })
 export class ProjectDetailSettingsPluginLinksComponent {
     parent = inject(ProjectDetailGuard);

@@ -20,17 +20,7 @@ const POSTPONE_DURATIONS = [
 
 export const getProjectActions = (self: any) => [
         { title: $localize`:@@i18n.common.open:open`, action: () => self.navigate(self.frontendUrl()) },
-        {
-            title: $localize`:@@i18n.common.addToClipboard:add to clipboard`,
-            group: true,
-            action: () => NxGlobal.clip(self)
-        },
-        {
-            title: $localize`:@@i18n.common.removeFromClipboard:remove from clipboard`,
-            group: true,
-            on: (): boolean => NxGlobal.hasClip(self),
-            action: () => NxGlobal.unclip(self)
-        },
+        ...NxGlobal.clipboardActions(self),
         {
             title: $localize`:@@i18n.common.makeRootProject:make root project`,
             group: true,
@@ -132,12 +122,11 @@ export const getProjectActions = (self: any) => [
 function getContactActions(self: any): any[] {
     const contacts: CompanyContact[] = self.assigned_contacts ?? [];
     const projectName: string = self.name;
-    console.log('Assigned contacts:', contacts);
     return contacts.flatMap((cc: CompanyContact) => {
         const actions: any[] = [];
-        const name: string = cc.getName() || cc.contact.card?.name || 'Contact';
+        const name: string = cc.getName() || cc.contact.card.name || 'Contact';
         // Phone numbers
-        (cc.card?.get('TEL') ?? []).forEach((p: VcardRow) => {
+        (cc.card.get('TEL') ?? []).forEach((p: VcardRow) => {
             actions.push({
                 title: `Call ${name}`,
                 group: true,
@@ -152,7 +141,7 @@ function getContactActions(self: any): any[] {
             }
         });
         // Email addresses
-        (cc.card?.get('EMAIL') ?? []).forEach((p: VcardRow) => {
+        (cc.card.get('EMAIL') ?? []).forEach((p: VcardRow) => {
             actions.push({
                 title: `Email ${name}`,
                 group: true,

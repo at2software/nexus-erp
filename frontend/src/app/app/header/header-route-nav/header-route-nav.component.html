@@ -1,3 +1,25 @@
 @for (route of routes; track route.path) {
-<header-link-item [routerLink]="route.path" [title]="route.title" [exact]="route.exact"></header-link-item>
+  @if (!route.hasChildren) {
+    <header-link-item [routerLink]="route.path" [title]="route.title" [exact]="route.exact"></header-link-item>
+  } @else {
+    <li class="nav-item" ngbDropdown [autoClose]="true" placement="bottom-start" #dropdown="ngbDropdown" (mouseleave)="dropdown.close()">
+      <a class="nav-link d-flex align-items-center text-capitalize" ngbDropdownToggle tabindex="0" (mouseenter)="dropdown.open()"
+         [routerLink]="route.path" 
+         [routerLinkActive]="'active'" 
+         [routerLinkActiveOptions]="{ exact: route.exact }">
+        {{route.title}}
+      </a>
+      <ul class="dropdown-menu" ngbDropdownMenu>
+        @for (child of route.children; track child.path) {
+          <li>
+            <a class="dropdown-item text-capitalize" [routerLink]="[route.path, child.path]" 
+               [routerLinkActive]="'active'" 
+               [routerLinkActiveOptions]="{ exact: child.exact }">
+              {{child.title}}
+            </a>
+          </li>
+        }
+      </ul>
+    </li>
+  }
 }

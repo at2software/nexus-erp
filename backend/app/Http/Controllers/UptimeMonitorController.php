@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Project;
 use App\Models\UptimeMonitor;
 use App\Models\User;
 use App\Services\UptimeCheckService;
@@ -17,36 +16,28 @@ class UptimeMonitorController extends Controller {
             ->when($request->has('project_id'), fn ($q) => $q->whereHas('projects', fn ($pq) => $pq->where('projects.id', $request->project_id)))
             ->with(['projects', 'createdBy', 'recipients'])
             ->orderBy('name');
-
         return $query->get();
-    }
-    public function indexForProject(Request $request, Project $_) {
-        return $_->uptimeMonitors()
-            ->with(['projects', 'createdBy', 'recipients'])
-            ->orderBy('name')
-            ->get();
     }
     public function show(Request $request, UptimeMonitor $_) {
         $_->load(['projects', 'createdBy', 'recipients', 'latestCheck']);
-
         return $_;
     }
     public function store(Request $request) {
         $validated = $request->validate([
-            'name'                      => 'required|string|max:255',
-            'url'                       => 'required|url|max:512',
-            'method'                    => 'sometimes|in:GET,POST,HEAD',
-            'expected_status_code'      => 'sometimes|integer|min:100|max:599',
-            'timeout'                   => 'sometimes|integer|min:5|max:120',
-            'response_time_threshold'   => 'sometimes|integer|min:100',
-            'check_interval'            => 'sometimes|integer|min:60',
-            'is_active'                 => 'sometimes|boolean',
-            'request_headers'           => 'sometimes|array',
-            'request_body'              => 'sometimes|string|nullable',
-            'project_ids'               => 'sometimes|array',
-            'project_ids.*'             => 'exists:projects,id',
-            'recipient_ids'             => 'sometimes|array',
-            'recipient_ids.*'           => 'exists:users,id',
+            'name'                    => 'required|string|max:255',
+            'url'                     => 'required|url|max:512',
+            'method'                  => 'sometimes|in:GET,POST,HEAD',
+            'expected_status_code'    => 'sometimes|integer|min:100|max:599',
+            'timeout'                 => 'sometimes|integer|min:5|max:120',
+            'response_time_threshold' => 'sometimes|integer|min:100',
+            'check_interval'          => 'sometimes|integer|min:60',
+            'is_active'               => 'sometimes|boolean',
+            'request_headers'         => 'sometimes|array',
+            'request_body'            => 'sometimes|string|nullable',
+            'project_ids'             => 'sometimes|array',
+            'project_ids.*'           => 'exists:projects,id',
+            'recipient_ids'           => 'sometimes|array',
+            'recipient_ids.*'         => 'exists:users,id',
         ]);
 
         $validated['created_by_user_id'] = $request->user()->id;
@@ -60,25 +51,24 @@ class UptimeMonitorController extends Controller {
         if (isset($validated['recipient_ids'])) {
             $monitor->recipients()->sync($validated['recipient_ids']);
         }
-
         return $monitor->load(['projects', 'createdBy', 'recipients']);
     }
     public function update(Request $request, UptimeMonitor $_) {
         $validated = $request->validate([
-            'name'                      => 'sometimes|string|max:255',
-            'url'                       => 'sometimes|url|max:512',
-            'method'                    => 'sometimes|in:GET,POST,HEAD',
-            'expected_status_code'      => 'sometimes|integer|min:100|max:599',
-            'timeout'                   => 'sometimes|integer|min:5|max:120',
-            'response_time_threshold'   => 'sometimes|integer|min:100',
-            'check_interval'            => 'sometimes|integer|min:60',
-            'is_active'                 => 'sometimes|boolean',
-            'request_headers'           => 'sometimes|array|nullable',
-            'request_body'              => 'sometimes|string|nullable',
-            'project_ids'               => 'sometimes|array',
-            'project_ids.*'             => 'exists:projects,id',
-            'recipient_ids'             => 'sometimes|array',
-            'recipient_ids.*'           => 'exists:users,id',
+            'name'                    => 'sometimes|string|max:255',
+            'url'                     => 'sometimes|url|max:512',
+            'method'                  => 'sometimes|in:GET,POST,HEAD',
+            'expected_status_code'    => 'sometimes|integer|min:100|max:599',
+            'timeout'                 => 'sometimes|integer|min:5|max:120',
+            'response_time_threshold' => 'sometimes|integer|min:100',
+            'check_interval'          => 'sometimes|integer|min:60',
+            'is_active'               => 'sometimes|boolean',
+            'request_headers'         => 'sometimes|array|nullable',
+            'request_body'            => 'sometimes|string|nullable',
+            'project_ids'             => 'sometimes|array',
+            'project_ids.*'           => 'exists:projects,id',
+            'recipient_ids'           => 'sometimes|array',
+            'recipient_ids.*'         => 'exists:users,id',
         ]);
 
         $_->update($validated);
@@ -90,24 +80,16 @@ class UptimeMonitorController extends Controller {
         if (isset($validated['recipient_ids'])) {
             $_->recipients()->sync($validated['recipient_ids']);
         }
-
         return $_->load(['projects', 'createdBy', 'recipients']);
     }
     public function destroy(UptimeMonitor $_) {
         $_->delete();
-
         return response()->json(['success' => true]);
     }
     public function indexChecks(Request $request, UptimeMonitor $_) {
         $days      = $request->get('days', 30);
         $sinceDate = Carbon::now()->subDays($days);
-
-        $checks = $_->checks()
-            ->where('checked_at', '>=', $sinceDate)
-            ->orderBy('checked_at', 'asc')
-            ->get();
-
-        return $checks;
+        return $_->checks()->dailyStats($sinceDate)->get();
     }
     public function indexRecipients(Request $request, UptimeMonitor $_) {
         return $_->recipients()
@@ -124,7 +106,6 @@ class UptimeMonitorController extends Controller {
         $_->recipients()->syncWithoutDetaching([
             $user->id => $validated,
         ]);
-
         return response()->json(['success' => true]);
     }
     public function testCheck(Request $request, UptimeMonitor $_, UptimeCheckService $checkService, UptimeNotificationService $notificationService) {
@@ -134,7 +115,6 @@ class UptimeMonitorController extends Controller {
             if ($request->boolean('with_notification') && $checkService->shouldNotify($_, $check)) {
                 $notificationService->notifyDown($_, $check);
             }
-
             return response()->json([
                 'success' => true,
                 'check'   => $check,
@@ -166,15 +146,14 @@ class UptimeMonitorController extends Controller {
         $uptime24h = $last24Hours->count() > 0
             ? round(($last24Hours->where('status', 'up')->count() / $last24Hours->count()) * 100, 2)
             : 100.0;
-
         return response()->json([
-            'total_checks'        => $totalChecks,
-            'up_checks'           => $upChecks,
-            'down_checks'         => $downChecks,
-            'degraded_checks'     => $degradedChecks,
-            'uptime_percentage'   => $uptimePercentage,
-            'uptime_24h'          => $uptime24h,
-            'avg_response_time'   => $avgResponseTime ? round($avgResponseTime) : null,
+            'total_checks'      => $totalChecks,
+            'up_checks'         => $upChecks,
+            'down_checks'       => $downChecks,
+            'degraded_checks'   => $degradedChecks,
+            'uptime_percentage' => $uptimePercentage,
+            'uptime_24h'        => $uptime24h,
+            'avg_response_time' => $avgResponseTime ? round($avgResponseTime) : null,
         ]);
     }
 }

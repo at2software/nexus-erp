@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands\Cronjobs;
 
-use App\Actions\User\CalculateDailyWorkload;
 use App\Helpers\NLog;
 use App\Models\Assignment;
 use App\Models\Company;
@@ -11,6 +10,7 @@ use App\Models\Project;
 use App\Models\ProjectState;
 use App\Models\User;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Console\Command;
 
 class ComputeTimeBasedAssignmentAverages extends Command {
@@ -20,9 +20,8 @@ class ComputeTimeBasedAssignmentAverages extends Command {
     public function handle() {
         $this->info('Computing assignment averages...');
 
-        $threeMonthsAgo     = now()->subMonths(3)->startOfDay();
-        $processedCount     = 0;
-        $workloadCalculator = new CalculateDailyWorkload;
+        $threeMonthsAgo = now()->subMonths(3)->startOfDay();
+        $processedCount = 0;
 
         // Get all running time-based OR internal projects
         $projects = Project::where(function ($query) {
@@ -45,13 +44,7 @@ class ComputeTimeBasedAssignmentAverages extends Command {
 
         foreach ($projects as $project) {
             foreach ($project->assignees as $assignment) {
-                $processedCount += $this->processAssignment(
-                    $assignment,
-                    $project,
-                    Project::class,
-                    $workloadCalculator,
-                    $threeMonthsAgo
-                );
+                $processedCount += $this->processAssignment($assignment, $project, Project::class, $threeMonthsAgo);
             }
         }
 
@@ -68,13 +61,7 @@ class ComputeTimeBasedAssignmentAverages extends Command {
 
         foreach ($companies as $company) {
             foreach ($company->assignees as $assignment) {
-                $processedCount += $this->processAssignment(
-                    $assignment,
-                    $company,
-                    Company::class,
-                    $workloadCalculator,
-                    $threeMonthsAgo
-                );
+                $processedCount += $this->processAssignment($assignment, $company, Company::class, $threeMonthsAgo);
             }
         }
 
@@ -84,14 +71,12 @@ class ComputeTimeBasedAssignmentAverages extends Command {
         } else {
             $this->info('No assignments with focus data to process');
         }
-
         return Command::SUCCESS;
     }
     private function processAssignment(
         Assignment $assignment,
         $parent,
         string $parentType,
-        CalculateDailyWorkload $workloadCalculator,
         Carbon $threeMonthsAgo
     ): int {
         $user = $assignment->assignee;
@@ -100,8 +85,7 @@ class ComputeTimeBasedAssignmentAverages extends Command {
             return 0;
         }
 
-        // Get break days (vacation, sick, holidays) for the user
-        $breakDays = $workloadCalculator->getBreakDays($user, $threeMonthsAgo, now());
+        $breakDays = $user->getBreakDays($threeMonthsAgo, now());
         $hpwArray  = $user->getHpwArray();
 
         // Get total hours from foci for this user on this parent in last 3 months
@@ -112,7 +96,7 @@ class ComputeTimeBasedAssignmentAverages extends Command {
             ->sum('duration');
 
         // Calculate total available working days in the period (excluding weekends, vacation, sick, holidays)
-        $period               = \Carbon\CarbonPeriod::create($threeMonthsAgo, now());
+        $period               = CarbonPeriod::create($threeMonthsAgo, now());
         $availableWorkingDays = 0;
 
         foreach ($period as $date) {
@@ -139,10 +123,8 @@ class ComputeTimeBasedAssignmentAverages extends Command {
 
             NLog::info("Assignment #{$assignment->id}: User '{$user->name}' on {$parentTypeName} '{$parentName}' - AVG_HPD: ".round($avgHpd, 2)."h/day (total: {$totalHours}h over {$availableWorkingDays} available working days)");
             $this->info("  ✓ Assignment #{$assignment->id}: {$user->name} on '{$parentName}' - ".round($avgHpd, 2).'h/day');
-
             return 1;
         }
-
         return 0;
     }
 }

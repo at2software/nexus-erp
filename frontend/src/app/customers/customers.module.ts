@@ -24,6 +24,7 @@ import { CustomersMapComponent } from './-/customers-map/customers-map.component
 import { CustomersNetworkComponent } from './-/customers-network/customers-network.component';
 import { CustomerVcards } from './details/customer-vcards/customer-vcards';
 import { EditVcardTsComponent } from './_shards/edit-vcard.ts/edit-vcard.ts.component';
+import { EmptyComponentComponent } from '@shards/empty-component/empty-component.component';
 
 
 @NgModule({
@@ -165,13 +166,36 @@ import { EditVcardTsComponent } from './_shards/edit-vcard.ts/edit-vcard.ts.comp
                     },
                     {
                         path: 'invoices',
-                        component: CustomerInvoicesComponent,
+                        component: EmptyComponentComponent,
                         data: {
                             nav: {
                                 title: $localize`:@@i18n.common.invoices:invoices`,
                                 roles: 'invoicing'
                             }
-                        }
+                        },
+                        children: [      
+                            { path: '', pathMatch: 'full', redirectTo: 'prepare' },                                         
+                            {
+                                path: 'prepare',
+                                component: CustomerInvoicesComponent,
+                                data: {
+                                    nav: {
+                                        title: $localize`:@@i18n.common.invoices:invoices`,
+                                        roles: 'invoicing'
+                                    }
+                                },
+                            },
+                            {
+                                path: 'standing-orders',
+                                component: CustomerStandingOrdersComponent,
+                                data: {
+                                    nav: {
+                                        title: $localize`:@@i18n.common.standingOrders:standing orders`,
+                                        roles: 'invoicing'
+                                    }
+                                }
+                            },
+                        ]
                     },
                     {
                         path: 'connections',
@@ -195,16 +219,6 @@ import { EditVcardTsComponent } from './_shards/edit-vcard.ts/edit-vcard.ts.comp
                         children: [
                             { path: ':cid', component: EditVcardTsComponent }
                         ]
-                    },
-                    {
-                        path: 'standing-orders',
-                        component: CustomerStandingOrdersComponent,
-                        data: {
-                            nav: {
-                                title: $localize`:@@i18n.common.standingOrders:standing orders`,
-                                roles: 'invoicing'
-                            }
-                        }
                     },
                     {
                         path: 'knownseq',

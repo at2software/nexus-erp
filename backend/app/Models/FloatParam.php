@@ -9,6 +9,6 @@ class FloatParam extends BaseModel {
 
     protected $fillable = ['created_at', 'updated_at', 'value', 'parent_id', 'parent_type', 'language', 'param_id'];
     protected $hidden   = ['created_at', 'updated_at'];
-    protected $casts    = ['value'=>'double'];
-    protected $access   = ['admin' => '*', 'project_manager'=>'cru', 'user'=>'cru'];
+    protected $casts    = ['value' => 'double'];
+    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 }

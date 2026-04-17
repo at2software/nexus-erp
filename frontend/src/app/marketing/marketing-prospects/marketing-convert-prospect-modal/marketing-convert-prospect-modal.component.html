@@ -57,9 +57,9 @@
               <avatar [object]="company" size="32"></avatar>
               <div class="flex-fill">
                 <div>{{company.name}}</div>
-                @if (company.card?.get('ADR')?.[0]?.vals?.[3]) {
+                @if (company.card.get('ADR')[0]?.vals?.[3]) {
                 <small class="text-muted">
-                  {{company.card?.get('ADR')?.[0]?.vals?.[3]}} <!-- City -->
+                  {{company.card.get('ADR')[0]?.vals?.[3]}} <!-- City -->
                 </small>
                 }
               </div>

@@ -2,9 +2,14 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { NexusHttpService } from '../http/http.nexus';
 import { UptimeMonitor } from './uptime-monitor.model';
-import { UptimeCheck } from './uptime-check.model';
+export interface UptimeCheckDay {
+    day: string;
+    up_count: number;
+    down_count: number;
+    degraded_count: number;
+    total: number;
+}
 import { Dictionary } from '@constants/constants';
-import { Project } from '../project/project.model';
 
 @Injectable({ providedIn: 'root' })
 export class UptimeMonitorService extends NexusHttpService<UptimeMonitor> {
@@ -13,10 +18,6 @@ export class UptimeMonitorService extends NexusHttpService<UptimeMonitor> {
 
     index = (filters?: Dictionary): Observable<UptimeMonitor[]> => {
         return this.aget(this.apiPath, filters, UptimeMonitor);
-    }
-
-    indexForProject = (project: Project, filters?: Dictionary): Observable<UptimeMonitor[]> => {
-        return this.aget(`projects/${project.id}/uptime_monitors`, filters, UptimeMonitor);
     }
 
     show = (id: string): Observable<UptimeMonitor> => {
@@ -35,8 +36,8 @@ export class UptimeMonitorService extends NexusHttpService<UptimeMonitor> {
         return this.delete(`${this.apiPath}/${id}`);
     }
 
-    indexChecks = (monitor: UptimeMonitor, days: number = 30): Observable<UptimeCheck[]> => {
-        return this.aget(`${this.apiPath}/${monitor.id}/checks`, { days }, UptimeCheck);
+    indexChecks = (monitor: UptimeMonitor, days: number = 30): Observable<UptimeCheckDay[]> => {
+        return this.get(`${this.apiPath}/${monitor.id}/checks`, { days });
     }
 
     stats = (monitor: UptimeMonitor): Observable<any> => {

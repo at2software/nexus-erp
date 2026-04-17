@@ -1,5 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { environment } from 'src/environments/environment';
@@ -21,7 +21,7 @@ const SPECIALIZED_ROLES = ['project_manager', 'invoicing', 'financial', 'marketi
     templateUrl: './roles.component.html',
     styleUrls: ['./roles.component.scss'],
     standalone: true,
-    imports: [CommonModule, FormsModule, NgbTooltipModule, RolePipe, ScrollbarComponent, ToolbarComponent, NexusModule]
+    imports: [FormsModule, NgbTooltipModule, RolePipe, ScrollbarComponent, ToolbarComponent, NexusModule]
 })
 export class UsersComponent implements OnInit {
 

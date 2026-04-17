@@ -9,13 +9,17 @@
             </tr>
         </thead>
         <tbody>
-            <tr *nxFor="let contact of contacts">
+            @for (contact of contacts; track contact.id) {
+            <tr [nx]="contact" [tables]="contacts">
                 <td>
-                    <avatar [object]="company" *nxFor="let company of contact.companies"></avatar>
+                    @for (company of contact.companies; track company.id) {
+                    <avatar [object]="company" [nx]="company" [tables]="contact.companies"></avatar>
+                    }
                 </td>
                 <td class="text-truncate">{{contact.name}}</td>
                 <td><input type="text" (blur)="onUpdate(contact)" [(ngModel)]="contact.var.bday" class="form-control" placeholder="YYYY-MM-DD" i18n-placeholder="@@i18n.common.date_format_placeholder"></td>
             </tr>
+            }
         </tbody>
     </table>
 </div>

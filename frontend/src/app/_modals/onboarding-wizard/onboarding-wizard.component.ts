@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { GlobalService } from 'src/models/global.service';
@@ -22,7 +22,7 @@ interface AddedUser { name: string, email: string }
     templateUrl: './onboarding-wizard.component.html',
     styleUrls: ['./onboarding-wizard.component.scss'],
     standalone: true,
-    imports: [CommonModule, FormsModule]
+    imports: [FormsModule]
 })
 export class OnboardingWizardComponent implements OnInit {
 

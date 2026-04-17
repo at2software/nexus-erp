@@ -1,6 +1,8 @@
 <?php
 
+use App\Helpers\NLog;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Str;
 
 if (! function_exists('responseError')) {
     function responseError(string $title, string $message = 'Something went wrong', int $status = 400): JsonResponse {
@@ -30,7 +32,7 @@ if (! function_exists('logStackTrace')) {
             return "{$class}{$function}() at {$file}:{$line}";
         }, array_slice($filtered, 0, $limit));
 
-        \App\Helpers\NLog::info($message, $formatted);
+        NLog::info($message, $formatted);
         return $formatted;
     }
 }
@@ -41,7 +43,7 @@ if (! function_exists('logWithBindings')) {
         $bindings = $query->getBindings();
 
         // Replace ? with actual bindings
-        $fullQuery = \Illuminate\Support\Str::replaceArray('?', collect($bindings)->map(function ($binding) {
+        $fullQuery = Str::replaceArray('?', collect($bindings)->map(function ($binding) {
             if (is_null($binding)) {
                 return 'NULL';
             }
@@ -54,7 +56,7 @@ if (! function_exists('logWithBindings')) {
             return $binding;
         })->toArray(), $sql);
 
-        \App\Helpers\NLog::info($message.': '.$fullQuery);
+        NLog::info($message.': '.$fullQuery);
         return $fullQuery;
     }
 }

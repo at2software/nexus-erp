@@ -79,7 +79,7 @@ export class ActivityService {
      * @returns true if the tab was found and activated, false otherwise
      */
     switchToTabByComponent(componentType: Type<any>): boolean {
-        const index = this.tabs.findIndex(tab => tab.componentType === componentType)
+        const index = this.tabs.findIndex(tab => tab.componentType() === componentType)
         if (index !== -1) {
             this.setActiveTab(index)
             return true
@@ -93,7 +93,7 @@ export class ActivityService {
      * @returns true if the tab was found and activated, false otherwise
      */
     switchToTabByIcon(icon: string): boolean {
-        const index = this.tabs.findIndex(tab => tab.icon === icon || tab.nicon === icon)
+        const index = this.tabs.findIndex(tab => tab.icon() === icon || tab.nicon() === icon)
         if (index !== -1) {
             this.setActiveTab(index)
             return true

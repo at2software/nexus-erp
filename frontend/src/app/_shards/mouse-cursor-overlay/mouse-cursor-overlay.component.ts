@@ -1,7 +1,8 @@
-import { Component, inject, OnInit, OnDestroy, HostListener } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, DestroyRef, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
 import { LiveSharingService } from '@models/live-sharing.service';
-import { Subject, takeUntil, throttleTime } from 'rxjs';
+import { Subject, throttleTime } from 'rxjs';
 import { MousePosition, MouseClick, WebSocketService } from 'src/services/websocket.service';
 import { Router } from '@angular/router';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
@@ -9,7 +10,7 @@ import { InputModalService } from '@app/_modals/modal-input/modal-input.componen
 @Component({
     selector: 'mouse-cursor-overlay',
     standalone: true,
-    imports: [CommonModule],
+    imports: [],
     template: `
         @for (cursor of cursors; track cursor.userId) {
             <div class="remote-cursor"
@@ -112,7 +113,7 @@ export class MouseCursorOverlayComponent implements OnInit, OnDestroy {
     #wsService = inject(WebSocketService);
     #router = inject(Router);
     #inputModal = inject(InputModalService);
-    #destroy$ = new Subject<void>();
+    #destroyRef = inject(DestroyRef);
     #mouseMove$ = new Subject<{x: number, y: number, event: MouseEvent}>();
 
     cursors: MousePosition[] = [];
@@ -122,15 +123,15 @@ export class MouseCursorOverlayComponent implements OnInit, OnDestroy {
     #scrollHandler = () => this.#updateCursorPositions();
 
     ngOnInit() {
-        this.#liveSharingService.mousePositionsOnCurrentUrl$.pipe(takeUntil(this.#destroy$)).subscribe(positionsMap => {
+        this.#liveSharingService.mousePositionsOnCurrentUrl$.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(positionsMap => {
             this.cursors = Array.from(positionsMap.values());
         });
 
-        this.#liveSharingService.mouseClicks$.pipe(takeUntil(this.#destroy$)).subscribe(clicks => {
+        this.#liveSharingService.mouseClicks$.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(clicks => {
             this.clicks = clicks;
         });
 
-        this.#mouseMove$.pipe(throttleTime(100), takeUntil(this.#destroy$)).subscribe(({x, y, event}) => {
+        this.#mouseMove$.pipe(throttleTime(100), takeUntilDestroyed(this.#destroyRef)).subscribe(({x, y, event}: {x: number, y: number, event: MouseEvent}) => {
             const scrollOffsets = this.#getScrollOffsets(event);
             this.#liveSharingService.sendMousePosition(x + scrollOffsets.x, y + scrollOffsets.y);
         });
@@ -201,7 +202,6 @@ export class MouseCursorOverlayComponent implements OnInit, OnDestroy {
             }
             currentElement = currentElement.parentElement;
         }
-
         return { x: totalScrollX, y: totalScrollY };
     }
 
@@ -246,7 +246,5 @@ export class MouseCursorOverlayComponent implements OnInit, OnDestroy {
         window.removeEventListener('blur', this.#visibilityChangeHandler);
         window.removeEventListener('focus', this.#visibilityChangeHandler);
         window.removeEventListener('scroll', this.#scrollHandler, true);
-        this.#destroy$.next();
-        this.#destroy$.complete();
     }
 }

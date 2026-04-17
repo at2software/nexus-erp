@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use App\Builders\UptimeCheckBuilder;
 
-class UptimeCheck extends Model {
-    use HasFactory;
+class UptimeCheck extends BaseModel {
+    public function newEloquentBuilder($query): UptimeCheckBuilder {
+        return new UptimeCheckBuilder($query);
+    }
 
     public $timestamps  = false;
+    protected $appends  = [];
     protected $fillable = [
         'uptime_monitor_id',
         'checked_at',

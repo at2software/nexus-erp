@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, ViewChild, inject, OnInit } from '@angular/core';
+import { Component, OnChanges, ViewChild, inject, OnInit, input } from '@angular/core';
 import { EChartsSimpleOptions } from '../ChartOptions';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { deepMerge } from 'src/constants/deepMerge';
@@ -21,12 +21,12 @@ export class LineChartComponent implements OnInit, OnChanges {
     echartsInstance: any
     trend:number = 0
     
-    @Input() value: any = 0
-    @Input() cardTitle: string = ""
-    @Input() color: string|string[] = "primary"
-    @Input() options: any = {}
-    @Input() suffix:string = ''
-    @Input() roles?:string
+    value     = input<any>(0)
+    cardTitle = input<string>("")
+    color     = input<string|string[]>("primary")
+    options   = input<any>({})
+    suffix    = input<string>("")
+    roles     = input<string|undefined>(undefined)
 
     global = inject(GlobalService)
     
@@ -56,10 +56,10 @@ export class LineChartComponent implements OnInit, OnChanges {
                         const seriesColor = param.color || this.getColor(i);
                         html += `<div class="f-b p-0 d-flex" style="color: ${seriesColor};">`;
                         html += `<div class="flex-fill px-2">${param.seriesName}</div>`;
-                        html += `<div class="px-2 text-end">${param.value}${this.suffix}</div></div>`;
+                        html += `<div class="px-2 text-end">${param.value}${this.suffix()}</div></div>`;
                         total += param.value || 0;
                     });
-                    html += `<div class="f-b p-0 d-flex"><div class="flex-fill px-2">&sum;</div><div class="px-2 text-end">${total}${this.suffix}</div></div>`;
+                    html += `<div class="f-b p-0 d-flex"><div class="flex-fill px-2">&sum;</div><div class="px-2 text-end">${total}${this.suffix()}</div></div>`;
                     html += '</div>';
                     return `<div class="arrow_box">${html}</div>`;
                 }
@@ -73,7 +73,7 @@ export class LineChartComponent implements OnInit, OnChanges {
                 show: false,
                 min: 0
             }
-        }, this.individualOptions(), this.options)
+        }, this.individualOptions(), this.options())
     }
     ngOnChanges(changes: any): void {
         if (this.chartOptions && 'options' in changes && changes.options) {
@@ -85,8 +85,8 @@ export class LineChartComponent implements OnInit, OnChanges {
         this.echartsInstance = ec;
     }
 
-    colorArray = ():string[] => Array.isArray(this.color) ? this.color : [this.color]
-    getColor = (index:number) => this.colorArray()[index % this.colorArray().length]
+    colorArray = (): string[] => [this.color()].flat() as string[]
+    getColor = (index: number) => { const c = this.colorArray(); return c[index % c.length] }
 }
 
 @Component({
@@ -94,15 +94,16 @@ export class LineChartComponent implements OnInit, OnChanges {
     standalone: true
 })
 export abstract class LineChartParamComponent extends LineChartComponent implements OnChanges, OnInit {
-    @Input() keyPath: string | undefined = undefined
-    @Input() chartData: any = undefined
-    @Input() type:string = 'bar'
-    @Input() cluster:string = 'month'
-    @Input() offset:'none'|'month'|'year' = 'none'
-
+    
     abstract updateSeries(result:any[]):void
-    #paramService = inject(ParamService)
 
+    keyPath   = input<string|undefined>(undefined)
+    chartData = input<any>(undefined)
+    type      = input<string>('bar')
+    cluster   = input<string>('month')
+    offset    = input<'none'|'month'|'year'>('none')
+
+    #paramService = inject(ParamService)
 
     ngOnInit():void {
         super.ngOnInit()
@@ -115,30 +116,30 @@ export abstract class LineChartParamComponent extends LineChartComponent impleme
         }
     }
 
-    seriesLength = () => this.keyPath?.split(',').length ?? 0
+    seriesLength = () => this.keyPath()?.split(',').length ?? 0
 
     reload() {
         // Check roles field
-        if (this.roles) {
-            const requiredRoles = this.roles.split('|')
+        if (this.roles()) {
+            const requiredRoles = this.roles()!.split('|')
             if (!this.global.user?.hasAnyRole(requiredRoles)) {
                 return
             }
         }
         // If chartData is provided, use it directly instead of fetching
-        if (this.chartData) {
+        if (this.chartData()) {
             // Ensure chartData is an array (wrap single series in array)
-            const dataArray = Array.isArray(this.chartData) ? this.chartData : [this.chartData]
+            const dataArray = [this.chartData()].flat()
             return this.updateSeries(dataArray)
         }
         // Otherwise, fetch data using keyPath (legacy behavior)
-        if (this.keyPath) {
+        if (this.keyPath()) {
             this.chartOptions.series = []
             if (this.echartsInstance) {
                 this.echartsInstance.clear()
             }
             const start = moment().startOf('month').subtract(36, "month")
-            this.#paramService.history(this.keyPath, start.unix(), 'month').subscribe((_) => this.updateSeries(_))
+            this.#paramService.history(this.keyPath()!, start.unix(), 'month').subscribe((_) => this.updateSeries(_))
         }
     }
 }

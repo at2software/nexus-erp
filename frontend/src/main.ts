@@ -1,12 +1,12 @@
-import { ApplicationConfig, enableProdMode, ErrorHandler, inject, LOCALE_ID, provideAppInitializer } from '@angular/core';
+import { ApplicationConfig, enableProdMode, ErrorHandler, inject, LOCALE_ID, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
 import { environment } from './environments/environment';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { AppComponent } from '@app/app/app.component';
 import { APP_BASE_HREF, PlatformLocation, registerLocaleData } from '@angular/common';
-import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptors, withInterceptorsFromDi } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { ConfirmationService } from './app/_modals/modal-confirm/confirmation.service';
-import { NexusHttpInterceptor } from '@app/http.interceptor';
+import { nexusHttpInterceptor } from '@app/http.interceptor';
 import { NxService } from '@app/nx/nx.service';
 import { RouteChangeListenerService } from '@app/routeChangeListener.service';
 import { GlobalService } from '@models/global.service';
@@ -52,11 +52,10 @@ AuthenticationService.loadSysInfo().then(async sysinfo => {
 
                 provideHttpClient(
                     ...keycloakHttpOptions,
-                    withInterceptorsFromDi()
+                    withInterceptors([nexusHttpInterceptor])
                 ),
                 { provide: LOCALE_CONFIG, useValue: { format: 'DD.MM.YYYY' } },
                 { provide: ErrorHandler, useClass: ChunkErrorHandler },
-                { provide: HTTP_INTERCEPTORS, useClass: NexusHttpInterceptor, multi: true },
                 { provide: APP_BASE_HREF, useFactory: (s: PlatformLocation) => s.getBaseHrefFromDOM(), deps: [PlatformLocation] },
                 { provide: LOCALE_ID, deps: [GlobalService], useFactory: (g: GlobalService) => g.locale },
                 provideEchartsCore({ echarts: () => import('echarts') as any }),
@@ -74,7 +73,7 @@ AuthenticationService.loadSysInfo().then(async sysinfo => {
             enableProdMode();
         }
 
-        bootstrapApplication(AppComponent, appConfig).then(() => {
+        bootstrapApplication(AppComponent, {...appConfig, providers: [provideZoneChangeDetection(), ...appConfig.providers]}).then(() => {
             const splash = document.getElementById('splash-screen');
             if (splash) {
                 splash.classList.add('fade-out');

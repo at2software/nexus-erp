@@ -1,9 +1,8 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { WidgetService } from 'src/models/widget.service';
-import { BaseWidgetComponent } from '../base.widget.component';
+import { BaseWidgetComponent, WidgetOptions } from '../base.widget.component';
 import { Invoice } from 'src/models/invoice/invoice.model';
 import moment from 'moment';
-import { OptionType } from '../widget-options/widget-options.component';
 import { GlobalService } from '@models/global.service';
 import { WidgetsModule } from '../widgets.module';
 import { PermissionsDirective } from '@directives/permissions.directive';
@@ -18,18 +17,15 @@ import { PermissionsDirective } from '@directives/permissions.directive';
 export class WidgetUnpaidInvoicesComponent extends BaseWidgetComponent implements OnInit {
 
     defaultOptions = () => ({
-        'max-items': { type: OptionType.Number, value: 999, i18n: $localize`:@@i18n.common.maxItems:max items` },
-        'chart-only': { type: OptionType.Boolean, value: false, i18n: $localize`:@@i18n.common.chartOnly:chart only` }
+        ...WidgetOptions.maxItems,
+        ...WidgetOptions.chartOnly,
     })
 
     data:Invoice[]
     chartData: any = undefined
-    #widgetService = inject(WidgetService)
     global = inject(GlobalService)
+    #widgetService = inject(WidgetService)
 
-    ngOnInit() {
-        this.reload()
-    }
     reload(): void {
         this.#widgetService.indexCashflow('INVOICES', { ...this.getOptionsURI(), withChart: '1' }, Invoice).subscribe((response: any) => {
             const _ = response.objects || []

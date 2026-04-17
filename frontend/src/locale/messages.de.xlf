@@ -310,6 +310,18 @@
         <target>Remarketing</target>
       </segment>
     </unit>
+    <unit id="i18n.common.forecast">
+      <segment>
+        <source>forecast</source>
+        <target>Prognose</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.marketingActivities">
+      <segment>
+        <source>marketing activities</source>
+        <target>Marketing-Aktivitäten</target>
+      </segment>
+    </unit>
     <unit id="i18n.common.dueAt">
       <segment>
         <source>due at</source>
@@ -3134,6 +3146,42 @@
         <target>Assets werden geladen</target>
       </segment>
     </unit>
+    <unit id="i18n.marketing.addToInitiative">
+      <segment>
+        <source>add to initiative</source>
+        <target>Zur Initiative hinzufügen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.selectInitiative">
+      <segment>
+        <source>select initiative</source>
+        <target>Initiative auswählen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.noActiveInitiatives">
+      <segment>
+        <source>no active initiatives available</source>
+        <target>Keine aktiven Initiativen verfügbar</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.noContacts">
+      <segment>
+        <source>no contacts available</source>
+        <target>Keine Kontakte verfügbar</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.noInitiativesForCompany">
+      <segment>
+        <source>no open initiative activities</source>
+        <target>Keine offenen Initiativaktivitäten</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.prospectActivity">
+      <segment>
+        <source>prospect activity</source>
+        <target>Interessenten-Aktivität</target>
+      </segment>
+    </unit>
     <unit id="i18n.marketing.category_description">
       <segment>
         <source>description</source>
@@ -3759,6 +3807,54 @@
       <segment>
         <source>on hold</source>
         <target>zurückgestellt</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.open_linkedin">
+      <segment>
+        <source>Open LinkedIn</source>
+        <target>LinkedIn öffnen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.mark_status">
+      <segment>
+        <source>Mark...</source>
+        <target>Markieren...</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.mark_new">
+      <segment>
+        <source>Mark New</source>
+        <target>Als "Neu" markieren</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.mark_engaged">
+      <segment>
+        <source>Mark Engaged</source>
+        <target>Als "Aktiviert" markieren</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.mark_converted">
+      <segment>
+        <source>Mark Converted</source>
+        <target>Als "Konvertiert" markieren</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.mark_unresponsive">
+      <segment>
+        <source>Mark Unresponsive</source>
+        <target>Als "Nicht reagierend" markieren</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.mark_disqualified">
+      <segment>
+        <source>Mark Disqualified</source>
+        <target>Als "Disqualifiziert" markieren</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.mark_on_hold">
+      <segment>
+        <source>Mark On Hold</source>
+        <target>Als "Zurückgestellt" markieren</target>
       </segment>
     </unit>
     <unit id="i18n.common.remarketing_intervals">
@@ -6428,6 +6524,12 @@
         <target>E-Mail-Text</target>
       </segment>
     </unit>
+    <unit id="i18n.invoice.emailTextSepa">
+      <segment>
+        <source>email text (SEPA debit)</source>
+        <target>E-Mail-Text (SEPA-Lastschrift)</target>
+      </segment>
+    </unit>
     <unit id="i18n.invoice.datev">
       <segment>
         <source>DATEV</source>
@@ -6660,6 +6762,24 @@
       <segment>
         <source>email address for framework update notifications</source>
         <target>E-Mail-Adresse für Framework-Update-Benachrichtigungen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.emailThresholds">
+      <segment>
+        <source>email thresholds</source>
+        <target>E-Mail-Schwellenwerte</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.emailThresholdsDesc">
+      <segment>
+        <source>Send an email to the project manager when hours invested divided by estimated work exceeds a threshold. Notifications reset automatically if the ratio drops below the threshold again.</source>
+        <target>Sendet eine E-Mail an den Projektmanager, wenn das Verhältnis von investierten Stunden zu geschätztem Aufwand einen Schwellenwert überschreitet. Benachrichtigungen werden automatisch zurückgesetzt, wenn das Verhältnis wieder unter den Schwellenwert fällt.</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.noThresholds">
+      <segment>
+        <source>no thresholds configured</source>
+        <target>Keine Schwellenwerte konfiguriert</target>
       </segment>
     </unit>
     <unit id="i18n.project.quoteText">

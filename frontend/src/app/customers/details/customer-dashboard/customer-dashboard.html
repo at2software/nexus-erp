@@ -34,8 +34,10 @@
             <div class="card-header">
               <span i18n="@@i18n.common.favorites">favorites</span>
             </div>
-            <list-group-item-contact *nxFor="let _ of quickContacts" [contact]="_" [role]="_.role" [showQuickContact]="true" routerLink="{{_.id}}">
+            @for (_ of quickContacts; track _.id) {
+            <list-group-item-contact [nx]="_" [tables]="quickContacts" [contact]="_" [role]="_.role" [showQuickContact]="true" routerLink="{{_.id}}">
             </list-group-item-contact>
+            }
           }
           <div class="card-body">
             <ng-container roles="financial">
@@ -140,22 +142,45 @@
           <div class="row">
             <div class="col-lg-4">
               <div class="card chart-card mb-3">
-                <div class="card-header">
+                <div class="card-header hstack gap-2">
                   <span i18n="@@i18n.common.revenue">revenue</span>
-                  <span class="badge bg-lighter ms-2 py-1 px-1" ngbTooltip="accumulated revenue of the last 12 months" i18n="@@i18n.common.12m" i18n-ngbTooltip="@@i18n.invoice.revenue12m">12m</span>
+                  <span class="badge bg-lighter py-1 px-1" ngbTooltip="accumulated revenue of the last 12 months" i18n="@@i18n.common.12m" i18n-ngbTooltip="@@i18n.invoice.revenue12m">12m</span>
+                  @if (forecastRevenue) {
+                    <i class="ms-auto"
+                       [class.text-success]="forecastUp"
+                       [class.text-danger]="!forecastUp"
+                       [ngbTooltip]="forecastTip" placement="auto">
+                      {{forecastUp ? 'trending_up' : 'trending_down'}}
+                    </i>
+                    <ng-template #forecastTip>
+                      <div class="text-start small">
+                        <div class="hstack gap-3">
+                          <span class="text-muted" i18n="@@i18n.common.current">current</span>
+                          <span class="ms-auto font-monospace">{{currentRevenue | money}}</span>
+                        </div>
+                        <div class="hstack gap-3">
+                          <span class="text-muted" i18n="@@i18n.common.forecast">forecast</span>
+                          <span class="ms-auto font-monospace">{{forecastRevenue | money}}</span>
+                        </div>
+                        <div class="hstack gap-3 mt-1" style="border-top: 1px solid rgba(255,255,255,0.15); padding-top: 4px;">
+                          <span class="text-muted">Δ</span>
+                          <span class="ms-auto font-monospace" [class.text-success]="forecastUp" [class.text-danger]="!forecastUp">
+                            {{forecastChange | percent:'1.0-0'}}
+                          </span>
+                        </div>
+                      </div>
+                    </ng-template>
+                  }
                 </div>
-                <chart-card-range keyPath="{{parent.current.getParamPath('INVOICE_REVENUE_12M,INVOICE_DEG_12M')}}" [color]="['white','primary']"></chart-card-range>
+                <chart-card-range keyPath="{{parent.current.getParamPath('INVOICE_REVENUE_12M')}}" [color]="['primary']"></chart-card-range>
               </div>
             </div>
             <div class="col-lg-4">
               <div class="card chart-card mb-3">
                 <div class="card-header hstack gap-2">
                     <span i18n="@@i18n.widget-prediction-bias" class="flex-fill text-truncate">prediction bias</span>
-                    @if (parent.current.getParam('STATS_PREDICTION_BIAS')) {
-                    <div class="chart-title">{{parent.current.getParam('STATS_PREDICTION_BIAS') | percent:"1.0-0"}}</div>
-                    }
-                </div>                
-                <chart-card-range keyPath="{{parent.current.getParamPath('STATS_PREDICTION_BIAS')}}" [color]="['white']" suffix="%"></chart-card-range>
+                </div>
+                <customer-prediction-bias-chart [company]="parent.current"></customer-prediction-bias-chart>
               </div>
             </div>
             <div class="col-lg-4">
@@ -180,6 +205,7 @@
                 <invoices-table [invoices]="invoices"></invoices-table>
               </div>
             }
+            <customer-initiatives [company]="parent.current"></customer-initiatives>
           </div>
           <div class="col-4">
             <project-team-planning [entity]="parent.current"></project-team-planning>

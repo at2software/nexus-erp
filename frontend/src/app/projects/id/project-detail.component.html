@@ -6,7 +6,7 @@
                 <project [project]="service.current" [noRouting]="true"></project>
             </div>
             <ul class="dropdown-menu" ngbDropdownMenu>
-                @for (state of global.getAllowedSucceedingProjectStatesFor(service.current); track state.id) {
+                @for (state of global.getAllowedSucceedingProjectStatesFor(service.current); track ('state:' + state.id)) {
                 <li class="cursor-pointer">
                     <a class="dropdown-item hstack gap-2" (click)="setState($event, state.id)" (keyup.enter)="setState($event, state.id)" tabindex="0">
                         <span i18n="@@i18n.project.changeTo">change to</span> <span class="font-monospace"
@@ -31,7 +31,7 @@
                 <i>apps</i>
             </a>
             <ul class="dropdown-menu" ngbDropdownMenu (mouseleave)="dropdown.close()">
-                @for (p of service.current.companys_active_projects; track p.id) {
+                @for (p of service.current.companys_active_projects; track ('activeProject:' + p.id)) {
                 <li>
                     <a class="dropdown-item hstack gap-2" [routerLink]="['/projects', p.id]">
                         <project [project]="p" [noRouting]="true"></project>

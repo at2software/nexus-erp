@@ -5,7 +5,9 @@
     @if (stickies && stickies.length) {
       <div class="header" i18n="@@i18n.common.sticky">sticky</div>
     }
-    <tab-comment [comment]="comment" *nxFor="let comment of stickies"></tab-comment>
+    @for (comment of stickies; track ('sticky:' + (comment.id || comment.track_id))) {
+    <tab-comment [comment]="comment" [nx]="comment" [tables]="stickies"></tab-comment>
+    }
 
     <div class="header d-flex align-items-center">
       <span class="flex-fill" i18n="@@i18n.common.comments">comments</span>
@@ -46,7 +48,9 @@
     </div>
     @for (group of groupedComments; track group.date) {
       <div class="day-header text-muted small px-3 py-1">{{group.header}}</div>
-      <tab-comment [comment]="comment" *nxFor="let comment of group.comments"></tab-comment>
+      @for (comment of group.comments; track ('comment:' + (comment.id || comment.track_id))) {
+      <tab-comment [comment]="comment" [nx]="comment" [tables]="group.comments"></tab-comment>
+      }
     }
   </scrollbar>
   <div class="input-container p-2 border-top d-flex gap-2 align-items-start">

@@ -10,7 +10,7 @@ class Comment extends BaseModel {
 
     protected $fillable = ['path', 'text', 'user_id', 'parent_id', 'parent_type', 'is_mini', 'type'];
     protected $touches  = ['user', 'parent'];
-    protected $access   = ['admin' => '*', 'project_manager'=>'cru', 'user'=>'cru'];
+    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
     public function getIconAttribute() {
         return 'users/'.$this->user_id.'/icon';

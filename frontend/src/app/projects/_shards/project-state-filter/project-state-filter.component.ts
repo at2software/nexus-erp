@@ -1,5 +1,5 @@
 
-import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
+import { Component, OnInit, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ProjectAvatar } from '@models/project/project-state.model';
 import { ProjectComponent } from '@shards/project/project.component';
@@ -18,10 +18,10 @@ type TFilter = Record<string, Project>;
 })
 export class ProjectStateFilterComponent implements OnInit {
 
-    @Input() cookieId: string = 'PROJECT_STATE_FILTER'
-    @Input() defaultEnableAll:boolean = false
+    cookieId       = input<string>('PROJECT_STATE_FILTER')
+    defaultEnableAll = input<boolean>(false)
 
-    @Output() filterChanged = new EventEmitter<Project>()
+    filterChanged = output<Project>()
 
     filters: TFilter = {
         prepared   : ProjectAvatar.Prepared({ var: { enabled: true }}),
@@ -50,78 +50,70 @@ export class ProjectStateFilterComponent implements OnInit {
         this.filters.budgetBased,
     ]
 
-    #applyCookie(array: Project[], data: number[]) {
-        for (let i = 0; i < data.length; i++) {
-            if (i in array) {
-                array[i].var.enabled = data[i]
-            }
-        }
-    }
     ngOnInit() {
-        const cookieData = getCookie(this.cookieId)
+        const cookieData = getCookie(this.cookieId())
         if (cookieData) {
-            const parsed: any = JSON.parse(cookieData)
+            const parsed = JSON.parse(cookieData)
             if (parsed) {
                 const [states, internal, budgeting] = parsed
                 this.#applyCookie(this.#filterIconsInternal, internal)
                 this.#applyCookie(this.#filterIconsBudgeting, budgeting)
                 this.#applyCookie(this.stateFilters, states)
             } else {
-                this.enableAllIfRequired()
+                this.#enableAllIfRequired()
             }
         } else {
-            this.enableAllIfRequired()
+            this.#enableAllIfRequired()
+        }
+    }
+
+    #applyCookie(array: Project[], data: number[]) {
+        for (let i = 0; i < data.length; i++) {
+            if (i in array) array[i].var.enabled = data[i]
         }
     }
 
     getFilters(): Dictionary {
-        const data = {
-            states       : Object.values(this.stateFilters).filter(_ => _.var.enabled).map(_ => _.var.filter),
-            is_internal  : Object.values(this.#filterIconsInternal).filter(_ => _.var.enabled).map(_ => _.var.filter),
-            is_time_based: Object.values(this.#filterIconsBudgeting).filter(_ => _.var.enabled).map(_ => _.var.filter),
-        }
-        return filtered(data)
+        return filtered({
+            states       : this.stateFilters.filter(_ => _.var.enabled).map(_ => _.var.filter),
+            is_internal  : this.#filterIconsInternal.filter(_ => _.var.enabled).map(_ => _.var.filter),
+            is_time_based: this.#filterIconsBudgeting.filter(_ => _.var.enabled).map(_ => _.var.filter),
+        })
     }
 
-    #filterWillHide (project:Project, filterProject:Project, checkKeys:string[]) {
+    #filterWillHide(project: Project, filterProject: Project, checkKeys: string[]): boolean {
         if (filterProject.var.enabled) return false
-        const checkAppliesToProject = checkKeys.map(key => (project as any)[key] === (filterProject as any)[key]).reduce((a, b) => a && b, true)
-        return checkAppliesToProject
+        return checkKeys.every(key => (project as any)[key] === (filterProject as any)[key])
     }
 
-    isHidden(p:Project):boolean {
-        // show project, if there is a subproject that is still shown, even if the filters do not match
-        if (p.var.subprojects.length) {
-            const allChildrenHidden = p.var.subprojects.map((_:Project) => this.isHidden(_)).reduce((a:boolean, b:boolean) => a && b, true)            
-            if (!allChildrenHidden) return false
-        }
-        // check filters
-        if (this.#filterWillHide(p, this.filters.prepared, ['state'])) return true
-        if (this.#filterWillHide(p, this.filters.inProgress, ['state'])) return true
-        if (this.#filterWillHide(p, this.filters.finished, ['state', 'finished_state'])) return true
-        if (this.#filterWillHide(p, this.filters.failed, ['state', 'finished_state'])) return true
-        if (this.#filterWillHide(p, this.filters.alternative, ['state', 'finished_state'])) return true
-        if (this.#filterWillHide(p, this.filters.budgetBased, ['is_time_based'])) return true
-        if (this.#filterWillHide(p, this.filters.timeBased, ['is_time_based'])) return true
-        if (this.#filterWillHide(p, this.filters.internal, ['is_internal'])) return true
-        if (this.#filterWillHide(p, this.filters.external, ['is_internal'])) return true
-        return false
+    isHidden(p: Project): boolean {
+        if (p.var.subprojects.length && p.var.subprojects.some((_: Project) => !this.isHidden(_))) return false
+        return (
+            this.#filterWillHide(p, this.filters.prepared,    ['state'])                   ||
+            this.#filterWillHide(p, this.filters.inProgress,  ['state'])                   ||
+            this.#filterWillHide(p, this.filters.finished,    ['state', 'finished_state']) ||
+            this.#filterWillHide(p, this.filters.failed,      ['state', 'finished_state']) ||
+            this.#filterWillHide(p, this.filters.alternative, ['state', 'finished_state']) ||
+            this.#filterWillHide(p, this.filters.budgetBased, ['is_time_based'])           ||
+            this.#filterWillHide(p, this.filters.timeBased,   ['is_time_based'])           ||
+            this.#filterWillHide(p, this.filters.internal,    ['is_internal'])             ||
+            this.#filterWillHide(p, this.filters.external,    ['is_internal'])
+        )
     }
 
     onValueChanged(project: Project) {
-        const data = [
-            Object.values(this.stateFilters).map(_ => _.var.enabled),
-            Object.values(this.#filterIconsBudgeting).map(_ => _.var.enabled),
-            Object.values(this.#filterIconsInternal).map(_ => _.var.enabled),
-        ]
-        setCookie(this.cookieId, JSON.stringify(data), 7)
-        this.filterChanged.next(project)
+        setCookie(this.cookieId(), JSON.stringify([
+            this.stateFilters.map(_ => _.var.enabled),
+            this.#filterIconsBudgeting.map(_ => _.var.enabled),
+            this.#filterIconsInternal.map(_ => _.var.enabled),
+        ]), 7)
+        this.filterChanged.emit(project)
     }
-    enableAllIfRequired() {
-        if (this.defaultEnableAll) {
-            this.stateFilters.forEach(_ => _.var.enabled = true)
-            this.#filterIconsBudgeting.forEach(_ => _.var.enabled = true)
-            this.#filterIconsInternal.forEach(_ => _.var.enabled = true)
+
+    #enableAllIfRequired() {
+        if (this.defaultEnableAll()) {
+            [...this.stateFilters, ...this.#filterIconsBudgeting, ...this.#filterIconsInternal]
+                .forEach(_ => _.var.enabled = true)
         }
     }
 }

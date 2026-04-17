@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, input, model } from '@angular/core';
 
 
 @Component({
@@ -9,15 +9,10 @@ import { Component, Input } from '@angular/core';
     styleUrl: './spinner.component.scss'
 })
 export class SpinnerComponent {
-    @Input() size: number = 48
-    @Input() centered: boolean = true
-    visible: boolean = true
+    size = input<number>(48)
+    centered = input<boolean>(true)
+    visible = model<boolean>(true)
 
-    show() {
-        this.visible = true
-    }
-
-    hide() {
-        this.visible = false
-    }
+    show() { this.visible.set(true) }
+    hide() { this.visible.set(false) }
 }

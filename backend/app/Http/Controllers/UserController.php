@@ -8,23 +8,26 @@ use App\Enums\InvoiceItemType;
 use App\Enums\InvoiceVatHandling;
 use App\Helpers\ModelRelationship;
 use App\Http\Middleware\Auth;
+use App\Models\Assignment;
 use App\Models\Company;
 use App\Models\LeadSource;
+use App\Models\Milestone;
 use App\Models\Param;
+use App\Models\Project;
 use App\Models\ProjectState;
+use App\Models\Task;
 use App\Models\User;
 use App\Models\UserEmployment;
 use App\Models\UserPaidTime;
 use App\Models\Vault;
+use App\Models\Vcard;
+use App\Services\DatabaseSchemaService;
+use App\Services\UserTimelineService;
 use App\Traits\ControllerHasPermissionsTrait;
 use App\Traits\HasParams;
-use Carbon\CarbonPeriod;
 use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class UserController extends Controller {
     const ERROR_404   = 'email not found or password incorrect';
@@ -35,7 +38,6 @@ class UserController extends Controller {
     use ControllerHasPermissionsTrait;
 
     public function index(Request $request) {
-
         return User::get()
             ->map(function ($user) {
                 $user['hr_stress'] = round(100 * $user->foci()->where('created_at', '>', now()->subWeeks(2))->sum('duration') / 80);
@@ -65,9 +67,9 @@ class UserController extends Controller {
             $familyName = $parts[1] ?? '';
         }
 
-        $fullName = trim($firstName . ' ' . $familyName) ?: $request->name;
+        $fullName = trim($firstName.' '.$familyName) ?: $request->name;
 
-        $vcard = new \App\Models\Vcard();
+        $vcard = new Vcard;
         $vcard->setProperty('FN', $fullName);
         $vcard->setProperty('N', [$familyName, $firstName, '', '', ''], ['charset' => 'utf-8']);
         $vcard->setProperty('EMAIL', $request->email, ['type' => 'work']);
@@ -81,12 +83,12 @@ class UserController extends Controller {
         ]);
 
         if ($request->has('employment')) {
-            $emp        = $request->input('employment');
-            $type       = $emp['type'] ?? 'Festanstellung';
-            $hpw        = (float) ($emp['hpw'] ?? 40);
-            $hpd        = $hpw / 5;
-            $start      = $emp['started_at'] ?? now()->format('Y-m-d');
-            $timeBased  = ['Werkstudent'];
+            $emp       = $request->input('employment');
+            $type      = $emp['type'] ?? 'Festanstellung';
+            $hpw       = (float)($emp['hpw'] ?? 40);
+            $hpd       = $hpw / 5;
+            $start     = $emp['started_at'] ?? now()->format('Y-m-d');
+            $timeBased = ['Werkstudent'];
 
             UserEmployment::create([
                 'user_id'       => $user->id,
@@ -103,7 +105,6 @@ class UserController extends Controller {
                 'is_active'     => true,
             ]);
         }
-
         return $user;
     }
     public function indexFoci(Request $request, User $_) {
@@ -115,7 +116,7 @@ class UserController extends Controller {
         // Also include projects without milestone coverage (PM-specific)
         $meId = Param::get('ME_ID')->value;
 
-        $projectsNoCoverage = \App\Models\Project::whereRunning()
+        $projectsNoCoverage = Project::whereRunning()
             ->where('project_manager_id', $_->id)
             ->where('is_time_based', false)
             ->where('company_id', '!=', $meId)
@@ -134,7 +135,6 @@ class UserController extends Controller {
                     }
                     return $milestone->invoiceItems->sum(fn ($item) => $item->assumedWorkload());
                 });
-
                 return $milestoneHours <= 0;
             })
             ->map(function ($project) {
@@ -149,7 +149,6 @@ class UserController extends Controller {
                 ];
             })
             ->values();
-
         return [
             'milestones'           => $result,
             'projects_no_coverage' => $projectsNoCoverage,
@@ -157,7 +156,7 @@ class UserController extends Controller {
     }
     public function indexMilestones(Request $request, User $_, bool $pm = false) {
         if ($pm) {
-            $milestonesGrouped = \App\Models\Milestone::whereHas('project', fn ($query) => $query->where('project_manager_id', $_->id)->whereRunning());
+            $milestonesGrouped = Milestone::whereHas('project', fn ($query) => $query->where('project_manager_id', $_->id)->whereRunning());
         } else {
             $milestonesGrouped = $_->milestones()->whereHas('project', fn ($q) => $q->whereRunning());
         }
@@ -186,27 +185,26 @@ class UserController extends Controller {
         $milestoneIds = $milestonesGrouped->flatten(1)->pluck('id');
 
         // Optimize task queries with joins instead of whereExists
-        $projectTasksGrouped = \App\Models\Task::where('parent_type', 'App\\Models\\Project')
+        $projectTasksGrouped = Task::where('parent_type', 'App\\Models\\Project')
             ->whereIn('parent_id', $projectIds)
             ->with('assignee.assignee')
             ->get()
             ->groupBy('parent_id');
 
-        $milestoneTasksGrouped = \App\Models\Task::where('parent_type', 'App\\Models\\Milestone')
+        $milestoneTasksGrouped = Task::where('parent_type', 'App\\Models\\Milestone')
             ->whereIn('parent_id', $milestoneIds)
             ->with('assignee.assignee')
             ->get()
             ->groupBy('parent_id');
-
         return $milestonesGrouped->map(function ($milestones, $projectId) use ($projectTasksGrouped, $milestoneTasksGrouped) {
-            $project      = $milestones->first()->project;
+            $project = $milestones->first()->project;
+            $project->makeHidden(['params', 'assignees']);
             $projectTasks = $projectTasksGrouped->get($projectId, collect());
 
             $milestonesWithTasks = $milestones->map(fn ($milestone) => [
-                'milestone' => $milestone,
+                'milestone' => $milestone->makeHidden('project'),
                 'tasks'     => $milestoneTasksGrouped->get($milestone->id, collect()),
             ]);
-
             return [
                 'project'       => $project,
                 'project_tasks' => $projectTasks,
@@ -316,101 +314,32 @@ class UserController extends Controller {
         // Get roles if user has permission
         $roles = [];
         if ($user->hasRole('admin')) {
-            $roleController = new \App\Http\Controllers\RoleController;
+            $roleController = new RoleController;
             $rolesData      = $roleController->index();
             $roles          = $rolesData['roles'] ?? [];
         }
 
         $object = collect([
-            'version'                 => 1,
-            'user'                    => $user,
-            'dashboards'              => $user->getDashboards(),
-            'encryptions'             => $user->encryptions,
-            'eu_countries'            => $this->getCachedEuCountries(),
-            'lead_sources'            => $leadSources,
-            'team'                    => $team,
-            'settings'                => Param::index(),
-            'tables'                  => $this->getCachedTables(),
-            'relations'               => ModelRelationship::RELATIONSHIPS,
-            'accessors'               => ModelRelationship::ACCESSORS,
-            'project_states'          => $projectStates,
-            'plugins'                 => $plugins,
-            'enums'                   => $this->getCachedEnums(),
-            'roles'                   => $roles,
+            'version'        => 1,
+            'user'           => $user,
+            'dashboards'     => $user->getDashboards(),
+            'encryptions'    => $user->encryptions,
+            'eu_countries'   => $this->getCachedEuCountries(),
+            'lead_sources'   => $leadSources,
+            'team'           => $team,
+            'settings'       => Param::index(),
+            'tables'         => $this->getCachedTables(),
+            'relations'      => ModelRelationship::RELATIONSHIPS,
+            'accessors'      => ModelRelationship::ACCESSORS,
+            'project_states' => $projectStates,
+            'plugins'        => $plugins,
+            'enums'          => $this->getCachedEnums(),
+            'roles'          => $roles,
         ]);
         return $object;
     }
     public function getTables() {
-        $database       = config('database.connections.mysql.database');
-        $excludedTables = ['sentinel_triggers', 'sentinel_users', 'failed_jobs', 'role_has_permissions', 'migrations', 'milestone_milestones', 'float_params', 'string_params', 'text_params', 'password_resets', 'translations', 'model_has_permissions', 'model_has_roles', 'permissions', 'roles', 'role_has_permission'];
-
-        // Build excluded tables clause with proper parameter binding
-        $excludePlaceholders = implode(',', array_fill(0, count($excludedTables), '?'));
-
-        // Get all tables and their columns in a single query using INFORMATION_SCHEMA
-        $tablesWithColumns = DB::select("
-            SELECT
-                t.TABLE_NAME as table_name,
-                c.COLUMN_NAME as Field,
-                c.DATA_TYPE as Type,
-                c.IS_NULLABLE as `Null`,
-                c.COLUMN_KEY as `Key`,
-                c.COLUMN_DEFAULT as `Default`,
-                c.EXTRA as Extra
-            FROM INFORMATION_SCHEMA.TABLES t
-            LEFT JOIN INFORMATION_SCHEMA.COLUMNS c ON t.TABLE_NAME = c.TABLE_NAME AND t.TABLE_SCHEMA = c.TABLE_SCHEMA
-            WHERE t.TABLE_SCHEMA = ?
-            AND t.TABLE_TYPE = 'BASE TABLE'
-            AND t.TABLE_NAME NOT IN ({$excludePlaceholders})
-            ORDER BY t.TABLE_NAME, c.ORDINAL_POSITION
-        ", array_merge([$database], $excludedTables));
-
-        // Group columns by table
-        $tables       = [];
-        $currentTable = null;
-
-        foreach ($tablesWithColumns as $row) {
-            if ($currentTable !== $row->table_name) {
-                if ($currentTable !== null) {
-                    // Add mutator columns for previous table if model exists
-                    $this->addMutatorColumns($tables[count($tables) - 1]);
-                }
-
-                $tables[] = [
-                    'name'    => $row->table_name,
-                    'columns' => [],
-                ];
-                $currentTable = $row->table_name;
-            }
-
-            if ($row->Field) { // Only add if column data exists
-                $tables[count($tables) - 1]['columns'][] = [
-                    'Field'   => $row->Field,
-                    'Type'    => $row->Type,
-                    'Null'    => $row->Null,
-                    'Key'     => $row->Key,
-                    'Default' => $row->Default,
-                    'Extra'   => $row->Extra,
-                ];
-            }
-        }
-
-        // Handle last table's mutators
-        if (! empty($tables)) {
-            $this->addMutatorColumns($tables[count($tables) - 1]);
-        }
-        return $tables;
-    }
-    private function addMutatorColumns(&$tableNode) {
-        $model = '\\App\\Models\\'.Str::studly(Str::singular($tableNode['name']));
-        if (class_exists($model)) {
-            $o = new $model;
-            if (method_exists($o, 'getMutators')) {
-                foreach (@$o->getMutators() as $t) {
-                    $tableNode['columns'][] = ['Field' => $t, 'Type' => 'int'];
-                }
-            }
-        }
+        return (new DatabaseSchemaService)->getTables();
     }
     private function getCachedTables() {
         return $this->getTables();
@@ -496,120 +425,8 @@ class UserController extends Controller {
             'vacation'           => $data->vacation,
         ]);
     }
-    public function generateTimeline(User $user, $plannedSubscriptions = null, $remainingHpw = 40, $withoutSubscriptions = false) {
-        $totalDays           = 60;
-        $dailyAvailable      = $remainingHpw / 7;
-        $totalAvailableHours = $dailyAvailable * $totalDays;
-
-        $today         = now()->startOfDay();
-        $endDate       = $today->copy()->addDays($totalDays);
-        $currentOffset = 0;
-
-        // Create map of break days
-        $breakMap = collect();
-
-        $approvedVacations = $user->approvedVacations(now()->subDays(90), now()->addMonths(3))->get();
-        $currentSickNotes  = $user->currentSickNotes(now()->subDays(90), now()->addMonths(3))->get();
-
-        $holidays = app(VacationController::class)->indexHolidays($user->work_zip ?? '87435');
-        foreach ($holidays as $holiday) {
-            $day                             = Carbon::parse($holiday->datum);
-            $breakMap[$day->format('Y-m-d')] = ['holiday', $holiday->name];
-        }
-
-        foreach ($approvedVacations as $vac) {
-            $period = CarbonPeriod::create($vac->started_at, $vac->ended_at);
-            foreach ($period as $date) {
-                $name                             = "$vac->comment [".$vac->started_at->format('Y-m-d').' - '.$vac->ended_at->format('Y-m-d').']';
-                $breakMap[$date->format('Y-m-d')] = ['vacation', $name];
-            }
-        }
-
-        foreach ($currentSickNotes as $sick) {
-            $period = CarbonPeriod::create($sick->started_at, $sick->ended_at);
-            foreach ($period as $date) {
-                $breakMap[$date->format('Y-m-d')] = ['sick', 'sick note'];
-            }
-        }
-
-        $subsQueue = $plannedSubscriptions ? $plannedSubscriptions->map(fn ($s) => ['id' => $s->id, 'class'=>$s->class, 'name'=>$s->name, 'hours' => $s->pivot->hours_planned])->values() : collect();
-
-        // Build timeline per day
-        $timeline   = [];
-        $currentDay = 0;
-
-        while ($today->lt($endDate)) {
-            $dateStr = $today->format('Y-m-d');
-            $isBreak = isset($breakMap[$dateStr]);
-
-            if ($isBreak) {
-                if ($withoutSubscriptions) {
-                    // For leaves-only mode, use calendar-based positioning
-                    $timeline[] = [
-                        'type'  => $breakMap[$dateStr][0],
-                        'id'    => 0,
-                        'left'  => round($currentDay / $totalDays, 4),
-                        'width' => round(1 / $totalDays, 4),
-                        'days'  => 1,
-                        'name'  => $breakMap[$dateStr][1],
-                    ];
-                } else {
-                    // For full timeline mode, use hours-based positioning
-                    $timeline[] = [
-                        'type'  => $breakMap[$dateStr][0],
-                        'id'    => 0,
-                        'left'  => round($currentOffset / $totalAvailableHours, 4),
-                        'width' => round($dailyAvailable / $totalAvailableHours, 4),
-                        'days'  => 1,
-                        'name'  => $breakMap[$dateStr][1],
-                    ];
-                    $currentOffset += $dailyAvailable;
-                }
-            } elseif (! $withoutSubscriptions && $subsQueue->isNotEmpty()) {
-                $current     = $subsQueue->first();
-                $hoursToPlan = min($dailyAvailable, $current['hours']);
-                $timeline[]  = [
-                    'type'  => $current['class'],
-                    'id'    => $current['id'],
-                    'left'  => round($currentOffset / $totalAvailableHours, 4),
-                    'width' => round($hoursToPlan / $totalAvailableHours, 4),
-                    'name'  => $current['name'],
-                    'days'  => 1,
-                ];
-
-                $currentOffset += $hoursToPlan;
-                $current['hours'] -= $hoursToPlan;
-                if ($current['hours'] <= 0) {
-                    $subsQueue->shift();
-                } else {
-                    $subsQueue->put(0, $current);
-                }
-            } elseif (! $withoutSubscriptions) {
-                $currentOffset += $dailyAvailable;
-            }
-
-            $currentDay++;
-            $today->addDay();
-        }
-
-        // merge blocks
-        $grouped = [];
-        $prev    = null;
-        foreach ($timeline as $item) {
-            if ($prev && $item['type'] === $prev['type'] && $item['id'] === $prev['id'] && (abs($prev['left'] + $prev['width'] - $item['left']) < 0.001)) {
-                $prev['width'] += $item['width'];
-                $prev['days']++;
-            } else {
-                if ($prev) {
-                    $grouped[] = $prev;
-                }
-                $prev = $item;
-            }
-        }
-        if ($prev) {
-            $grouped[] = $prev;
-        }
-        return $grouped;
+    public function generateTimeline(User $user, $plannedSubscriptions = null, $remainingHpw = 40, $withoutSubscriptions = false): array {
+        return (new UserTimelineService)->generate($user, $plannedSubscriptions, $remainingHpw, $withoutSubscriptions);
     }
     public function indexProjectLoad(User $_) {
         $user = $_;
@@ -628,12 +445,12 @@ class UserController extends Controller {
             return response('user has no active employment', 404);
         }
 
-        $activeSubscriptions  = collect([...$user->activeProjects()->with('company')->get(), ...$user->assigned_companies()->get()])->unique();
+        $activeSubscriptions = collect([...$user->activeProjects()->with('company')->get(), ...$user->assigned_companies()->get()])->unique();
 
         // Load avg_hpd accessor for each subscription's assignment
         $activeSubscriptions->each(function ($subscription) {
             if ($subscription->pivot && $subscription->pivot->id) {
-                $assignment = \App\Models\Assignment::find($subscription->pivot->id);
+                $assignment = Assignment::find($subscription->pivot->id);
                 if ($assignment) {
                     $subscription->pivot->avg_hpd = $assignment->avg_hpd;
                 }
@@ -661,7 +478,7 @@ class UserController extends Controller {
             'hpw'              => $ae->hpw,
             'remaining_hpw'    => $remainingHpw,
             'subscriptions'    => $activeSubscriptions,
-            'weekly_ids'       => $weeklySubscriptions->map(fn ($_) => ['type'=>$_->class, 'id'=>$_->id])->values(),
+            'weekly_ids'       => $weeklySubscriptions->map(fn ($_) => ['type' => $_->class, 'id' => $_->id])->values(),
             'timeline_planned' => $timeline_planned,
             'timeline_leaves'  => $timeline_leaves,
         ];
@@ -675,7 +492,6 @@ class UserController extends Controller {
         $endDate = $request->has('end')
             ? Carbon::parse($request->get('end'))->endOfDay()
             : now()->addMonths(3)->endOfDay();
-
         return app(CalculateDailyWorkload::class)->execute($_, $startDate, $endDate);
     }
 }

@@ -97,9 +97,9 @@
                     <div class="text-end vstack align-items-end" style="flex: 0 0 15rem; width: 15rem; max-width: 15rem;">
                         <div class="hstack gap-1 fs-4">
                             <div class="text-start flex-fill">
-                                {{metric.target_value ? formatTargetValue(metric) : ''}}
+                                {{metric.target_value ? metric.formatTargetValue() : ''}}
                             </div>
-                            <div class="text-end">{{formatMetricValue(metric)}}</div>
+                            <div class="text-end">{{metric.formatValue()}}</div>
                         </div>
                         @if (metric.activity_stats && metric.activity_stats.total > 0) {
                         <div class="progress mt-1 w-100" style="height: 2px;">

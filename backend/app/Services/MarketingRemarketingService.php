@@ -33,7 +33,6 @@ class MarketingRemarketingService {
     }
     public static function getRemarketingDue() {
         $now = now();
-
         return Company::whereNot('remarketing_interval', Recurrence::None)
             ->where(function ($query) use ($now) {
                 $query->where(function ($q) use ($now) {

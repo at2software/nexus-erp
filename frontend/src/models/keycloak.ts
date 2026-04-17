@@ -85,7 +85,6 @@ export class KeycloakHandler {
         const keycloakCondition = createInterceptorCondition<IncludeBearerTokenCondition>({
             urlPattern: createSafeUrlPattern(keycloakUrl),
         });
-
         return [
             KeycloakService,
             provideKeycloak({

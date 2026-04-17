@@ -8,6 +8,7 @@ import { Company } from 'src/models/company/company.model';
 import { InvoiceItem } from 'src/models/invoice/invoice-item.model';
 import { ProductDetailGuard } from '../product-details.guard';
 
+import { NgClass } from '@angular/common';
 import { AutosaveDirective } from '@directives/autosave.directive';
 import { RteComponent } from '@shards/rte/rte.component';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
@@ -15,13 +16,14 @@ import { NexusModule } from '@app/nx/nexus.module';
 import { AffixInputDirective } from '@directives/affix-input.directive';
 import { FormsModule } from '@angular/forms';
 import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
+import { UlCompactComponent } from "@shards/ul-compact/ul-compact.component";
 
 @Component({
     selector: 'app-product-detail-overview',
     templateUrl: './product-detail-overview.component.html',
     styleUrls: ['./product-detail-overview.component.scss'],
     standalone: true,
-    imports: [AutosaveDirective, FormsModule, RteComponent, AvatarComponent, NexusModule, AffixInputDirective, NgbDropdownModule, NgbTooltipModule, MoneyShortPipe, LoadingPipe]
+    imports: [NgClass, AutosaveDirective, FormsModule, RteComponent, AvatarComponent, NexusModule, AffixInputDirective, NgbDropdownModule, NgbTooltipModule, MoneyShortPipe, LoadingPipe, UlCompactComponent]
 })
 export class ProductDetailOverviewComponent implements OnInit {
 
@@ -40,6 +42,7 @@ export class ProductDetailOverviewComponent implements OnInit {
             switchMap(product => {
                 this.totalRevenue = null
                 this.customers = []
+                this.item = product.getInvoiceItem()?.getClone()
                 return this.#productService.indexCustomers(product)
             })
         ).subscribe(data => {
@@ -50,6 +53,7 @@ export class ProductDetailOverviewComponent implements OnInit {
     }
 
     setTimeBased = (_: number) => this.parent.current.update({ 'time_based': _ }).subscribe()
+    setItemType = (type: number) => { this.item!.type = type; this.item!.update({ type }).subscribe() }
 
     getCurrentPriceSourceText = (): string => {
         switch (this.parent.current.time_based) {

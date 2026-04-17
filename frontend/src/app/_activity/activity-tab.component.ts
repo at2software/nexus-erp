@@ -1,4 +1,4 @@
-import { Component, ContentChild, ElementRef, inject, Input, model, OnDestroy, Type, OnInit } from '@angular/core';
+import { Component, contentChild, ElementRef, inject, model, OnDestroy, Type, OnInit, input } from '@angular/core';
 import { ActivityService } from './activity.service';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 
@@ -10,12 +10,13 @@ import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 })
 export class ActivityTabComponent implements OnDestroy, OnInit {
 
-    @Input() icon: string
-    @Input() nicon: string
+    icon = input<string>()
+    nicon = input<string>()
     hidden = model<boolean>(false)
-    @Input() badge: string|undefined = undefined
-    @Input() componentType: Type<any>
-    @ContentChild(ScrollbarComponent) scroll:ScrollbarComponent
+    badge = model<string|undefined>(undefined)
+    componentType = input<Type<any>>()
+
+    scroll = contentChild(ScrollbarComponent);
 
     index: number = 0
     id: number = 0
@@ -36,8 +37,8 @@ export class ActivityTabComponent implements OnDestroy, OnInit {
         this.el.nativeElement.setAttribute('aria-labelledby', 'activity-tab-' + id)
         this.el.nativeElement.setAttribute('role', 'tabpanel')
     }
-    onFocus: () => void = () => {}
-    onBlur:  () => void = () => {}
+    onFocus: () => void = () => { /* noop */ }
+    onBlur:  () => void = () => { /* noop */ }
 
     show = () => this.hidden.set(false)
     hide = () => this.hidden.set(true)

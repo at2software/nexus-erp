@@ -33,7 +33,6 @@ class ProductGroupController extends Controller {
             ->groupBy('companies.id')
             ->orderByDesc('revenue')
             ->get();
-
         return [
             'customers'       => $all->take(20)->values(),
             'total_revenue'   => $all->sum('revenue'),

@@ -30,7 +30,7 @@ export class MarketingConvertProspectModalComponent extends ModalBaseComponent<{
     init(...args: any): void {
         this.prospect = args[0].prospect
         // Pre-fill search with company name from prospect's vcard
-        const companyFromVcard = this.prospect.card?.get('ORG')?.map(_ => _.vals.join(' ')).join(', ')
+        const companyFromVcard = this.prospect.card.get('ORG')?.map(_ => _.vals.join(' ')).join(', ')
         if (companyFromVcard) {
             this.searchQuery = companyFromVcard
             this.#searchCompanies()

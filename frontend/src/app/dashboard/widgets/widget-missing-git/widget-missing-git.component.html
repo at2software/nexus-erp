@@ -9,7 +9,8 @@
   <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
 
   <ul-compact>
-    <li class="list-group-item d-flex text-nowrap compact" *nxFor="let _ of data; let i = index">
+    @for (_ of data; track _.id) {
+    <li class="list-group-item d-flex text-nowrap compact" [nx]="_" [tables]="data">
       <div>
         <avatar [object]="_"></avatar>
       </div>
@@ -19,5 +20,6 @@
         </div>
       </div>
     </li>
+    }
   </ul-compact>
 </div>

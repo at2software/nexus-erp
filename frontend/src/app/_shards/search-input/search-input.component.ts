@@ -1,10 +1,9 @@
-import { Component, ElementRef, EventEmitter, inject, Input, Output, ViewChild } from '@angular/core';
+import { afterNextRender, Component, computed, ElementRef, inject, input, model, output, signal, viewChild } from '@angular/core';
 import { SearchService } from '@models/search.service';
 import { Serializable } from '@models/serializable';
 import { Dictionary, REFLECTION } from '@constants/constants';
 import { FormsModule } from '@angular/forms';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
-
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { SafePipe } from 'src/pipes/safe.pipe';
 
@@ -18,37 +17,43 @@ import { SafePipe } from 'src/pipes/safe.pipe';
 })
 export class SearchInputComponent {
 
-    @Output() itemSelected: EventEmitter<any> = new EventEmitter<any>()
+    readonly itemSelected = output<any>()
 
-    @Input() query: string = ''
-    @Input() only: string
-    @Input() has_icon: boolean = false
-    @Input() minSearch: number = 3
-    @Input() selected?: Serializable
+    query     = model<string>('')
+    only      = input<string>('')
+    has_icon  = input<boolean>(false)
+    minSearch = input<number>(3)
+    selected  = model<Serializable | undefined>(undefined)
 
-    @ViewChild('searchbox') searchbox!: ElementRef<HTMLInputElement>
-    @ViewChild('dropdown') dropdown!: ScrollbarComponent
-    @ViewChild('p') searchContent: any
+    protected readonly searchbox = viewChild.required<ElementRef<HTMLInputElement>>('searchbox')
+    protected readonly dropdown  = viewChild<ScrollbarComponent>('dropdown')
 
-    currentIndex: number = 0
-    results: any[] = []
-    isLoading: boolean = false
-    hasSearched: boolean = false
+    readonly currentIndex = signal(0)
+    readonly results      = signal<any[]>([])
+    readonly isLoading    = signal(false)
+    readonly hasSearched  = signal(false)
 
-    #delay: any;
-    #currentSearchTerm: string = ''
-    #searchService = inject(SearchService)
-    el = inject(ElementRef)
+    readonly hasResults        = computed(() => this.results().length > 0)
+    readonly shouldShowDropdown = computed(() => this.hasSearched() && (this.results().length > 0 || this.isLoading()))
 
-    hasResults = () => this.results.length
-    shouldShowDropdown = () => this.hasSearched && (this.results.length > 0 || this.isLoading)
-    focus = () => setTimeout(() => this.searchbox?.nativeElement.focus(), 0)
-    empty = () => this.query = ''
-    blur = () => this.searchbox?.nativeElement?.blur()
-    clear = () => {
-        this.results = []
-        this.isLoading = false
-        this.hasSearched = false
+    #delay: ReturnType<typeof setTimeout> | null = null
+    #currentSearchTerm = ''
+
+    readonly #searchService = inject(SearchService)
+    readonly #el            = inject(ElementRef)
+
+    constructor() {
+        afterNextRender(() => this.focus())
+    }
+
+    focus = () => setTimeout(() => this.searchbox()?.nativeElement.focus(), 0)
+    empty = () => this.query.set('')
+    blur  = () => this.searchbox()?.nativeElement?.blur()
+
+    clear() {
+        this.results.set([])
+        this.isLoading.set(false)
+        this.hasSearched.set(false)
         this.#currentSearchTerm = ''
         if (this.#delay) {
             clearTimeout(this.#delay)
@@ -57,91 +62,72 @@ export class SearchInputComponent {
     }
 
     scrollToCurrentItem(): void {
-        if (this.currentIndex < 0 || !this.dropdown) return;
-        
-        const dropdownElement = this.dropdown.el.nativeElement;
-        const items = dropdownElement.querySelectorAll('.dropdown-item');
-        const currentItem = items[this.currentIndex] as HTMLElement;
-        
+        const dropdown = this.dropdown()
+        if (this.currentIndex() < 0 || !dropdown) return
+
+        const dropdownElement = dropdown.el.nativeElement
+        const items = dropdownElement.querySelectorAll('.dropdown-item')
+        const currentItem = items[this.currentIndex()] as HTMLElement
+
         if (currentItem) {
-            const containerRect = dropdownElement.getBoundingClientRect();
-            const itemRect = currentItem.getBoundingClientRect();
-            
-            // Calculate if the item is outside the visible area
-            const topOffset = itemRect.top - containerRect.top;
-            const bottomOffset = itemRect.bottom - containerRect.bottom;
-            
+            const containerRect = dropdownElement.getBoundingClientRect()
+            const itemRect = currentItem.getBoundingClientRect()
+            const bottomOffset = itemRect.bottom - containerRect.bottom
+            const topOffset = itemRect.top - containerRect.top
+
             if (bottomOffset > 0) {
-                // Item is below visible area - scroll down
-                dropdownElement.scrollTop += bottomOffset + 10;
+                dropdownElement.scrollTop += bottomOffset + 10
             } else if (topOffset < 0) {
-                // Item is above visible area - scroll up
-                dropdownElement.scrollTop += topOffset - 10;
+                dropdownElement.scrollTop += topOffset - 10
             }
         }
     }
 
-    ngAfterViewInit = () => this.focus()
-
-    search(event: any) {
-        const originalElement = event.srcElement || event.originalTarget
-        const inputValue = originalElement?.value ?? event.target?.value ?? this.query
-        
-        // Handle keyboard navigation
-        if (event.keyCode == 40) {
-            event.preventDefault()
-            this.currentIndex = (this.currentIndex + 1) % this.results.length
-            this.scrollToCurrentItem()
-            return
-        }
-        else if (event.keyCode == 38) {
-            event.preventDefault()
-            this.currentIndex = (this.results.length + this.currentIndex - 1) % this.results.length
-            this.scrollToCurrentItem()
-            return
-        }
-        else if (event.keyCode == 13) {
-            event.preventDefault()
-            if (this.results.length > 0 && this.results[this.currentIndex]) {
-                this.searchbox.nativeElement.blur()
-                this.open(this.results[this.currentIndex])
+    onKeydown(event: KeyboardEvent) {
+        switch (event.key) {
+            case 'ArrowDown':
+                event.preventDefault()
+                this.currentIndex.set((this.currentIndex() + 1) % this.results().length)
+                this.scrollToCurrentItem()
+                break
+            case 'ArrowUp':
+                event.preventDefault()
+                this.currentIndex.set((this.results().length + this.currentIndex() - 1) % this.results().length)
+                this.scrollToCurrentItem()
+                break
+            case 'Enter': {
+                event.preventDefault()
+                const item = this.results()[this.currentIndex()]
+                if (item) {
+                    this.searchbox().nativeElement.blur()
+                    this.open(item)
+                }
+                break
             }
-            return
-        }
-        else if (event.keyCode == 27) { // Escape key
-            event.preventDefault()
-            this.clear()
-            this.blur()
-            return
-        }
-
-        // Handle text input changes
-        if (this.#delay) clearTimeout(this.#delay)
-        
-        if ((inputValue?.length ?? 0) >= this.minSearch) {
-            this.#delay = setTimeout(() => this.searchDelayed(inputValue), 300)
-        } else if ((inputValue?.length ?? 0) === 0) {
-            this.clear()
+            case 'Escape':
+                event.preventDefault()
+                this.clear()
+                this.blur()
+                break
         }
     }
 
-    onInput(event: any) {
-        const inputValue = event.target.value
-        this.query = inputValue
-        this.#triggerSearch(inputValue)
+    onInput(event: Event) {
+        const value = (event.target as HTMLInputElement).value
+        this.query.set(value)
+        this.#triggerSearch(value)
     }
 
     onFocus() {
-        // Re-trigger search if there's a query and no results
-        if (this.query && this.query.length >= this.minSearch && this.results.length === 0) {
-            this.#triggerSearch(this.query)
+        const q = this.query()
+        if (q.length >= this.minSearch() && !this.results().length) {
+            this.#triggerSearch(q)
         }
     }
 
     onBlur() {
-        // Small delay to allow clicks on dropdown items
         setTimeout(() => {
-            if (!this.el.nativeElement.contains(document.activeElement)) {
+            if (!this.#el.nativeElement.contains(document.activeElement)) {
                 this.clear()
             }
         }, 150)
@@ -149,45 +135,41 @@ export class SearchInputComponent {
 
     #triggerSearch(value: string) {
         if (this.#delay) clearTimeout(this.#delay)
-        
-        if ((value?.length ?? 0) >= this.minSearch) {
-            this.#delay = setTimeout(() => this.searchDelayed(value), 300)
-        } else if ((value?.length ?? 0) === 0) {
+
+        if (value.length >= this.minSearch()) {
+            this.#delay = setTimeout(() => this.#searchDelayed(value), 300)
+        } else if (value.length === 0) {
             this.clear()
         }
     }
-    
-    searchDelayed(search: string) {
+
+    #searchDelayed(search: string) {
         this.#currentSearchTerm = search
-        this.isLoading = true
-        this.hasSearched = true
-        
+        this.isLoading.set(true)
+        this.hasSearched.set(true)
+
         const filters: Dictionary = {}
-        if (this.only) filters.only = this.only
-        this.selected = undefined
-        
+        if (this.only()) filters.only = this.only()
+        this.selected.set(undefined)
+
         this.#searchService.search(search, filters).subscribe({
             next: (x: any) => {
-                // Only update results if this is still the current search
                 if (this.#currentSearchTerm === search) {
-                    this.currentIndex = 0
-                    this.results = Object.values(x).map((x: any) => REFLECTION(x))
-                    this.isLoading = false
+                    this.currentIndex.set(0)
+                    this.results.set(Object.values(x).map((x: any) => REFLECTION(x)))
+                    this.isLoading.set(false)
                 }
             },
-            error: (error: any) => {
-                console.error('Search error:', error)
-                this.isLoading = false
-                this.results = []
+            error: () => {
+                this.isLoading.set(false)
+                this.results.set([])
             }
         })
     }
 
     selectItem(item: any, event?: Event) {
-        if (event) {
-            event.preventDefault()
-            event.stopPropagation()
-        }
+        event?.preventDefault()
+        event?.stopPropagation()
         this.open(item)
     }
 
@@ -196,23 +178,13 @@ export class SearchInputComponent {
     }
 
     setCurrentIndex(index: number) {
-        this.currentIndex = index
-        // Note: We don't auto-scroll on mouse hover to avoid interfering with user's manual scrolling
+        this.currentIndex.set(index)
     }
 
-    scssFor(o: any) {
-        switch (o.class) {
-            case 'Company': return 'customer'
-            case 'Project': return 'project'
-            case 'Product': return 'product'
-            case 'Invoice': return 'invoice'
-        }
-        return '/'
-    }
     open(o: any) {
-        this.results = []
-        this.query = o.name
-        this.selected = o
+        this.results.set([])
+        this.query.set(o.name)
+        this.selected.set(o)
         this.itemSelected.emit(o)
     }
 }

@@ -17,8 +17,8 @@
             <div><i>add</i></div>
             <div class="flex-fill">
               <span i18n="@@i18n.common.createNew">create new</span>
-              @if (popSearch.query) {
-                <span class="fw-bold">"{{popSearch.query}}"</span>
+              @if (popSearch.query()) {
+                <span class="fw-bold">"{{popSearch.query()}}"</span>
               }
             </div>
           </div>
@@ -27,11 +27,11 @@
     </div>
   </div>
   <ul class="list-group">
-    @for (con of filteredConnections; track con.id) {
-      <li class="list-group-item d-flex text-nowrap align-items-center" [nx]="con" [tables]="connections" (singleActionResolved)="singleActionResolved()">
-        <div class="me-3"><avatar [object]="con.otherCompany(company)"></avatar></div>
-        <div class="text-truncate flex-fill">{{con.otherCompany(company)?.name}}</div>
-        @if (showAddButton) {
+    @for (con of filteredConnections(); track con.id) {
+      <li class="list-group-item d-flex text-nowrap align-items-center" [nx]="con" [tables]="connections()" (singleActionResolved)="singleActionResolved()">
+        <div class="me-3"><avatar [object]="con.otherCompany(company()!)"></avatar></div>
+        <div class="text-truncate flex-fill">{{con.otherCompany(company()!)?.name}}</div>
+        @if (showAddButton()) {
           <button class="btn btn-sm btn-plain text-primary ms-2" (click)="addConnection(con)">
             <i>add</i>
           </button>

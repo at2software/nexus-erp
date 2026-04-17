@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\InvoiceItemType;
 use App\Helpers\NLog;
 use App\Http\Middleware\Auth;
 use App\Models\Assignment;
@@ -11,17 +10,20 @@ use App\Models\Focus;
 use App\Models\Param;
 use App\Models\Project;
 use App\Models\ProjectState;
-use App\Models\User;
+use App\Services\TimetrackerDataService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
 class TimetrackerController extends Controller {
-    private const GLOBAL_LOADERS      = ['id', 'name', 'color', 'latest_focus', 'target', 'is_subscribed', 'icon', 'company_name'];
-    private const PROJECT_LOADERS     = ['progress', 'hours_invested'];
-    private const TARGET_PROJECT      = 'project_id';
-    private const TARGET_COMPANY      = 'company_id';
+    private const TARGET_PROJECT      = TimetrackerDataService::TARGET_PROJECT;
+    private const TARGET_COMPANY      = TimetrackerDataService::TARGET_COMPANY;
     private const ORGANIZATIONAL_NAME = 'Organisational';
 
+    private TimetrackerDataService $dataService;
+
+    public function __construct() {
+        $this->dataService = new TimetrackerDataService;
+    }
     public function index() {
         $builderCompanies = request()->user()->assigned_companies();
         $meCompanyId      = Param::get('ME_ID')->value;
@@ -31,7 +33,7 @@ class TimetrackerController extends Controller {
                 'color'        => '#FF6700',
                 'company_name' => self::ORGANIZATIONAL_NAME,
                 'name'         => 'Organisational',
-                'latest_focus' => ['started_at' => now(), 'comment'=>''],
+                'latest_focus' => ['started_at' => now(), 'comment' => ''],
                 'is_project'   => false,
                 'icon'         => $my->icon,
                 'id'           => $my->id,
@@ -39,68 +41,14 @@ class TimetrackerController extends Controller {
             ];
             // $builderCompanies->whereNot('id', $meCompanyId);
         }
-        $projects  = $this->mapProjects(request()->user()->projects()->with('company')->wherePreparedOrRunning());
-        $companies = $this->mapCompanies($builderCompanies);
+        $projects  = $this->dataService->mapProjects(request()->user()->projects()->with('company')->wherePreparedOrRunning());
+        $companies = $this->dataService->mapCompanies($builderCompanies);
         return $this->sorted([$orga], $projects, $companies);
     }
     private function sorted(...$args) {
         $a = array_merge(...$args);
         usort($a, fn ($a, $b) => strcmp($b['latest_focus']['started_at'] ?? '', $a['latest_focus']['started_at'] ?? ''));
         return $a;
-    }
-    private function mapProjects($collection) {
-        return $collection
-            ->with('latest_focus', 'pluginLinks', 'hoursInvestedSum')
-            ->get()
-            ->filter(fn ($_) => $_->state->progress < 2)
-            ->map(function ($_) {
-                foreach (self::PROJECT_LOADERS as $key) {
-                    $_->{$key};
-                }
-                $_->latest_focus       = $_->latest_focus ? $_->latest_focus->only(['started_at', 'comment']) : null;
-                $_->is_project         = true;
-                $_->needs_progress_bar = ! $_->is_time_based && ! $_->is_internal;
-                $_->target             = self::TARGET_PROJECT;
-                if (! $_->is_time_based) {
-                    $_->items = $_->invoiceItems()->whereType(InvoiceItemType::Default)->get()->map->only(['id', 'text']);
-                }
-                $_->is_internal   = $_->is_internal ? 1 : 0;
-                $_->is_time_based = $_->is_time_based ? 1 : 0;
-                $_->is_subscribed = Assignment::whereParentAndAssignee($_, Auth::user())->exists();
-
-                // Add allocated time remaining for current user's assignment
-                $assignment = Assignment::whereParentAndAssignee($_, request()->user())->first();
-                if ($assignment = Assignment::whereParentAndAssignee($_, request()->user())->first()) {
-                    $_->hours_planned = $assignment->hours_planned;
-                }
-                return $_;
-            })
-            ->map->only([...self::GLOBAL_LOADERS, ...self::PROJECT_LOADERS,
-                'project_manager_id', 'project_manager_id', 'due_at', 'deadline_at', 'pluginLinks', 'needs_progress_bar',
-                'state', 'finished_state', 'progress', 'is_internal', 'is_time_based', 'items', 'work_estimated', 'hours_planned', 'has_time_budget'])
-            ->all();
-    }
-    private function mapCompanies($collection) {
-        return $collection
-            ->with('latest_focus')
-            ->get()
-            ->map(function ($_) {
-                $_->color         = $_->accepts_support ? '#00C9A7' : '#FF6700';
-                $_->is_project    = false;
-                $_->company_name  = ($_->accepts_support ? 'Support' : 'Unbezahlt');
-                $_->target        = self::TARGET_COMPANY;
-                $_->latest_focus  = $_->latest_focus ? $_->latest_focus->only(['started_at', 'comment']) : null;
-                // $_->name          = ;
-                $_->is_subscribed = count(request()->user()->assigned_companies->filter(fn ($company) => $company->id == $_->id)) > 0;
-
-                // Add allocated time remaining for current user's assignment
-                if ($assignment = Assignment::whereParentAndAssignee($_, request()->user())->first()) {
-                    $_->hours_planned = $assignment->hours_planned;
-                }
-                return $_;
-            })
-            ->map->only([...self::GLOBAL_LOADERS, 'hours_planned', 'has_time_budget'])
-            ->all();
     }
     private function getParentPolyFromRequest(): Project|Company|null {
         if (request()->has(self::TARGET_PROJECT)) {
@@ -114,12 +62,12 @@ class TimetrackerController extends Controller {
     public function store() {
         // deprecated. not used anymore? TBD: shut down
         request()->validate([
-            'duration'              => 'required|numeric',
-            'started_at'            => 'required|date',
-            self::TARGET_PROJECT    => 'required_without_all:company_id|exists:App\Models\Project,id',
-            'company_id'            => 'required_without_all:project_id|exists:App\Models\Company,id',
-            'is_unpaid'             => 'boolean',
-            'item_focus_id'         => 'exists:App\Models\InvoiceItem,id',
+            'duration'           => 'required|numeric',
+            'started_at'         => 'required|date',
+            self::TARGET_PROJECT => 'required_without_all:company_id|exists:App\Models\Project,id',
+            'company_id'         => 'required_without_all:project_id|exists:App\Models\Company,id',
+            'is_unpaid'          => 'boolean',
+            'item_focus_id'      => 'exists:App\Models\InvoiceItem,id',
         ]);
 
         $payload = [];
@@ -144,13 +92,13 @@ class TimetrackerController extends Controller {
     }
     public function subscribe() {
         request()->validate([
-            self::TARGET_PROJECT    => 'required_without_all:'.self::TARGET_COMPANY.'|exists:App\Models\Project,id',
-            self::TARGET_COMPANY    => 'required_without_all:'.self::TARGET_PROJECT.'|exists:App\Models\Company,id',
+            self::TARGET_PROJECT => 'required_without_all:'.self::TARGET_COMPANY.'|exists:App\Models\Project,id',
+            self::TARGET_COMPANY => 'required_without_all:'.self::TARGET_PROJECT.'|exists:App\Models\Company,id',
         ]);
         $parent = $this->getParentPolyFromRequest();
 
         $assignment = Assignment::firstOrCreate([
-            ... Auth::user()->toPoly('assignee'),
+            ...Auth::user()->toPoly('assignee'),
             ...$parent->toPoly(),
         ], ['role' => 2]);
         return $assignment->wasRecentlyCreated ? $this->getParent() : response('Already subscribed', 406);
@@ -201,10 +149,10 @@ class TimetrackerController extends Controller {
     }
     public function getParent() {
         if (request()->has(self::TARGET_PROJECT)) {
-            return $this->mapProjects(Project::where('id', request(self::TARGET_PROJECT)))[0];
+            return $this->dataService->mapProjects(Project::where('id', request(self::TARGET_PROJECT)))[0];
         }
         if (request()->has(self::TARGET_COMPANY)) {
-            return $this->mapCompanies(Company::where('id', request(self::TARGET_COMPANY)))[0];
+            return $this->dataService->mapCompanies(Company::where('id', request(self::TARGET_COMPANY)))[0];
         }
         return null;
     }
@@ -226,8 +174,8 @@ class TimetrackerController extends Controller {
         request()->validate([
             'q' => 'required',
         ]);
-        $projects  = $this->mapProjects(Project::wherePreparedOrRunning()->where('name', 'like', '%'.request('q').'%'));
-        $companies = $this->mapCompanies(Company::where('vcard', 'like', '%'.request('q').'%'));
+        $projects  = $this->dataService->mapProjects(Project::wherePreparedOrRunning()->where('name', 'like', '%'.request('q').'%'));
+        $companies = $this->dataService->mapCompanies(Company::where('vcard', 'like', '%'.request('q').'%'));
         return $this->sorted($projects, $companies);
     }
     public function updateCurrentFocus() {

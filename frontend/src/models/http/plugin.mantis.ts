@@ -124,7 +124,6 @@ export class MantisPlugin extends PluginInstance implements ITaskPlugin {
         for (let page = 1; page <= maxPages; page++) {
             pageRequests.push(this.#getActivityCommentsPage(projectId, page, pageSize, resolveUser))
         }
-        
         return forkJoin(pageRequests).pipe(
             map((pagesResults: any[][]) => pagesResults.flat().slice(0, maxInitialItems))
         )
@@ -153,7 +152,6 @@ export class MantisPlugin extends PluginInstance implements ITaskPlugin {
     
     #getActivityCommentsPage(projectId: string, page: number, pageSize: number, resolveUser?: (email?: string, username?: string, name?: string, pluginAttribute?: string) => any): Observable<any[]> {
         const queryParams = `project_id=${projectId}&page=${page}&page_size=${pageSize}`
-        
         return this.aget(`issues?${queryParams}`, {}, (data: any) => data).pipe(
             map((response: any) => {
                 const tasks = response?.issues || []
@@ -173,7 +171,6 @@ export class MantisPlugin extends PluginInstance implements ITaskPlugin {
                         description += `${authorName} `
                     }
                     description += `<n>mantis</n> <a href="${href}" target="_blank" class="text-primary">#${issueId}</a> [${stateText}]`
-
                     return {
                         text: description,
                         created_at: issue.created_at,

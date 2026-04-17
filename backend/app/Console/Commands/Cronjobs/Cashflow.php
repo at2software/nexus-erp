@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands\Cronjobs;
 
-use App\Enums\InvoiceItemType;
 use App\Helpers\NLog;
+use App\Http\Controllers\WidgetController;
 use App\Models\Company;
 use App\Models\Expense;
 use App\Models\FloatParam;
@@ -11,6 +11,7 @@ use App\Models\InvoiceItem;
 use App\Models\Param;
 use App\Models\Project;
 use Illuminate\Console\Command;
+use Symfony\Component\Console\Output\ConsoleOutput;
 
 class Cashflow extends Command {
     protected $saveToDb = true;
@@ -19,13 +20,13 @@ class Cashflow extends Command {
     protected $description = 'Compute cashflow statistics (daily)';
 
     public function handle() {
-        $this->output   = new \Symfony\Component\Console\Output\ConsoleOutput;
+        $this->output   = new ConsoleOutput;
         $this->saveToDb = ! $this->option('no-save');
 
         try {
             $baseWage = Param::get('HR_HOURLY_WAGE')->value;
 
-            $widgetController          = new \App\Http\Controllers\WidgetController;
+            $widgetController          = new WidgetController;
             $CASHFLOW_CUSTOMER_SUPPORT = $widgetController->GET_CASHFLOW_CUSTOMER_SUPPORT($baseWage)->getSum;
 
             // Optimize unpaid calculation - already optimized with withSum
@@ -50,7 +51,7 @@ class Cashflow extends Command {
 
             $CASHFLOW_INVOICES_PREPARED = Company::getAllWithSupportItems()->sum('support_net');
             $CASHFLOW_INVOICES_PREPARED += Project::getAllWithSupportItems()->sum('support_net');
-            $CASHFLOW_INVOICES_PREPARED += InvoiceItem::whereType(InvoiceItemType::PreparedSupport)->sum('net');
+            $CASHFLOW_INVOICES_PREPARED += InvoiceItem::whereStage(1)->whereNull('invoice_id')->sum('net');
 
             $CASHFLOW_COMPANIES_TIMEBASED = 0;  // new directive: foci on customers w/o projects is unpaid
 

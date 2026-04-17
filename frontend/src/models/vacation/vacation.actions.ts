@@ -1,7 +1,6 @@
 import { NxAction, NxActionType } from "src/app/nx/nx.actions"
 import { Vacation } from "./vacation.model"
 import { NxGlobal } from "src/app/nx/nx.global"
-import { ModalConfirmComponent } from "@app/_modals/modal-confirm/modal-confirm.component"
 
 export function getVacatisingleActionResolveds(self: Vacation): NxAction[] {
     return [
@@ -36,15 +35,6 @@ export function getVacatisingleActionResolveds(self: Vacation): NxAction[] {
             on:()=>(self.state === Vacation.STATE_SICK) && self.hasVacationPermissions(),
             action: () => self.acknowledge().subscribe(),
         },
-        {
-            title: $localize`:@@i18n.common.delete:delete`,
-            interrupt: { service: ModalConfirmComponent, args: { message: $localize`:@@i18n.vacation.reallyDeleteThisVacation:really delete this vacation?`, title: $localize`:@@i18n.common.attention:attention` } },
-            action: () => self.delete(),
-            type: NxActionType.Destructive,
-            group: true,
-            hotkey: 'CTRL+DELETE',
-            on: () => self.state < Vacation.STATE_SICK,
-            roles: 'admin'
-        },
+        NxGlobal.deleteAction(self, $localize`:@@i18n.vacation.reallyDeleteThisVacation:really delete this vacation?`, { roles: 'admin', on: () => self.state < Vacation.STATE_SICK }),
     ]
 }

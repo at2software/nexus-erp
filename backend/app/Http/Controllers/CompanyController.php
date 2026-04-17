@@ -9,9 +9,11 @@ use App\Models\Company;
 use App\Models\Connection;
 use App\Models\Invoice;
 use App\Models\Param;
+use App\Services\FocusStatisticsService;
 use App\Traits\ControllerHasPermissionsTrait;
 use App\Traits\HasParams;
 use Illuminate\Console\Command;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
@@ -156,24 +158,21 @@ class CompanyController extends Controller {
         $replies->withQueryString();
         $replies->appends($request->input())->links();
 
-        // Add computed running_project_value which needs the collection loaded
-        $replies->each(function (&$r) {
-            // running_project_count is already loaded via withCount
-            // Calculate running_project_value from the loaded projectsUnfinished
-            // (it sums the 'net' attribute which might be precomputed)
+        $companyHidden = ['customer_number', 'vat_id', 'managing_director', 'commercial_register', 'invoice_correction', 'invoice_email', 'address', 'discount', 'has_direct_debit', 'requires_po', 'has_nda', 'remarketing_interval', 'flags', 'total_time', 'net_remaining', 'contact_id'];
+        $projectHidden = ['company', 'params', 'hours_invested', 'intro', 'outro', 'description', 'work_estimated', 'target_wage', 'support_net', 'net_remaining', 'gross', 'lead_probability', 'is_ignored_from_prepared', 'decision_at', 'vcard'];
+
+        $replies->each(function (&$r) use ($companyHidden, $projectHidden) {
             $r->append('running_project_value');
-
-            // unpaid_invoice_count and unpaid_invoice_value are already loaded via withCount/withSum
-            // hours_invested is already loaded on projects via withSum
+            $r->makeHidden($companyHidden);
+            $r->projectsUnfinished->each(fn ($p) => $p->makeHidden($projectHidden));
         });
-
         return $replies;
     }
 
     /**
      * Show a company by phone number.
      */
-    public function showByPhone(Request $request): ?\Illuminate\Http\JsonResponse {
+    public function showByPhone(Request $request): ?JsonResponse {
         $phoneNumber = $request->input('phone_number');
         $company     = Company::searchByPhone($phoneNumber);
         if (empty($company)) {
@@ -193,7 +192,7 @@ class CompanyController extends Controller {
     }
 
     public function indexUnbilledFoci() {
-        $widgetController = new \App\Http\Controllers\WidgetController;
+        $widgetController = new WidgetController;
         return $widgetController->GET_CASHFLOW_CUSTOMER_SUPPORT()->getAndAppend();
     }
 
@@ -215,42 +214,25 @@ class CompanyController extends Controller {
      * Display a listing of the connections for a company.
      */
     public function indexConnections(Company $_) {
-        $connections1 = \App\Models\Connection::where('company1_id', $_->id)
+        $connections1 = Connection::where('company1_id', $_->id)
             ->with(['company1', 'company2'])
             ->withCount('projects')
             ->get();
 
-        $connections2 = \App\Models\Connection::where('company2_id', $_->id)
+        $connections2 = Connection::where('company2_id', $_->id)
             ->with(['company1', 'company2'])
             ->withCount('projects')
             ->get();
-        return $this->obfuscateConnectionsNet($connections1->merge($connections2));
+        return Connection::obfuscateNet($connections1->merge($connections2));
     }
 
     /**
      * Display a listing of all connections.
      */
     public function indexAllConnections() {
-        return $this->obfuscateConnectionsNet(
-            \App\Models\Connection::with(['company1', 'company2'])->withCount('projects')->get()
+        return Connection::obfuscateNet(
+            Connection::with(['company1', 'company2'])->withCount('projects')->get()
         );
-    }
-
-    /**
-     * Obfuscate company net values in connections with log10.
-     */
-    private function obfuscateConnectionsNet($connections) {
-        return $connections->map(function ($conn) {
-            $data = $conn->toArray();
-
-            foreach (['company1', 'company2'] as $company) {
-                if (isset($data[$company]['net'])) {
-                    $net                   = $data[$company]['net'];
-                    $data[$company]['net'] = $net > 0 ? round(log10($net), 2) : 0;
-                }
-            }
-            return $data;
-        });
     }
 
     /**
@@ -260,18 +242,16 @@ class CompanyController extends Controller {
         return $_->employees;
     }
 
-    /**
-     * Display a listing of the invoice items for a company.
-     */
-    public function indexInvoiceItems(Company $_) {
-        return $_->indexedItems()->whereNull('invoice_id')->get();
-    }
+    public function indexInvoiceItems(Request $request, Company $_) {
+        $query = $_->indexedItems()->whereNull('invoice_id');
 
-    /**
-     * Display a listing of the support items for a company.
-     */
-    public function indexSupportItems(Company $_) {
-        return $_->indexedItems()->whereNull('invoice_id')->whereNull('project_id')->get();
+        if ($request->boolean('support_only')) {
+            $query->whereNull('project_id');
+        }
+        return $query->get();
+    }
+    public function showPredictionAccuracy(Company $_) {
+        return response()->json(FocusStatisticsService::getCompanyMonthlyPredictionAccuracy($_));
     }
 
     /**
@@ -294,7 +274,7 @@ class CompanyController extends Controller {
         ]);
 
         // Load available connections for adding participants to projects
-        $connections = \App\Models\Connection::where('company1_id', $company->id)
+        $connections = Connection::where('company1_id', $company->id)
             ->orWhere('company2_id', $company->id)
             ->with(['company1', 'company2'])
             ->get();

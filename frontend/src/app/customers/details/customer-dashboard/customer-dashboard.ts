@@ -18,20 +18,22 @@ import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 
 import { ListGroupItemContactComponent } from '@app/customers/_shards/list-group-item-contact/list-group-item-contact.component';
-import { PermissionsDirective } from '@directives/permissions.directive';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
 import { NgbTooltipModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { FormsModule } from '@angular/forms';
 import { CustomerQuickstatsComponent } from '@app/customers/_shards/customer-quickstats/customer-quickstats.component';
 import { ProjectsTableComponent } from '@app/projects/_shards/projects-table/projects-table.component';
 import { InvoicesTable } from '@app/invoices/_shards/invoices-table/invoices-table';
+import { CustomerInitiativesComponent } from '@app/customers/_shards/customer-initiatives/customer-initiatives.component';
 import { NexusModule } from '@app/nx/nexus.module';
 import { ProjectTeamPlanningComponent } from "@app/projects/_shards/project-team-planning/project-team-planning.component";
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { SafePipe } from '../../../../pipes/safe.pipe';
 import { PercentPipe } from '@angular/common';
+import { MoneyPipe } from 'src/pipes/money.pipe';
 import { MediaPreviewComponent } from '@app/projects/id/project-media/media-preview/media-preview.component';
 import { CompanyLocaleSelectorComponent } from '@app/customers/_shards/company-locale-selector/company-locale-selector.component';
+import { CustomerPredictionBiasChartComponent } from '@app/customers/_shards/customer-prediction-bias-chart/customer-prediction-bias-chart.component';
 
 const REMARKETING_INTERVALS:Record<number, string> = {
     0: $localize`:@@i18n.common.none:none`,
@@ -49,7 +51,7 @@ const REMARKETING_INTERVALS:Record<number, string> = {
     templateUrl: './customer-dashboard.html',
     styleUrls: ['./customer-dashboard.scss'],
     standalone: true,
-    imports: [ToolbarComponent, ScrollbarComponent, ListGroupItemContactComponent, SearchInputComponent, NgbTooltipModule, NgbDropdownModule, FormsModule, RouterModule, CustomerQuickstatsComponent, MediaPreviewComponent, ProjectsTableComponent, InvoicesTable, LineChartRangeComponent, NexusModule, ProjectTeamPlanningComponent, HotkeyDirective, SafePipe, PercentPipe, CompanyLocaleSelectorComponent]
+    imports: [ToolbarComponent, ScrollbarComponent, ListGroupItemContactComponent, SearchInputComponent, NgbTooltipModule, NgbDropdownModule, FormsModule, RouterModule, CustomerQuickstatsComponent, MediaPreviewComponent, ProjectsTableComponent, InvoicesTable, LineChartRangeComponent, NexusModule, ProjectTeamPlanningComponent, HotkeyDirective, SafePipe, PercentPipe, MoneyPipe, CompanyLocaleSelectorComponent, CustomerInitiativesComponent, CustomerPredictionBiasChartComponent]
 })
 
 export class CustomerDashboard implements OnInit {
@@ -129,4 +131,9 @@ export class CustomerDashboard implements OnInit {
     onLeadSourceSelected(_:Serializable) {
         this.parent.current.update({ source_type: 'App\\Models\\' + _.class, source_id:_.id}).subscribe(r => this.parent.current.setSource(r))
     }
+
+    get forecastRevenue(): number { return +(this.parent.current?.getParam('STATS_LINREG_FORECAST_12M') ?? 0) }
+    get currentRevenue(): number  { return +(this.parent.current?.getParam('INVOICE_REVENUE_12M') ?? 0) }
+    get forecastUp(): boolean     { return this.forecastRevenue >= this.currentRevenue }
+    get forecastChange(): number  { return this.currentRevenue > 0 ? (this.forecastRevenue - this.currentRevenue) / this.currentRevenue : 0 }
 }

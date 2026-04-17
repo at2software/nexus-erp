@@ -7,6 +7,7 @@ use App\Http\Controllers\PluginGitController;
 use App\Http\Controllers\PluginLocalAiController;
 use App\Http\Controllers\PluginMattermostController;
 use Crypt;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -23,7 +24,7 @@ class Vault extends Model {
             get: function ($val) {
                 try {
                     return Crypt::decrypt($val);
-                } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+                } catch (DecryptException $e) {
                     return null;
                 }
             },
@@ -52,7 +53,7 @@ class Vault extends Model {
                 'controller' => At2ConnectController::class,
                 'active'     => false,
                 'keys'       => collect([
-                    'URL'    => 'URL',
+                    'URL' => 'URL',
                 ]),
             ],
             [
@@ -61,9 +62,9 @@ class Vault extends Model {
                 'controller' => PluginGitController::class,
                 'active'     => false,
                 'keys'       => collect([
-                    'URL'       => 'GitLab URL',
-                    'TOKEN'     => 'access token',
-                    'APIKEY'    => 'api key for webhooks',
+                    'URL'    => 'GitLab URL',
+                    'TOKEN'  => 'access token',
+                    'APIKEY' => 'api key for webhooks',
                 ]),
             ],
             // [
@@ -82,7 +83,13 @@ class Vault extends Model {
     public static function indexVaults(): Collection {
         $response = Vault::allVaults();
         $response = $response->map(function ($item) {
-            $item['active'] = Vault::isActive($item['prefix']);
+            $keys     = Vault::getVaultKeys($item['prefix']);
+            $existing = Vault::whereIn('key', $keys)->get()
+                ->filter(fn ($_) => $_->value ? true : false)
+                ->map(fn ($_) => $_->key);
+            $missing         = $keys->diff($existing)->values();
+            $item['active']  = $missing->isEmpty();
+            $item['missing'] = $missing;
             return $item;
         });
         return $response;

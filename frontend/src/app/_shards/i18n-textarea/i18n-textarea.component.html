@@ -1,7 +1,7 @@
 <div class="mb-3">
     <div class="d-flex justify-content-between align-items-center mb-2">
-        @if (label) {
-            <label for="i18n-textarea-input" class="form-label mb-0">{{ label }}</label>
+        @if (label()) {
+            <label for="i18n-textarea-input" class="form-label mb-0">{{ label() }}</label>
         }
         @if (!isLocalized) {
             <button
@@ -32,10 +32,10 @@
         id="i18n-textarea-input"
         class="form-control"
         [(ngModel)]="textValue"
-        [placeholder]="placeholder"
-        [rows]="rows"
+        [placeholder]="placeholder()"
+        [rows]="rows()"
     ></textarea>
-    @if (showPlaceholderInfo) {
+    @if (showPlaceholderInfo()) {
         <small class="text-muted">
             <span>
                 <span i18n="@@i18n.common.availablePlaceholders">available placeholders</span>

@@ -1,13 +1,11 @@
-import { NxAction, NxActionType } from "src/app/nx/nx.actions"
+import { NxAction } from "src/app/nx/nx.actions"
 import { InvoiceItem } from "./invoice-item.model"
 import { InvoiceItemService } from "./invoice-item.service"
 import { InvoiceItemType } from "src/enums/invoice-item.type"
 import { REPEATING_MULT } from "../expense/expense.model"
 import { NxGlobal } from "src/app/nx/nx.global"
-import { ModalConfirmComponent } from "@app/_modals/modal-confirm/modal-confirm.component"
 import { ModalCombineInvoiceItemsComponent } from "@app/_modals/modal-combine-invoice-items/modal-combine-invoice-items.component"
 import { ModalBaseService } from "@app/_modals/modal-base-service"
-import { ProjectState } from "../project/project-state.model"
 
 export function getInvoiceItemActions(self: InvoiceItem): NxAction[] {
     return [
@@ -21,18 +19,7 @@ export function getInvoiceItemActions(self: InvoiceItem): NxAction[] {
             ]
         },
         //{ title: 'go to project', context:'', on: () => (this.project_id ? true : false), action: () => this.navigate('projects/' + this.project_id) },
-        {
-            title: $localize`:@@i18n.common.addToClipboard:add to clipboard`,
-            context: '!clipboard',
-            group: true,
-            action: () => NxGlobal.clip(self)
-        },
-        {
-            title: $localize`:@@i18n.common.removeFromClipboard:remove from clipboard`,
-            group: true,
-            on: (): boolean => NxGlobal.hasClip(self),
-            action: () => NxGlobal.unclip(self)
-        },
+        ...NxGlobal.clipboardActions(self, '!clipboard'),
         {
             title: $localize`:@@i18n.common.selectAll:select all...`, on: () => self.type in REPEATING_MULT, children: [
                 { title: $localize`:@@i18n.common.ofCustomer:...of customer`, hotkey: 'CTRL+ALT+C', action: () => self.nxSelect((_: InvoiceItem) => _.company_id == self.company_id) }
@@ -46,15 +33,7 @@ export function getInvoiceItemActions(self: InvoiceItem): NxAction[] {
             action: (success) => combineSelectedItems(self, success)
         },
         ...self.markerActions(),
-        {
-            title: $localize`:@@i18n.common.delete:delete`,
-            interrupt: { service: ModalConfirmComponent, args: { message: $localize`:@@i18n.invoices.reallyDeleteThisInvoiceItem:really delete this invoice item?`, title: $localize`:@@i18n.common.attention:attention` } },
-            action: () => self.delete(),
-            type: NxActionType.Destructive,
-            group: true,
-            hotkey: 'CTRL+DELETE',
-            on: () => NxGlobal.global.user?.hasAnyRole(['invoicing', 'project_manager']) || (NxGlobal.global.currentProjectRoot()?.state.progress == ProjectState.ProgressPrepared)
-        },
+        NxGlobal.deleteAction(self, $localize`:@@i18n.invoices.reallyDeleteThisInvoiceItem:really delete this invoice item?`, { roles: 'invoicing|financial|project_manager' }),
     ]
 }
 

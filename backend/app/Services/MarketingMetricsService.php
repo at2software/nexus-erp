@@ -20,16 +20,16 @@ class MarketingMetricsService {
         }
         return $query->latest()->get()->map(function ($metric) {
             return [
-                'id'                   => $metric->id,
-                'name'                 => $metric->name,
-                'description'          => $metric->description,
-                'metric_type'          => $metric->metric_type,
-                'target_value'         => $metric->target_value,
-                'current_value'        => $metric->getCurrentValue(),
-                'progress_percentage'  => round($metric->getProgressPercentage(), 2),
-                'activity_stats'       => $metric->getActivityStatistics(),
-                'created_at'           => $metric->created_at,
-                'updated_at'           => $metric->updated_at,
+                'id'                  => $metric->id,
+                'name'                => $metric->name,
+                'description'         => $metric->description,
+                'metric_type'         => $metric->metric_type,
+                'target_value'        => $metric->target_value,
+                'current_value'       => $metric->getCurrentValue(),
+                'progress_percentage' => round($metric->getProgressPercentage(), 2),
+                'activity_stats'      => $metric->getActivityStatistics(),
+                'created_at'          => $metric->created_at,
+                'updated_at'          => $metric->updated_at,
             ];
         });
     }

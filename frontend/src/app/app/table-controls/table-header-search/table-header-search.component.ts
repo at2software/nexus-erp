@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, EventEmitter, Input, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, input, viewChild, ElementRef } from '@angular/core';
 import { TableHeaderComponent } from '../table-header/table-header.component';
 import { SearchData } from '../search-data';
 import { TableHeaderSortButtonComponent } from '../table-header-sort-button/table-header-sort-button.component';
@@ -16,30 +16,28 @@ import { TableHeaderSortButtonComponent } from '../table-header-sort-button/tabl
 })
 export class TableHeaderSearchComponent extends TableHeaderComponent implements AfterViewInit {
 
-  @ViewChild('searchInput') searchInput: ElementRef|undefined
-
-  @Input() searchData:SearchData|undefined
-  @Input() clearSearchEvent:EventEmitter<any>|undefined
+  searchInput     = viewChild<ElementRef>('searchInput')
+  searchData      = input<SearchData>()
+  clearSearchEvent = input<any>()
 
   ngAfterViewInit(): void {
-     this.subscribe(this.clearSearchEvent, ()=>{
-      if(!this.searchData) return
-      if(!this.searchInput) return
-      this.searchData.searchString = undefined
-      this.searchInput.nativeElement.value = ""
+    this.subscribe(this.clearSearchEvent(), () => {
+      if (!this.searchData()) return
+      if (!this.searchInput()) return
+      this.searchData()!.searchString = undefined
+      this.searchInput()!.nativeElement.value = ''
     })
   }
 
-  public onInputSelect():void {
-    if(!this.key) return
-    if(!this.searchData) return
-    this.searchData.key = this.key
-    this.clearSearchEvent?.emit()
+  public onInputSelect(): void {
+    if (!this.key()) return
+    if (!this.searchData()) return
+    this.searchData()!.key = this.key()!
+    this.clearSearchEvent()?.emit()
   }
 
-  public onInputChange():void {
-    if(!this.searchData) return
-    this.searchData.searchString = this.searchInput?.nativeElement.value
+  public onInputChange(): void {
+    if (!this.searchData()) return
+    this.searchData()!.searchString = this.searchInput()?.nativeElement.value
   }
-
 }

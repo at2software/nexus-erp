@@ -1,4 +1,4 @@
-import { Component, inject, Input, OnChanges } from '@angular/core';
+import { Component, effect, inject, input } from '@angular/core';
 import { NexusModule } from '@app/nx/nexus.module';
 import { Product } from '@models/product/product.model';
 import { ProductService } from '@models/product/product.service';
@@ -11,28 +11,30 @@ import { SearchInputComponent } from '@shards/search-input/search-input.componen
   standalone: true,
   imports: [SearchInputComponent, NexusModule, NgbTooltipModule],
   templateUrl: './project-default-product.component.html',
-  styleUrl: './project-default-product.component.scss'
+  styleUrls: ['./project-default-product.component.scss']
 })
-export class ProjectDefaultProductComponent implements OnChanges {
+export class ProjectDefaultProductComponent {
     
-    @Input() project:Project
+    project = input.required<Project>()
 
     product: Product | undefined = undefined
     #productService = inject(ProductService)
 
-    ngOnChanges(changes:any) {
-        if ('project' in changes) {
-            if (this.project.product_id) {
-                this.#productService.show(this.project.product_id).subscribe((p: Product) => {
+    constructor() {
+        effect(() => {
+            const project = this.project()
+            if (project.product_id) {
+                this.#productService.show(project.product_id).subscribe((p: Product) => {
                     this.product = p
                 })
             }
-        }
+        })
     }
 
     onProductSelect(_: Product) {
-        this.project.product_id = _.id
+        const project = this.project()
+        project.product_id = _.id
         this.product = _
-        this.project.update().subscribe()
+        project.update().subscribe()
     }
 }

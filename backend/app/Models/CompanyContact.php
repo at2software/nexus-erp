@@ -23,8 +23,8 @@ class CompanyContact extends BaseModel {
     protected $fillable = ['vcard', 'created_at', 'updated_at', 'company_id', 'contact_id', 'flags'];
     protected $touches  = ['company', 'contact'];
     protected $appends  = ['gender', 'class', 'path'];
-    protected $casts    = ['is_retired' => 'boolean', 'is_favorite'=>'boolean', 'is_invoicing_address'=>'boolean'];
-    protected $access   = ['admin' => '*', 'project_manager'=>'cru', 'user'=>'cru'];
+    protected $casts    = ['is_retired' => 'boolean', 'is_favorite' => 'boolean', 'is_invoicing_address' => 'boolean'];
+    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
     public function getIconAttribute() {
         return 'companies/'.$this->company_id.'/icon?'.($this->updated_at ? $this->updated_at->timestamp : '');
@@ -46,7 +46,7 @@ class CompanyContact extends BaseModel {
             return [];
         }
         $ret = [];
-        foreach ($attr->$key as $cat=>$arr) {
+        foreach ($attr->$key as $cat => $arr) {
             foreach ($arr as $val) {
                 $ret[] = [$cat, $val];
             }
@@ -67,15 +67,15 @@ class CompanyContact extends BaseModel {
         if (strtoupper($ADR[6] ?? '') != 'DE') {
             $az5 = strtoupper($az5);
         }  // Foreign cities should be in UPPERCASE and in the local language
-        $az6                                                = (strtoupper($ADR[6] ?? '') != 'DE') ? ($ADR[6] ?? '') : '';
-        $code                                               = [];
-        ! strlen($this->company->name) || $code[]           = $this->company->name;            // 1. AZ – Firma (= Name des Unternehmens)
-        ! strlen($this->title) || $code[]                   = $this->title;              // 2. AZ – Anrede, ggf. Berufs- oder Amtsbezeichnungen
-        ! strlen($az3) || $code[]                           = $az3;                      // 3. AZ – ggf. akademische Grade (z. B. Dr., Dipl.-Ing., Dipl.-Hdl.), Name
-        ! strlen($ADR[2]) || $code[]                        = $ADR[2];   // 4. AZ – Straße/Hausnummer (ggf. // App.-Nr.) oder Postfach
-        ! strlen($ADR[1]) || $code[]                        = $ADR[1];  // 4. AZ – Thomas Otto Override: App-Nr bekommt ne eigene Zeile!
-        ! strlen($az5) || $code[]                           = $az5;                      // 5. AZ – Postleitzahl und Bestimmungsort
-        ! strlen($az6) || $code[]                           = $az6;                      // 6. AZ – (LAND)
+        $az6                                      = (strtoupper($ADR[6] ?? '') != 'DE') ? ($ADR[6] ?? '') : '';
+        $code                                     = [];
+        ! strlen($this->company->name) || $code[] = $this->company->name;            // 1. AZ – Firma (= Name des Unternehmens)
+        ! strlen($this->title) || $code[]         = $this->title;              // 2. AZ – Anrede, ggf. Berufs- oder Amtsbezeichnungen
+        ! strlen($az3) || $code[]                 = $az3;                      // 3. AZ – ggf. akademische Grade (z. B. Dr., Dipl.-Ing., Dipl.-Hdl.), Name
+        ! strlen($ADR[2]) || $code[]              = $ADR[2];   // 4. AZ – Straße/Hausnummer (ggf. // App.-Nr.) oder Postfach
+        ! strlen($ADR[1]) || $code[]              = $ADR[1];  // 4. AZ – Thomas Otto Override: App-Nr bekommt ne eigene Zeile!
+        ! strlen($az5) || $code[]                 = $az5;                      // 5. AZ – Postleitzahl und Bestimmungsort
+        ! strlen($az6) || $code[]                 = $az6;                      // 6. AZ – (LAND)
         while (count($code) < 8) {
             array_unshift($code, '&nbsp;');
         }      // always 8 lines high

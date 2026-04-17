@@ -12,7 +12,8 @@
 
   @if (!getOptions()['chart-only']?.value) {
     <ul-compact [badge]="this.badgeCount(data) > 0 ? '' + this.badgeCount(data) : undefined">
-      <li class="list-group-item d-flex text-nowrap" [class.compact]="indexExceedsSettings(i)" *nxFor="let _ of data; let i = index">
+      @for (_ of data; track _.id; let i = $index) {
+      <li class="list-group-item d-flex text-nowrap" [nx]="_" [tables]="data" [class.compact]="indexExceedsSettings(i)">
         <div>
           <avatar [object]="_"></avatar>
         </div>
@@ -21,11 +22,12 @@
             <div class="flex-fill text-truncate">{{_.name}}</div>
             <div class="text-muted" roles="invoicing">{{_.uninvoiced_hours | number : '1.1-1'}}h</div>
           </div>
-          @if (_.isRunning) {
+          @if (_.state.isRunning()) {
             <progress-bar [style]="'cyan'" [progress]="(_.uninvoiced_hours! / max)" [title]="_.progress"></progress-bar>
           }
         </div>
       </li>
+      }
     </ul-compact>
   }
 </div>

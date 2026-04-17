@@ -12,13 +12,13 @@ class WebDAVAuthMiddleware {
     /**
      * Handle an incoming request.
      *
-     * @param \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response) $next
+     * @param Closure(Request): (Response) $next
      */
     public function handle(Request $request, Closure $next): Response {
         $username = $request->getUser();
         $password = $request->getPassword();
         if (empty($username) || empty($password)) {
-            $response  = $this->createUnauthorizedResponse();
+            $response = $this->createUnauthorizedResponse();
             $response->headers->set('WWW-Authenticate', 'Basic realm="_"');
             return $response;
         }
@@ -35,7 +35,7 @@ class WebDAVAuthMiddleware {
         return $next($request);
     }
 
-    public function createUnauthorizedResponse($message=null) {
+    public function createUnauthorizedResponse($message = null) {
         $response = new Response;
         $response->setStatusCode(401);
         if (! empty($message)) {

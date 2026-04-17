@@ -7,6 +7,5 @@ export const mergeArraysToMap = (keys: string[], values: string[]): Record<strin
         map[key] = values[index];
         return map;
     }, {});
-
     return mergedMap;
 }

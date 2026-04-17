@@ -9,8 +9,24 @@
                     <input type="text" class="form-control" id="instalmentDescription" placeholder="description" [(ngModel)]="item.text" i18n-placeholder="@@i18n.common.description">
                     <label for="instalmentDescription" i18n="@@i18n.common.description">description</label>
                 </div>
+                <div class="input-group mb-3">
+                    <span class="input-group-text" i18n="@@i18n.common.base">base</span>
+                    <input type="number" class="form-control" [(ngModel)]="basePrice" (change)="applyPercentage()">
+                    <span class="input-group-text">{{global.currencySymbol()}}</span>
+                </div>
+                <div class="input-group mb-3">
+                    <span class="input-group-text" i18n="@@i18n.common.percentage">percentage</span>
+                    <input type="number" class="form-control" [(ngModel)]="percentage" (change)="applyPercentage()">
+                    <span class="input-group-text">%</span>
+                    <button type="button" class="btn btn-outline-info btn-sm ms-2" (click)="setPercentage(5)">5%</button>
+                    <button type="button" class="btn btn-outline-info btn-sm" (click)="setPercentage(10)">10%</button>
+                    <button type="button" class="btn btn-outline-info btn-sm" (click)="setPercentage(15)">15%</button>
+                    <button type="button" class="btn btn-outline-info btn-sm" (click)="setPercentage(20)">20%</button>
+                    <button type="button" class="btn btn-outline-info btn-sm" (click)="setPercentage(25)">25%</button>
+                    <button type="button" class="btn btn-outline-info btn-sm" (click)="setPercentage(30)">30%</button>
+                </div>
                 <div class="form-floating mb-3">
-                    <input type="text" class="form-control" id="instalmentValue" placeholder="100" [(ngModel)]="item.price">
+                    <input type="number" class="form-control" id="instalmentValue" placeholder="100" [(ngModel)]="item.price">
                     <label for="instalmentValue" i18n="@@i18n.common.valuePositive">value (positive)</label>
                 </div>
             </div>

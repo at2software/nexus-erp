@@ -21,7 +21,7 @@ trait HasInvoiceItemsTrait {
         return $this->hasMany(InvoiceItem::class)->with('productSource')->whereNull('invoice_id')->oldest('position');
     }
     public function supportItems() {
-        return $this->invoiceItems()->whereIn('type', [...InvoiceItemType::TotalRemaining, InvoiceItemType::PreparedSupport])->whereInvoiceId(null);
+        return $this->invoiceItems()->whereStage(1)->whereIn('type', InvoiceItemType::TotalRemaining)->whereInvoiceId(null);
     }
     public static function getAllWithSupportItems() {
         return self::whereHasSupportItems()

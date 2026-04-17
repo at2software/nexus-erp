@@ -1,16 +1,19 @@
 import { Component, OnInit, inject } from '@angular/core'
-import { CommonModule } from '@angular/common'
+
 import { FormsModule } from '@angular/forms'
 import { RouterModule } from '@angular/router'
 import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap'
 import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material'
 import { DebriefService, DebriefStats, CategoryBreakdown, CategoryBreakdownPositives } from '@models/project/debrief.service'
+import { Company } from '@models/company/company.model'
+import { Project } from '@models/project/project.model'
 import { DebriefProblemCategory } from '@models/project/debrief-problem-category.model'
 import { DebriefProblem } from '@models/project/debrief-problem.model'
 import { DebriefPositive } from '@models/project/debrief-positive.model'
 import { DebriefRadarChartComponent } from '@app/projects/_shards/debrief-radar-chart/debrief-radar-chart.component'
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component'
 import { NexusModule } from '@app/nx/nexus.module'
+import { AvatarComponent } from '@app/_shards/avatar/avatar.component'
 import { forkJoin } from 'rxjs'
 import moment from 'moment'
 
@@ -20,16 +23,16 @@ const STORAGE_KEY = 'debrief-dashboard-filters'
     selector: 'projects-debriefing',
     standalone: true,
     imports: [
-        CommonModule,
-        FormsModule,
-        RouterModule,
-        NgbDropdownModule,
-        NgbTooltipModule,
-        NgxDaterangepickerMd,
-        NexusModule,
-        ToolbarComponent,
-        DebriefRadarChartComponent
-    ],
+    FormsModule,
+    RouterModule,
+    NgbDropdownModule,
+    NgbTooltipModule,
+    NgxDaterangepickerMd,
+    NexusModule,
+    ToolbarComponent,
+    DebriefRadarChartComponent,
+    AvatarComponent
+],
     templateUrl: './projects-debriefing.component.html',
     styleUrls: ['./projects-debriefing.component.scss']
 })
@@ -44,6 +47,10 @@ export class ProjectsDebriefingComponent implements OnInit {
     topPositives: DebriefPositive[] = []
     displayProblems: DebriefProblem[] = []
     displayPositives: DebriefPositive[] = []
+    worstCustomers: Company[] = []
+    topCustomers: Company[] = []
+    expandedProblems = new Set<string>()
+    expandedPositives = new Set<string>()
 
     // Filters
     selectedCategoryId: string | null = null
@@ -75,6 +82,8 @@ export class ProjectsDebriefingComponent implements OnInit {
             breakdownPositives: this.#service.getStatsCategoriesPositives(filters),
             problems: this.#service.getStatsTopProblems(5, filters),
             positives: this.#service.getStatsTopPositives(50, filters),
+            worstCustomers: this.#service.getStatsTopCustomers('worst', 10, filters),
+            topCustomers: this.#service.getStatsTopCustomers('best', 10, filters),
         }).subscribe({
             next: (data) => {
                 this.categories = data.categories || []
@@ -83,6 +92,8 @@ export class ProjectsDebriefingComponent implements OnInit {
                 this.categoryBreakdownPositives = data.breakdownPositives || []
                 this.positivesRadarData = this.#buildPositivesRadar(this.categoryBreakdownPositives)
                 this.#buildDisplayLists(data.positives || [])
+                this.worstCustomers = data.worstCustomers || []
+                this.topCustomers = data.topCustomers || []
                 this.loading = false
             },
             error: () => this.loading = false
@@ -137,14 +148,20 @@ export class ProjectsDebriefingComponent implements OnInit {
 
         this.displayProblems = source.flatMap(cat =>
             (cat.problems || []).map(p => {
-                console.log(p)
-                const problem = DebriefProblem.fromJson({ id: p.id, title: p.title, severity: p.severity, usage_count: p.usage_count, var: { category_color: cat.category_color, category_name: cat.category_name } })
+                const problem = DebriefProblem.fromJson({ id: p.id, title: p.title, severity: p.severity, usage_count: p.usage_count })
                 problem.var.category_color = cat.category_color
+                problem.var.category_name = cat.category_name
+                problem.var.projects = (p.projects || []).map((proj: any) => Project.fromJson(proj))
                 return problem
             })
         )
 
         this.displayPositives = allPositives
+    }
+
+    toggleExpanded(id: string, set: Set<string>) {
+        if (set.has(id)) set.delete(id)
+        else set.add(id)
     }
 
     #saveFilters() {
@@ -161,7 +178,7 @@ export class ProjectsDebriefingComponent implements OnInit {
             const data = JSON.parse(stored)
             this.selectedCategoryId = data.categoryId || null
             this.selectedSeverity = data.severity || null
-        } catch { }
+        } catch { /* noop */ }
     }
 
     #buildPositivesRadar(positives: CategoryBreakdownPositives[]): CategoryBreakdown[] {

@@ -4,12 +4,14 @@
     <span class="flex-fill" i18n="@@i18n.common.remarketing">remarketing</span>
 </div>
 <ul class="list-group">
-    <li class="list-group-item hstack gap-2" *nxFor="let item of due">
+    @for (item of due; track item.id) {
+    <li class="list-group-item hstack gap-2" [nx]="item" [tables]="due">
         <avatar [object]="item"></avatar>
         <div class="flex-fill text-truncate">{{item.name}}</div>
         <div class="text-end small text-muted text-nowrap" ngbTooltip="due at" i18n-ngbTooltip="@@i18n.common.dueAt">
             {{item.var.remarketing_due_at | date}}
         </div>
     </li>
+    }
 </ul>
 }

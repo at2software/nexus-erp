@@ -1,4 +1,4 @@
-@if (!user.public_key) {
+@if (!user().public_key) {
   <empty-state class="encryption" title="" [card]="false">
     <div class="mb-3" i18n="@@i18n.encryption.noRsaKeypair">you do not have a RSA keypair yet</div>
     <div class="mb-3 d-flex justify-content-center">

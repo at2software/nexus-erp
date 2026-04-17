@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Contact;
 use App\Models\ProjectState;
 use App\Traits\HasVaultCredentials;
-use Carbon\Carbon;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -54,7 +53,7 @@ class At2ConnectController extends Controller {
         }
         return $token;
     }
-    private function curl($method, $path, $payload=[]) {
+    private function curl($method, $path, $payload = []) {
         return $this->client->{$method}(config('services.openai.endpoint').$path, array_merge([
             'headers' => [
                 'Content-Type'  => 'application/json',
@@ -199,23 +198,16 @@ class At2ConnectController extends Controller {
                 $content            = $response->getBody();
                 $contentType        = $response->getHeaders()['Content-Type'][0];
                 $contentDisposition = $response->getHeaders()['Content-Disposition'][0];
+                preg_match('/filename\*?=[\'"]?([^\'";]+)/i', $contentDisposition, $matches);
                 return new Response($content, Response::HTTP_OK, [
                     'Content-Type'        => $contentType,
-                    'Content-Disposition' => 'inline; filename="'.$this->extractFilename($contentDisposition).'"',
+                    'Content-Disposition' => 'inline; filename="'.($matches[1] ?? null).'"',
                 ]);
             }
         } catch (\Throwable $t) {
             return new Response('', Response::HTTP_OK);
         }
         return response()->json($response);
-    }
-    private function extractFilename($contentDisposition) {
-        $regex = '/filename\*?=[\'"]?([^\'";]+)/i';
-
-        if (preg_match($regex, $contentDisposition, $matches)) {
-            return $matches[1];
-        }
-        return null;
     }
     public function initSupportThread(Request $request) {
         if (! $request->filled('user_id') || ! $request->filled('channel_id')) {
@@ -227,7 +219,7 @@ class At2ConnectController extends Controller {
         $newest_thread = $this->getNewestThread($request, $channel_id);
         $thread_id     = null;
         if ($newest_thread != null) {
-            if ($this->isFromToday($newest_thread['create_at'])) {
+            if (Contact::isMattermostTimestampFromToday($newest_thread['create_at'])) {
                 $thread_id = $newest_thread['id'];
             }
         }
@@ -269,7 +261,7 @@ class At2ConnectController extends Controller {
             $isSupportThread = true;
             $newest_thread   = $this->getNewestThread($request, $channel_id);
 
-            if ($newest_thread != null && $this->isFromToday($newest_thread['create_at'])) {
+            if ($newest_thread != null && Contact::isMattermostTimestampFromToday($newest_thread['create_at'])) {
                 $thread_id = $newest_thread['id'];
                 $after     = $request->after;
                 $payload   = ['query' => [
@@ -390,8 +382,8 @@ class At2ConnectController extends Controller {
                 $response     = $this->curl('post', 'files', $payload);
                 $responseBody = json_decode($response->getBody(), true);
                 return response()->json([
-                    'filename'   => $filename,
-                    'file_id'    => $responseBody['file_infos'][0]['id'],
+                    'filename' => $filename,
+                    'file_id'  => $responseBody['file_infos'][0]['id'],
                 ]);
             } catch (\Exception $e) {
                 return response()->json([
@@ -409,7 +401,7 @@ class At2ConnectController extends Controller {
         $newest_thread = $this->getNewestThread($request, $channel_id);
         $thread_id     = null;
         if ($newest_thread != null) {
-            if ($this->isFromToday($newest_thread['create_at'])) {
+            if (Contact::isMattermostTimestampFromToday($newest_thread['create_at'])) {
                 $thread_id = $newest_thread['id'];
             }
         }
@@ -536,14 +528,7 @@ class At2ConnectController extends Controller {
     }
     private function isChannelAllowed(Request $request, $channel_id) {
         $availableChannels = $this->getRawProjects($request);
-
-        $channelAllowed = array_filter($availableChannels, fn ($item) => $item['id'] === $channel_id);
+        $channelAllowed    = array_filter($availableChannels, fn ($item) => $item['id'] === $channel_id);
         return count($channelAllowed) === 0;
-    }
-    private function isFromToday($created_at) {
-        $timestampSeconds  = $created_at / 1000;
-        $dateFromTimestamp = Carbon::createFromTimestamp($timestampSeconds);
-        $today             = Carbon::today();
-        return $dateFromTimestamp->isSameDay($today);
     }
 }

@@ -114,7 +114,6 @@ trait HasI18nTrait {
                 }
             }
         }
-
         return null;
     }
 }

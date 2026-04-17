@@ -7,7 +7,9 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use ReflectionClass;
 use Symfony\Component\Console\Output\BufferedOutput;
 
 class CommandController extends Controller {
@@ -15,9 +17,9 @@ class CommandController extends Controller {
         $scheduleMap = $this->buildScheduleMap();
 
         $commands = collect(Artisan::all())
-            ->filter(fn($command) => $this->isCustomCommand($command))
+            ->filter(fn ($command) => $this->isCustomCommand($command))
             ->map(function ($command, $name) use ($scheduleMap) {
-                $reflection = new \ReflectionClass($command);
+                $reflection = new ReflectionClass($command);
                 $namespace  = $reflection->getName();
 
                 $category = str_contains($namespace, 'Commands\\Cronjobs\\') ? 'Cronjobs' : 'General';
@@ -30,7 +32,6 @@ class CommandController extends Controller {
                         $category = 'Finance';
                     }
                 }
-
                 return [
                     'name'        => $name,
                     'description' => $command->getDescription() ?: 'No description available',
@@ -41,10 +42,8 @@ class CommandController extends Controller {
             })
             ->groupBy('category')
             ->sortKeys();
-
         return response()->json($commands);
     }
-
     private function buildScheduleMap(): array {
         $frequencyMap = [
             '* * * * *'    => 'every minute',
@@ -72,7 +71,7 @@ class CommandController extends Controller {
         $data = $this->getBody();
 
         // Debug logging
-        \Log::info('Command execution request:', (array)$data);
+        Log::info('Command execution request:', (array)$data);
 
         $commandName = $data->command ?? null;
         $arguments   = (array)($data->arguments ?? []);
@@ -122,7 +121,10 @@ class CommandController extends Controller {
         }
 
         try {
-            $command    = Artisan::resolve($commandName);
+            $command = Artisan::all()[$commandName] ?? null;
+            if (! $command) {
+                return response()->json(['error' => 'Command not found'], 404);
+            }
             $definition = $command->getDefinition();
 
             $arguments = collect($definition->getArguments())->map(function ($argument) {
@@ -158,15 +160,10 @@ class CommandController extends Controller {
     }
 
     private function isCommandAllowed(string $commandName): bool {
-        try {
-            $command = Artisan::resolve($commandName);
-            return $command && $this->isCustomCommand($command);
-        } catch (\Exception) {
-            return false;
-        }
+        $command = Artisan::all()[$commandName] ?? null;
+        return $command && $this->isCustomCommand($command);
     }
-
     private function isCustomCommand(object $command): bool {
-        return str_starts_with((new \ReflectionClass($command))->getName(), 'App\\Console\\Commands\\');
+        return str_starts_with((new ReflectionClass($command))->getName(), 'App\\Console\\Commands\\');
     }
 }

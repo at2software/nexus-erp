@@ -73,7 +73,7 @@ abstract class PluginController extends Controller {
     }
     public static function getByKey(string $key, ?string $restrictToClass = null): ?static {
         return collect(static::getPluginControllers($restrictToClass))
-            ->first(fn($c) => $c::getKey() === $key);
+            ->first(fn ($c) => $c::getKey() === $key);
     }
     public static function getPluginControllers(?string $restrictToClass = null): array {
         $instances = [];
@@ -87,7 +87,7 @@ abstract class PluginController extends Controller {
             ->filter(function ($class) use ($restrictToClass) {
                 $reflection = new ReflectionClass($class);
                 $restricted = $restrictToClass ? is_subclass_of($class, $restrictToClass) : true;
-                return class_exists($class) && is_subclass_of($class, \App\Http\Controllers\PluginController::class) && ! $reflection->isAbstract() && $restricted;
+                return class_exists($class) && is_subclass_of($class, PluginController::class) && ! $reflection->isAbstract() && $restricted;
             })
             ->values();
 

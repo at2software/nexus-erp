@@ -68,6 +68,8 @@ export class Company extends VcardClass implements HasInvoiceItems, IHasFiles, I
     desicion_duration         ?: number
     has_time_budget            : boolean
     billing_considerations    ?: TBillingConsideration[]
+    quote_acceptance_rate     ?: number | null
+    avg_payment_days          ?: number | null
     marker: number | null
 
     isVatExcempt        :boolean = false
@@ -119,8 +121,8 @@ export class Company extends VcardClass implements HasInvoiceItems, IHasFiles, I
     getCompanyId = () => this.id
 
     getLocale = (): string => {
-        const lang = this.card?.first('X-LANG')?.vals[0] || 'de';
-        const formality = this.card?.first('X-FORMALITY')?.vals[0] || 'formal';
+        const lang = this.card.first('X-LANG')?.vals[0] || 'de';
+        const formality = this.card.first('X-FORMALITY')?.vals[0] || 'formal';
         return `${lang}-${formality}`;
     }
     getAssignedUsers = ():Assignee[] => this.assignees.filter(_ => _.assignee instanceof User)
@@ -149,6 +151,12 @@ export class Company extends VcardClass implements HasInvoiceItems, IHasFiles, I
     }
 
     importImprint = () => NxGlobal.getService<CompanyService>(CompanyService).importImprint(this)
+
+    averagePaymentDelay(): number {
+        const paid = this.invoices.filter(i => i.paid_at)
+        if (paid.length === 0) return 0
+        return paid.reduce((sum, i) => sum + i.time_paid().diff(i.time_due(), 'days'), 0) / paid.length
+    }
 
     static iconForId = (id:string) => environment.envApi + `companies/${id}/icon`
 }

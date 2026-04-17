@@ -1,14 +1,17 @@
-import { Component, OnInit, ElementRef, ViewChild, HostListener, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild, HostListener, inject } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { NgbModal, NgbModalRef, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { CalendarEntry } from 'src/models/vcalendar/calendar-entry.model';
 import { RecurrenceType, VCalendarEvent, Weekday } from 'src/models/vcalendar/vcalendar-event.model';
 import { VCalendarService } from 'src/models/vcalendar/vcalendar.service';
 import { ConfirmationService } from '@app/_modals/modal-confirm/confirmation.service';
+import { NxGlobal, TBroadcast } from '@app/nx/nx.global';
 import { CalendarEntryModalComponent } from '../calendar-entry-modal/calendar-entry-modal.component';
 import { HeaderModule } from '@app/app/header/header.module';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { Nx } from '@app/nx/nx.directive';
 
 interface EventSpan {
     calendarEntry: CalendarEntry;
@@ -22,9 +25,9 @@ interface EventSpan {
     templateUrl: './calendar-detail.component.html',
     styleUrls: ['./calendar-detail.component.scss'],
     standalone: true,
-    imports: [HeaderModule, ToolbarComponent, FormsModule, CommonModule, NgbTooltipModule]
+    imports: [HeaderModule, ToolbarComponent, FormsModule, CommonModule, NgbTooltipModule, Nx]
 })
-export class CalendarDetailComponent implements OnInit {
+export class CalendarDetailComponent implements OnInit, OnDestroy {
     @ViewChild('popupButton', { static: false }) popupButton!: ElementRef;
     @ViewChild('popup', { static: false }) popup!: ElementRef;
 
@@ -50,6 +53,7 @@ export class CalendarDetailComponent implements OnInit {
     calendarEntries: CalendarEntry[] = [];
     calendarEntriesByDate = new Map<string, CalendarEntry[]>();
     #vCalendarService = inject(VCalendarService)
+    #broadcastSub?: Subscription
 
 
     confirmation = inject(ConfirmationService)
@@ -58,7 +62,19 @@ export class CalendarDetailComponent implements OnInit {
         this.generateLocalizedDaysAndMonths()
     }
 
+    ngOnDestroy() {
+        this.#broadcastSub?.unsubscribe()
+    }
+
     ngOnInit(): void {
+        this.#broadcastSub = NxGlobal.broadcast$.subscribe(({ type, data }) => {
+            if (type === TBroadcast.Delete && data instanceof CalendarEntry) {
+                const index = this.calendarEntries.findIndex(e => e.id === data.id)
+                if (index >= 0) this.calendarEntries.splice(index, 1)
+                this.groupEventsByDate()
+                this.setCalendarEntriesPerDate()
+            }
+        })
         this.#vCalendarService.getCalendar().subscribe(_ => {
             this.parseVCalendarEvents(_)
             this.groupEventsByDate()
@@ -372,7 +388,6 @@ export class CalendarDetailComponent implements OnInit {
                     assignedRow++;
                 }
             });
-            
             return spans;
         });
         
@@ -403,7 +418,6 @@ export class CalendarDetailComponent implements OnInit {
             const eventCount = this.weekEventCounts[i] || 0;
             totalHeight += baseHeight + (eventCount * eventRowHeight);
         }
-        
         return `${totalHeight}px`;
     }
 
@@ -421,7 +435,6 @@ export class CalendarDetailComponent implements OnInit {
     getCalendarEntriesForDate(date: Date, _index?: number): CalendarEntry[] {
         const dateStr = date.toLocaleDateString('en-GB').split('/').reverse().join('-');
         const calendarEntries = this.calendarEntriesByDate.get(dateStr) || [];
-        
         return calendarEntries.sort((a, b) => {
             const dateA = a?.vcalendar_event?.start_date ? new Date(a.vcalendar_event.start_date) : null;
             const dateB = b?.vcalendar_event?.start_date ? new Date(b.vcalendar_event.start_date) : null;

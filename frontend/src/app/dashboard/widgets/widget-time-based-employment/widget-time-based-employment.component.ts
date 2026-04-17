@@ -19,9 +19,6 @@ export class WidgetTimeBasedEmploymentComponent extends BaseWidgetComponent impl
     employees:any[] = []
     env = environment
 
-    ngOnInit() {
-        this.reload()
-    }
     reload(): void {
         this.#widgetService.indexTimeBasedEmployees().subscribe(_ => this.employees = _)        
     }

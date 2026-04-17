@@ -31,15 +31,15 @@ class CrudRoleMiddleware {
             return $next($request);
         }
 
-        $modelClass = 'App\\Models\\' . $parts[1];
+        $modelClass = 'App\\Models\\'.$parts[1];
         $operation  = strtolower($parts[2]);
 
-        if (!class_exists($modelClass)) {
+        if (! class_exists($modelClass)) {
             return $next($request);
         }
 
         $user = $request->user();
-        if (!$user) {
+        if (! $user) {
             throw UnauthorizedException::forRolesOrPermissions([]);
         }
 
@@ -49,7 +49,6 @@ class CrudRoleMiddleware {
 
         throw UnauthorizedException::forRolesOrPermissions([]);
     }
-
     protected function userCanPerform($user, string $modelClass, string $operation): bool {
         if ($user->hasRole('admin')) {
             return true;
@@ -67,7 +66,6 @@ class CrudRoleMiddleware {
                 return true;
             }
         }
-
         return false;
     }
 }

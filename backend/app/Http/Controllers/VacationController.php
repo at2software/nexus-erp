@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Enums\VacationState;
 use App\Mail\VacationMail;
+use App\Models\Holiday;
 use App\Models\User;
 use App\Models\Vacation;
 use App\Models\VacationGrant;
 use App\Traits\ControllerHasPermissionsTrait;
+use Carbon\Carbon;
 use Closure;
 use Mail;
 use Storage;
@@ -33,11 +35,11 @@ class VacationController extends Controller {
             ->get();
     }
     public function indexSickNotes() {
-        // Back to simple approach - avoid complex joins and mapping
         return Vacation::where('state', VacationState::Sick)
             ->whereNull('approved_at')
-            ->with('user')
-            ->get();
+            ->with(['user' => fn ($q) => $q->without('activeEmployment')])
+            ->get()
+            ->each(fn ($v) => $v->user?->makeHidden('is_retired'));
     }
     public function indexPendingRequests() {
         return Vacation::where('state', VacationState::Open)->with('user', 'grant')->get();
@@ -62,90 +64,10 @@ class VacationController extends Controller {
         $year     = intval(date('Y'));
         $holidays = [...$this->_indexHolidays($year - 1), ...$this->_indexHolidays($year), ...$this->_indexHolidays($year + 1)];
 
-        // Filter holidays based on work ZIP code if provided
         if ($workZip) {
-            $holidays = array_filter($holidays, function ($holiday) use ($workZip) {
-                return $this->isHolidayValidForZip($holiday, $workZip);
-            });
+            $holidays = array_filter($holidays, fn ($holiday) => Holiday::isValidForZip($holiday, $workZip));
         }
         return array_values($holidays);
-    }
-    private function isHolidayValidForZip($holiday, $workZip) {
-        $holidayName = $holiday->name;
-        $hint        = $holiday->hinweis ?? '';
-
-        // Augsburger Friedensfest - only valid in Augsburg (ZIP codes 86...)
-        if (strpos($holidayName, 'Augsburger Friedensfest') !== false) {
-            return substr($workZip, 0, 2) === '86';
-        }
-
-        // Mariä Himmelfahrt - complex rules based on Catholic majority
-        if (strpos($holidayName, 'Mariä Himmelfahrt') !== false) {
-            return $this->isCatholicMajorityZip($workZip);
-        }
-
-        // Fronleichnam - specific regions in some states
-        if (strpos($holidayName, 'Fronleichnam') !== false && ! empty($hint)) {
-            return $this->isFronleichnamValidForZip($workZip, $hint);
-        }
-
-        // All other holidays are valid everywhere
-        return true;
-    }
-    private function isCatholicMajorityZip($workZip) {
-        // This is a simplified version - you'd need the actual list from Bayerisches Landesamt für Statistik
-        // Based on the official 2011 census data, these are known Catholic majority areas
-        $catholicZipRanges = [
-            // Munich city and immediate Catholic suburbs
-            ['80331', '80339'], // Munich center
-            ['80469', '80469'], // München-Au
-            ['81241', '81249'], // München-Pasing Catholic areas
-
-            // Lower Bavaria - traditionally Catholic
-            ['84028', '84028'], // Landshut
-            ['94032', '94036'], // Passau area
-            ['84347', '84359'], // Pfarrkirchen area
-
-            // Upper Bavaria - Alpine Catholic regions
-            ['83022', '83026'], // Rosenheim Catholic areas
-            ['82467', '82467'], // Garmisch-Partenkirchen
-            ['83471', '83471'], // Berchtesgaden
-
-            // Swabia - selective Catholic municipalities
-            ['87435', '87439'], // Kempten Catholic areas (your default!)
-            ['89073', '89077'], // Ulm surrounding Catholic villages
-
-            // Note: This is a VERY simplified list. The real implementation needs
-            // the official 1704 municipalities list from Bayerisches Landesamt
-        ];
-
-        foreach ($catholicZipRanges as $range) {
-            if ($workZip >= $range[0] && $workZip <= $range[1]) {
-                return true;
-            }
-        }
-
-        // TODO: Load from official data source or mapping file
-        // The real list contains 1704 specific municipalities
-        return false;
-    }
-    private function isFronleichnamValidForZip($workZip, $hint) {
-        // Parse hint for specific cities/regions mentioned
-        // This is a simplified implementation - you'd need detailed mapping
-
-        // Saxon specific municipalities mentioned in hint
-        if (strpos($hint, 'sorbischen Siedlungsgebietes') !== false) {
-            // Saxony specific ZIP ranges for Sorbian areas
-            $sorbianZips = ['02625', '02627', '02694', '02699', '02906', '02929', '02957', '02999'];
-            return in_array($workZip, $sorbianZips);
-        }
-
-        // Thuringian specific areas
-        if (strpos($hint, 'Landkreis Eichsfeld') !== false) {
-            // Eichsfeld area ZIP codes
-            return substr($workZip, 0, 3) === '373' || substr($workZip, 0, 3) === '374';
-        }
-        return true; // Default to valid if we can't determine specifics
     }
     public function indexVacationStats(User $_) {
         return $_->vacation_grants()->with('vacations')->get();
@@ -188,9 +110,9 @@ class VacationController extends Controller {
     public function revoke(Vacation $vacation) {
         $isOwner = $vacation->grant->user_id === request()->user()->id;
         $isHR    = request()->user()->hasAnyRole(['admin', 'hr']);
-        abort_if(!$isOwner && !$isHR, 403);
+        abort_if(! $isOwner && ! $isHR, 403);
         abort_if($vacation->state !== VacationState::Open && $vacation->state !== VacationState::Approved, 422, 'Only open or approved vacation requests can be revoked.');
-        abort_if(\Carbon\Carbon::parse($vacation->started_at)->startOfDay()->lte(today()), 422, 'Cannot revoke past vacations.');
+        abort_if(Carbon::parse($vacation->started_at)->startOfDay()->lte(today()), 422, 'Cannot revoke past vacations.');
         $vacation->update(['state' => VacationState::Cancelled]);
         return $vacation;
     }
@@ -250,7 +172,7 @@ class VacationController extends Controller {
 
         $userId = request('user_id') ?? request()->user()->id;
 
-        if ($userId != request()->user()->id && !request()->user()->hasAnyRole(['admin', 'hr'])) {
+        if ($userId != request()->user()->id && ! request()->user()->hasAnyRole(['admin', 'hr'])) {
             return response('not permitted', 403);
         }
 

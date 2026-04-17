@@ -272,16 +272,14 @@ export class NxService {
                             if (sel.nx) {
                                 if (!tables.includes(sel.nx)) {
                                     const f = tables.find(_ => _.track_id === sel.nx!.track_id)
-                                    if (f) {
-                                        tables.remove(f)
-                                    }
+                                    if (f) tables.remove(f)
                                 } else {
                                     tables.remove(sel.nx)
                                 }
                             }
                         }
                         if (data && action.type === NxActionType.Creative && sel.tables) {
-                            const tables = Array.isArray(sel.tables) ? sel.tables : [sel.tables]
+                            const tables = [sel.tables].flat()
                             tables.push(data)
                         }
                         if (stackCount === 0) {

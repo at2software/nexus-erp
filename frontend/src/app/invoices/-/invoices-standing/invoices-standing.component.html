@@ -27,7 +27,8 @@
           </tr>
         </thead>
         <tbody>
-          <tr *nxFor="let item of items">
+          @for (item of items; track item.id) {
+          <tr [nx]="item" [tables]="items">
             <td class="p-2 text-end text-muted small align-middle">
               {{getDaysUntilNext(item)}}d
             </td>
@@ -47,6 +48,7 @@
                 <td class="p-2 text-end small" [class]="item.getRepeatColor()">{{item.getRepeatString()}}</td>
                 <td class="p-2 text-end text-monospace">{{item.getYearlyPrice() | money}}</td>
               </tr>
+          }
             </tbody>
 
             <tfoot>

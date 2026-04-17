@@ -1,5 +1,5 @@
 
-import { Component, Input } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { SafePipe } from 'src/pipes/safe.pipe';
 
 @Component({
@@ -10,7 +10,7 @@ import { SafePipe } from 'src/pipes/safe.pipe';
     imports: [SafePipe]
 })
 export class UlCompactComponent {
-    @Input() badge?:string
+    badge = input<string>();
     compacted:boolean = true
     toggle = () => this.compacted = !this.compacted
 }

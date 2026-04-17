@@ -1,92 +1,102 @@
+@let _user = user();
+
 <toolbar>
-  <button class="btn btn-primary" roles="admin" (click)="modal.open(addFocus)" ngbTooltip="CTRL+ALT+N" hotkey="CTRL+ALT+N"><i>add</i> focus</button>
+    <button class="btn btn-primary" roles="admin" (click)="modal.open(addFocus)" ngbTooltip="CTRL+ALT+N"
+        hotkey="CTRL+ALT+N"><i>add</i> focus</button>
 </toolbar>
 
-@if (user) {
-  <div class="card">
+<div class="card">
     <div class="card-header">
-      {{user.name}}
+        {{_user.name}}
     </div>
     <ul class="list-group">
-      @for (x of days; track x.date) {
+        @for (x of days; track x.date) {
         <li class="list-group-item mx-0 p-0">
-          <div class="day-wrapper" [class.weekend]="x.weekend" [class.workday]="!x.weekend" [class.vacation]="x.vacation?.isVacation()" [class.sick]="x.vacation?.isSick()">
-            @for (f of x.foci; track $index) {
-              <div class="bar"
-                [class.bar-unpaid]="f.isUnpaid()"
-                [style.left]="f.pStart()"
-                [style.right]="f.pEnd()"
-                [style.backgroundColor]="f.color()"
-                [ngbTooltip]="f.getParentName()"
-                [nx]="f"
-                (actionsResolved)="reorderDays()"
-                [tables]="x.foci"
-                >
-              </div>
-            }
-            <small class="date small text-muted p-1">{{x.date}} @if (x.vacation) {<i [class]="x.vacation.getTypeClass()" style="font-size:.75rem; vertical-align: middle;" [ngbTooltip]="x.vacation.getTypeTooltip()">{{x.vacation.getTypeIcon()}}</i>}</small>
-            @if (x.total > 0) {
-              <small class="total p-1">{{x.total | number:'1.1-1'}}h</small>
-            }
-            @if (x.foci.length > 0) {
-              <a class="btn btn-plain" (click)="toggleDetails(x)" (keyup.enter)="toggleDetails(x)" tabindex="0"><i>{{ !x.details ? 'expand_more' : 'expand_less'}}</i></a>
-            }
-          </div>
-          <div [class.d-none]="!x.details">
-            <table class="table table-sm align-middle mb-0">
-              <tr class="detail-row" [style.borderLeftColor]="f.color()" *nxFor="let f of x.foci" (actionsResolved)="reorderDays()">
-                <td class="ps-2"><img class="avatar avatar-sm p-0" [src]="iconFor(f)" alt=""></td>
-                <td class="text-truncate">{{f.getParentName()}}</td>
-                <td>@if (f.comment?.length) {
-                  <span class="text-muted small">{{f.comment}}</span>
-                }</td>
-                <td class="small text-muted text-nowrap">{{f.started_at | date:'shortTime'}} - {{f.ended_at.toString()| date:'shortTime'}}</td>
-                <td class="text-end text-nowrap">{{f.duration | number : '1.2-2'}} h</td>
-                <td class="text-end">@if (f.invoice_item_id) {
-                  <i class="align-middle" [style.color]="f.getInvoiceItemColor()" ngbTooltip="focus-feature: {{f.invoice_item.text}}">filter_tilt_shift</i>
-                }</td>
-              </tr>
-            </table>
-          </div>
+            <div class="day-wrapper" [class.weekend]="x.weekend" [class.workday]="!x.weekend"
+                [class.vacation]="x.vacation?.isVacation()" [class.sick]="x.vacation?.isSick()">
+
+                @for (f of x.foci; track $index) {
+                <div class="bar" [class.bar-unpaid]="f.isUnpaid()" [style.left]="f.pStart()" [style.right]="f.pEnd()"
+                    [style.backgroundColor]="f.color()" [ngbTooltip]="f.getParentName()" [nx]="f"
+                    (actionsResolved)="reorderDays()" [tables]="x.foci">
+                </div>
+                }
+                
+                <small class="date small text-muted p-1">{{x.date}} @if (x.vacation) {<i
+                        [class]="x.vacation.getTypeClass()" style="font-size:.75rem; vertical-align: middle;"
+                        [ngbTooltip]="x.vacation.getTypeTooltip()">{{x.vacation.getTypeIcon()}}</i>}</small>
+                @if (x.total > 0) {
+                <small class="total p-1">{{x.total | number:'1.1-1'}}h</small>
+                }
+                @if (x.foci.length > 0) {
+                <a class="btn btn-plain" (click)="toggleDetails(x)" (keyup.enter)="toggleDetails(x)" tabindex="0"><i>{{
+                        !x.details ? 'expand_more' : 'expand_less'}}</i></a>
+                }
+            </div>
+            <div [class.d-none]="!x.details">
+                <table class="table table-sm align-middle mb-0">
+                    @for (f of x.foci; track f.id) {
+                    <tr class="detail-row" [nx]="f" [tables]="x.foci" [style.borderLeftColor]="f.color()"
+                        (actionsResolved)="reorderDays()">
+                        <td class="ps-2"><img class="avatar avatar-sm p-0" [src]="iconFor(f)" alt=""></td>
+                        <td class="text-truncate">{{f.getParentName()}}</td>
+                        <td>@if (f.comment?.length) {
+                            <span class="text-muted small">{{f.comment}}</span>
+                            }
+                        </td>
+                        <td class="small text-muted text-nowrap">{{f.started_at | date:'shortTime'}} -
+                            {{f.ended_at.toString()| date:'shortTime'}}</td>
+                        <td class="text-end text-nowrap">{{f.duration | number : '1.2-2'}} h</td>
+                        <td class="text-end">@if (f.invoice_item_id) {
+                            <i class="align-middle" [style.color]="f.getInvoiceItemColor()"
+                                ngbTooltip="focus-feature: {{f.invoice_item.text}}">filter_tilt_shift</i>
+                            }
+                        </td>
+                    </tr>
+                    }
+                </table>
+            </div>
         </li>
-      }
+        }
     </ul>
     <continuous-marker [observer]="observer" (dataReceived)="onResult($event)"></continuous-marker>
-  </div>
-}
+</div>
 
 @if (global.user?.hasAnyRole(['admin', 'hr'])) {
-  <hr-focus-summary-tab [days]="days" [user]="user"></hr-focus-summary-tab>
+<hr-focus-summary-tab [days]="days" [user]="_user"></hr-focus-summary-tab>
 }
 
 <ng-template #addFocus let-modal>
-  <div class="modal-header">
-    <span class="modal-title" i18n="@@i18n.hr.addNewFocus">add new focus</span>
-  </div>
-  <div class="modal-body">
-    <div class="input-group mb-2">
-      <div class="input-group-prepend">
-        <span class="input-group-text" i18n="@@i18n.common.date">date</span>
-      </div>
-      <input ngbDatepicker #d="ngbDatepicker" placeholder="yyyy-mm-dd" (click)="d.open()" class="form-control" tabindex="-1" [startDate]="addFocusDate" (dateSelect)="d.close()" [(ngModel)]="addFocusDate" [autoClose]="'outside'"/>
-      <button class="btn btn-outline-primary" (click)="d.toggle()" type="button"><i>calendar_month</i></button>
+    <div class="modal-header">
+        <span class="modal-title" i18n="@@i18n.hr.addNewFocus">add new focus</span>
     </div>
-    <div class="input-group mb-2">
-      <div class="input-group-prepend">
-        <span class="input-group-text" i18n="@@i18n.common.time">time</span>
-      </div>
-      <input type="number" class="text-end form-control" [(ngModel)]="addFocusTime.hour">
-      <span class="input-group-text">:</span>
-      <input type="number" class="text-end form-control" [(ngModel)]="addFocusTime.minute">
+    <div class="modal-body">
+        <div class="input-group mb-2">
+            <div class="input-group-prepend">
+                <span class="input-group-text" i18n="@@i18n.common.date">date</span>
+            </div>
+            <input ngbDatepicker #d="ngbDatepicker" placeholder="yyyy-mm-dd" (click)="d.open()" class="form-control"
+                tabindex="-1" [startDate]="addFocusDate" (dateSelect)="d.close()" [(ngModel)]="addFocusDate"
+                [autoClose]="'outside'" />
+            <button class="btn btn-outline-primary" (click)="d.toggle()" type="button"><i>calendar_month</i></button>
+        </div>
+        <div class="input-group mb-2">
+            <div class="input-group-prepend">
+                <span class="input-group-text" i18n="@@i18n.common.time">time</span>
+            </div>
+            <input type="number" class="text-end form-control" [(ngModel)]="addFocusTime.hour">
+            <span class="input-group-text">:</span>
+            <input type="number" class="text-end form-control" [(ngModel)]="addFocusTime.minute">
+        </div>
+        <div class="input-group mb-2">
+            <div class="input-group-prepend">
+                <span class="input-group-text" i18n="@@i18n.common.duration">duration</span>
+            </div>
+            <input type="number" class="text-end form-control" suffix="h" tabindex="1" [(ngModel)]="addFocusDuration">
+        </div>
     </div>
-    <div class="input-group mb-2">
-      <div class="input-group-prepend">
-        <span class="input-group-text" i18n="@@i18n.common.duration">duration</span>
-      </div>
-      <input type="number" class="text-end form-control" suffix="h" tabindex="1" [(ngModel)]="addFocusDuration">
+    <div class="modal-footer">
+        <button class="btn btn-primary text-end" [class.d-none]="!addFocusDate" (click)="onNewEntry()"
+            i18n="@@i18n.common.add">add</button>
     </div>
-  </div>
-  <div class="modal-footer">
-    <button class="btn btn-primary text-end" [class.d-none]="!addFocusDate" (click)="onNewEntry()" i18n="@@i18n.common.add">add</button>
-  </div>
 </ng-template>

@@ -20,8 +20,7 @@ class PluginSlackController extends PluginChatController {
         }
         return null;
     }
-    public function __construct() {
-    }
+    public function __construct() {}
     protected function getToken(): string {
         $token = Cache::get('slack_api_token');
         if (! $token) {
@@ -122,6 +121,12 @@ class PluginSlackController extends PluginChatController {
     public function updateStatus(string $status, string $userId): void {
         $payload = ['user' => $userId, 'status_text' => $status];
         $this->post('users.profile.set', $payload);
+    }
+    public function deletePost(string $id): void {
+        // Slack requires channel + ts to delete; without channel context, skip silently
+    }
+    public function getChannelPosts(string $channelId, int $page = 0, int $perPage = 200): array {
+        return [];
     }
     public function getDirectChannelIdFor(string $userId): ?string {
         $data = $this->post('conversations.open', ['users' => $userId]);

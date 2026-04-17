@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterModule } from '@angular/router';
 import { NexusModule } from '@app/nx/nexus.module';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
@@ -8,7 +9,6 @@ import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
 import { Task } from '@models/tasks/task.model';
 import { ITaskPlugin } from '@models/tasks/task.plugin.interface';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { takeUntil } from 'rxjs';
 import { TabTasksBaseComponent } from '../tab-tasks-base.component';
 
 type TTask = ITaskPlugin & PluginInstance
@@ -32,8 +32,8 @@ export class TabTasksPluginTasksComponent extends TabTasksBaseComponent {
     }
 
     #loadInstance(instance: TTask) {
-        instance.init.pipe(takeUntil(this.destroy$)).subscribe(() => {
-            instance.indexTasks().pipe(takeUntil(this.destroy$)).subscribe(response => {
+        instance.init.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+            instance.indexTasks().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(response => {
                 instance.tasks = response
             })
         })
@@ -43,7 +43,7 @@ export class TabTasksPluginTasksComponent extends TabTasksBaseComponent {
         this.input.open('title', true).then(response => {
             if (response) {
                 const n = Task.fromJson({ name: response.text })
-                instance.create(n).pipe(takeUntil(this.destroy$)).subscribe(response => {
+                instance.create(n).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(response => {
                     const newTask = Task.fromJson(response)
                     newTask.var.user = instance.getUserFor(newTask.assignee?.id)
                     newTask.var.compact = (newTask.state == 1)

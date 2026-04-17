@@ -1,18 +1,18 @@
-@if (showMiniCards) {
+@if (showMiniCards()) {
 <div class="row mb-3">
     <div class="col-4">
         <div class="card h-100">
             <div class="card-header" i18n="@@i18n.common.address">address</div>
-            <div class="card-body" [innerHTML]="company.address| safe:'html'"></div>
+            <div class="card-body" [innerHTML]="company().address | safe:'html'"></div>
         </div>
     </div>
     <div class="col-4">
         <customer-payment-details
-            [company]="company"
-            [additionalItems]="additionalItems"
-            [projectPaymentDuration]="projectPaymentDuration"
-            [onChangeProjectPaymentDuration]="onChangeProjectPaymentDuration"
-            [onRemoveProjectPaymentDuration]="onRemoveProjectPaymentDuration">
+            [company]="company()"
+            [additionalItems]="additionalItems()"
+            [projectPaymentDuration]="projectPaymentDuration()"
+            [onChangeProjectPaymentDuration]="onChangeProjectPaymentDuration()"
+            [onRemoveProjectPaymentDuration]="onRemoveProjectPaymentDuration()">
         </customer-payment-details>
     </div>
     <div class="col-4">
@@ -20,9 +20,9 @@
             <div class="card-header d-flex align-items-center justify-content-between">
                 <span i18n="@@i18n.invoice.billingConsiderations">billing considerations</span>
                 @if (hasVatIssues()) {
-                    <button 
-                        type="button" 
-                        class="btn btn-sm btn-outline-primary" 
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-primary"
                         (click)="fixVatIssues()"
                         ngbTooltip="Fix all VAT issues automatically"
                         i18n-ngbTooltip="@@i18n.invoice.fixVatIssues">
@@ -30,9 +30,9 @@
                     </button>
                 }
             </div>
-            @if (allBillingConsiderations.length) {
+            @if (allBillingConsiderations().length) {
             <ul class="list-group list-group-flush cursor-default">
-                @for (item of allBillingConsiderations; track trackBillingConsideration($index, item)) {
+                @for (item of allBillingConsiderations(); track ('billing:' + trackBillingConsideration($index, item))) {
                 <li class="list-group-item list-group-item-action d-flex align-items-center gap-2">
                     <i [class.text-warning]="item.type === 'warning'"
                         [class.text-danger]="item.type === 'error'">
@@ -46,7 +46,10 @@
                 }
             </ul>
             } @else {
-            <div class="card-body text-muted" i18n="@@i18n.invoice.noBillingIssues">no issues found</div>
+            <div class="card-body text-muted vstack gap-2 align-items-center">
+                <img src="../../../assets/empty-state/checkmark.png" alt="No issues" style="width:100px; height:100px; margin-bottom: -20px;">
+                <span i18n="@@i18n.invoice.noBillingIssues">no issues found</span>
+            </div>
             }
         </div>
     </div>
@@ -54,21 +57,23 @@
 }
 
 <div class="card mb-3 p-3 prefix-card">
-    <text-param-editor #before [key]="prefixKey" [to]="prefixTo" [annotations]="true" [object]="prefixObject"
-        [fallback]="true" [locale]="companyLocale"></text-param-editor>
+    <text-param-editor #before [key]="prefixKey()" [to]="prefixTo()" [annotations]="true" [object]="prefixObject()"
+        [fallback]="true" [locale]="companyLocale()"></text-param-editor>
 </div>
 
-@if (items !== undefined) {
-<invoice-prepare [items]="items" [companyRef]="company" [annotationType]="annotationType"
-    [allowedNewItems]="allowedNewItems" [withInstalments]="withInstalments" [parent]="parent"
+<ng-content></ng-content>
+
+@if (items() !== undefined) {
+<invoice-prepare [items]="items()" [stageFilter]="stageFilter()" [companyRef]="company()" [annotationType]="annotationType()"
+    [allowedNewItems]="allowedNewItems()" [withInstalments]="withInstalments()" [parent]="parent()"
     (dataLoaded)="handleTableLoaded($event)"></invoice-prepare>
-} @else if (parent) {
-<invoice-prepare [parent]="parent" [companyRef]="company" [annotationType]="annotationType"
-    [allowedNewItems]="allowedNewItems" [withInstalments]="withInstalments"
+} @else if (parent()) {
+<invoice-prepare [parent]="parent()" [stageFilter]="stageFilter()" [companyRef]="company()" [annotationType]="annotationType()"
+    [allowedNewItems]="allowedNewItems()" [withInstalments]="withInstalments()"
     (dataLoaded)="handleTableLoaded($event)"></invoice-prepare>
 }
 
 <div class="card my-3 p-3">
-    <text-param-editor #after [key]="suffixKey" [to]="suffixTo" [annotations]="true" [object]="suffixObject"
-        [fallback]="true" [locale]="companyLocale"></text-param-editor>
+    <text-param-editor #after [key]="suffixKey()" [to]="prefixTo()" [annotations]="true" [object]="prefixObject()"
+        [fallback]="true" [locale]="companyLocale()"></text-param-editor>
 </div>

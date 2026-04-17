@@ -1,4 +1,4 @@
-import { Component, inject, Input, signal, TemplateRef, WritableSignal, OnInit } from '@angular/core';
+import { Component, inject, signal, TemplateRef, WritableSignal, OnInit, model } from '@angular/core';
 import { GlobalService } from 'src/models/global.service';
 import { User } from 'src/models/user/user.model';
 import { HrTeamService } from '../hr-team/hr-team.service';
@@ -20,7 +20,9 @@ import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
     imports: [HrVacationContainerComponent, CommonModule, FormsModule, NgbDatepickerModule, ToolbarComponent]
 })
 export class HrVacationColsComponent implements OnInit {
-    @Input() user:User
+    
+    user = model<User>()
+
     global = inject(GlobalService)    
     #parent = inject(HrTeamService)
     calendar = inject(NgbCalendar)
@@ -40,7 +42,7 @@ export class HrVacationColsComponent implements OnInit {
 
     ngOnInit() {
         this.#parent.onUserChange.subscribe(_ => {
-            this.user = _
+            this.user.set(_)
             this.initializeNewWorkingHours()
             this.loadVacationGrants()
         })
@@ -50,38 +52,41 @@ export class HrVacationColsComponent implements OnInit {
     }
 
     loadVacationGrants() {
-        if (this.user) {
-            this.#vacationService.indexGrants(this.user).subscribe(grants => {
+        const user = this.user()
+        if (user) {
+            this.#vacationService.indexGrants(user).subscribe(grants => {
                 this.grants = grants
             })
         }
     }
 
     initializeNewWorkingHours() {
-        if (this.user?.active_employment) {
+        const user = this.user()
+        if (user?.active_employment) {
             this.newWorkingHours = {
-                mo: this.user.active_employment.mo || 0,
-                tu: this.user.active_employment.tu || 0,
-                we: this.user.active_employment.we || 0,
-                th: this.user.active_employment.th || 0,
-                fr: this.user.active_employment.fr || 0
+                mo: user.active_employment.mo || 0,
+                tu: user.active_employment.tu || 0,
+                we: user.active_employment.we || 0,
+                th: user.active_employment.th || 0,
+                fr: user.active_employment.fr || 0
             }
             this.calculateVacationAdjustment()
         }
     }
 
     calculateVacationAdjustment() {
-        if (!this.user?.active_employment || !this.effectiveDate || !this.vacationDaysPerYear) {
+        const user = this.user()
+        if (!user?.active_employment || !this.effectiveDate || !this.vacationDaysPerYear) {
             this.vacationCalculation = null
             return
         }
 
         const currentHours = [
-            this.user.active_employment.mo || 0,
-            this.user.active_employment.tu || 0,
-            this.user.active_employment.we || 0,
-            this.user.active_employment.th || 0,
-            this.user.active_employment.fr || 0
+            user.active_employment.mo || 0,
+            user.active_employment.tu || 0,
+            user.active_employment.we || 0,
+            user.active_employment.th || 0,
+            user.active_employment.fr || 0
         ]
 
         const newHours = [
@@ -115,7 +120,8 @@ export class HrVacationColsComponent implements OnInit {
     }
 
     canUpdateHours(): boolean {
-        return !!(this.user?.active_employment && 
+        const user = this.user()
+        return !!(user?.active_employment && 
                   this.effectiveDate && 
                   this.vacationDaysPerYear > 0 &&
                   this.vacationCalculation)
@@ -132,12 +138,15 @@ export class HrVacationColsComponent implements OnInit {
             fr: this.newWorkingHours.fr
         }
 
-        this.user.active_employment.update(updatedEmployment).subscribe(() => {
-            this.user.active_employment.mo = this.newWorkingHours.mo
-            this.user.active_employment.tu = this.newWorkingHours.tu
-            this.user.active_employment.we = this.newWorkingHours.we
-            this.user.active_employment.th = this.newWorkingHours.th
-            this.user.active_employment.fr = this.newWorkingHours.fr
+        const user = this.user()
+        if (!user?.active_employment) return
+
+        user.active_employment.update(updatedEmployment).subscribe(() => {
+            user.active_employment.mo = this.newWorkingHours.mo
+            user.active_employment.tu = this.newWorkingHours.tu
+            user.active_employment.we = this.newWorkingHours.we
+            user.active_employment.th = this.newWorkingHours.th
+            user.active_employment.fr = this.newWorkingHours.fr
             
             this.createVacationAdjustmentEntry()
             this.calculateVacationAdjustment()
@@ -145,7 +154,8 @@ export class HrVacationColsComponent implements OnInit {
     }
 
     createVacationAdjustmentEntry() {
-        if (!this.vacationCalculation || !this.user?.active_employment) return
+        const user = this.user()
+        if (!this.vacationCalculation || !user?.active_employment) return
 
         const vacation = Vacation.fromJson({})
         vacation.comment = `Working hours adjustment: ${this.vacationCalculation.avgHoursChange >= 0 ? '+' : ''}${this.vacationCalculation.avgHoursChange.toFixed(2)} hours/day average change. Formula: ${this.vacationDaysPerYear} days × ${this.vacationCalculation.remainingMonths}/12 months × ${this.vacationCalculation.avgHoursChange.toFixed(2)} hours = ${this.vacationCalculation.adjustmentHours >= 0 ? '+' : ''}${this.vacationCalculation.adjustmentHours.toFixed(2)} vacation hours adjustment`

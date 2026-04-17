@@ -53,17 +53,19 @@
             <div class="card-header" i18n="@@i18n.products.topProductsSold">top products by revenue</div>
             @if (statistics?.top_products?.length) {
               <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex align-items-center gap-2" *nxFor="let product of statistics.top_products; let i = index">
+                @for (product of statistics.top_products; track product.id; let i = $index) {
+                <li class="list-group-item d-flex align-items-center gap-2" [nx]="product" [tables]="statistics.top_products">
                   <span class="badge rounded-pill flex-shrink-0"
                     [ngClass]="i === 0 ? 'bg-warning text-dark' : i === 1 ? 'text-white' : i === 2 ? 'text-white' : 'bg-dark text-white'"
                     [style.background-color]="i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : ''"
                     ngbTooltip="Revenue rank based on total sales value"
                   i18n-ngbTooltip="@@i18n.products.revenueRankTooltip">#{{ i + 1 }}</span>
-                  <span class="text-truncate" [nx]="product">{{ product.name }}</span>
+                  <span class="text-truncate">{{ product.name }}</span>
                   <span class="ms-auto small text-muted"
                     ngbTooltip="Total revenue generated from this product"
                   i18n-ngbTooltip="@@i18n.products.totalRevenueTooltip">{{ product.total_revenue | money }}</span>
                 </li>
+                }
               </ul>
             } @else {
               <div class="card-body">
@@ -77,17 +79,19 @@
             <div class="card-header" i18n="@@i18n.products.fastestSellers">fastest selling products</div>
             @if (statistics?.fastest_sellers?.length) {
               <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex align-items-center gap-2" *nxFor="let product of statistics.fastest_sellers; let i = index">
+                @for (product of statistics.fastest_sellers; track product.id; let i = $index) {
+                <li class="list-group-item d-flex align-items-center gap-2" [nx]="product" [tables]="statistics.fastest_sellers">
                   <span class="badge rounded-pill flex-shrink-0"
                     [ngClass]="i === 0 ? 'bg-warning text-dark' : i === 1 ? 'text-white' : i === 2 ? 'text-white' : 'bg-dark text-white'"
                     [style.background-color]="i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : ''"
                     ngbTooltip="Speed rank based on average days from item creation to invoice"
                   i18n-ngbTooltip="@@i18n.products.speedRankTooltip">#{{ i + 1 }}</span>
-                  <span class="text-truncate" [nx]="product">{{ product.name }}</span>
+                  <span class="text-truncate">{{ product.name }}</span>
                   <span class="ms-auto small text-muted"
                     ngbTooltip="Average days between adding to invoice and invoice creation"
                   i18n-ngbTooltip="@@i18n.products.salesSpeedTooltip">{{ (product.average_sales_speed | number:'1.1-1') }}d</span>
                 </li>
+                }
               </ul>
             } @else {
               <div class="card-body">
@@ -101,17 +105,19 @@
             <div class="card-header" i18n="@@i18n.products.mostRepurchased">most repurchased products</div>
             @if (statistics?.most_repurchased?.length) {
               <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex align-items-center gap-2" *nxFor="let product of statistics.most_repurchased; let i = index">
+                @for (product of statistics.most_repurchased; track product.id; let i = $index) {
+                <li class="list-group-item d-flex align-items-center gap-2" [nx]="product" [tables]="statistics.most_repurchased">
                   <span class="badge rounded-pill flex-shrink-0"
                     [ngClass]="i === 0 ? 'bg-warning text-dark' : i === 1 ? 'text-white' : i === 2 ? 'text-white' : 'bg-dark text-white'"
                     [style.background-color]="i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : ''"
                     ngbTooltip="Repurchase rank based on average purchases per customer"
                   i18n-ngbTooltip="@@i18n.products.repurchaseRankTooltip">#{{ i + 1 }}</span>
-                  <span class="text-truncate" [nx]="product">{{ product.name }}</span>
+                  <span class="text-truncate">{{ product.name }}</span>
                   <span class="ms-auto small text-muted"
                     ngbTooltip="Average purchases per customer"
                   i18n-ngbTooltip="@@i18n.products.repurchaseFrequencyTooltip">{{ product.average_repurchase_frequency }}×</span>
                 </li>
+                }
               </ul>
             } @else {
               <div class="card-body">

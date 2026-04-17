@@ -2,6 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Company;
+use App\Models\Focus;
+use App\Models\Param;
+use App\Models\Project;
 use App\Models\User;
 
 class FocusStatisticsService {
@@ -60,7 +64,7 @@ class FocusStatisticsService {
         $startDate = now()->subMonths(24);
 
         // Get companies with finished successful projects in the last 24 months
-        $companies = \App\Models\Company::whereHas('projects', function ($query) use ($startDate) {
+        $companies = Company::whereHas('projects', function ($query) use ($startDate) {
             $query->whereHas('lastFinishedSuccessfulState', function ($stateQuery) use ($startDate) {
                 $stateQuery->where('project_project_state.created_at', '>=', $startDate);
             });
@@ -118,12 +122,66 @@ class FocusStatisticsService {
         }
         return $result;
     }
+    public static function getCompanyMonthlyPredictionAccuracy(Company $company): array {
+        $startDate = now()->subMonths(36);
+
+        $projects = $company->projects()
+            ->whereHas('lastFinishedState')
+            ->where('created_at', '>=', $startDate)
+            ->with(['invoiceItems'])
+            ->get();
+
+        $focusByProject = Focus::where('parent_type', Project::class)
+            ->whereIn('parent_id', $projects->pluck('id'))
+            ->selectRaw('parent_id, SUM(duration) as total_duration')
+            ->groupBy('parent_id')
+            ->pluck('total_duration', 'parent_id');
+
+        $monthlyData = [];
+
+        foreach ($projects as $project) {
+            $estimated = $project->invoiceItems->sum(fn ($item) => $item->assumedWorkload());
+            if ($estimated <= 0) {
+                continue;
+            }
+
+            $actual = $focusByProject[$project->id] ?? 0;
+            if ($actual <= 0) {
+                continue;
+            }
+
+            $biasFactor = $actual / $estimated;
+            $month      = $project->created_at->format('Y-m');
+
+            if (! isset($monthlyData[$month])) {
+                $monthlyData[$month] = ['weighted_sum' => 0, 'total_weight' => 0, 'projects' => []];
+            }
+            $monthlyData[$month]['weighted_sum'] += $biasFactor * $actual;
+            $monthlyData[$month]['total_weight'] += $actual;
+            $monthlyData[$month]['projects'][$project->id] = true;
+        }
+
+        $result = [];
+        foreach ($monthlyData as $month => $data) {
+            if ($data['total_weight'] <= 0) {
+                continue;
+            }
+            $result[] = [
+                'month'          => $month,
+                'bias_factor'    => round($data['weighted_sum'] / $data['total_weight'], 4),
+                'projects_count' => count($data['projects']),
+            ];
+        }
+
+        usort($result, fn ($a, $b) => strcmp($a['month'], $b['month']));
+        return $result;
+    }
 
     /**
      * Calculate bias factor for a single invoice item
      * Returns null if item should be skipped, otherwise returns array with bias data
      */
-    private static function calculateItemBiasFactor($item): ?array {
+    public static function calculateItemBiasFactor($item): ?array {
         if ($item->predictions->isEmpty() || $item->assumedWorkload() <= 0) {
             return null;
         }
@@ -178,7 +236,7 @@ class FocusStatisticsService {
 
         $regexWorkload = [
             '(hours?|hrs?|hr\.?|h|std\.?|stunden?)'                               => 1,
-            '(days?|d|day|tage?|tag|pt|pts?\.?|mt|man[-\s]?day[s]?|arbeitstage?)' => \App\Models\Param::get('INVOICE_HPD')->value,
+            '(days?|d|day|tage?|tag|pt|pts?\.?|mt|man[-\s]?day[s]?|arbeitstage?)' => Param::get('INVOICE_HPD')->value,
         ];
 
         foreach ($regexWorkload as $regex => $multiplier) {

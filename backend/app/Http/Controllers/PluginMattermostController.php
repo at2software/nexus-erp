@@ -40,13 +40,22 @@ class PluginMattermostController extends PluginChatController {
             }
         }
     }
+    public static function buildWebhookProps(string $username = 'NEXUS', ?string $icon = null): array {
+        $icon = $icon ?? env('APP_URL').'/icons/project.jpg';
+        return [
+            'from_webhook'         => 'true',
+            'webhook_display_name' => $username,
+            'override_username'    => $username,
+            'override_icon_url'    => $icon,
+        ];
+    }
     protected function getPluginLinkUrl($id) {
         return $this->env('ENDPOINT').'projects/'.$id;
     }
-    public function getOrCreateChannel($project, string $purpose, string $header, ?string $postfix=null) {
+    public function getOrCreateChannel($project, string $purpose, string $header, ?string $postfix = null) {
         return $this->getChannelIdFor($project, $postfix) ?? $this->createChannelFor($project, $purpose, $header, $postfix);
     }
-    public function getChannelIdFor(Project $project, ?string $postfix=null): ?string {
+    public function getChannelIdFor(Project $project, ?string $postfix = null): ?string {
         $existing = $project->pluginLinks()->where('type', static::getKey())->value('url');
         if ($existing) {
             $parts = explode('/', $existing);
@@ -91,7 +100,7 @@ class PluginMattermostController extends PluginChatController {
         return $this->_createOrUpdatePost($cacheId, $channelId, $message, $props, 'id');
     }
     public function createPost(string $channel_id, string $message, $props = null) {
-        $payload = ['channel_id' => $channel_id, 'message'    => $message];
+        $payload = ['channel_id' => $channel_id, 'message' => $message];
         if ($props) {
             $payload['props'] = $props;
         } else {
@@ -154,7 +163,23 @@ class PluginMattermostController extends PluginChatController {
         }
         return null;
     }
-    public function updatePost(string $id, string $message, $props = null, ?string $channelId=null) {
+    protected function findExistingPost(string $cacheId, string $channelId): ?string {
+        $data  = $this->getChannelPosts($channelId, 0, 200);
+        $posts = $data['posts'] ?? [];
+        foreach ($data['order'] ?? [] as $postId) {
+            if (($posts[$postId]['props']['nexus_cache_id'] ?? null) === $cacheId) {
+                return $postId;
+            }
+        }
+        return null;
+    }
+    public function deletePost(string $id): void {
+        $this->delete("posts/$id");
+    }
+    public function getChannelPosts(string $channelId, int $page = 0, int $perPage = 200): array {
+        return $this->get("channels/$channelId/posts?page=$page&per_page=$perPage") ?? [];
+    }
+    public function updatePost(string $id, string $message, $props = null, ?string $channelId = null) {
         $payload = ['id' => $id, 'message' => $message];
         if ($props) {
             $payload['props'] = $props;
@@ -169,7 +194,7 @@ class PluginMattermostController extends PluginChatController {
         return $this->put('channels/'.$id, $payload);
     }
     public function updateStatus(string $status, string $user_id): void {
-        $this->put('users/'.$user_id.'/status', ['user_id' => $user_id, 'status'  => $status]);
+        $this->put('users/'.$user_id.'/status', ['user_id' => $user_id, 'status' => $status]);
     }
     public function updatePosition(string $position, string $user_id): void {
         $data    = $this->get('users/'.$user_id);
@@ -184,7 +209,6 @@ class PluginMattermostController extends PluginChatController {
     public function getIdFor(User $user): ?string {
         return $this->getUserId($user);
     }
-
     public function getDirectChannelIdFor(string $userId): ?string {
         $me = $this->get('users/me');
         if (! $me || empty($me['id'])) {

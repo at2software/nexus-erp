@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { MarketingService } from '@models/marketing/marketing.service';
 import { MarketingProspect } from '@models/marketing/marketing.prospect.model';
@@ -13,13 +13,15 @@ import { MarketingConvertProspectModalComponent } from '../marketing-convert-pro
 import { MarketingLinkContactModalComponent } from '../marketing-link-contact-modal/marketing-link-contact-modal.component';
 import { MarketingProspectActivity } from '@models/marketing/marketing-prospect-activity.model';
 import { VcardComponent } from '@app/customers/_shards/vcard/vcard.component';
+import { RteComponent } from '@app/_shards/rte/rte.component';
+import { personalized } from 'src/constants/personalized';
 
 @Component({
     selector: 'marketing-prospect-detail',
     templateUrl: './marketing-prospect-detail.component.html',
     styleUrls: ['./marketing-prospect-detail.component.scss'],
     standalone: true,
-    imports: [CommonModule, FormsModule, NgbTooltipModule, NexusModule, VcardComponent, ToolbarComponent]
+    imports: [CommonModule, FormsModule, NgbTooltipModule, NexusModule, VcardComponent, ToolbarComponent, RteComponent, RouterLink]
 })
 export class MarketingProspectDetailComponent implements OnInit {
 
@@ -135,23 +137,23 @@ export class MarketingProspectDetailComponent implements OnInit {
     }
 
     getProspectEmail(): string | null {
-        return this.prospect?.card?.get('EMAIL')?.first()?.vals?.[0]
-            || this.prospect?.company_contact?.card?.get('EMAIL')?.first()?.vals?.[0]
-            || this.prospect?.company_contact?.contact?.card?.get('EMAIL')?.first()?.vals?.[0]
+        return this.prospect?.card.get('EMAIL')?.first()?.vals?.[0]
+            || this.prospect?.company_contact?.card.get('EMAIL')?.first()?.vals?.[0]
+            || this.prospect?.company_contact?.contact?.card.get('EMAIL')?.first()?.vals?.[0]
             || this.prospect?.email || null;
     }
 
     getProspectLinkedIn(): string | null {
-        return this.prospect?.card?.get('URL')?.first()?.vals?.[0]
-            || this.prospect?.company_contact?.card?.get('URL')?.first()?.vals?.[0]
-            || this.prospect?.company_contact?.contact?.card?.get('URL')?.first()?.vals?.[0]
+        return this.prospect?.card.get('URL')?.first()?.vals?.[0]
+            || this.prospect?.company_contact?.card.get('URL')?.first()?.vals?.[0]
+            || this.prospect?.company_contact?.contact?.card.get('URL')?.first()?.vals?.[0]
             || this.prospect?.linkedin_url || null;
     }
 
     getProspectPhone(): string | null {
-        return this.prospect?.card?.get('TEL')?.first()?.vals?.[0]
-            || this.prospect?.company_contact?.card?.get('TEL')?.first()?.vals?.[0]
-            || this.prospect?.company_contact?.contact?.card?.get('TEL')?.first()?.vals?.[0]
+        return this.prospect?.card.get('TEL')?.first()?.vals?.[0]
+            || this.prospect?.company_contact?.card.get('TEL')?.first()?.vals?.[0]
+            || this.prospect?.company_contact?.contact?.card.get('TEL')?.first()?.vals?.[0]
             || this.prospect?.phone || null;
     }
 
@@ -160,8 +162,9 @@ export class MarketingProspectDetailComponent implements OnInit {
         switch (qa) {
             case 'EMAIL': {
                 const email = this.getProspectEmail();
+                if (!email) return;
                 const subject = activity.marketing_activity?.name || 'Regarding Our Recent Outreach';
-                const body = this.getLocalizedDescription(activity);
+                const body = personalized(this.getEmailQuickActionBody(activity), this.getQuickActionPersonalizations());
                 window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                 break;
             }
@@ -186,6 +189,24 @@ export class MarketingProspectDetailComponent implements OnInit {
         return icons[qa] || '';
     }
 
+    getEmailQuickActionBody(activity: MarketingProspectActivity): string {
+        const matchingActivity = this.getMatchingProspectActivity(activity);
+        return this.getLocalizedDescription(matchingActivity || activity);
+    }
+
+    getMatchingProspectActivity(activity: MarketingProspectActivity): MarketingProspectActivity | null {
+        const targetId = String(activity.marketing_initiative_activity_id || activity.marketing_activity?.id || '');
+        if (!targetId) return null;
+
+        const matched = this.prospect?.activities?.find((item: any) => {
+            const itemTargetId = String(item?.marketing_initiative_activity_id || item?.marketing_initiative_activity?.id || item?.marketing_activity?.id || '');
+            return itemTargetId === targetId;
+        });
+
+        if (!matched) return null;
+        return matched instanceof MarketingProspectActivity ? matched : MarketingProspectActivity.fromJson(matched);
+    }
+
     getLocalizedDescription(activity: MarketingProspectActivity): string {
         const desc = activity.marketing_activity?.description;
         if (!desc) return '';
@@ -205,6 +226,69 @@ export class MarketingProspectDetailComponent implements OnInit {
 
         // Fallback: return first available
         return desc[0]?.text || '';
+    }
+
+    getQuickActionPersonalizations(): Record<string, string> {
+        const prospect = this.prospect;
+        const contact = prospect?.company_contact?.contact;
+        const companyContact = prospect?.company_contact;
+
+        const firstName = prospect?.firstName || companyContact?.firstName || contact?.firstName || '';
+        const familyName = prospect?.familyName || companyContact?.familyName || contact?.familyName || '';
+        const fullName = prospect?.fullName || companyContact?.fullName || contact?.fullName || prospect?.name || '';
+        const salutation = this.buildEmailSalutation(
+            firstName,
+            familyName,
+            fullName,
+            prospect?.salutation || companyContact?.salutation || contact?.salutation || '',
+            prospect?.gender || companyContact?.gender || contact?.gender || ''
+        );
+        const company = prospect?.company || prospect?.companyModel?.company_name || companyContact?.company?.name || '';
+        const email = this.getProspectEmail() || '';
+        const phone = this.getProspectPhone() || '';
+
+        return {
+            salutation,
+            firstName,
+            familyName,
+            fullName,
+            name: fullName,
+            company,
+            companyName: company,
+            email,
+            phone,
+            // Legacy aliases used by some placeholders.
+            first_name: firstName,
+            family_name: familyName,
+            full_name: fullName
+        };
+    }
+
+    buildEmailSalutation(firstName: string, familyName: string, fullName: string, rawSalutation: string, gender: string): string {
+        const lang = this.prospect?.getLang() || 'de';
+        const formality = this.prospect?.getFormality() || 'formal';
+
+        if (formality === 'informal') {
+            const informalPrefix = lang === 'de' ? 'Hallo' : 'Hello';
+            const informalName = firstName || fullName || familyName;
+            return informalName ? `${informalPrefix} ${informalName},` : `${informalPrefix},`;
+        }
+
+        if (lang === 'de') {
+            if (familyName) {
+                if (gender === 'F') return `Sehr geehrte Frau ${familyName},`;
+                return `Sehr geehrter Herr ${familyName},`;
+            }
+            if (fullName) return `Sehr geehrte/r ${fullName},`;
+            if (rawSalutation) return `${rawSalutation},`;
+            return 'Sehr geehrte Damen und Herren,';
+        }
+
+        const englishHonorific = gender === 'F' ? 'Ms.' : 'Mr.';
+        if (familyName) return `Dear ${englishHonorific} ${familyName},`;
+        if (fullName) return `Dear ${fullName},`;
+        if (rawSalutation) return `Dear ${rawSalutation.replace(/,$/, '')},`;
+        return 'Dear Sir or Madam,';
     }
 
     markActivityCompleted(activity: MarketingProspectActivity, notes?: string) {

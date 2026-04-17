@@ -116,7 +116,7 @@ export const markdown2html = (markdown:string) => {
     markdown = markdown.replace(/[([[]([^\][]*?)[\]](?!\()/gs, "&#91;$1&#93;")
     markdown = markdown.replace(/!\[(.*?)\]\((.*?)( =\d+x\d+)?\)/gs, "<img src=\"$2\" title=\"$1\">")
     markdown = markdown.replace(/\[(.*?)\]\((.*?)\)/gs, "<a class=\"text-primary\" href=\"$2\" target=\"_blank\">$1</a>")
-    markdown = markdown.replace(/:([a-z0-9_+\-]+):/g, (match, name) => {
+    markdown = markdown.replace(/:([a-z0-9_+-]+):/g, (match, name) => {
         const code = EMOJI_MAP[name]
         return code ? String.fromCodePoint(...code.split('-').map(c => parseInt(c, 16))) : match
     })

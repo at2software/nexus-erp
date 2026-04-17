@@ -17,12 +17,9 @@ final class InvoiceItemType extends Enum {
     const Monthly               = 32;
     const Quarterly             = 33;
     const Yearly                = 34;
-    const PreparedInstalment    = 40;
-    const PreparedSupport       = 41;
-    const PreparedRecurring     = 43;
     const Repeating             = [self::Daily, self::Weekly, self::Monthly, self::Quarterly, self::Yearly];
     const Total                 = [self::Default, self::Discount, self::Paydown];
-    const TotalRemaining        = [self::Default, self::Discount, self::Paydown, self::Instalment, self::PreparedRecurring];
+    const TotalRemaining        = [self::Default, self::Discount, self::Paydown, self::Instalment];
     const ProjectTotal          = [self::Default, self::Discount];
-    const ProjectTotalRemaining = [self::Default, self::Discount, self::Paydown, self::Instalment, self::PreparedRecurring];
+    const ProjectTotalRemaining = [self::Default, self::Discount, self::Paydown, self::Instalment];
 }

@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 import { GitLabPlugin } from '@models/http/plugin.gitlab';
 import { User } from '@models/user/user.model';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
@@ -10,7 +10,7 @@ import { ModalBaseComponent } from '@app/_modals/modal-base.component';
     templateUrl: './git-user-selection.component.html',
     styleUrls: ['./git-user-selection.component.scss'],
     standalone: true,
-    imports: [FormsModule, CommonModule]
+    imports: [FormsModule]
 })
 export class GitUserSelectionComponent extends ModalBaseComponent<string> {
 

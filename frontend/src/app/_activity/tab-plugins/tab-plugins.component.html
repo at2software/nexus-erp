@@ -14,7 +14,8 @@
           @if (project) {
             <div class="header">{{project.name}}</div>
             <ul class="list-group">
-              <li class="list-group-item d-flex" *nxFor="let p of project.plugin_links">
+              @for (p of project.plugin_links; track p.id) {
+              <li class="list-group-item d-flex" [nx]="p" [tables]="project.plugin_links">
                 <div class="ms-1 me-2">
                   <n [ngbTooltip]="factory.instanceFor(p)?.state" class="text-{{factory.instanceFor(p)?.getStateCss()}}">{{factory.instanceFor(p)?.icon()}}</n>
                 </div>
@@ -22,6 +23,7 @@
                   {{factory.instanceFor(p)?.getName()}}
                 </div>
               </li>
+              }
             </ul>
           }
           <div class="header">
@@ -29,7 +31,8 @@
             <i class="float-end text-primary cursor-pointer" smartLink="/profile/plugins">chevron_right</i>
           </div>
           <ul class="list-group">
-            <li class="list-group-item d-flex" *nxFor="let p of factory.getPluginEncryptions()">
+            @for (p of factory.getPluginEncryptions(); track p.id) {
+            <li class="list-group-item d-flex" [nx]="p" [tables]="factory.getPluginEncryptions()">
               <div class="ms-1 me-2">
                 <n [ngbTooltip]="factory.instanceFor(p)?.state" class="text-{{factory.instanceFor(p)?.getStateCss()}}">{{factory.instanceFor(p)?.icon()}}</n>
               </div>
@@ -47,6 +50,7 @@
                 </div>
               }
             </li>
+            }
           </ul>
         </scrollbar>
       }

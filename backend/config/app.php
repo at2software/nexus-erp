@@ -1,7 +1,11 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\BootHooksServiceProvider;
+use App\Providers\BroadcastServiceProvider;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\ServiceProvider;
+use Spatie\Permission\PermissionServiceProvider;
 
 return [
 
@@ -126,6 +130,8 @@ return [
 
     'key' => env('APP_KEY'),
 
+    'team_monitor_api_key' => env('TEAM_MONITOR_API_KEY', ''),
+
     'cipher' => 'AES-256-CBC',
 
     /*
@@ -158,20 +164,10 @@ return [
     */
 
     'providers' => ServiceProvider::defaultProviders()->merge([
-        /*
-         * Package Service Providers...
-         */
-
-        /*
-         * Application Service Providers...
-         */
-        App\Providers\AppServiceProvider::class,
-        App\Providers\AuthServiceProvider::class,
-        App\Providers\BroadcastServiceProvider::class,
-        App\Providers\EventServiceProvider::class,
-        App\Providers\RouteServiceProvider::class,
-        Spatie\Permission\PermissionServiceProvider::class,
-        App\Providers\BootHooksServiceProvider::class,
+        AppServiceProvider::class,
+        BroadcastServiceProvider::class,
+        BootHooksServiceProvider::class,
+        PermissionServiceProvider::class,
     ])->toArray(),
 
     /*

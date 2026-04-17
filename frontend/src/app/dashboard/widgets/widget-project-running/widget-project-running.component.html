@@ -15,7 +15,7 @@
   @if (!getOptions()['chart-only']?.value) {
     <ul-compact [badge]="this.badgeCount(data) > 0 ? '' + this.badgeCount(data) : undefined">
       @for (_ of data; track _.id) {
-      <li class="list-group-item d-flex text-nowrap {{_.markerClass()}}" [class.compact]="indexExceedsSettings(i) && !_.badge" [nx]="_" [tables]="data">
+      <li class="list-group-item d-flex text-nowrap {{_.markerClass()}}" [class.compact]="indexExceedsSettings(i()!) && !_.badge" [nx]="_" [tables]="data">
         <div>
           <avatar [object]="_"></avatar>
         </div>

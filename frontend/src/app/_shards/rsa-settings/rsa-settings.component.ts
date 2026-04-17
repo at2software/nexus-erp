@@ -1,4 +1,4 @@
-import { Component, inject, Input } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 import * as forge from 'node-forge';
 import { GlobalService } from 'src/models/global.service';
 import { User } from 'src/models/user/user.model';
@@ -15,14 +15,14 @@ import { FormsModule } from '@angular/forms';
 })
 export class RsaSettingsComponent {
     
-    @Input() user: User
+    user = input.required<User>()
 
     saveCookie:boolean = false
 
     global = inject(GlobalService)
 
-    downloadPublicKey = () => this.downloadPem(forge.pki.publicKeyToPem(this.user.keyPair!.publicKey), 'public.pem')
-    downloadPrivateKey = () => this.downloadPem(forge.pki.privateKeyToPem(this.user.keyPair!.privateKey), 'private.pem')
+    downloadPublicKey = () => this.downloadPem(forge.pki.publicKeyToPem(this.user().keyPair!.publicKey), 'public.pem')
+    downloadPrivateKey = () => this.downloadPem(forge.pki.privateKeyToPem(this.user().keyPair!.privateKey), 'private.pem')
     downloadPem(data: string, filename: string) {
         const blob = new Blob([data], { type: 'application/x-pem-file' });
         const a    = document.createElement('a')

@@ -14,7 +14,4 @@ import { WidgetsModule } from '../widgets.module';
 export class WidgetRevenueMonthlyComponent extends BaseWidgetComponent implements OnInit {
     stats = inject(StatsService)
     data: any
-    ngOnInit() {
-        this.reload()
-    }
 }

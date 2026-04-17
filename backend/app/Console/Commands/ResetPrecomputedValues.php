@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
+use ReflectionClass;
 use Schema;
 
 class ResetPrecomputedValues extends Command {
@@ -19,7 +20,7 @@ class ResetPrecomputedValues extends Command {
             ->filter(function ($class) {
                 $valid = false;
                 if (class_exists($class) && is_subclass_of($class, Model::class) && Schema::hasTable(@(new $class)->getTable())) {
-                    $reflection = new \ReflectionClass($class);
+                    $reflection = new ReflectionClass($class);
                     $valid      = $reflection->isSubclassOf(Model::class) && ! $reflection->isAbstract();
                 }
                 return $valid;

@@ -1,5 +1,5 @@
-import { Component, Input, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, OnChanges, SimpleChanges, inject, input } from '@angular/core';
+
 import { FormsModule } from '@angular/forms';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { Serializable } from 'src/models/serializable';
@@ -21,11 +21,11 @@ export function sortSteps<T extends { trigger: string }>(steps: T[]): T[] {
     templateUrl: './payment-plan-editor.component.html',
     styleUrls: ['./payment-plan-editor.component.scss'],
     standalone: true,
-    imports: [CommonModule, FormsModule, NgbTooltipModule]
+    imports: [FormsModule, NgbTooltipModule]
 })
 export class PaymentPlanEditorComponent implements OnInit, OnChanges {
 
-    @Input() object?: Serializable
+    object = input<Serializable>()
 
     steps: PaymentPlanStep[] = []
     editSteps: PaymentPlanStep[] = []
@@ -46,8 +46,9 @@ export class PaymentPlanEditorComponent implements OnInit, OnChanges {
     }
 
     load() {
-        if (!this.object) return
-        this.object.showParam('PROJECT_PAYMENT_PLAN', { fallback: false }).subscribe((data: any) => {
+        const object = this.object()
+        if (!object) return
+        object.showParam('PROJECT_PAYMENT_PLAN', { fallback: false }).subscribe((data: any) => {
             if (data?.value) {
                 this.isFallback = false
                 this.activeTierLabel = ''
@@ -59,7 +60,7 @@ export class PaymentPlanEditorComponent implements OnInit, OnChanges {
     }
 
     #loadTierFallback() {
-        const budget = (this.object as any)?.net ?? 0
+        const budget = (this.object() as any)?.net ?? 0
         this.#paramService.show('params/PROJECT_PAYMENT_PLAN_TIERS').subscribe((data: any) => {
             const tiers = this.#parseTiers(data?.value)
             const tier  = tiers.find(t => t.threshold === null || budget < t.threshold) ?? tiers[tiers.length - 1]
@@ -92,7 +93,7 @@ export class PaymentPlanEditorComponent implements OnInit, OnChanges {
         if (this.totalPercentage !== 100 || !this.object) return
         this.editSteps = sortSteps(this.editSteps)
         const json = JSON.stringify(this.editSteps)
-        this.object.updateParam('PROJECT_PAYMENT_PLAN', { value: json }).subscribe(() => {
+        this.object()?.updateParam('PROJECT_PAYMENT_PLAN', { value: json }).subscribe(() => {
             this.steps           = this.editSteps.map(s => ({ ...s }))
             this.isFallback      = false
             this.activeTierLabel = ''
@@ -101,7 +102,7 @@ export class PaymentPlanEditorComponent implements OnInit, OnChanges {
     }
 
     revertToDefault() {
-        this.object?.updateParam('PROJECT_PAYMENT_PLAN', { value: null }).subscribe(() => this.load())
+        this.object()?.updateParam('PROJECT_PAYMENT_PLAN', { value: null }).subscribe(() => this.load())
     }
 
     addStep() {

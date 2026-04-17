@@ -1,4 +1,4 @@
-import { Component, Input, ViewChild, OnChanges } from '@angular/core';
+import { Component, ViewChild, OnChanges, input } from '@angular/core';
 import { ChartComponent, NgApexchartsModule } from 'ng-apexcharts';
 
 import { deepMerge } from '@constants/deepMerge';
@@ -11,7 +11,9 @@ import { chartTooltipHideEvent } from './chartTooltipHideEvent';
     imports: [NgApexchartsModule]
 })
 export class ApxChartXComponent implements OnChanges {
-    @Input() options: any
+    
+    options = input<any>()
+
     @ViewChild(ChartComponent) chart: ChartComponent;
 
     ngOnChanges(changes:any) {

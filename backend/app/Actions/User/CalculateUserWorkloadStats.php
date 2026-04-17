@@ -78,6 +78,7 @@ class CalculateUserWorkloadStats {
             $class = 'work-bar-danger';
         }
         return [
+            'key'      => $dayString,
             'day'      => date('d.m.Y', $day),
             'value'    => $duration,
             'class'    => $class,

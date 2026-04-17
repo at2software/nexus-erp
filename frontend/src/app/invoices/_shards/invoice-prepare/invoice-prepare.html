@@ -1,4 +1,4 @@
-@if (!isInvoice && allowedNewItems.length) {
+@if (!isInvoice() && allowedNewItems().length) {
   <toolbar>
     <div class="btn-group" ngbDropdown>
       @if (hasNewSet('item')) {
@@ -34,12 +34,11 @@
 }
 
 <div class="card">
-  @if (items) {
-    <table class="table mb-0 table-ext">
+  <table class="table mb-0 table-ext">
       <colgroup>
-      <col style="width:0px;">
-      <col style="width:30px;">
-      <col>
+        <col style="width:0px;">
+        <col style="width:30px;">
+        <col>
         <col style="width:100px;">
         <col style="width:80px;">
         <col style="width:100px;">
@@ -55,32 +54,32 @@
         </tr>
       </thead>
       <tbody cdkDropList (cdkDropListDropped)="onDrop($event)">
-        @if (loading) {
+        @if (loading()) {
           <tr>
             <td colspan="6" class="text-center py-5">
               <spinner [size]="48" [centered]="true"></spinner>
             </td>
           </tr>
         }
-        @for (item of regularItems; track item.id; let i = $index) {
+        @for (item of regularItems(); track ('regularItems:' + item.track_id); let i = $index) {
           <tr
             cdkDrag
             [nx]="item"
-            [tables]="items"
-            [nxContext]="{company: companyRef}"
+            [tables]="_items()"
+            [nxContext]="{company: companyRef()}"
             cdkDragLockAxis="y"
             invoice-item-row
-            [company]="getCompany()"
+            [company]="effectiveCompany()"
             [item]="item"
-            [annotationType]="annotationType"
+            [annotationType]="annotationType()"
             (singleActionResolved)="singleActionResolved($event)"
             class="{{item.markerClass()}}"
-            >
+          >
           </tr>
         }
-        @if (lastGroup) {
+        @if (lastGroup()) {
           <tr>
-            <td class="small text-end" colspan="6">{{lastGroup.var.sum | money}}</td>
+            <td class="small text-end" colspan="6">{{lastGroup()!.var.sum | money}}</td>
           </tr>
         }
       </tbody>
@@ -88,9 +87,9 @@
         <tr>
           <td colspan="1"></td>
           <td colspan="4" i18n="@@i18n.common.net">net</td>
-          <td class="text-end">{{net | money}}</td>
+          <td class="text-end">{{net() | money}}</td>
         </tr>
-        @for (v of vat; track v.title) {
+        @for (v of vat(); track ('vat:' + v.title)) {
           <tr>
             <td colspan="2"></td>
             <td colspan="3">{{v.title}}</td>
@@ -100,29 +99,30 @@
         <tr>
           <td colspan="1"></td>
           <td colspan="4" i18n="@@i18n.common.gross">gross</td>
-          <td class="text-end">{{gross | money}}</td>
+          <td class="text-end">{{gross() | money}}</td>
         </tr>
-        @if (instalmentItems.length) {
-          <tr *nxFor="let i of instalmentItems" (actionsResolved)="reload()">
+        @if (instalmentItems().length) {
+          @for (i of instalmentItems(); track ('instalments:' + i.track_id)) {
+          <tr [nx]="i" [tables]="_items()" (actionsResolved)="reload()">
             <td colspan="2"></td>
             <td colspan="3">{{i.text}}</td>
-            <td class="text-end text-muted">{{i.gross| money}}</td>
+            <td class="text-end text-muted">{{i.gross | money}}</td>
           </tr>
+          }
           <tr>
             <td colspan="1"></td>
             <td colspan="4" i18n="@@i18n.common.remaining">remaining</td>
-            <td class="text-end">{{remaining | money}}</td>
+            <td class="text-end">{{remaining() | money}}</td>
           </tr>
         }
-        <tr class="sticky-footer selection-row" [class.d-none]="selection.length === 0">
+        <tr class="sticky-footer selection-row" [class.d-none]="selection().length === 0">
           <td colspan="1"></td>
           <td colspan="3" i18n="@@i18n.common.selection">selection</td>
-          <td class="text-end">{{selectionQty | number:'1.0-2'}} PT</td>
-          <td class="text-end">{{selectionNet | money}}</td>
+          <td class="text-end">{{selectionQty() | number:'1.0-2'}} PT</td>
+          <td class="text-end">{{selectionNet() | money}}</td>
         </tr>
       </tfoot>
     </table>
-  }
 </div>
 <ng-template #dragHandleTmpl>
   <svg class="bi bi-list handle" width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">

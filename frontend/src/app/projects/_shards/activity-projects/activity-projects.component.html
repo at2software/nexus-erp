@@ -1,9 +1,11 @@
 @if (pp && pp.length) {
   <div class="header" i18n="@@i18n.common.quickLinks">quick links</div>
   <ul class="list-group">
-    <li *nxFor="let _ of pp" class="list-group-item d-flex">
+    @for (_ of pp; track ('activityProject:' + _.id)) {
+    <li class="list-group-item d-flex" [nx]="_" [tables]="pp">
       <project [project]="_" class="me-2"></project>
       {{_.name}}
     </li>
+    }
   </ul>
 }

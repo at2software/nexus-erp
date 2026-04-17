@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { MoneyPipe } from 'src/pipes/money.pipe';
 
 @Component({
@@ -10,9 +10,9 @@ import { MoneyPipe } from 'src/pipes/money.pipe';
     imports: [MoneyPipe, CommonModule]
 })
 export class SaldoChartComponent {
-    @Input() min:number
-    @Input() max:number
-    @Input() dx:number
-    @Input() delta:number
-    @Input() unit:string = 'money' // 'money' or 'hours'
+    min   = input<number>()
+    max   = input<number>()
+    dx    = input<number>()
+    delta = input<number>()
+    unit  = input<'money' | 'hours'>('money')
 }

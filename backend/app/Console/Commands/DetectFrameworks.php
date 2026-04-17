@@ -75,6 +75,7 @@ class DetectFrameworks extends Command {
 
                 if (! isset($frameworks[$frameworkName])) {
                     $this->warn("  Framework '{$frameworkName}' not found in database. Skipping.");
+
                     continue;
                 }
 
@@ -117,7 +118,6 @@ class DetectFrameworks extends Command {
 
         $color       = $colors[$framework] ?? 'white';
         $versionText = $version ? " <fg=gray>(v{$version})</>" : ' <fg=gray>(no version)</>';
-
         return "<fg={$color}>{$framework}</>{$versionText}";
     }
 }

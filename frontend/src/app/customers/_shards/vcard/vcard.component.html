@@ -1,4 +1,5 @@
-@if (object) {
+@let obj = object();
+@if (obj) {
 <div class="card mb-3">
   <div class="card-header hstack gap-2 align-items-center" [class.p-0]="isCompany()">
 
@@ -11,27 +12,19 @@
     }
 
     @if (isUser()) {
-
-    <ng-container *ngTemplateOutlet="title; context: { object:object, icon: 'person' }"></ng-container>
-
+    <ng-container *ngTemplateOutlet="title; context: { object: obj, icon: 'person' }"></ng-container>
     }
 
     @if (isContact()) {
-
-    <ng-container *ngTemplateOutlet="title; context: { object:object, icon: 'person' }"></ng-container>
-
+    <ng-container *ngTemplateOutlet="title; context: { object: obj, icon: 'person' }"></ng-container>
     }
 
     @if (isCompanyContact()) {
-
-    <ng-container *ngTemplateOutlet="title; context: { object:object, icon: 'work' }"></ng-container>
-
+    <ng-container *ngTemplateOutlet="title; context: { object: obj, icon: 'work' }"></ng-container>
     }
 
     @if (isProspect()) {
-
-    <ng-container *ngTemplateOutlet="title; context: { object:object, icon: 'group' }"></ng-container>
-
+    <ng-container *ngTemplateOutlet="title; context: { object: obj, icon: 'group' }"></ng-container>
     }
 
     <div class="card-header-actions d-flex ps-3">
@@ -50,13 +43,13 @@
             <a class="dropdown-item capitalize" (click)="addRow('TITLE:')" (keyup.enter)="addRow('TITLE:')" tabindex="0" i18n="@@i18n.common.position">position</a>
             }
           </li>
-          <li><a class="dropdown-item capitalize" (click)="addRow('TEL;type='+type+',VOICE:')" (keyup.enter)="addRow('TEL;type='+type+',VOICE:')" tabindex="0"
+          <li><a class="dropdown-item capitalize" (click)="addRow('TEL;type='+type()+',VOICE:')" (keyup.enter)="addRow('TEL;type='+type()+',VOICE:')" tabindex="0"
               i18n="@@i18n.common.telephone">telephone</a></li>
-          <li><a class="dropdown-item capitalize" (click)="addRow('TEL;type='+type+',CELL:')" (keyup.enter)="addRow('TEL;type='+type+',CELL:')" tabindex="0"
+          <li><a class="dropdown-item capitalize" (click)="addRow('TEL;type='+type()+',CELL:')" (keyup.enter)="addRow('TEL;type='+type()+',CELL:')" tabindex="0"
               i18n="@@i18n.common.mobile">mobile</a></li>
-          <li><a class="dropdown-item capitalize" (click)="addRow('TEL;type='+type+',FAX:')" (keyup.enter)="addRow('TEL;type='+type+',FAX:')" tabindex="0"
+          <li><a class="dropdown-item capitalize" (click)="addRow('TEL;type='+type()+',FAX:')" (keyup.enter)="addRow('TEL;type='+type()+',FAX:')" tabindex="0"
               i18n="@@i18n.common.fax">fax</a></li>
-          <li><a class="dropdown-item capitalize" (click)="addRow('EMAIL;type='+type+':')" (keyup.enter)="addRow('EMAIL;type='+type+':')" tabindex="0"
+          <li><a class="dropdown-item capitalize" (click)="addRow('EMAIL;type='+type()+':')" (keyup.enter)="addRow('EMAIL;type='+type()+':')" tabindex="0"
               i18n="@@i18n.common.email">email</a></li>
           <li><a class="dropdown-item capitalize" (click)="addRow('ADR:;;;;;;')" (keyup.enter)="addRow('ADR:;;;;;;')" tabindex="0"
               i18n="@@i18n.common.address">address</a></li>
@@ -67,7 +60,7 @@
           </li>
           <!-- <li><a class="dropdown-item capitalize" *ngIf="isCompanyContact() || isUser()" (click)="addRow('ROLE:')" tabindex="0" (keydown.enter)="addRow('ROLE:')" i18n="@@i18n.common.role">role</a></li> -->
           <li>@if (isCompany() || isContact() || isProspect()) {
-            <a class="dropdown-item capitalize" (click)="addRow('URL;type='+type+':')" (keyup.enter)="addRow('URL;type='+type+':')" tabindex="0" i18n="@@i18n.common.url">URL</a>
+            <a class="dropdown-item capitalize" (click)="addRow('URL;type='+type()+':')" (keyup.enter)="addRow('URL;type='+type()+':')" tabindex="0" i18n="@@i18n.common.url">URL</a>
             }
           </li>
           <li>@if (isContact() || isUser() || isProspect()) {
@@ -93,7 +86,7 @@
       </div>
     </div>
   </div>
-  @if (object.card) {
+  @if (obj.card; as card) {
   <ul class="list-group list-group-dark">
 
     <!-- Business Register Information -->
@@ -122,14 +115,14 @@
 
     @if (isContact() || isUser() || isProspect()) {
 
-    <li [nx]="object.card.get('FN').first()!" (singleActionResolved)="singleActionResolved($event)" [class]="liClass">
+    <li [nx]="card.get('FN').first()!" (singleActionResolved)="singleActionResolved($event)" [class]="liClass">
       <div class="mb-1">
         <div class="input-group">
           <span class="input-group-text">
             <i ngbTooltip="name" i18n-ngbTooltip="@@i18n.common.name">badge</i>
           </span>
           <input (blur)="updateVcard()" (keyup)="onFnChange($event)" type="text" class="form-control" id="floatingInput"
-            placeholder="name" [(ngModel)]="object.card.get('FN').first()!.vals[0]" i18n-placeholder="@@i18n.common.name">
+            placeholder="name" [(ngModel)]="card.get('FN').first()!.vals[0]" i18n-placeholder="@@i18n.common.name">
           <div (click)="showNameDetails = !showNameDetails" (keyup.enter)="showNameDetails = !showNameDetails" tabindex="0">
             <i class="p-2 pointer text-primary">{{showNameDetails ? 'expand_less' : 'expand_more'}}</i>
           </div>
@@ -138,14 +131,14 @@
     </li>
 
     @if (showNameDetails) {
-    <li [nx]="object.card.get('N').first()!" (singleActionResolved)="singleActionResolved($event)" [class]="liClass">
-      @for (val of object.card.get('N').first()!.vals; track j; let j = $index) {
+    <li [nx]="card.get('N').first()!" (singleActionResolved)="singleActionResolved($event)" [class]="liClass">
+      @for (val of card.get('N').first()!.vals; track j; let j = $index) {
       <div class="mb-1">
         <div class="input-group">
-          <label for="floatingInput" class="input-group-text col-4">{{object.descN(j)}}</label>
-          <input (blur)="updateVcard()" (keyup)="onNChange(object.card.get('N').first()!)" type="text"
+          <label for="floatingInput" class="input-group-text col-4">{{obj.descN(j)}}</label>
+          <input (blur)="updateVcard()" (keyup)="onNChange(card.get('N').first()!)" type="text"
             class="form-control" id="floatingInput" placeholder="name"
-            [(ngModel)]="object.card.get('N').first()!.vals[j]" i18n-placeholder="@@i18n.common.name">
+            [(ngModel)]="card.get('N').first()!.vals[j]" i18n-placeholder="@@i18n.common.name">
         </div>
       </div>
       }
@@ -154,7 +147,7 @@
 
     }
 
-    @for (row of object.card.rows; track i; let i = $index) {
+    @for (row of card.rows; track i; let i = $index) {
 
     @switch (row.key) {
     @case ('ADR') {
@@ -162,43 +155,43 @@
       [class.accent-danger]="needsWarning(row)" [attr.title]="needsWarning(row) || null">
       <div class="flex-fill me-3">
         <div class="form-floating mb-2">
-          <input (blur)="updateVcard()" type="text" class="form-control" id="adr-{{i}}-1" placeholder="{{object.descAdr(1)}}"
-            [(ngModel)]="object.card.rows[i].vals[1]">
-          <label for="adr-{{i}}-1">{{object.descAdr(1)}}</label>
+          <input (blur)="updateVcard()" type="text" class="form-control" id="adr-{{i}}-1" placeholder="{{obj.descAdr(1)}}"
+            [(ngModel)]="card.rows[i].vals[1]">
+          <label for="adr-{{i}}-1">{{obj.descAdr(1)}}</label>
         </div>
         <div class="form-floating mb-2">
-          <input (blur)="updateVcard()" type="text" class="form-control" id="adr-{{i}}-2" placeholder="{{object.descAdr(2)}}"
-            [(ngModel)]="object.card.rows[i].vals[2]">
-          <label for="adr-{{i}}-2">{{object.descAdr(2)}}</label>
+          <input (blur)="updateVcard()" type="text" class="form-control" id="adr-{{i}}-2" placeholder="{{obj.descAdr(2)}}"
+            [(ngModel)]="card.rows[i].vals[2]">
+          <label for="adr-{{i}}-2">{{obj.descAdr(2)}}</label>
         </div>
         <div class="row g-2 mb-2">
           <div class="col-auto" style="width: 150px;">
             <div class="form-floating">
-              <input (blur)="updateVcard()" type="text" class="form-control" id="adr-{{i}}-5" placeholder="{{object.descAdr(5)}}"
-                [(ngModel)]="object.card.rows[i].vals[5]" (keyup)="onPlzUpdate(row)">
-              <label for="adr-{{i}}-5">{{object.descAdr(5)}}</label>
+              <input (blur)="updateVcard()" type="text" class="form-control" id="adr-{{i}}-5" placeholder="{{obj.descAdr(5)}}"
+                [(ngModel)]="card.rows[i].vals[5]" (keyup)="onPlzUpdate(row)">
+              <label for="adr-{{i}}-5">{{obj.descAdr(5)}}</label>
             </div>
           </div>
           <div class="col">
             <div class="form-floating">
-              <input (blur)="updateVcard()" type="text" class="form-control" id="adr-{{i}}-3" placeholder="{{object.descAdr(3)}}"
-                [(ngModel)]="object.card.rows[i].vals[3]">
-              <label for="adr-{{i}}-3">{{object.descAdr(3)}}</label>
+              <input (blur)="updateVcard()" type="text" class="form-control" id="adr-{{i}}-3" placeholder="{{obj.descAdr(3)}}"
+                [(ngModel)]="card.rows[i].vals[3]">
+              <label for="adr-{{i}}-3">{{obj.descAdr(3)}}</label>
             </div>
           </div>
         </div>
         <div class="form-floating mb-2">
-          <input (blur)="updateVcard()" type="text" class="form-control" id="adr-{{i}}-4" placeholder="{{object.descAdr(4)}}"
-            [(ngModel)]="object.card.rows[i].vals[4]">
-          <label for="adr-{{i}}-4">{{object.descAdr(4)}}</label>
+          <input (blur)="updateVcard()" type="text" class="form-control" id="adr-{{i}}-4" placeholder="{{obj.descAdr(4)}}"
+            [(ngModel)]="card.rows[i].vals[4]">
+          <label for="adr-{{i}}-4">{{obj.descAdr(4)}}</label>
         </div>
         <div class="form-floating">
-          <select (change)="updateVcard()" class="form-select" id="adr-{{i}}-6" [(ngModel)]="object.card.rows[i].vals[6]">
+          <select (change)="updateVcard()" class="form-select" id="adr-{{i}}-6" [(ngModel)]="card.rows[i].vals[6]">
             @for (c of db_countries; track c) {
             <option [ngValue]="c.alpha2">{{c.name}}</option>
             }
           </select>
-          <label for="adr-{{i}}-6">{{object.descAdr(6)}}</label>
+          <label for="adr-{{i}}-6">{{obj.descAdr(6)}}</label>
         </div>
       </div>
       @if (hasGeoForAddress(i); as geoRow) {
@@ -254,7 +247,7 @@
 
         @for (val of row.vals; track j; let j = $index) {
         <input (blur)="updateVcard()" type="text" class="form-control" placeholder="{{row.key}}"
-          [attr.aria-label]="row.key" [(ngModel)]="object.card.rows[i].vals[j]">
+          [attr.aria-label]="row.key" [(ngModel)]="card.rows[i].vals[j]">
         }
 
         @if (!row.isSocialMedia()) {
@@ -282,7 +275,7 @@
         </span>
         @for (val of row.vals; track j; let j = $index) {
         <input (blur)="updateVcard()" type="text" class="form-control" placeholder="{{row.key}}"
-          [attr.aria-label]="row.key" [(ngModel)]="object.card.rows[i].vals[j]">
+          [attr.aria-label]="row.key" [(ngModel)]="card.rows[i].vals[j]">
         }
       </div>
     </li>
@@ -298,7 +291,7 @@
         <ng-container *ngTemplateOutlet="telTypeDropdown; context: { row: row }"></ng-container>
         @for (val of row.vals; track j; let j = $index) {
         <input (blur)="updateVcard()" type="text" class="form-control" placeholder="{{row.key}}"
-          [attr.aria-label]="row.key" [(ngModel)]="object.card.rows[i].vals[j]">
+          [attr.aria-label]="row.key" [(ngModel)]="card.rows[i].vals[j]">
         }
       </div>
     </li>
@@ -332,7 +325,7 @@
         </span>
         @for (val of row.vals; track j; let j = $index) {
         <input (blur)="updateVcard()" type="text" class="form-control" placeholder="{{row.key}}"
-          [attr.aria-label]="row.key" [(ngModel)]="object.card.rows[i].vals[j]">
+          [attr.aria-label]="row.key" [(ngModel)]="card.rows[i].vals[j]">
         }
       </div>
     </li>
@@ -343,7 +336,7 @@
         <span class="input-group-text">
           <i ngbTooltip="language" i18n-ngbTooltip="@@i18n.common.language">language</i>
         </span>
-        <select class="form-select" [ngModel]="object.getLang()" (ngModelChange)="object.setLang($event); updateVcard()">
+        <select class="form-select" [ngModel]="obj.getLang()" (ngModelChange)="obj.setLang($event); updateVcard()">
           <option value="de" i18n="@@i18n.common.deutsch">deutsch</option>
           <option value="en" i18n="@@i18n.common.english">english</option>
           <option value="fr" i18n="@@i18n.common.français">français</option>
@@ -358,7 +351,7 @@
         <span class="input-group-text">
           <i ngbTooltip="formality" i18n-ngbTooltip="@@i18n.common.formality">perm_identity</i>
         </span>
-        <select class="form-select" [ngModel]="object.getFormality()" (ngModelChange)="object.setFormality($event); updateVcard()">
+        <select class="form-select" [ngModel]="obj.getFormality()" (ngModelChange)="obj.setFormality($event); updateVcard()">
           <option value="formal" i18n="@@i18n.common.formal">formal</option>
           <option value="informal" i18n="@@i18n.common.informal">informal</option>
         </select>
@@ -374,7 +367,7 @@
         </span>
         @for (val of row.vals; track j; let j = $index) {
         <input (blur)="updateVcard()" type="text" class="form-control" placeholder="{{row.key}}"
-          [attr.aria-label]="row.key" [(ngModel)]="object.card.rows[i].vals[j]">
+          [attr.aria-label]="row.key" [(ngModel)]="card.rows[i].vals[j]">
         }
       </div>
     </li>
@@ -388,7 +381,7 @@
         </span>
         @for (val of row.vals; track j; let j = $index) {
         <input (blur)="updateVcard()" type="text" class="form-control" placeholder="{{row.key}}"
-          [attr.aria-label]="row.key" [(ngModel)]="object.card.rows[i].vals[j]">
+          [attr.aria-label]="row.key" [(ngModel)]="card.rows[i].vals[j]">
         }
       </div>
     </li>
@@ -400,7 +393,7 @@
         <span class="input-group-text col-desc">{{row.key}}</span>
         @for (val of row.vals; track j; let j = $index) {
         <input (blur)="updateVcard()" type="text" class="form-control" placeholder="{{row.key}}"
-          [attr.aria-label]="row.key" [(ngModel)]="object.card.rows[i].vals[j]">
+          [attr.aria-label]="row.key" [(ngModel)]="card.rows[i].vals[j]">
         }
       </div>
     </li>

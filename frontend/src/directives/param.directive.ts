@@ -1,4 +1,4 @@
-import { Directive, ElementRef, HostListener, Input, inject, OnInit } from "@angular/core";
+import { Directive, ElementRef, HostListener, inject, input, OnInit } from "@angular/core";
 import { Param } from "src/models/param.model";
 import { ParamService } from "src/models/param.service";
 
@@ -8,25 +8,28 @@ import { ParamService } from "src/models/param.service";
 })
 export class ParamDirective implements OnInit {
 
-    @Input() paramPath:string
-    @Input() fallback:boolean = true
-    @Input() autosave:boolean
-    value:string
+    readonly paramPath = input.required<string>()
+    readonly fallback  = input<boolean>(true)
+    readonly autosave  = input<boolean>()
 
-    #paramService = inject(ParamService)
-    #element = inject(ElementRef)
+    value: string
 
-    @HostListener('blur') onChange = () => {
-        this.#updateModelString(this.#element.nativeElement.value)
-        this.#paramService.update(this.paramPath, { value: this.#element.nativeElement.value}).subscribe()
+    readonly #paramService = inject(ParamService)
+    readonly #el = inject(ElementRef<HTMLInputElement>)
+
+    ngOnInit() {
+        this.#paramService.show(this.paramPath(), { fallback: this.fallback() })
+            .subscribe((p: Param) => p && typeof p.value === 'string' && this.#setValue(p.value))
     }
 
-    ngOnInit() { this.#refresh() }
-
-    #updateModelString = (_:string) =>  { 
-        this.value = _
-        this.#element.nativeElement.value = _ 
+    @HostListener('blur') onBlur() {
+        const val = this.#el.nativeElement.value
+        this.#setValue(val)
+        this.#paramService.update(this.paramPath(), { value: val }).subscribe()
     }
-    #updateModel = (_:Param) => _ && this.#updateModelString(_.value ?? '')
-	#refresh = () => this.#paramService.show(this.paramPath, { fallback: this.fallback }).subscribe(this.#updateModel)
+
+    #setValue(val: string) {
+        this.value = val
+        this.#el.nativeElement.value = val
+    }
 }

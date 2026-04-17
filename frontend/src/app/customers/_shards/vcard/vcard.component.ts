@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnChanges, OnDestroy, AfterViewInit, ViewChildren, QueryList, ElementRef, inject } from '@angular/core';
+import { Component, OnInit, OnChanges, OnDestroy, AfterViewInit, ViewChildren, QueryList, ElementRef, inject, input, computed } from '@angular/core';
 import { VcardRow } from 'src/models/vcard/VcardRow';
 import { Company } from 'src/models/company/company.model';
 import { CompanyContact } from 'src/models/company/company-contact.model';
@@ -26,20 +26,28 @@ import { DB_PLZ } from '../db.plz';
 })
 export class VcardComponent implements OnInit, OnChanges, OnDestroy, AfterViewInit {
 
-    @Input() object: VcardClass
-    @Input() type: string = 'work'
+    object = input.required<VcardClass>()
+    type = input<string>('work')
+
+    isCompany        = computed(() => this.object() instanceof Company)
+    isCompanyContact = computed(() => this.object() instanceof CompanyContact)
+    isContact        = computed(() => this.object() instanceof Contact)
+    isUser           = computed(() => this.object() instanceof User)
+    isProspect       = computed(() => this.object() instanceof MarketingProspect)
+
     @ViewChildren('mapContainer') mapContainers!: QueryList<ElementRef<HTMLElement>>;
 
     liClass: string = 'list-group-item pe-9 px-3 py-1'
 
-    db_countries: any[] = DB_COUNTRIES
-    db_plz: any[] = DB_PLZ
-    showNameDetails:boolean = false
-    smtypes = SOCIAL_MEDIA_TYPES
-    smtypekeys:string[] = Object.keys(this.smtypes)
-    #nominatim = inject(NominatimHttpWrapper)
-    singleGeoLoad:boolean = false
-    isImportingImprint:boolean = false
+    db_countries       : any[]         = DB_COUNTRIES
+    db_plz             : any[]         = DB_PLZ
+    showNameDetails    : boolean       = false
+    smtypes            : Record<string, string> = SOCIAL_MEDIA_TYPES
+    smtypekeys         : string[]      = Object.keys(this.smtypes)
+    singleGeoLoad      : boolean       = false
+    isImportingImprint : boolean       = false
+
+    #nominatim    = inject(NominatimHttpWrapper)
     #mapInstances = new Map<HTMLElement, L.Map>();
     src_string:string
 
@@ -53,27 +61,23 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy, AfterViewIn
         });
     }
 
-    isCompany        = (): boolean => this.object instanceof Company
-    isCompanyContact = (): boolean => this.object instanceof CompanyContact
-    isContact        = (): boolean => this.object instanceof Contact
-    isUser           = (): boolean => this.object instanceof User
-    isProspect       = (): boolean => this.object instanceof MarketingProspect
-    
+
     smSrcForKey = (key?:string) => (key && this.smtypekeys.includes(key)) ? this.smtypes[key] : undefined
 
     resetDirty = ():void => {
-        if (this.object?.card) {
-            this.src_string = this.object.card.toString()
-            const geo = this.object.card.get('GEO').first()
+        const obj = this.object()
+        if (obj?.card) {
+            this.src_string = obj.card.toString()
+            const geo = obj.card.get('GEO').first()
             if (!geo) {
                 this.#nominatim.init().then(() => {
-                    const adr = this.object.card?.get('ADR').first() ?? undefined
+                    const adr = obj.card.get('ADR').first() ?? undefined
                     if (adr) {
                         if (!this.singleGeoLoad) {
                             this.singleGeoLoad = true
                             this.#nominatim.lookup(adr).subscribe(info => {
                                 if (Array.isArray(info) && info.length) {
-                                    this.object.card?.rows.push(new VcardRow('GEO', [], [info[0].lat, info[0].lon]))
+                                    obj.card.rows.push(new VcardRow('GEO', [], [info[0].lat, info[0].lon]))
                                     this.updateVcard()
                                 }
                             })
@@ -104,51 +108,45 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy, AfterViewIn
         // Re-initialize maps when object changes
         setTimeout(() => this.initializeMaps(), 0);
     }
-    isDirty = ():boolean => this.src_string != this.object.card?.toString()
+    isDirty = ():boolean => this.src_string != this.object().card.toString()
 
     delete = (r: any) => {
-        this.object.card?.rows.splice(r as number, 1)
+        this.object().card.rows.splice(r as number, 1)
     }
     removeRow = (_: any) => {
-        this.object.card?.rows.splice(this.object.card.rows.indexOf(_ as VcardRow), 1)
+        const card = this.object().card
+        card?.rows.splice(card.rows.indexOf(_ as VcardRow), 1)
     }
     addRow = (s: string) => {
         const row = VcardRow.fromString(s)
-        if (row && this.object.card) this.object.card.rows.push(row)
+        const card = this.object().card
+        if (row && card) card.rows.push(row)
     }
     addEmergencyContact = () => {
-        if (this.object.card) {
-            this.object.card.rows.push(VcardRow.fromString('RELATED;TYPE=emergency:')!)
-            this.object.card.rows.push(VcardRow.fromString('TEL;TYPE=cell,emergency:')!)
+        const card = this.object().card
+        if (card) {
+            card.rows.push(VcardRow.fromString('RELATED;TYPE=emergency:')!)
+            card.rows.push(VcardRow.fromString('TEL;TYPE=cell,emergency:')!)
         }
     }
     updateVcard = () => {
         if (this.isDirty()) {
-            // Store data that might not be returned by the update API
-            const preservedData: any = {};
-            if (this.object instanceof MarketingProspect && this.object.activities) {
-                preservedData.activities = this.object.activities;
-            }
-            
-            this.object.update({'vcard': this.object.card?.toString() }).subscribe((response)=> {
-                if (this.object instanceof CompanyContact) {
-                    this.object.contact = Contact.fromJson(response.contact)
-                }
-                
-                // Restore preserved data if it wasn't in the response
-                if (this.object instanceof MarketingProspect && preservedData.activities && !response.activities) {
-                    (this.object as MarketingProspect).activities = preservedData.activities;
+            const obj = this.object()
+            obj.update({'vcard': obj.card.toString() }).subscribe((response)=> {
+                if (obj instanceof CompanyContact) {
+                    (obj as CompanyContact).contact = Contact.fromJson(response.contact)
                 }
             })
         }
     }
     importImprint = () => {
-        if (!(this.object instanceof Company) || this.isImportingImprint) return
+        const obj = this.object()
+        if (!(obj instanceof Company) || this.isImportingImprint) return
 
         this.isImportingImprint = true
-        this.object.importImprint().subscribe({
-            next: (_) => {
-                Object.assign(this.object, _)
+        ;(obj as Company).importImprint().subscribe({
+            next: (_: any) => {
+                Object.assign(obj, _)
                 this.isImportingImprint = false
             },
             error: () => {
@@ -178,43 +176,43 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy, AfterViewIn
         return row.mods.some(_ => _.toLowerCase().includes('emergency'))
     }
     getEmergencyTelForRelated = (relatedIndex:number):VcardRow|null => {
-        if (!this.object.card) return null
-        for (let i = relatedIndex + 1; i < this.object.card.rows.length; i++) {
-            const row = this.object.card.rows[i]
-            if (row.key === 'TEL' && this.isEmergencyContact(row)) {
-                return row
-            }
+        const rows = this.object().card.rows
+        if (!rows) return null
+        for (let i = relatedIndex + 1; i < rows.length; i++) {
+            const row = rows[i]
+            if (row.key === 'TEL' && this.isEmergencyContact(row)) return row
             if (row.key === 'RELATED') break
         }
         return null
     }
     isEmergencyTelForRelated = (telRow:VcardRow):boolean => {
-        if (!this.object.card || telRow.key !== 'TEL') return false
+        const rows = this.object().card.rows
+        if (!rows || telRow.key !== 'TEL') return false
         if (!this.isEmergencyContact(telRow)) return false
-        const telIndex = this.object.card.rows.indexOf(telRow)
+        const telIndex = rows.indexOf(telRow)
         for (let i = telIndex - 1; i >= 0; i--) {
-            const row = this.object.card.rows[i]
-            if (row.key === 'RELATED' && row.mods.includes('TYPE=emergency')) {
-                return true
-            }
+            const row = rows[i]
+            if (row.key === 'RELATED' && row.mods.includes('TYPE=emergency')) return true
             if (row.key === 'TEL') break
         }
         return false
     }
 
-    org = () => this.object.card?.first("ORG")?.vals[0] ?? ''
+    org = () => this.object().card.first("ORG")?.vals[0] ?? ''
     onOrgChange = ($event:any) => {
-        if (this.object.card) {
-            this.object.card.get('FN')[0].vals[0] = $event.target.value
-            this.object.card.get('ORG')[0].vals[0] = $event.target.value
+        const card = this.object().card
+        if (card) {
+            card.get('FN')[0].vals[0] = $event.target.value
+            card.get('ORG')[0].vals[0] = $event.target.value
         }
     }
-    fn = () => this.object.card?.get("FN")[0].vals[0] ?? ''
+    fn = () => this.object().card.get("FN")[0].vals[0] ?? ''
     onFnChange($event:any) {
-        if (this.object.card) {
-            this.object.card.get("FN")[0].vals[0] = $event.target.value
-            const n = this.object.card?.get("N")
-            if (n.length) {
+        const card = this.object().card
+        if (card) {
+            card.get("FN")[0].vals[0] = $event.target.value
+            const n = card.get("N")
+            if (n?.length) {
                 const parts = $event.target.value.split(' ')
                 const ref = n[0].vals
                 if (parts.length > 0) ref[1] = parts.shift(); else ref[1] = ''
@@ -226,9 +224,8 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy, AfterViewIn
     onNChange(row:VcardRow) {
         let fn = row.vals[1] + ' ' + row.vals[2] + " " + row.vals[0]
         fn = fn.replace(/\s+/, ' ')
-        if (this.object.card) {
-            this.object.card.get("FN")[0].vals[0] = fn
-        }
+        const card = this.object().card
+        if (card) card.get("FN")[0].vals[0] = fn
     }
     onPlzUpdate(o: VcardRow) {
         if (o.vals[6] != 'DE') return
@@ -264,7 +261,7 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy, AfterViewIn
     }
 
     initializeMaps() {
-        if (!this.mapContainers || !this.object?.card) return;
+        if (!this.mapContainers || !this.object()?.card) return;
 
         this.mapContainers.forEach((container) => {
             const mapEl = container.nativeElement;
@@ -338,8 +335,9 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy, AfterViewIn
     }
 
     getGeoForAddress(_adrIndex: number): VcardRow | null {
-        if (!this.object?.card?.rows) return null;
-        const geoRows = this.object.card.rows.filter(row => row.key === 'GEO');
+        const rows = this.object()?.card.rows
+        if (!rows) return null;
+        const geoRows = rows.filter(row => row.key === 'GEO');
         return geoRows.length > 0 ? geoRows[0] : null;
     }
 
@@ -351,20 +349,20 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy, AfterViewIn
 
     isRealCompany(): boolean {
         if (!this.isCompany()) return false;
-        const company = this.object as Company;
+        const company = this.object() as Company;
         return company.name?.includes('GmbH') || company.name?.includes('AG') || company.name?.includes('KG') || company.name?.includes('OHG') || false;
     }
 
     getCommercialRegister(): string {
         if (this.isCompany()) {
-            return (this.object as Company).commercial_register || '';
+            return (this.object() as Company).commercial_register || '';
         }
         return '';
     }
 
     setCommercialRegister(value: string) {
         if (this.isCompany()) {
-            (this.object as Company).commercial_register = value;
+            (this.object() as Company).commercial_register = value;
         }
     }
 
@@ -402,47 +400,39 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy, AfterViewIn
         if (this.isCompany()) {
             const parts = [type, number, court].filter(part => part && part.trim());
             const register = parts.length > 0 ? parts.join('|') : '';
-            (this.object as Company).commercial_register = register;
+            (this.object() as Company).commercial_register = register;
         }
     }
 
     updateCommercialRegister() {
         if (this.isCompany()) {
-            const company = this.object as Company;
+            const company = this.object() as Company;
             company.update({'commercial_register': company.commercial_register}).subscribe();
         }
     }
 
     ensureI18nFields() {
-        if (!this.object?.card) return;
-        
-        // Ensure basic required fields exist
-        if (!this.object.card.rows.some(r => r.key === 'FN')) {
-            this.addRow('FN:');
-        }
-        if (!this.object.card.rows.some(r => r.key === 'N')) {
-            this.addRow('N:;;;;');
-        }
-        
-        // Ensure i18n fields for Contact, User, and Prospect
+        const card = this.object()?.card
+        if (!card) return;
+
+        if (!card.rows.some(r => r.key === 'FN')) this.addRow('FN:');
+        if (!card.rows.some(r => r.key === 'N')) this.addRow('N:;;;;');
+
         if (this.isContact() || this.isUser() || this.isProspect()) {
-            if (!this.object.card.rows.some(r => r.key === 'X-LANG')) {
-                this.addRow('X-LANG:de');
-            }
-            if (!this.object.card.rows.some(r => r.key === 'X-FORMALITY')) {
-                this.addRow('X-FORMALITY:formal');
-            }
+            if (!card.rows.some(r => r.key === 'X-LANG')) this.addRow('X-LANG:de');
+            if (!card.rows.some(r => r.key === 'X-FORMALITY')) this.addRow('X-FORMALITY:formal');
         }
     }
 
     addLanguageFormality = () => {
-        if (!this.object.card) return;
-        if (!this.object.card.rows.some(r => r.key === 'X-LANG')) this.addRow('X-LANG:de');
-        if (!this.object.card.rows.some(r => r.key === 'X-FORMALITY')) this.addRow('X-FORMALITY:formal');
+        const card = this.object().card
+        if (!card) return;
+        if (!card.rows.some(r => r.key === 'X-LANG')) this.addRow('X-LANG:de');
+        if (!card.rows.some(r => r.key === 'X-FORMALITY')) this.addRow('X-FORMALITY:formal');
     }
 
     hasLanguageFormality = (): boolean => {
-        return this.object?.card?.rows.some(r => r.key === 'X-LANG') ?? false;
+        return this.object()?.card.rows.some(r => r.key === 'X-LANG') ?? false;
     }
 
 }

@@ -72,7 +72,7 @@ export class CustomersKnownSequiturComponent implements AfterViewInit, OnInit {
     ngAfterViewInit() {
         // Focus on the comments tab when knownseq component appears
         setTimeout(() => {
-            const commentsTab = this.#activityService.tabs.find(tab => tab.icon === 'chat');
+            const commentsTab = this.#activityService.tabs.find(tab => tab.icon() === 'chat');
             if (commentsTab) {
                 commentsTab.focus();
             }
@@ -173,7 +173,6 @@ export class CustomersKnownSequiturComponent implements AfterViewInit, OnInit {
             if (this.isSameItem(con.company1, item)) return con.company1;
             return con.company2
         }
-
         return this.customer;
     }
 
@@ -214,9 +213,9 @@ export class CustomersKnownSequiturComponent implements AfterViewInit, OnInit {
 
     asProject = (_: any) => _ as Project
     birthdayMissing = (item: any) => this.isInstanceOf(item, 'CompanyContact') && !item.contact?.card.get('BDAY').length;
-    linkedinMissing = (item: any) => this.isInstanceOf(item, 'CompanyContact') && !item.contact?.card?.get('URL').filter((row: VcardRow) => row.getType() == 'linkedin').length;
+    linkedinMissing = (item: any) => this.isInstanceOf(item, 'CompanyContact') && !item.contact?.card.get('URL').filter((row: VcardRow) => row.getType() == 'linkedin').length;
 
-    webUrlMissing = (item: any) => this.isInstanceOf(item, 'Company') && item.card?.get('URL').every((row: VcardRow) => row.isSocialMedia());
+    webUrlMissing = (item: any) => this.isInstanceOf(item, 'Company') && item.card.get('URL').every((row: VcardRow) => row.isSocialMedia());
     commercialRegisterNumberMissing = (item: any) => this.isInstanceOf(item, 'Company') && (item.name.includes('GmbH') || item.name.includes('AG')) && !item.commercial_register;
 
     isCompanyContact(item: any) {

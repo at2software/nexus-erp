@@ -11,7 +11,7 @@ class VacationGrant extends BaseModel {
         'expires_at' => 'date',
         'amount'     => 'double',
     ];
-    protected $access   = ['admin' => '*', 'project_manager'=>'r', 'user'=>'r'];
+    protected $access   = ['admin' => '*', 'project_manager' => 'r', 'user' => 'r'];
     protected $fillable = ['user_id', 'amount', 'name', 'expires_at'];
 
     public function user() {

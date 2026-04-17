@@ -60,6 +60,7 @@ class UpdateLeadProbability extends Command {
             // Skip if we still don't have valid probabilities (empty training data)
             if ($budgetProb === null || $timeProb === null) {
                 $this->warn("Skipping project {$project->id}: insufficient training data (budgetProb={$budgetProb}, timeProb={$timeProb})");
+
                 continue;
             }
 

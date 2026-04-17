@@ -7,7 +7,10 @@ use Illuminate\Support\Facades\DB;
 
 class InvoiceBuilder extends BaseBuilder {
     public function last12(Carbon $date) {
-        return $this->whereBetween('created_at', [$date->copy()->subYear(), $date])->get()->append('net');
+        return $this
+            ->whereBetween('created_at', [$date->copy()->subYear(), $date])
+            ->where(fn ($q) => $q->where('is_cancelled', false)->orWhereNull('is_cancelled'))
+            ->get()->append('net');
     }
     public function revenue_12(Carbon $date) {
         return $this->last12($date)->sum('net');

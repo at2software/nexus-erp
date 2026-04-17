@@ -6,13 +6,13 @@ scrollbar {
 }
 .list-group-item {
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
 
     &:hover {
-        opacity: 0.8;
+        background-color: rgba(var(--bs-primary-rgb), 0.06);
     }
 
-    &.active {
+    &.active, &.router-active {
         background-color: var(--bs-primary);
         color: white;
 
@@ -56,12 +56,20 @@ scrollbar {
     }
 }
 
-.dropdown-toggle-simple::after {
-    display: none;
+.bg-cyan {
+    background-color: #0dcaf0 !important;
 }
 
 .badge {
     font-size: 0.75rem;
+    text-shadow: none;
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+    display: inline-block;
+    flex-shrink: 0;
 }
 
 .card {

@@ -1,5 +1,5 @@
-import { Component, ElementRef, ViewChild, AfterViewInit, Input, OnChanges, SimpleChanges } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ElementRef, ViewChild, AfterViewInit, OnChanges, SimpleChanges, input } from '@angular/core';
+
 import { MoneyPipe } from 'src/pipes/money.pipe';
 import * as d3 from 'd3';
 import { sankey, sankeyLinkHorizontal, sankeyJustify } from 'd3-sankey';
@@ -28,21 +28,21 @@ export interface SankeyData {
     templateUrl: './sankey-chart.component.html',
     styleUrls: ['./sankey-chart.component.scss'],
     standalone: true,
-    imports: [CommonModule]
+    imports: []
 })
 export class SankeyChartComponent implements AfterViewInit, OnChanges {
 
     @ViewChild('sankeyContainer') sankeyContainer!: ElementRef<HTMLDivElement>;
 
-    @Input() data?: SankeyData;
-    @Input() mode: 'count' | 'money' = 'count';
-    @Input() height: number = 200;
-    @Input() stateColumns?: Record<number, number>;
+    data         = input<SankeyData | undefined>(undefined);
+    mode         = input<'count' | 'money'>('count');
+    height       = input<number>(200);
+    stateColumns = input<Record<number, number> | undefined>(undefined);
 
     money = new MoneyPipe();
 
     ngAfterViewInit() {
-        if (this.data) {
+        if (this.data()) {
             this.renderSankey();
         }
     }
@@ -62,15 +62,16 @@ export class SankeyChartComponent implements AfterViewInit, OnChanges {
 
         d3.select(container).selectAll('*').remove();
 
-        if (!this.data.nodes || !this.data.links) {
+        const data = this.data();
+        if (!data || !data.nodes || !data.links) {
             console.warn('No funnel data available');
             return;
         }
 
-        const isCountMode = this.mode === 'count';
+        const isCountMode = this.mode() === 'count';
 
         // Define fixed column positions for each state (or use provided ones)
-        const stateColumns = this.stateColumns || {
+        const stateColumns = this.stateColumns() || {
             1: 0,  // prepared - left
             6: 1,  // quoted - 2nd
             2: 2,  // started - 3rd
@@ -94,7 +95,7 @@ export class SankeyChartComponent implements AfterViewInit, OnChanges {
 
         // Build nodes with fixed x positions
         const nodesById = new Map();
-        this.data.nodes.forEach((node: any) => {
+        data.nodes.forEach((node: any) => {
             const column = stateColumns[node.id] ?? 0;
             nodesById.set(node.id, {
                 id: node.id,
@@ -109,7 +110,7 @@ export class SankeyChartComponent implements AfterViewInit, OnChanges {
         const nodes = Array.from(nodesById.values());
 
         // Build links - only forward-facing (source column < target column)
-        const links = this.data.links
+        const links = data.links
             .map((link: any) => {
                 const sourceNode = nodesById.get(link.source);
                 const targetNode = nodesById.get(link.target);
@@ -117,7 +118,6 @@ export class SankeyChartComponent implements AfterViewInit, OnChanges {
 
                 // Only include forward-facing links
                 if (sourceNode.column >= targetNode.column) return null;
-
                 return {
                     source: link.source,
                     target: link.target,
@@ -141,7 +141,7 @@ export class SankeyChartComponent implements AfterViewInit, OnChanges {
             .nodeWidth(15)
             .nodePadding(10)
             .nodeAlign(sankeyJustify)
-            .extent([[marginLeft, 10], [width - marginRight, height - 10]]);
+            .extent([[marginLeft, 10], [width - marginRight, height() - 10]]);
 
         const graph: any = sankeyGenerator({
             nodes: nodes.map((d: any) => Object.assign({}, d)),

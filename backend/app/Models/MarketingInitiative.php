@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Http\Request;
 
 class MarketingInitiative extends BaseModel {
     protected $table    = 'marketing_initiatives';
@@ -68,7 +69,6 @@ class MarketingInitiative extends BaseModel {
     public function initiativeActivities(): HasMany {
         return $this->hasMany(MarketingInitiativeActivity::class, 'marketing_initiative_id');
     }
-
     public function orderedInitiativeActivities(): HasMany {
         return $this->initiativeActivities()->orderBy('day_offset');
     }
@@ -116,10 +116,10 @@ class MarketingInitiative extends BaseModel {
             // Find initiative activities that track this metric
             // We need to find initiative activities that were copied from workflow activities linked to this metric
             $initiativeActivityIds = MarketingInitiativeActivity::where('marketing_initiative_id', $this->id)
-                ->whereIn('marketing_workflow_id', function($query) use ($metric) {
+                ->whereIn('marketing_workflow_id', function ($query) use ($metric) {
                     $query->select('marketing_workflow_id')
                         ->from('marketing_activities')
-                        ->whereIn('id', function($subQuery) use ($metric) {
+                        ->whereIn('id', function ($subQuery) use ($metric) {
                             $subQuery->select('marketing_activity_id')
                                 ->from('marketing_activity_metric')
                                 ->where('marketing_performance_metric_id', $metric->id);
@@ -133,11 +133,11 @@ class MarketingInitiative extends BaseModel {
             })->whereIn('marketing_initiative_activity_id', $initiativeActivityIds);
 
             // Calculate activity statistics
-            $total       = (clone $baseQuery)->count();
-            $completed   = (clone $baseQuery)->where('status', 'completed')->count();
-            $skipped     = (clone $baseQuery)->where('status', 'skipped')->count();
-            $overdue     = (clone $baseQuery)->where('status', 'pending')->where('scheduled_at', '<', now())->count();
-            $pending     = (clone $baseQuery)->where('status', 'pending')->count() - $overdue;
+            $total     = (clone $baseQuery)->count();
+            $completed = (clone $baseQuery)->where('status', 'completed')->count();
+            $skipped   = (clone $baseQuery)->where('status', 'skipped')->count();
+            $overdue   = (clone $baseQuery)->where('status', 'pending')->where('scheduled_at', '<', now())->count();
+            $pending   = (clone $baseQuery)->where('status', 'pending')->count() - $overdue;
 
             $metric->activity_stats = [
                 'total'     => $total,
@@ -157,5 +157,138 @@ class MarketingInitiative extends BaseModel {
             ->groupBy('status')
             ->pluck('count', 'status')
             ->toArray();
+    }
+    public static function createWithUser(array $validated, $user = null): static {
+        $initiative = static::create($validated);
+
+        if ($user) {
+            $initiative->users()->attach($user->id, ['role' => 'owner']);
+        }
+
+        if (isset($validated['channels'])) {
+            foreach ($validated['channels'] as $channel) {
+                $initiative->channels()->attach($channel['lead_source_id'], [
+                    'is_primary'      => $channel['is_primary'] ?? false,
+                    'custom_settings' => $channel['custom_settings'] ?? null,
+                ]);
+            }
+        }
+        return $initiative->load(['channels', 'parent', 'users']);
+    }
+    public function getDeletionBlocker(): ?string {
+        if ($this->children()->exists()) {
+            return 'Cannot delete initiative with sub-initiatives';
+        }
+        if ($this->prospects()->exists()) {
+            return 'Cannot delete initiative with prospects';
+        }
+        return null;
+    }
+    public function addChannel(array $validated) {
+        if ($this->channels()->where('lead_source_id', $validated['lead_source_id'])->exists()) {
+            return null;
+        }
+        $this->channels()->attach($validated['lead_source_id'], [
+            'is_primary'      => $validated['is_primary'] ?? false,
+            'custom_settings' => $validated['custom_settings'] ?? null,
+        ]);
+        return $this->channels()->withPivot(['is_primary', 'custom_settings'])->get();
+    }
+    public function removeChannel(LeadSource $leadSource): ?array {
+        if (! $this->channels()->where('lead_source_id', $leadSource->id)->exists()) {
+            return null;
+        }
+        $this->channels()->detach($leadSource->id);
+        return [
+            'message'  => 'Channel removed successfully',
+            'channels' => $this->channels()->withPivot(['is_primary', 'custom_settings'])->get(),
+        ];
+    }
+    public function updateChannels(array $channels) {
+        $syncData = [];
+        foreach ($channels as $channel) {
+            $syncData[$channel['lead_source_id']] = [
+                'is_primary'      => $channel['is_primary'] ?? false,
+                'custom_settings' => $channel['custom_settings'] ?? null,
+            ];
+        }
+        $this->channels()->sync($syncData);
+        return $this->channels()->withPivot(['is_primary', 'custom_settings'])->get();
+    }
+    public function copyWorkflowActivities(MarketingWorkflow $workflow): void {
+        $activityIdMap = [];
+
+        foreach ($workflow->orderedActivities()->with('i18n')->get() as $activity) {
+            $newActivity = MarketingInitiativeActivity::create([
+                'marketing_initiative_id' => $this->id,
+                'marketing_workflow_id'   => $workflow->id,
+                'name'                    => $activity->name,
+                'day_offset'              => $activity->day_offset,
+                'description'             => $activity->description,
+                'is_required'             => $activity->is_required,
+                'has_external_dependency' => $activity->has_external_dependency ?? false,
+                'quick_action'            => $activity->quick_action,
+                'parent_activity_id'      => null,
+            ]);
+            $activityIdMap[$activity->id] = $newActivity->id;
+        }
+
+        foreach ($workflow->orderedActivities as $activity) {
+            if ($activity->parent_activity_id && isset($activityIdMap[$activity->parent_activity_id])) {
+                MarketingInitiativeActivity::where('id', $activityIdMap[$activity->id])
+                    ->update(['parent_activity_id' => $activityIdMap[$activity->parent_activity_id]]);
+            }
+        }
+    }
+    public function createActivity(array $validated): MarketingInitiativeActivity {
+        $activity = $this->marketingInitiativeActivities()->create([
+            'marketing_workflow_id'   => $validated['marketing_workflow_id'] ?? null,
+            'name'                    => $validated['name'],
+            'day_offset'              => $validated['day_offset'],
+            'description'             => $validated['description'] ?? '',
+            'is_required'             => $validated['is_required'] ?? true,
+            'has_external_dependency' => $validated['has_external_dependency'] ?? false,
+            'parent_activity_id'      => $validated['parent_activity_id'] ?? null,
+            'quick_action'            => $validated['quick_action'] ?? null,
+        ]);
+
+        if (isset($validated['metric_ids'])) {
+            $activity->performanceMetrics()->attach($validated['metric_ids']);
+        }
+        return $activity->load(['performanceMetrics', 'parentActivity', 'childActivities', 'i18n']);
+    }
+    public static function filteredQuery(Request $request) {
+        $query = static::with(['parent', 'children', 'channels', 'performanceMetrics', 'workflows', 'users'])
+            ->withCount('prospects')
+            ->withCount(['prospects as overdue_prospects_count' => function ($query) {
+                $query->whereNotIn('status', ['unresponsive', 'disqualified', 'on_hold'])
+                    ->where('user_id', auth()->id())
+                    ->whereHas('activities', function ($q) {
+                        $q->where('status', 'pending')->where('scheduled_at', '<=', now());
+                    });
+            }]);
+
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->boolean('root_only')) {
+            $query->whereNull('parent_id');
+        }
+        if ($request->has('search')) {
+            $query->where('name', 'like', '%'.$request->search.'%');
+        }
+        if ($request->has('company_id')) {
+            $companyId = $request->company_id;
+            $query->whereHas('prospects', function ($q) use ($companyId) {
+                $q->whereHas('companyContact', function ($q2) use ($companyId) {
+                    $q2->where('company_id', $companyId);
+                });
+            })->withCount(['prospects as company_prospects_count' => function ($q) use ($companyId) {
+                $q->whereHas('companyContact', function ($q2) use ($companyId) {
+                    $q2->where('company_id', $companyId);
+                });
+            }]);
+        }
+        return $query->latest()->paginate(50)->withQueryString();
     }
 }

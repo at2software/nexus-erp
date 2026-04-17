@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Traits\VcardTrait;
 use DOMDocument;
 use DOMXPath;
 use Illuminate\Console\Command;
@@ -462,6 +463,7 @@ class AnalyzeUrlImprint extends Command {
                     $this->log('<fg=green>✓</> Loaded imprint ('.round(strlen($response) / 1024, 1).'KB)');
                 } catch (\Exception $e) {
                     $this->log("<fg=red>✗ Failed to load imprint: {$e->getMessage()}</>");
+
                     continue;
                 }
 
@@ -555,14 +557,14 @@ class AnalyzeUrlImprint extends Command {
 
         // STEP 3: Extract and normalize phone numbers using the determined country context
         $existingData['TEL'] = array_map(
-            fn ($tel) => \App\Traits\VcardTrait::normalizePhoneNumber($tel, $countryContext),
+            fn ($tel) => VcardTrait::normalizePhoneNumber($tel, $countryContext),
             $existingData['TEL']
         );
 
         // Priority: schema.org phone numbers, then scraped
         if (! empty($schemaData['telephone'])) {
             foreach ($schemaData['telephone'] as $phone) {
-                $normalized = \App\Traits\VcardTrait::normalizePhoneNumber($phone, $countryContext);
+                $normalized = VcardTrait::normalizePhoneNumber($phone, $countryContext);
                 if (! in_array($normalized, $existingData['TEL'] ?? [])) {
                     $rv['TEL'][] = ['number' => $normalized, 'type' => 'phone'];
                 }
@@ -1040,8 +1042,9 @@ class AnalyzeUrlImprint extends Command {
             if ($extension) {
                 $formatted .= $extension;
             }
+
             // Normalize using VcardTrait method
-            return \App\Traits\VcardTrait::normalizePhoneNumber($formatted, $countryContext);
+            return VcardTrait::normalizePhoneNumber($formatted, $countryContext);
         }
 
         // Handle international numbers starting with + using known country codes
@@ -1072,7 +1075,7 @@ class AnalyzeUrlImprint extends Command {
                 }
 
                 // Normalize using VcardTrait method
-                return \App\Traits\VcardTrait::normalizePhoneNumber($formatted, $countryContext);
+                return VcardTrait::normalizePhoneNumber($formatted, $countryContext);
             }
         }
 
@@ -1088,7 +1091,7 @@ class AnalyzeUrlImprint extends Command {
             }
 
             // Normalize using VcardTrait method
-            return \App\Traits\VcardTrait::normalizePhoneNumber($formatted, $countryContext);
+            return VcardTrait::normalizePhoneNumber($formatted, $countryContext);
         }
         return null;
     }
@@ -1331,7 +1334,7 @@ class AnalyzeUrlImprint extends Command {
     /**
      * Extract structured data from schema.org JSON-LD
      */
-    private function extractSchemaOrgData(\DOMDocument $doc, \DOMXPath $xpath): array {
+    private function extractSchemaOrgData(DOMDocument $doc, DOMXPath $xpath): array {
         $data = [
             'name'        => null,
             'address'     => null,
@@ -1434,7 +1437,7 @@ class AnalyzeUrlImprint extends Command {
     /**
      * Extract company name from HTML meta tags, title, and schema.org data
      */
-    private function extractCompanyName(\DOMDocument $doc, \DOMXPath $xpath): ?string {
+    private function extractCompanyName(DOMDocument $doc, DOMXPath $xpath): ?string {
         // Try schema.org organization name (highest priority)
         $schemaData = $this->extractSchemaOrgData($doc, $xpath);
         if ($schemaData['name']) {
@@ -1584,6 +1587,7 @@ class AnalyzeUrlImprint extends Command {
 
                         if (! $this->isAddressDuplicate($rfc, $rv['ADR'])) {
                             $rv['ADR'][] = $rfc;
+
                             continue;
                         }
                     }

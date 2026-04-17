@@ -1,5 +1,7 @@
 .milestone-popup {
-    position: absolute;
+    position: fixed;
+    left: 5rem;
+    top: 5rem;
     z-index: 1000;
     width: 320px;
     max-width: 90vw;

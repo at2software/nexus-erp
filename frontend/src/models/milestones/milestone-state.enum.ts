@@ -32,6 +32,5 @@ export function getMilestoneStateInfo(state: MilestoneState | number | null | un
     } else {
         stateValue = MilestoneState.TODO;
     }
-
     return MILESTONE_STATES[stateValue] || MILESTONE_STATES[MilestoneState.TODO];
 }

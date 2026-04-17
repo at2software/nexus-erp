@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Str;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class BaseModel extends Model {
@@ -50,7 +50,6 @@ class BaseModel extends Model {
     public function newCollection(array $models = []) {
         return new BaseCollection($models);
     }
-
     public function getAccess(): array {
         return $this->access ?? [];
     }
@@ -63,7 +62,10 @@ class BaseModel extends Model {
         return Str::snake(lcfirst(preg_replace('/'.$prefix.'(.*)Attribute/is', '$1', $trace[2]['function'])));
     }
 
-    public static function fromPath(string $path, string $key = 'parent'): ?Model {
+    public static function fromPath(?string $path, string $key = 'parent'): ?Model {
+        if ($path === null) {
+            return null;
+        }
         $parts = explode('/', $path);
         if (count($parts) !== 2) {
             return null;

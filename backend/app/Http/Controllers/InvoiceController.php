@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\InvoiceItemType;
+use App\Actions\UndoInvoiceAction;
 use App\Helpers\NLog;
 use App\Models\File;
 use App\Models\Invoice;
@@ -44,7 +44,7 @@ class InvoiceController extends Controller {
         return $_->indexedItems()->get();
     }
     public function probe(Request $request) {
-        return ['count'=>$this->_index($request)->count()];
+        return ['count' => $this->_index($request)->count()];
     }
     public function show(Invoice $invoice) {
         return $invoice->load('company');
@@ -69,32 +69,8 @@ class InvoiceController extends Controller {
     public function updateCancel(Invoice $_) {
         return $_->cancel();
     }
-    public function updateRedo(Invoice $_) {
-        $currentInvoiceNo = Param::get('INVOICE_NO_CURRENT')->value;
-        $invoiceNumber    = Invoice::getCurrentInvoiceNumber(-1)['value'];
-
-        if ($_->name !== $invoiceNumber) {
-            return response('Can only redo the latest invoice', 403);
-        }
-
-        $updatePayload = ['invoice_id' => null];
-        if ($firstItem = $_->invoiceItems()->first()) {
-            if ($firstItem->project?->is_time_based) {
-                // revert to prepared support item instead
-                $updatePayload['type'] = InvoiceItemType::PreparedSupport;
-            }
-        }
-        $_->invoiceItems()->update($updatePayload);
-        $_->delete();
-
-        $invoiceNoParam        = Param::get('INVOICE_NO_CURRENT');
-        $invoiceNoParam->value = $currentInvoiceNo - 1;
-        $invoiceNoParam->save();
-        return response([
-            'status'             => 'Successfully redone',
-            'item'               => $firstItem,
-            'INVOICE_NO_CURRENT' => $invoiceNoParam->value,
-        ], 200);
+    public function updateUndo(Invoice $_) {
+        return (new UndoInvoiceAction)->execute($_);
     }
     public function sendMail(Invoice $_) {
         if (env('NEXUS_DEBUG', false)) {

@@ -3,7 +3,9 @@
         <div class="card">
             <div class="card-header" i18n="@@i18n.common.cashRegisters">cash registers</div>
             <ul class="list-group">
-                <li *nxFor="let r of registers" class="list-group-item" routerLink="./{{r.id}}">{{r.name}}</li>
+                @for (r of registers; track r.id) {
+                <li class="list-group-item" [nx]="r" [tables]="registers" routerLink="./{{r.id}}">{{r.name}}</li>
+                }
             </ul>
         </div>
     </div>

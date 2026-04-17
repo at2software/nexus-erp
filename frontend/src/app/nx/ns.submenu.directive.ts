@@ -21,9 +21,9 @@ export class NxSubMenu implements AfterViewInit {
         this.submenu?.el.nativeElement.classList.remove('show')
         this.autoposition?.corrected.subscribe(correction => {
             if (correction & ECorrection.Right) {
-                this.submenu?.parent?.el.nativeElement.classList.add('dropstart')
+                this.submenu?.parent()?.el.nativeElement.classList.add('dropstart')
             } else {
-                this.submenu?.parent?.el.nativeElement.classList.remove('dropstart')
+                this.submenu?.parent()?.el.nativeElement.classList.remove('dropstart')
             }
         })
     }

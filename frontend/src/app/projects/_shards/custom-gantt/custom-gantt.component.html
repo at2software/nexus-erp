@@ -2,13 +2,13 @@
     <button
         type="button"
         class="btn"
-        [class.btn-outline-primary]="!hideCompleted"
-        [class.btn-primary]="hideCompleted"
-        (click)="hideCompleted = !hideCompleted; render()"
-        [title]="hideCompleted ? 'Show completed milestones' : 'Hide completed milestones'"
+        [class.btn-outline-primary]="!hideCompleted()"
+        [class.btn-primary]="hideCompleted()"
+        (click)="toggleHideCompleted()"
+        [title]="hideCompleted() ? 'Show completed milestones' : 'Hide completed milestones'"
     >
-        <i>{{ hideCompleted ? 'visibility_off' : 'visibility' }}</i>
-        {{ hideCompleted ? 'Show completed' : 'Hide completed' }}
+        <i>{{ hideCompleted() ? 'visibility_off' : 'visibility' }}</i>
+        {{ hideCompleted() ? 'Show completed' : 'Hide completed' }}
     </button>
 </toolbar>
 
@@ -16,8 +16,8 @@
     <svg #svgContainer [attr.width]="svgWidth" [attr.height]="svgHeight" class="gantt-svg" (mousedown)="onBackgroundMouseDown($event)">
         <!-- Row backgrounds and headers -->
         <g class="row-backgrounds">
-            @for (row of visibleRows; track $index; let rowIndex = $index) {
-                @if (row.type === 'header' && showProjectHeaders) {
+            @for (row of visibleRows(); track $index; let rowIndex = $index) {
+                @if (row.type === 'header' && showProjectHeaders()) {
                     <g class="header-row">
                         <rect
                             x="0"
@@ -51,14 +51,14 @@
         </g>
 
         <!-- Weekend backgrounds - Render after row backgrounds (Day mode only) -->
-        @if (viewMode === 'Day') {
+        @if (viewMode() === 'Day') {
             <g class="weekend-backgrounds">
                 @for (unit of timelineUnits; track unit.date) {
                     @if (unit.isWeekend) {
                         <rect
                             [attr.x]="unit.x"
                             [attr.y]="TIMELINE_HEADER_HEIGHT"
-                            [attr.width]="UNIT_WIDTH"
+                            [attr.width]="UNIT_WIDTH()"
                             [attr.height]="svgHeight - TIMELINE_HEADER_HEIGHT"
                             fill="#0009"
                             opacity="0.5"
@@ -83,8 +83,8 @@
         </g>
 
         <!-- Header row duration bars -->
-        @for (row of visibleRows; track $index; let rowIndex = $index) {
-            @if (row.type === 'header' && showProjectHeaders) {
+        @for (row of visibleRows(); track $index; let rowIndex = $index) {
+            @if (row.type === 'header' && showProjectHeaders()) {
                 @if (getProjectDurationBar(row.project!); as durationBar) {
                     <g class="duration-bar">
                         <rect
@@ -101,8 +101,8 @@
         }
 
         <!-- Header row content (sticky labels and buttons) -->
-        @for (row of visibleRows; track $index; let rowIndex = $index) {
-            @if (row.type === 'header' && showProjectHeaders) {
+        @for (row of visibleRows(); track $index; let rowIndex = $index) {
+            @if (row.type === 'header' && showProjectHeaders()) {
                 <foreignObject
                     x="0"
                     [attr.y]="getRowY(rowIndex)"
@@ -114,7 +114,7 @@
                         <div class="project-label" [style.left.px]="viewportLeft + 16" style="text-shadow: 0 0 3px #000" (click)="navigateToProject(row.project!)" (keydown.enter)="navigateToProject(row.project!)" (keydown.space)="navigateToProject(row.project!)" tabindex="0" role="button">
                             {{ row.project?.name }}
                         </div>
-                        <div class="header-add-button" [style.left.px]="viewportRight - 50" ngbDropdown #dropdown="ngbDropdown" placement="bottom-end" (openChange)="onDropdownOpenChange()">
+                        <div class="header-add-button" [style.left.px]="viewportRight - 50" ngbDropdown #dropdown="ngbDropdown" placement="bottom-end" container="body" (openChange)="onDropdownOpenChange()">
                             <button class="btn-add" ngbDropdownToggle type="button">
                                 <i>add</i>
                             </button>
@@ -294,7 +294,7 @@
 
         <!-- Tasks -->
         <g class="tasks">
-            @for (row of visibleRows; track $index; let rowIndex = $index) {
+            @for (row of visibleRows(); track $index; let rowIndex = $index) {
                 @if (row.type === 'task' && !isTaskDisappearing(row.data.id)) {
                     <foreignObject
                         [attr.x]="getTaskX(row)"
@@ -387,16 +387,16 @@
                     <rect
                         [attr.x]="unit.x"
                         [attr.y]="timelineGroups.length > 0 ? 30 : 0"
-                        [attr.width]="UNIT_WIDTH"
+                        [attr.width]="UNIT_WIDTH()"
                         [attr.height]="timelineGroups.length > 0 ? 30 : 60"
                         fill="var(--bs-body-bg)"
                     />
                     <!-- Workload indicator bar for unit -->
-                    @if (workloadUser && unit.workloadPercent !== undefined && unit.workloadPercent >= 0) {
+                    @if (workloadUser() && unit.workloadPercent !== undefined && unit.workloadPercent >= 0) {
                         <rect
                             [attr.x]="unit.x + 2"
                             [attr.y]="timelineGroups.length > 0 ? 56 : 56"
-                            [attr.width]="UNIT_WIDTH - 4"
+                            [attr.width]="UNIT_WIDTH() - 4"
                             height="3"
                             [attr.fill]="getWorkloadColor(unit.workloadPercent)"
                             rx="1"
@@ -404,12 +404,12 @@
                         />
                     }
                     <text
-                        [attr.x]="unit.x + UNIT_WIDTH / 2"
+                        [attr.x]="unit.x + UNIT_WIDTH() / 2"
                         [attr.y]="timelineGroups.length > 0 ? 50 : 35"
                         text-anchor="middle"
-                        [attr.fill]="viewMode === 'Year' ? '#ccc' : '#999'"
-                        [attr.font-size]="viewMode === 'Year' ? 20 : 11"
-                        [attr.font-family]="viewMode === 'Year' ? 'Michroma' : ''"
+                        [attr.fill]="viewMode() === 'Year' ? '#ccc' : '#999'"
+                        [attr.font-size]="viewMode() === 'Year' ? 20 : 11"
+                        [attr.font-family]="viewMode() === 'Year' ? 'Michroma' : ''"
                     >{{ unit.label }}</text>
                 }
             </g>

@@ -7,14 +7,18 @@ use App\Models\CashflowBuilder;
 use App\Models\Comment;
 use App\Models\Company;
 use App\Models\CompanyContact;
+use App\Models\Focus;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Param;
 use App\Models\Project;
+use App\Models\ProjectState;
 use App\Models\User;
 use App\Models\UserEmployment;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class WidgetController extends Controller {
@@ -41,7 +45,9 @@ class WidgetController extends Controller {
                     ->limit(1);
             }])
             ->get();
-
+        $companies->each->makeHidden('support_items');
+        $projects->each->makeHidden(['params', 'support_items', 'company']);
+        $finishedProjects->each->makeHidden(['params', 'unbilled_invoice_items', 'company']);
         return collect()
             ->merge($companies)
             ->merge($projects)
@@ -57,7 +63,7 @@ class WidgetController extends Controller {
             return response()->json(['error' => 'Unknown cashflow key'], 404);
         }
 
-        $baseWage        = \App\Models\Param::get('HR_HOURLY_WAGE')->value;
+        $baseWage        = Param::get('HR_HOURLY_WAGE')->value;
         $cashflowBuilder = $this->$methodName($baseWage);
 
         // Get the collection with appended attributes
@@ -83,7 +89,7 @@ class WidgetController extends Controller {
                 ]);
                 $historyData = $param->historyResponse();
                 // Handle response object
-                if ($historyData instanceof \Illuminate\Http\JsonResponse) {
+                if ($historyData instanceof JsonResponse) {
                     $responseData['history'] = [$historyData->getData(true)];
                 } else {
                     $responseData['history'] = [$historyData];
@@ -118,12 +124,12 @@ class WidgetController extends Controller {
         $label      = $key === 'PROJECTS_TIMEBASED' ? 'time-based' : 'support';
 
         // Single query to get oldest unbilled focus for all entities
-        $oldestFoci = \App\Models\Focus::whereIn('parent_id', $ids)
+        $oldestFoci = Focus::whereIn('parent_id', $ids)
             ->where('parent_type', $parentType)
             ->whereNull('invoiced_in_item_id')
             ->where('is_unpaid', false)
             ->whereNotNull('started_at')
-            ->select('parent_id', \DB::raw('MIN(started_at) as oldest_started_at'))
+            ->select('parent_id', DB::raw('MIN(started_at) as oldest_started_at'))
             ->groupBy('parent_id');
         $sql        = $oldestFoci->toSql();
         $oldestFoci = $oldestFoci->get()
@@ -168,7 +174,7 @@ class WidgetController extends Controller {
     }
     public function GET_CASHFLOW_CUSTOMER_SUPPORT($baseWage = 0) {
         return new CashflowBuilder(
-            builder: Company::whereHasUnbilledFoci()->whereNot('id', \App\Models\Param::get('ME_ID')->value),
+            builder: Company::whereHasUnbilledFoci()->whereNot('id', Param::get('ME_ID')->value),
             sum: fn ($company) => $company->foci_unbilled_sum_duration * $company->getWage($baseWage)
         );
     }
@@ -178,7 +184,7 @@ class WidgetController extends Controller {
                 ->with('company')
                 ->withSum([
                     'invoiceItems as gross_remaining_calculated' => function ($query) {
-                        $query->whereIn('type', [0, 11, 10, 12, 43]); // InvoiceItemType::TotalRemaining
+                        $query->whereIn('type', InvoiceItemType::TotalRemaining);
                     },
                 ], 'gross'),
             sum: fn ($invoice) => $invoice->gross_remaining_calculated ?? 0
@@ -222,7 +228,6 @@ class WidgetController extends Controller {
                             ->limit(1);
                     }])
                     ->get();
-
                 return collect()
                     ->merge($companies)
                     ->merge($projects)
@@ -269,7 +274,7 @@ class WidgetController extends Controller {
         $builder = Project::wherePreparedOrRunning()
             ->whereNot('is_internal', true)
             ->where('is_time_based', false)
-            ->whereHas('latestState', fn ($q) => $q->where('progress', '!=', \App\Models\ProjectState::Prepared))
+            ->whereHas('latestState', fn ($q) => $q->where('progress', '!=', ProjectState::Prepared))
             ->with(['latestState', 'company', 'hoursInvestedSum']);
 
         if (request('only-mine') === 'true') {

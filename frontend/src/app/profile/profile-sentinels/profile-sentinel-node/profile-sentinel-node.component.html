@@ -1,40 +1,41 @@
 <div class="card mb-3 node node-card position-relative"
-  [ngClass]="getNodeTypeClass(node.type)"
-  (click)="onEdit()" tabindex="0" (keydown.enter)="onEdit()"
-  [ngStyle]="{ width: width + 'px', height: height + 'px' }">
+  [ngClass]="getNodeTypeClass(node().type)"
+  [style.width.px]="width()"
+  [style.height.px]="height()"
+  (click)="editNode.emit()" tabindex="0" (keydown.enter)="editNode.emit()">
 
   @if (isCondition()) {
     <div
       role="button"
       class="delete-button text-danger cursor-pointer"
-      (click)="onDelete()" tabindex="0" (keydown.enter)="onDelete()">
+      (click)="deleteNode.emit(); $event.stopPropagation()" tabindex="0" (keydown.enter)="deleteNode.emit()">
       <i>delete</i>
     </div>
   }
 
   <div class="node-body">
-    @if (node.type === SentinelNodeType.Trigger) {
+    @if (node().type === SentinelNodeType.Trigger) {
       <div class="vstack">
-        <div class="form-label">{{ObserverTrigger[sentinel.trigger]}}</div>
-        <div class="form-label">{{sentinel.table_name}}</div>
+        <div class="form-label">{{ObserverTrigger[sentinel().trigger]}}</div>
+        <div class="form-label">{{sentinel().table_name}}</div>
       </div>
     }
-    @if (node.type === SentinelNodeType.Condition) {
+    @if (node().type === SentinelNodeType.Condition) {
       <div class="vstack">
-        @for (option of columnOptions; track option) {
+        @for (option of columnOptions(); track option) {
           <div class="form-label">{{option.label}} {{option.value}}</div>
         }
-        @if (getCondition(node.condition); as condition) {
+        @if (getCondition(node().condition); as condition) {
           <div class="form-label">{{condition.label}}</div>
         }
-        @for (option of options; track option) {
+        @for (option of options(); track option) {
           <div class="form-label">{{option.label}} {{option.value}}</div>
         }
       </div>
     }
-    @if (node.type === SentinelNodeType.Command) {
+    @if (node().type === SentinelNodeType.Command) {
       <div>
-        <div class="form-label">{{getCommandLabel()}}</div>
+        <div class="form-label">{{commandLabel()}}</div>
       </div>
     }
   </div>

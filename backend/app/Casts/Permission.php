@@ -15,7 +15,6 @@ class Permission implements CastsAttributes {
         }
         return $value;
     }
-
     public function set(Model $model, string $key, mixed $value, array $attributes): mixed {
         return $value;
     }

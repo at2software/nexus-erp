@@ -1,96 +1,130 @@
-<div class="row">
+﻿<div class="row g-3">
+
+    <!-- ===== LEFT COLUMN: Overview + KPI + Lead Sources ===== -->
     <div class="col-3">
 
+        <!-- Overview (all prospect statuses) -->
         <div class="card mb-3">
-            <div class="card-header" i18n="@@i18n.marketing.cold_calling">cold calling</div>
-            <ul class="list-group list-group-flush text-truncate">
+            <div class="card-header">overview</div>
+            <ul class="list-group list-group-flush">
                 <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
-                    (click)="navigateToSection('initiatives')" tabindex="0" (keydown.enter)="navigateToSection('initiatives')">
-                    <span>
-                        <i class="align-middle me-2">adjust</i>
-                        <span i18n="@@i18n.marketing.total_initiatives">total initiatives</span>
-                    </span>
-                    <span>
-                        <span class="me-2">{{stats.initiatives.total}}</span>
-                        <small class="text-muted">({{stats.initiatives.active}} <span
-                                i18n="@@i18n.common.active">active</span>)</small>
-                    </span>
+                    (click)="navigateToSection('initiatives')" tabindex="0"
+                    (keydown.enter)="navigateToSection('initiatives')">
+                    <span><i class="align-middle me-2">adjust</i>initiatives</span>
+                    <span><span class="me-1">{{stats.initiatives.total}}</span><small
+                            class="text-muted">({{stats.initiatives.active}} active)</small></span>
                 </li>
                 <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
-                    (click)="navigateToSection('prospects')" tabindex="0" (keydown.enter)="navigateToSection('prospects')">
-                    <span>
-                        <i class="align-middle me-2">groups</i>
-                        <span i18n="@@i18n.marketing.total_prospects">total prospects</span>
-                    </span>
-                    <span>
-                        <span class="me-2">{{stats.prospects.total}}</span>
-                        <small class="text-muted">({{stats.prospects.new}} <span i18n="@@i18n.common.new">new</span>)</small>
-                    </span>
+                    (click)="navigateToSection('prospects')" tabindex="0"
+                    (keydown.enter)="navigateToSection('prospects')">
+                    <span><i class="align-middle me-2">fiber_new</i>new</span>
+                    <span class="badge bg-primary rounded-pill">{{stats.prospects.new}}</span>
                 </li>
                 <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
-                    (click)="navigateToSection('prospects')" tabindex="0" (keydown.enter)="navigateToSection('prospects')">
-                    <span>
-                        <i class="align-middle me-2">task_alt</i>
-                        <span i18n="@@i18n.marketing.pending_activities">pending activities</span>
-                    </span>
-                    <span>
-                        <span class="me-2">{{stats.activities.pending}}</span>
-                        <small class="text-muted">({{stats.activities.overdue}} <span
-                                i18n="@@i18n.common.overdue">overdue</span>)</small>
-                    </span>
+                    (click)="navigateToSection('prospects')" tabindex="0"
+                    (keydown.enter)="navigateToSection('prospects')">
+                    <span><i class="align-middle me-2">bolt</i>engaged</span>
+                    <span class="badge bg-info rounded-pill">{{stats.prospects.engaged}}</span>
                 </li>
                 <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
-                    (click)="navigateToSection('workflows')" tabindex="0" (keydown.enter)="navigateToSection('workflows')">
-                    <span>
-                        <i class="align-middle me-2">account_tree</i>
-                        <span i18n="@@i18n.marketing.workflows">workflows</span>
-                    </span>
-                    <span class="text-muted" i18n="@@i18n.marketing.click_to_manage">click to manage</span>
+                    (click)="navigateToSection('prospects')" tabindex="0"
+                    (keydown.enter)="navigateToSection('prospects')">
+                    <span><i class="align-middle me-2">check_circle</i>converted</span>
+                    <span class="badge bg-success rounded-pill">{{stats.prospects.converted}}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    (click)="navigateToSection('prospects')" tabindex="0"
+                    (keydown.enter)="navigateToSection('prospects')">
+                    <span><i class="align-middle me-2">volume_off</i>unresponsive</span>
+                    <span class="badge bg-warning rounded-pill">{{stats.prospects.unresponsive}}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    (click)="navigateToSection('prospects')" tabindex="0"
+                    (keydown.enter)="navigateToSection('prospects')">
+                    <span><i class="align-middle me-2">pause_circle</i>on hold</span>
+                    <span class="badge bg-secondary rounded-pill">{{stats.prospects.on_hold}}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
+                    (click)="navigateToSection('prospects')" tabindex="0"
+                    (keydown.enter)="navigateToSection('prospects')">
+                    <span><i class="align-middle me-2">task_alt</i>activities</span>
+                    <span><span class="me-1">{{stats.activities.pending}}</span><small
+                            class="text-danger">({{stats.activities.overdue}} overdue)</small></span>
                 </li>
             </ul>
         </div>
 
-        <div class="card mb-3">
+        <!-- Lead Sources (breakdown + add) -->
+        <div class="card mb-0">
             <div class="card-header hstack gap-2">
-                <div class="flex-fill" i18n="@@i18n.marketing.assets">marketing assets</div>
+                <i class="me-1">hub</i>
+                <div class="flex-fill">lead sources</div>
+                <i class="pointer text-primary" (click)="onNewLeadSource()" tabindex="0"
+                    (keydown.enter)="onNewLeadSource()">add</i>
             </div>
-            <div class="card-body p-0">
-                @if (loadingAssets) {
-                <div class="text-center py-3">
-                    <div class="spinner-border spinner-border-sm" role="status">
-                        <span class="visually-hidden" i18n="@@i18n.common.loading">loading</span>
-                    </div>
-                </div>
+            @if (loadingDashboard) {
+            <div class="card-body text-center py-3">
+                <div class="spinner-border spinner-border-sm" role="status"></div>
+            </div>
+            }
+            @if (!loadingDashboard) {
+            <div class="card-body py-2 vstack gap-3">
+                @for (source of dashboardStats?.lead_sources; track source.name) {
+                <chart-progress [value]="source.converted || 0" [max]="source.total || 1" [title]="source.name"
+                    [ngbTooltip]="source.name + ': ' + (source.converted || 0) + ' converted / ' + source.total + ' total'"
+                    scss="success">
+                </chart-progress>
                 }
-
-                @if (!loadingAssets) {
-                <div class="list-group list-group-flush">
-                    @for (category of assetCategories; track category) {
-                    <div class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
-                        (click)="navigateToAssets(category.name)" tabindex="0" (keydown.enter)="navigateToAssets(category.name)" [ngbTooltip]="'View ' + category.name + ' assets'">
-                        <div class="d-flex align-items-center">
-                            <i class="me-2 text-{{category.color}}">{{category.icon}}</i>
-                            <span>{{category.name}}</span>
-                        </div>
-                        <span class="badge bg-{{category.color}} rounded-pill">{{category.count}}</span>
-                    </div>
-                    }
-                </div>
-                }
-
-                @if (!loadingAssets && (!assetCategories || assetCategories.length === 0)) {
-                <empty-state [card]="false" class="marketing" i18n-title="@@i18n.marketing.no_assets" title="no assets found"></empty-state>
+                @if (!dashboardStats?.lead_sources?.length) {
+                <div class="text-muted text-center small py-1">no data</div>
                 }
             </div>
+            }
         </div>
 
     </div>
+
+    <!-- ===== CENTER COLUMN: Schedule + Funnel + Initiatives + Team ===== -->
     <div class="col-6">
+
+        <!-- 7-Day Activity Schedule -->
         <div class="card mb-3">
             <div class="card-header hstack gap-2">
-                <div class="flex-fill" i18n="@@i18n.marketing.funnel_visualization">funnel visualization (aida)</div>
+                <div class="flex-fill">activity schedule</div>
+                <small class="text-muted">today + next 6 days</small>
+            </div>
+            @if (loadingDashboard) {
+            <div class="card-body text-center py-3">
+                <div class="spinner-border spinner-border-sm" role="status"></div>
+            </div>
+            }
+            @if (!loadingDashboard) {
+            <div class="card-body p-2">
+                <div class="row g-1 text-center">
+                    @for (day of activitySchedule; track day.date) {
+                    <div class="col">
+                        <small class="d-block" [class.fw-bold]="day.isToday"
+                            [class.text-primary]="day.isToday">{{day.day}}</small>
+                        <div class="rounded p-1 mt-1" [class.border]="day.isToday" [class.border-primary]="day.isToday"
+                            [ngbTooltip]="day.day + ': ' + day.completed + ' done, ' + day.pending + ' pending'">
+                            <div class="fw-semibold">{{day.total || '—'}}</div>
+                            @if (day.pending > 0) { <small class="text-warning d-block">{{day.pending}}p</small> }
+                            @if (day.completed > 0) { <small class="text-success d-block">{{day.completed}}✓</small> }
+                        </div>
+                    </div>
+                    }
+                </div>
+            </div>
+            }
+        </div>
+
+        <!-- AIDA Funnel -->
+        <div class="card mb-3">
+            <div class="card-header hstack gap-2">
+                <div class="flex-fill">funnel visualization (aida)</div>
                 <div class="hstack gap-2">
-                    <button type="button" class="btn btn-sm btn-outline-primary" (click)="toggleFunnelMode()" tabindex="0" (keydown.enter)="toggleFunnelMode()"
+                    <button type="button" class="btn btn-sm btn-outline-primary" (click)="toggleFunnelMode()"
+                        tabindex="0"
                         [ngbTooltip]="funnelMode === 'count' ? 'Switch to money view' : 'Switch to count view'">
                         <i>{{ funnelMode === 'count' ? 'attach_money' : 'format_list_numbered' }}</i>
                     </button>
@@ -98,8 +132,8 @@
                         <input type="text" class="form-control" ngxDaterangepickerMd [(ngModel)]="creation_span"
                             [ranges]="presetRanges" [showCustomRangeLabel]="true" [alwaysShowCalendars]="true"
                             (datesUpdated)="onCreationUpdated()" [locale]="{applyLabel: 'ok', format: 'DD.MM.YYYY'}">
-                        <button type="button" class="btn btn-plain" (click)="clearSelection()" tabindex="0" (keydown.enter)="clearSelection()">
-                            <i class="text-primary pointer" i18n="@@i18n.common.clear">clear</i>
+                        <button type="button" class="btn btn-plain" (click)="clearSelection()" tabindex="0">
+                            <i class="text-primary pointer">clear</i>
                         </button>
                     </div>
                 </div>
@@ -109,22 +143,227 @@
             </div>
         </div>
 
-        <!-- <div class="card mb-3">
-    <div class="card-header">Campaign performance charts</div>
-  </div>
+        <div class="row">
+            <!-- Top Initiatives -->
+            <div class="col-6">
+                <div class="card mb-3">
+                    <div class="card-header hstack gap-2">
+                        <i class="me-1">emoji_events</i>
+                        <div class="flex-fill">top initiatives</div>
+                        <small class="text-muted">by conversions</small>
+                    </div>
+                    @if (loadingDashboard) {
+                    <div class="card-body text-center py-3">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                    </div>
+                    }
+                    @if (!loadingDashboard) {
+                    <ul class="list-group list-group-flush">
+                        @for (initiative of dashboardStats?.top_initiatives; track initiative.id) {
+                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 cursor-pointer"
+                            (click)="navigateToInitiative(initiative.id)" tabindex="0"
+                            (keydown.enter)="navigateToInitiative(initiative.id)"
+                            [ngbTooltip]="initiative.total_prospects + ' prospects · ' + initiative.converted + ' converted'">
+                            <span class="text-truncate me-2">{{initiative.name}}</span>
+                            <span class="badge rounded-pill flex-shrink-0"
+                                [class.bg-success]="initiative.conversion_rate >= 10"
+                                [class.bg-warning]="initiative.conversion_rate > 0 && initiative.conversion_rate < 10"
+                                [class.bg-secondary]="initiative.conversion_rate === 0">
+                                {{initiative.conversion_rate}}%
+                            </span>
+                        </li>
+                        }
+                        @if (!dashboardStats?.top_initiatives?.length) {
+                        <li class="list-group-item text-muted text-center py-3">no data</li>
+                        }
+                    </ul>
+                    }
+                </div>
+            </div>
 
-  <div class="card mb-3">
-    <div class="card-header">Source/channel breakdown</div>
-  </div> -->
-
+            <!-- Team Performance -->
+            <div class="col-6">
+                <div class="card mb-0">
+                    <div class="card-header hstack gap-2">
+                        <i class="me-1">groups</i>
+                        <div class="flex-fill">team performance</div>
+                        <small class="text-muted">last 30 days</small>
+                    </div>
+                    @if (loadingDashboard) {
+                    <div class="card-body text-center py-3">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                    </div>
+                    }
+                    @if (!loadingDashboard) {
+                    <ul class="list-group list-group-flush">
+                        @for (member of dashboardStats?.team_performance; track member.id) {
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                            <span class="text-truncate me-2">{{member.name}}</span>
+                            <div class="hstack gap-1 flex-shrink-0">
+                                <span class="badge bg-success rounded-pill"
+                                    ngbTooltip="completed (30d)">{{member.completed_30d}}</span>
+                                @if (member.overdue > 0) {
+                                <span class="badge bg-danger rounded-pill"
+                                    ngbTooltip="overdue (active prospects only)">{{member.overdue}}</span>
+                                }
+                            </div>
+                        </li>
+                        }
+                        @if (!dashboardStats?.team_performance?.length) {
+                        <li class="list-group-item text-muted text-center py-3">no activity data</li>
+                        }
+                    </ul>
+                    }
+                </div>
+            </div>
+        </div>
     </div>
 
+    <!-- ===== RIGHT COLUMN: Conversion + Recents + Remarketing + Aging + Workflows ===== -->
     <div class="col-3">
 
+        <!-- Conversion Rate Hero -->
+        <div class="card mb-3">
+            <div class="card-body text-center py-3">
+                <div class="display-4 fw-bold" [class.text-success]="conversionRate >= 10"
+                    [class.text-warning]="conversionRate > 0 && conversionRate < 10"
+                    [class.text-muted]="conversionRate === 0"
+                    ngbTooltip="{{stats.prospects.converted}} converted / {{stats.prospects.total}} total">
+                    {{conversionRate}}%
+                </div>
+                <div class="text-muted small">conversion rate</div>
+                <div class="text-muted small mt-1">{{stats.prospects.converted}} / {{stats.prospects.total}} prospects
+                </div>
+            </div>
+        </div>
 
-        <settings-projects-leads></settings-projects-leads>
-        <!-- <div class="card mb-3">
-  <div class="card-header">High-level metrics: impressions, clicks, conversions, cost per lead (CPL), ROI</div>
-</div> -->
+        <!-- Recent Conversions -->
+        <div class="card mb-3">
+            <div class="card-header hstack gap-2">
+                <i class="text-success me-1">check_circle</i>
+                <div class="flex-fill">recent conversions</div>
+            </div>
+            @if (loadingDashboard) {
+            <div class="card-body text-center py-3">
+                <div class="spinner-border spinner-border-sm" role="status"></div>
+            </div>
+            }
+            @if (!loadingDashboard) {
+            <ul class="list-group list-group-flush">
+                @for (c of dashboardStats?.recent_conversions; track c.id) {
+                <li class="list-group-item d-flex justify-content-between align-items-center py-2"
+                    [ngbTooltip]="(c.company || '') + (c.initiative ? ' · ' + c.initiative : '')">
+                    <span class="text-truncate me-2">{{c.name}}</span>
+                    <small class="text-muted flex-shrink-0">{{c.converted_at}}</small>
+                </li>
+                }
+                @if (!dashboardStats?.recent_conversions?.length) {
+                <li class="list-group-item text-muted text-center py-3">no conversions yet</li>
+                }
+            </ul>
+            }
+        </div>
+
+        <!-- Remarketing + Prospect Aging (compact) -->
+        <div class="card mb-3">
+            <div class="card-header hstack gap-2">
+                <div class="flex-fill">remarketing</div>
+                <span class="cursor-pointer text-muted small" (click)="navigateToRemarketing()" tabindex="0"
+                    (keydown.enter)="navigateToRemarketing()">view</span>
+            </div>
+            @if (loadingRemarketing) {
+            <div class="card-body text-center py-2">
+                <div class="spinner-border spinner-border-sm" role="status"></div>
+            </div>
+            }
+            @if (!loadingRemarketing) {
+            <div class="card-body py-2 d-flex gap-2 flex-wrap">
+                <span class="badge bg-warning" ngbTooltip="due now">
+                    <i class="align-middle me-1" style="font-size:.75rem">alarm</i>{{remarketing?.due?.length || 0}} due
+                </span>
+                <span class="badge bg-info" ngbTooltip="being observed">
+                    <i class="align-middle me-1" style="font-size:.75rem">visibility</i>{{remarketing?.observed?.length
+                    || 0}} observed
+                </span>
+                <span class="badge bg-secondary" ngbTooltip="suggested high-value clients">
+                    <i class="align-middle me-1" style="font-size:.75rem">star</i>{{remarketing?.suggested?.length ||
+                    0}} suggested
+                </span>
+            </div>
+            }
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">prospect aging</div>
+            @if (loadingDashboard) {
+            <div class="card-body text-center py-2">
+                <div class="spinner-border spinner-border-sm" role="status"></div>
+            </div>
+            }
+            @if (!loadingDashboard && dashboardStats?.aging) {
+            <div class="card-body py-2 d-flex gap-2 flex-wrap">
+                <span class="badge bg-success" ngbTooltip="0–7 days (fresh)">
+                    <i class="align-middle me-1" style="font-size:.75rem">local_florist</i>{{dashboardStats.aging.fresh
+                    || 0}}
+                </span>
+                <span class="badge bg-info" ngbTooltip="8–30 days (warm)">
+                    <i class="align-middle me-1" style="font-size:.75rem">thermostat</i>{{dashboardStats.aging.warm ||
+                    0}}
+                </span>
+                <span class="badge bg-warning" ngbTooltip="31–90 days (cooling)">
+                    <i class="align-middle me-1" style="font-size:.75rem">ac_unit</i>{{dashboardStats.aging.cooling ||
+                    0}}
+                </span>
+                <span class="badge bg-danger" ngbTooltip="90+ days (stale)">
+                    <i class="align-middle me-1" style="font-size:.75rem">delete_sweep</i>{{dashboardStats.aging.stale
+                    || 0}}
+                </span>
+            </div>
+            }
+        </div>
+
+        <!-- Workflow Effectiveness -->
+        <div class="card mb-3">
+            <div class="card-header hstack gap-2">
+                <i class="me-1">account_tree</i>
+                <div class="flex-fill">workflow effectiveness</div>
+                <span class="cursor-pointer text-muted small" (click)="navigateToSection('workflows')" tabindex="0"
+                    (keydown.enter)="navigateToSection('workflows')">manage</span>
+            </div>
+            @if (loadingDashboard) {
+            <div class="card-body text-center py-3">
+                <div class="spinner-border spinner-border-sm" role="status"></div>
+            </div>
+            }
+            @if (!loadingDashboard) {
+            <ul class="list-group list-group-flush">
+                @for (wf of dashboardStats?.workflow_effectiveness; track wf.id) {
+                <li class="list-group-item list-group-item-action py-2 cursor-pointer"
+                    (click)="navigateToWorkflow(wf.id)" tabindex="0" (keydown.enter)="navigateToWorkflow(wf.id)">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-truncate me-2">{{wf.name}}</span>
+                        <span class="badge rounded-pill flex-shrink-0"
+                            ngbTooltip="prospect conversion rate ({{wf.converted_prospects}}/{{wf.total_workflow_prospects}})"
+                            [class.bg-success]="wf.prospect_conversion_rate >= 10"
+                            [class.bg-warning]="wf.prospect_conversion_rate > 0 && wf.prospect_conversion_rate < 10"
+                            [class.bg-secondary]="wf.prospect_conversion_rate === 0">
+                            {{wf.prospect_conversion_rate}}%
+                        </span>
+                    </div>
+                    <div class="progress" style="height:4px"
+                        ngbTooltip="activity completion rate ({{wf.completed_activities}}/{{wf.total_activities}})">
+                        <div class="progress-bar bg-primary" [style.width.%]="wf.completion_rate"></div>
+                    </div>
+                </li>
+                }
+                @if (!dashboardStats?.workflow_effectiveness?.length) {
+                <li class="list-group-item text-muted text-center py-3">no data</li>
+                }
+            </ul>
+            }
+        </div>
+
+
     </div>
+
 </div>

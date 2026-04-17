@@ -21,6 +21,8 @@ export class MarketingInitiative extends Serializable {
     pivot?: TPivot<'marketing_initiative', 'marketing_workflow'> & { is_active?: boolean };
     channels?: any[];
     prospects_count?: number;
+    overdue_prospects_count?: number;
+    company_prospects_count?: number;
     
     @AutoWrapArray('MarketingPerformanceMetric') performance_metrics?: MarketingPerformanceMetric[];
     @AutoWrapArray('MarketingWorkflow') workflows?: MarketingWorkflow[];

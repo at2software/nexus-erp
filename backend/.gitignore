@@ -31,3 +31,4 @@ storage/app/cronjobs-standing-orders.log
 storage/app/foci_invoice_item_ids.sql
 tmpclaude-*-cwd
 .claude/commands/
+.claude/settings.local.json

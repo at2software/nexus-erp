@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\NLog;
+use App\Jobs\ChatSendMessageJob;
 use App\Models\PluginLink;
 use App\Traits\HasVaultCredentials;
 use Illuminate\Http\Request;
@@ -94,7 +95,7 @@ class PluginLocalAiController extends PluginController {
                         $props = [
                             ...$git->props('GitLab Commit Review'),
                         ];
-                        \App\Jobs\ChatSendMessageJob::dispatch($message, $props, channelId: $channelId);
+                        ChatSendMessageJob::dispatch($message, $props, channelId: $channelId);
                     }
                 }
                 break;

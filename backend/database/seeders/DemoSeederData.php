@@ -8,6 +8,7 @@ use Faker\Factory as Faker;
 use Faker\Generator;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class DemoSeederData extends Seeder {
     private $_faker = null;
@@ -32,28 +33,28 @@ class DemoSeederData extends Seeder {
             [0,  'thomas.weber',   'thomas.weber',   'project_manager', 'Senior Developer',  '1983-07-24'],
             [0,  'lisa.schmidt',   'lisa.schmidt',   'user',       'Full-Stack Developer', '1990-11-05'],
             [12, 'markus.fischer', 'markus.fischer', 'user',       'Backend Developer', '1992-04-18'],
-            [30, 'julia.becker',   'julia.becker',   'user',       'Frontend Developer','1994-09-30'],
+            [30, 'julia.becker',   'julia.becker',   'user',       'Frontend Developer', '1994-09-30'],
             [42, 'david.koch',     'david.koch',     'user',       'Junior Developer',  '1999-02-14'],
         ];
 
         $users = [];
         foreach ($hireOffsets as [$offset, $username, $emailPre, $role, $title, $birthdate]) {
-            $hiredAt    = $startDay->copy()->addMonths($offset);
-            $domain     = 'digitech-demo.com';
-            $phone      = $faker->phoneNumber();
-            $postcode   = $faker->postcode();
-            $city       = $faker->city();
-            $street     = $faker->streetAddress();
-            $firstName  = ucfirst(explode('.', $username)[0]);
-            $lastName   = ucfirst(explode('.', $username)[1]);
+            $hiredAt   = $startDay->copy()->addMonths($offset);
+            $domain    = 'digitech-demo.com';
+            $phone     = $faker->phoneNumber();
+            $postcode  = $faker->postcode();
+            $city      = $faker->city();
+            $street    = $faker->streetAddress();
+            $firstName = ucfirst(explode('.', $username)[0]);
+            $lastName  = ucfirst(explode('.', $username)[1]);
 
             $users[] = [
-                'name'       => $username,
-                'email'      => "{$emailPre}@{$domain}",
-                'password'   => Hash::make('password'),
-                'role'       => $role,
-                'hired_at'   => $hiredAt,
-                'vcard'      => <<<VCARD
+                'name'     => $username,
+                'email'    => "{$emailPre}@{$domain}",
+                'password' => Hash::make('password'),
+                'role'     => $role,
+                'hired_at' => $hiredAt,
+                'vcard'    => <<<VCARD
                     FN:{$firstName} {$lastName}
                     ORG:Digitech GmbH
                     TITLE:{$title}
@@ -108,9 +109,9 @@ class DemoSeederData extends Seeder {
 
         foreach ($this->productNamesAndGroups as $i => $productNameAndGroup) {
             [$productName, $product_group_name] = $productNameAndGroup;
-            $productGroupId = ProductGroup::where('name', $product_group_name)->pluck('id')->first();
-            $price          = $faker->numberBetween(1000, 5000);
-            $products[]     = [
+            $productGroupId                     = ProductGroup::where('name', $product_group_name)->pluck('id')->first();
+            $price                              = $faker->numberBetween(1000, 5000);
+            $products[]                         = [
                 'product_group_id' => $productGroupId,
                 'name'             => $productName,
                 'item_number'      => 'PROD-00'.$i,
@@ -128,7 +129,6 @@ class DemoSeederData extends Seeder {
         }
         return $products;
     }
-
     public function new_customer(): array {
         $faker          = $this->faker();
         $companyName    = $faker->company();
@@ -137,7 +137,7 @@ class DemoSeederData extends Seeder {
         $postcode       = $faker->postcode();
         $city           = $faker->city();
         $streetAddress  = $faker->streetAddress();
-        $companySlug    = \Illuminate\Support\Str::slug($companyName, '.');
+        $companySlug    = Str::slug($companyName, '.');
         $email          = 'info@'.$companySlug.'.com';
         $website        = $companySlug.'.com';
 
@@ -168,7 +168,6 @@ class DemoSeederData extends Seeder {
             EMAIL;type=work:{$contactEmail}
             TEL;type=work;type=cell:{$phoneNumber}
             VCARD;
-
         return [
             'company'         => $company,
             'company_contact' => [
@@ -176,10 +175,9 @@ class DemoSeederData extends Seeder {
                 'is_invoicing_address' => true,
                 'vcard'                => $contactVcard,
             ],
-            'contact'         => ['vcard' => $contactVcard],
+            'contact' => ['vcard' => $contactVcard],
         ];
     }
-
     public function new_project($company): array {
         $faker       = $this->faker();
         $companyName = '';
@@ -227,7 +225,6 @@ class DemoSeederData extends Seeder {
         $invoiceItems = $this->createInvoiceItems($area, $productIds, $faker);
         return [$project, $invoiceItems];
     }
-
     public function createInvoiceItems(string $area, array $productIds, Generator $faker): array {
         $invoiceItems = [];
         switch ($area) {

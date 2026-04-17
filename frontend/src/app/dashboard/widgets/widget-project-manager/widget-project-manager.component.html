@@ -14,9 +14,10 @@
 
   @if (!getOptions()['chart-only']?.value) {
     <ul-compact>
+      @for (_ of data; track _.id) {
       <li class="list-group-item d-flex text-nowrap {{_.markerClass()}}"
+          [nx]="_" [tables]="data"
           [class.compact]="isCompact(_)"
-          *nxFor="let _ of data; let i = index"
           [ngbTooltip]="_.var.projectType === 'acquisition' ? getProbabilityTooltip(_) : ''">
         <div>
           <avatar [object]="_"></avatar>
@@ -39,6 +40,7 @@
           }
         </div>
       </li>
+      }
     </ul-compact>
   }
 

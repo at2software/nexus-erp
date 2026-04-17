@@ -17,6 +17,12 @@ class ProjectCollection extends BaseCollection {
             if (isset($project->connectionProjects)) {
                 $project->setRelation('connectionProjects', $project->connectionProjects->mapSimplified($project, false));
             }
+            if ($project->relationLoaded('assigned_users')) {
+                $project->assigned_users->each(function ($user) {
+                    $user->makeHidden('pivot');
+                    $user->unsetRelation('activeEmployment');
+                });
+            }
         });
         return $this;
     }

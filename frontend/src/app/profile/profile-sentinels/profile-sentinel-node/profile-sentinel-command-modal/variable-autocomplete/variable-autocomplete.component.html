@@ -1,9 +1,9 @@
 <div class="variable-autocomplete-container">
-  @if (multiline) {
+  @if (multiline()) {
     <textarea #inputEl
       class="form-control sentinel-input"
-      [(ngModel)]="option.value"
-      [placeholder]="option.placeholder || ''"
+      [(ngModel)]="option().value"
+      [placeholder]="option().placeholder || ''"
       rows="4"
       (input)="onInput($event)"
       (keydown)="onKeydown($event)"
@@ -12,19 +12,19 @@
     <input #inputEl
       type="text"
       class="form-control sentinel-input"
-      [(ngModel)]="option.value"
-      [placeholder]="option.placeholder || ''"
+      [(ngModel)]="option().value"
+      [placeholder]="option().placeholder || ''"
       (input)="onInput($event)"
       (keydown)="onKeydown($event)"
       (blur)="onBlur()">
   }
 
-  @if (showDropdown && results.length > 0) {
+  @if (showDropdown()) {
     <scrollbar class="variable-dropdown">
-      @for (res of results; track res; let i = $index) {
+      @for (res of results(); track res.name; let i = $index) {
         <div class="dropdown-item hstack gap-2 pointer"
           (mousedown)="selectResult(res)"
-          [class.active]="i === currentIndex">
+          [class.active]="i === currentIndex()">
           <span class="flex-fill">{{ res.name }}</span>
           <small class="text-muted">{{ res.type }}</small>
         </div>

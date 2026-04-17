@@ -16,7 +16,7 @@ class CommentController extends Controller {
         $parent  = Comment::fromPath($request->path);
         $payload = [
             ...$new->getValidFields($request->all()),
-            ...$parent->toPoly(),
+            ...$parent?->toPoly() ?? [],
             'user_id' => Auth::Id(),
         ];
         if (empty($payload['type'])) {

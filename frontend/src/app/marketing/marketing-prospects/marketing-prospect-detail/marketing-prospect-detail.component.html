@@ -24,20 +24,32 @@
     <div class="card mb-3">
         <div class="card-header hstack gap-2 align-items-center">
             @if (prospect.marketing_initiative) {
-                <span class="small text-secondary">{{prospect.marketing_initiative.name}}</span>
+                <span class="badge small text-muted">{{prospect.marketing_initiative.name}}</span>
             }
 
-            <div class="flex-fill fw-bold">{{prospect.name}}</div>
+            <div class="flex-fill">
+                @if (prospect.getFormality() === 'informal') {
+                    <span class="fw-bold">{{prospect.firstName || prospect.name}}</span>
+                    @if (prospect.familyName) {
+                        <span> {{prospect.familyName}}</span>
+                    }
+                } @else {
+                    @if (prospect.firstName && prospect.familyName) {
+                        <span>{{prospect.firstName}}</span>
+                    }
+                    <span class="fw-bold" [class.ms-1]="!!(prospect.firstName && prospect.familyName)">{{prospect.familyName || prospect.name}}</span>
+                }
+            </div>
 
             @if (prospect.company_contact) {
-                <span class="text-success" i18n-ngbTooltip="@@i18n.marketing.linked" ngbTooltip="linked">
-                    <i class="text-white">link</i>
+                <span [routerLink]="'/customers/' + prospect.company_contact.company_id" i18n-ngbTooltip="@@i18n.marketing.linked" ngbTooltip="linked">
+                    <i class="text-primary cursor-pointer">link</i>
                 </span>
              }
-            <span class="small {{getStatusBadgeClass(prospect.status)}}">
+            <span class="small badge {{getStatusBadgeClass(prospect.status)}}">
                 {{prospect.status}}
             </span>
-            <i class="cursor-pointer text-primary" (click)="vcardCollapsed = !vcardCollapsed" ngbTooltip="toggle vCard view">{{vcardCollapsed ? 'expand_more' : 'expand_less'}}</i>
+            <i class="cursor-pointer text-primary" tabindex="0" (click)="vcardCollapsed = !vcardCollapsed" (keyup.enter)="vcardCollapsed = !vcardCollapsed" ngbTooltip="toggle vCard view">{{vcardCollapsed ? 'expand_more' : 'expand_less'}}</i>
         </div>
     </div>
 
@@ -53,14 +65,10 @@
     </div>
 
     <!-- Notes -->
-    @if (prospect.notes) {
     <div class="card mb-3">
         <div class="card-header" i18n="@@i18n.common.notes">notes</div>
-        <div class="card-body">
-            <p class="small text-muted mb-0">{{prospect.notes}}</p>
-        </div>
+        <rte [object]="prospect" [compact]="true" key="notes"></rte>
     </div>
-    }
 
     @if (prospect.company_id && prospect.companyModel && !prospect.company_contact_id) {
     <div class="card mb-3">
@@ -135,6 +143,11 @@
                                 {{activity.scheduled_at | date:'shortDate'}}
                             </small>
                         </td>
+                        <td class="text-end" style="width: 24px;">
+                            <a class="text-primary cursor-pointer" href="/marketing/initiatives/12" (click)="$event.stopPropagation()">
+                                <i>chevron_right</i>
+                            </a>
+                        </td>
                     </tr>
                     }
                 </tbody>
@@ -194,6 +207,11 @@
                         </td>
                         <td class="text-end">
                             <small class="text-muted text-nowrap">{{activity.completed_at | date:'shortDate'}}</small>
+                        </td>
+                        <td class="text-end" style="width: 24px;">
+                            <a class="text-primary cursor-pointer" href="/marketing/initiatives/12" (click)="$event.stopPropagation()">
+                                <i>chevron_right</i>
+                            </a>
                         </td>
                     </tr>
                     }

@@ -1,4 +1,4 @@
-import { QuickActionType } from './marketing-activity.model';
+import { QuickActionType, TActivityStats } from './marketing-activity.model';
 import { MarketingPerformanceMetric } from './marketing-performance-metrics.model';
 
 /**
@@ -15,4 +15,5 @@ export interface IActivityBase {
     parent_activity_id?: string;
     quick_action?: QuickActionType;
     performance_metrics?: MarketingPerformanceMetric[];
+    stats?: TActivityStats;
 }

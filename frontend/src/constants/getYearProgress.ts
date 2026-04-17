@@ -15,6 +15,5 @@ export const getMonthsIntoYear = (): number => {
   const elapsedMs = now.getTime() - startOfYear.getTime();
 
   const monthsElapsed = (elapsedMs / totalMsInYear) * 12;
-
   return +monthsElapsed.toFixed(4); // 4 digits precision
 }

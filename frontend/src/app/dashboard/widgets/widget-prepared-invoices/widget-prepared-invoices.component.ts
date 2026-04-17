@@ -1,8 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { Company } from 'src/models/company/company.model';
 import { WidgetService } from 'src/models/widget.service';
-import { BaseWidgetComponent } from '../base.widget.component';
-import { OptionType } from '../widget-options/widget-options.component';
+import { BaseWidgetComponent, WidgetOptions } from '../base.widget.component';
 import { Project } from 'src/models/project/project.model';
 import { REFLECTION } from 'src/constants/constants';
 import { WidgetsModule } from '../widgets.module';
@@ -17,18 +16,11 @@ import { PermissionsDirective } from '@directives/permissions.directive';
 })
 export class WidgetPreparedInvoicesComponent extends BaseWidgetComponent {
 
-    defaultOptions = () => ({
-        'max-items': {type:OptionType.Number, value:999, i18n: $localize`:@@i18n.common.maxItems:max items`},
-        'chart-only': {type:OptionType.Boolean, value:false, i18n: $localize`:@@i18n.common.chartOnly:chart only`}
-    })
+    defaultOptions = () => ({ ...WidgetOptions.maxItems, ...WidgetOptions.chartOnly })
 
     data:(Company|Project)[] = []
     #widgetService = inject(WidgetService)
     
-    override ngOnInit() {
-        super.ngOnInit()
-        this.reload()
-    }
     reload(): void {
         if (!this.hasInvoicesExpenses) return;
         this.#widgetService.preparedInvoices(this.getOptionsURI()).subscribe((_:any) => {

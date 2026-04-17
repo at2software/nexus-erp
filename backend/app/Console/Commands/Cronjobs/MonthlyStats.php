@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands\Cronjobs;
 
+use App\Models\Company;
 use App\Models\User;
+use App\Services\FocusStatisticsService;
 use Illuminate\Console\Command;
 
 class MonthlyStats extends Command {
@@ -22,6 +24,7 @@ class MonthlyStats extends Command {
 
             if (empty($predictionData['monthly_accuracy'])) {
                 $this->warn("No prediction data found for user {$user->name}");
+
                 continue;
             }
 
@@ -74,10 +77,10 @@ class MonthlyStats extends Command {
         // Calculate company bias factors
         $this->info('Starting company bias factor calculation...');
 
-        $companyData = \App\Services\FocusStatisticsService::getCompanyPredictionAccuracy();
+        $companyData = FocusStatisticsService::getCompanyPredictionAccuracy();
 
         foreach ($companyData as $data) {
-            $company = \App\Models\Company::find($data['id']);
+            $company = Company::find($data['id']);
             if ($company && isset($data['bias_factor'])) {
                 $param        = $company->param('STATS_PREDICTION_BIAS');
                 $param->value = $data['bias_factor'];

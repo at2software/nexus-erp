@@ -72,6 +72,16 @@
                 <div class="card h-100">
                     <div class="card-header" i18n="@@i18n.debrief.worstCustomers">worst customers</div>
                     <ul class="list-group list-group-flush">
+                        @for (customer of worstCustomers; track customer.id) {
+                            <li class="list-group-item d-flex align-items-center gap-2">
+                                <avatar [object]="customer"></avatar>
+                                <span class="flex-grow-1 text-truncate">{{ customer.name }}</span>
+                                <span class="badge bg-dark">{{ customer.var.count }}</span>
+                            </li>
+                        }
+                        @if (worstCustomers.length === 0) {
+                            <li class="list-group-item text-muted small" i18n="@@i18n.debrief.noData">no data</li>
+                        }
                     </ul>
                 </div>
             </div>
@@ -80,6 +90,16 @@
                 <div class="card h-100">
                     <div class="card-header" i18n="@@i18n.debrief.topCustomers">top customers</div>
                     <ul class="list-group list-group-flush">
+                        @for (customer of topCustomers; track customer.id) {
+                            <li class="list-group-item d-flex align-items-center gap-2">
+                                <avatar [object]="customer"></avatar>
+                                <span class="flex-grow-1 text-truncate">{{ customer.name }}</span>
+                                <span class="badge bg-dark">{{ customer.var.count }}</span>
+                            </li>
+                        }
+                        @if (topCustomers.length === 0) {
+                            <li class="list-group-item text-muted small" i18n="@@i18n.debrief.noData">no data</li>
+                        }
                     </ul>
                 </div>
             </div>
@@ -118,13 +138,28 @@
                     <div class="card-header" i18n="@@i18n.debrief.problems">problems</div>
                     <ul class="list-group list-group-flush">
                         @for (problem of displayProblems; track problem.id) {
-                            <li [nx]="problem" class="list-group-item d-flex align-items-center gap-2">
-                                <span class="text-muted small">{{ problem.usage_count }}x</span>
-                                <span class="flex-grow-1 text-truncate">{{ problem.title }}</span>
-                                @if (problem.severity) {
-                                    <span class="small" [class]="'text-' + (problem.severity === 'critical' ? 'red' : problem.severity === 'high' ? 'orange' : problem.severity === 'medium' ? 'cyan' : 'grey')">{{ problem.severity }}</span>
+                            <li [nx]="problem" [tables]="displayProblems" class="list-group-item">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="text-muted small">{{ problem.usage_count }}x</span>
+                                    <span class="flex-grow-1 text-truncate">{{ problem.title }}</span>
+                                    @if (problem.severity) {
+                                        <span class="small" [class]="'text-' + (problem.severity === 'critical' ? 'red' : problem.severity === 'high' ? 'orange' : problem.severity === 'medium' ? 'cyan' : 'grey')">{{ problem.severity }}</span>
+                                    }
+                                    <span class="small" [style.color]="problem.var.category_color">{{problem.var.category_name}}</span>
+                                    @if (problem.var.projects?.length) {
+                                        <i class="text-muted cursor-pointer" tabindex="0" (click)="$event.stopPropagation(); toggleExpanded(problem.id, expandedProblems)" (keyup.enter)="toggleExpanded(problem.id, expandedProblems)">{{ expandedProblems.has(problem.id) ? 'expand_less' : 'expand_more' }}</i>
+                                    }
+                                </div>
+                                @if (expandedProblems.has(problem.id)) {
+                                    <div class="d-flex flex-wrap gap-1 pt-1">
+                                        @for (proj of problem.var.projects; track proj.id) {
+                                            <div class="hstack gap-2">
+                                                <avatar [object]="proj" size="xs"></avatar>
+                                                <div class="flex-fill text-truncate">{{proj.name}}</div>
+                                            </div>
+                                        }
+                                    </div>
                                 }
-                                <span class="small" [style.color]="problem.var.category_color">{{problem.var.category_name}}</span>
                             </li>
                         }
                         @if (displayProblems.length === 0) {
@@ -138,12 +173,27 @@
                 <div class="card">
                     <div class="card-header" i18n="@@i18n.debrief.positives">positives</div>
                     <ul class="list-group list-group-flush">
-                        @for (positive of displayPositives; track positive.title) {
-                            <li [nx]="positive" class="list-group-item d-flex align-items-center gap-2">
-                                <span class="text-muted small">{{ positive.var.count }}x</span>
-                                <span class="flex-grow-1 text-truncate">{{ positive.title }}</span>
-                                @if (positive.var.category_color) {
-                                    <span class="small" [style.color]="positive.var.category_color">{{ positive.var.category_name }}</span>
+                        @for (positive of displayPositives; track positive.id) {
+                            <li [nx]="positive" [tables]="displayPositives" class="list-group-item">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="text-muted small">{{ positive.var.count }}x</span>
+                                    <span class="flex-grow-1 text-truncate">{{ positive.title }}</span>
+                                    @if (positive.var.category_color) {
+                                        <span class="small" [style.color]="positive.var.category_color">{{ positive.var.category_name }}</span>
+                                    }
+                                    @if (positive.var.projects?.length) {
+                                        <i class="text-muted cursor-pointer" tabindex="0" (click)="$event.stopPropagation(); toggleExpanded(positive.id, expandedPositives)" (keyup.enter)="toggleExpanded(positive.id, expandedPositives)">{{ expandedPositives.has(positive.id) ? 'expand_less' : 'expand_more' }}</i>
+                                    }
+                                </div>
+                                @if (expandedPositives.has(positive.id)) {
+                                    <div class="d-flex flex-wrap gap-1 pt-1">
+                                        @for (proj of positive.var.projects; track proj.id) {
+                                            <div class="hstack gap-2">
+                                                <avatar [object]="proj" size="xs"></avatar>
+                                                <div>{{proj.name}}</div>
+                                            </div>
+                                        }
+                                    </div>
                                 }
                             </li>
                         }

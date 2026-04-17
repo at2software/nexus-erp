@@ -4,12 +4,12 @@ import { TOptions } from '@dashboard/widgets/base.widget.component';
 import { OptionType } from '@dashboard/widgets/widget-options/widget-options.component';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 
 @Component({
     selector: 'paydown-modal', templateUrl: './modal-edit-widget-options.component.html', styleUrls: ['./modal-edit-widget-options.component.scss'],
     standalone: true,
-    imports: [CommonModule, FormsModule]
+    imports: [FormsModule]
 })
 export class ModalEditWidgetOptionsComponent extends ModalBaseComponent<boolean> {
 

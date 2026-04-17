@@ -17,14 +17,14 @@ import { MoneyPipe } from 'src/pipes/money.pipe';
 import { ShortPipe } from 'src/pipes/short.pipe';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 
 @Component({
     selector: 'invoices-stats',
     templateUrl: './invoices-stats.component.html',
     styleUrls: ['./invoices-stats.component.scss'],
     standalone: true,
-    imports: [CommonModule, FormsModule, NgbTooltipModule, WidgetCashflowComponent, WidgetRevenueCurrentYearComponent, WidgetRevenueRadialComponent, ApxChartXComponent, SankeyChartComponent, RevenueSpiralChartComponent]
+    imports: [FormsModule, NgbTooltipModule, WidgetCashflowComponent, WidgetRevenueCurrentYearComponent, WidgetRevenueRadialComponent, ApxChartXComponent, SankeyChartComponent, RevenueSpiralChartComponent]
 })
 export class InvoicesStatsComponent implements OnInit {
 

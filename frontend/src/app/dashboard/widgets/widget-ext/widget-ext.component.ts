@@ -18,7 +18,7 @@ import { EChartsSimpleOptions } from '@charts/ChartOptions';
 })
 export class WidgetExtComponent extends BaseWidgetComponent implements OnInit {
     
-    chartOptions: any = {}
+    chartOptions: any = {...EChartsSimpleOptions, series: []}
     echartsInstance: any
     value = 0
     http = inject(HttpClient)
@@ -28,17 +28,7 @@ export class WidgetExtComponent extends BaseWidgetComponent implements OnInit {
         'url'    : {type:OptionType.String, value:'', i18n: $localize`:@@i18n.common.url:URL`},
         'headers': {type:OptionType.String, value:'', i18n: $localize`:@@i18n.common.headers:headers`},
     })
-    ngOnInit() {
-        this.initChartOptions()
-        this.reload()
-    }
 
-    initChartOptions() {
-        this.chartOptions = {
-            ...EChartsSimpleOptions,
-            series: []
-        }
-    }
     reload() {
         const url = this.getOptions().url.value
         const additionalHeaders = this.getOptions().headers.value.split(' ')
@@ -83,7 +73,6 @@ export class WidgetExtComponent extends BaseWidgetComponent implements OnInit {
                     _['data'].forEach((b: any) => {
                         if (b['x'] in keys) keys[b['x']].y += b['y']
                     })
-                    
                     return {
                         name: _['name'],
                         type: 'line' as const,

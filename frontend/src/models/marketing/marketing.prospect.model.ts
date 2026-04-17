@@ -8,7 +8,7 @@ import { User } from '@models/user/user.model';
 import { LeadSource } from '@models/project/lead_source.model';
 import { MarketingProspectActivity } from './marketing-prospect-activity.model';
 import { MarketingInitiative } from './marketing-initiative.model';
-import { IHasMarker } from 'src/enums/marker';
+import { IHasMarker, Marker } from 'src/enums/marker';
 
 export class MarketingProspect extends VcardClass implements IHasMarker {
 
@@ -24,11 +24,17 @@ export class MarketingProspect extends VcardClass implements IHasMarker {
     company_contact_id?: string;
     companyModel?: any;
     company?: string;
-    //company_contact?: any;
     status!: 'new' | 'engaged' | 'converted' | 'unresponsive' | 'disqualified' | 'on_hold';
     added_via!: 'addon' | 'manual' | 'import';
     has_overdue_activities?: boolean;
     marker: number | null = null;
+
+    readonly #inactiveStatuses = ['unresponsive', 'disqualified', 'on_hold'];
+
+    override markerClass = (): string => {
+        if (this.#inactiveStatuses.includes(this.status)) return ''
+        return this.marker !== null && Marker[this.marker as number] ? `marker marker-${Marker[this.marker as number]}` : ''
+    }
 
     @AutoWrap('CompanyContact') company_contact?: CompanyContact;
     @AutoWrap('User') user?: User;
@@ -43,48 +49,48 @@ export class MarketingProspect extends VcardClass implements IHasMarker {
             action: () => this.navigate(`/marketing/prospects`)
         },
         {
-            title: 'Open LinkedIn',
+            title: $localize`:@@i18n.marketing.open_linkedin:Open LinkedIn`,
             on: () => !!this.linkedin_url,
             action: () => {
                 if (this.linkedin_url) window.open(this.linkedin_url, '_blank');
             }
         },
         {
-            title: 'Mark...',
+            title: $localize`:@@i18n.marketing.mark_status:Mark...`,
             group: true,
             children: [
                 {
-                    title: 'Mark New',
+                    title: $localize`:@@i18n.marketing.mark_new:Mark New`,
                     group: true,
                     on: () => this.status !== 'new',
                     action: () => this.mark('new')
                 },
                 {
-                    title: 'Mark Engaged',
+                    title: $localize`:@@i18n.marketing.mark_engaged:Mark Engaged`,
                     group: true,
                     on: () => this.status !== 'engaged',
                     action: () => this.mark('engaged')
                 },
                 {
-                    title: 'Mark Converted',
+                    title: $localize`:@@i18n.marketing.mark_converted:Mark Converted`,
                     group: true,
                     on: () => this.status !== 'converted',
                     action: () => this.mark('converted')
                 },
                 {
-                    title: 'Mark Unresponsive',
+                    title: $localize`:@@i18n.marketing.mark_unresponsive:Mark Unresponsive`,
                     group: true,
                     on: () => this.status !== 'unresponsive',
                     action: () => this.mark('unresponsive')
                 },
                 {
-                    title: 'Mark Disqualified',
+                    title: $localize`:@@i18n.marketing.mark_disqualified:Mark Disqualified`,
                     group: true,
                     on: () => this.status !== 'disqualified',
                     action: () => this.mark('disqualified')
                 },
                 {
-                    title: 'Mark On Hold',
+                    title: $localize`:@@i18n.marketing.mark_on_hold:Mark On Hold`,
                     group: true,
                     on: () => this.status !== 'on_hold',
                     action: () => this.mark('on_hold')
@@ -92,7 +98,6 @@ export class MarketingProspect extends VcardClass implements IHasMarker {
 
             ]
         },
-        ...this.markerActions(),
         {
             title: $localize`:@@i18n.common.delete:delete`,
             group: true,
@@ -106,24 +111,54 @@ export class MarketingProspect extends VcardClass implements IHasMarker {
     static API_PATH = (): string => 'marketing/prospects';
     static DB_TABLE_NAME = (): string => 'marketing_prospects';
 
-    mark = (state:string) => this.httpService.put(`marketing/prospects/${this.id}`, { status: state }).subscribe()
+    mark = (state:string) => this.httpService.put(`marketing/prospects/${this.id}`, { status: state })
     
+    override _serialize(json: any) {
+        const existingActivities = this.activities?.length ? this.activities : undefined;
+        super._serialize(json);
+        if (existingActivities && json && !('activities' in json)) {
+            this.activities = existingActivities;
+        }
+        return this;
+    }
+
     serialize = () => {
+        super.serialize({});
+
         // For converted prospects, get data from company_contact relationships
         // Otherwise, get it from the prospect's own vcard
         if (this.company_contact_id && this.company_contact) {
+            const linkedContact = this.company_contact.contact;
+
             // Get name from contact
-            if (this.company_contact.contact?.card) {
-                const fn = this.company_contact.contact.card.get('FN')?.first()?.vals?.join('');
+            if (linkedContact?.card) {
+                const fn = linkedContact.card.get('FN')?.first()?.vals?.join('');
                 if (fn) this.name = fn;
             }
+
+            this.firstName = linkedContact?.firstName || this.firstName;
+            this.familyName = linkedContact?.familyName || this.familyName;
+            this.fullName = linkedContact?.fullName || this.fullName || this.name || '';
+
             // Get company from company
             if (this.company_contact.company?.card) {
                 this.company = this.company_contact.company.card.get('ORG')?.map(_ => _.vals.join(' ')).join(', ');
             }
         } else {
             // Use prospect's own vcard
-            this.company = this.card?.get('ORG')?.map(_ => _.vals.join(' ')).join(', ');
+            this.company = this.card.get('ORG')?.map(_ => _.vals.join(' ')).join(', ');
+        }
+
+        this.fullName = (this.fullName || this.name || '').trim();
+
+        if ((!this.firstName || !this.familyName) && this.fullName) {
+            const parts = this.fullName.split(/\s+/).filter(Boolean);
+            if (!this.firstName && parts.length > 0) {
+                this.firstName = parts[0];
+            }
+            if (!this.familyName && parts.length > 1) {
+                this.familyName = parts.slice(1).join(' ');
+            }
         }
     }
 

@@ -1,7 +1,6 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Project } from 'src/models/project/project.model';
-import { BaseWidgetComponent } from '../base.widget.component';
-import { OptionType } from '../widget-options/widget-options.component';
+import { BaseWidgetComponent, WidgetOptions } from '../base.widget.component';
 import { GlobalService } from '@models/global.service';
 import { WidgetsModule } from '../widgets.module';
 import { ShortPipe } from 'src/pipes/short.pipe';
@@ -15,7 +14,7 @@ import { WidgetService } from '@models/widget.service';
     standalone: true,
     imports: [WidgetsModule, ShortPipe, PermissionsDirective]
 })
-export class WidgetProjectTimebasedComponent extends BaseWidgetComponent implements OnInit {
+export class WidgetProjectTimebasedComponent extends BaseWidgetComponent {
 
     data: Project[] = []
     max: number = 1
@@ -24,15 +23,12 @@ export class WidgetProjectTimebasedComponent extends BaseWidgetComponent impleme
     global = inject(GlobalService)
 
     defaultOptions = () => ({
-        'max-items': {type: OptionType.Number, value: 999, i18n: $localize`:@@i18n.common.maxItems:max items`},
-        'only-mine': {type: OptionType.Boolean, value: false, i18n: $localize`:@@i18n.common.onlyMine:only mine`},
-        'only-mine-as-pm': {type: OptionType.Boolean, value: false, i18n: $localize`:@@i18n.common.onlyMineAsProjectManager:only mine as project manager`},
-        'chart-only': {type: OptionType.Boolean, value: false, i18n: $localize`:@@i18n.common.chartOnly:chart only`}
+        ...WidgetOptions.maxItems,
+        ...WidgetOptions.onlyMine,
+        ...WidgetOptions.onlyMineAsPm,
+        ...WidgetOptions.chartOnly,
     })
-
-    ngOnInit() {
-        this.reload()
-    }
+    
     reload(): void {
         this.#widgetService.indexCashflow('PROJECTS_TIMEBASED', { ...this.getOptionsURI(), withChart: '1' }, Project)
             .subscribe((response: any) => {

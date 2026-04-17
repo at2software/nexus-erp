@@ -69,7 +69,6 @@ export class GitLabPlugin extends PluginInstance implements ITaskPlugin, IReposi
         for (let page = 1; page <= maxPages; page++) {
             pageRequests.push(this.#getActivityCommentsPage(cleanProjectId, page, resolveUser))
         }
-        
         return forkJoin(pageRequests).pipe(
             map((pagesResults: any[][]) => pagesResults.flat().slice(0, maxInitialItems))
         )
@@ -147,7 +146,6 @@ export class GitLabPlugin extends PluginInstance implements ITaskPlugin, IReposi
                         description += `${authorName} `
                     }
                     description += `<n>git</n> <code>${ref}</code> [${commitCount}]`
-
                     return {
                         text: description,
                         created_at: event.created_at,
@@ -185,7 +183,6 @@ export class GitLabPlugin extends PluginInstance implements ITaskPlugin, IReposi
                         description += `${authorName} `
                     }
                     description += `<n>git</n> <a href="${issue.web_url}" target="_blank" class="text-primary">#${issue.iid}</a> [${stateText}]`
-
                     return {
                         text: description,
                         created_at: issue.created_at,

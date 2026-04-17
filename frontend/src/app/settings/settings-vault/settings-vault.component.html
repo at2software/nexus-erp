@@ -10,7 +10,7 @@
       <div class="card-header" i18n="@@i18n.common.connectors">connectors</div>
       <ul class="list-group">
         @for (vault of vaults; track vault) {
-          <li class="list-group-item hstack gap-2 align-items-center" (click)="currentVault = vault" (keyup.enter)="currentVault = vault" tabindex="0" [class.active]="currentVault === vault">
+          <li class="list-group-item hstack gap-2 align-items-center cursor-pointer" (click)="selectVault(vault)" (keyup.enter)="selectVault(vault)" tabindex="0" [class.active]="currentVault === vault">
             <div class="avatar-bullet" [class.bg-green]="vault.active" [class.bg-grey]="!vault.active"></div>
             <div>{{vault.name}}</div>
           </li>
@@ -18,18 +18,65 @@
       </ul>
     </div>
   </div>
-  <div class="col-9">
+
+  <div class="col-6">
     @if (currentVault) {
       <div class="card">
         <div class="card-header">{{currentVault.name}}</div>
         <button class="btn btn-fancy btn-fancy-te" (click)="checkCredentials()" i18n="@@i18n.settings.checkSave">check & save</button>
         <ul class="list-group">
           @for (key of keysFor(currentVault); track key) {
-            <li class="list-group-item hstack gap-2">
-              <div class="col-3">{{currentVault.keys[key]}}</div>
+            <li class="list-group-item hstack gap-2" [class.text-danger]="isKeyMissing(key)">
+              <div class="col-3" [class.text-danger]="isKeyMissing(key)">{{currentVault.keys[key]}}</div>
               <div>
-                <input class="form-control" [(ngModel)]="currentVault.map[mapKey(key)]">
+                <input class="form-control" [(ngModel)]="currentVault.map[mapKey(key)]" [class.border-danger]="isKeyMissing(key)">
               </div>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </div>
+
+  <div class="col-3">
+    @if (currentVault) {
+
+      @if (currentVault.prefix === 'GITLAB') {
+        <div class="card mb-3 pb-5">
+          <div class="card-header hstack gap-2">
+            <span i18n="@@i18n.settings.pipelineJobs">pipeline jobs</span>
+            <div class="ms-auto" ngbDropdown placement="bottom-end">
+              <button class="btn btn-sm text-primary dropdown-toggle-simple" ngbDropdownToggle>+</button>
+              <div ngbDropdownMenu>
+                @for (preset of jobPresets; track preset.type) {
+                  <button ngbDropdownItem (click)="addPipelineJob(preset)">{{preset.job}}</button>
+                }
+              </div>
+            </div>
+          </div>
+          <ul class="list-group">
+            @for (job of pipelineJobs; track $index; let i = $index) {
+              <li class="list-group-item vstack gap-1 py-2">
+                <div class="hstack gap-1">
+                  <small class="text-muted">{{job.job || 'new job'}}</small>
+                  <button class="btn btn-sm text-danger ms-auto" (click)="removePipelineJob(i)">×</button>
+                </div>
+                <input class="form-control form-control-sm" [(ngModel)]="pipelineJobs[i].job" [name]="'job_' + i" placeholder="job name" ngbTooltip="The CI pipeline job name as defined in .gitlab-ci.yml" placement="left">
+                <input class="form-control form-control-sm" [(ngModel)]="pipelineJobs[i].artifact" [name]="'artifact_' + i" placeholder="artifact file" ngbTooltip="Path to the artifact file produced by the job (e.g. gl-sast-report.json)" placement="left">
+              </li>
+            }
+          </ul>
+          <button class="btn btn-fancy btn-fancy-be" (click)="savePipelineJobs()" i18n="@@i18n.common.save">save</button>
+        </div>
+      }
+
+      <div class="card mb-3">
+        <div class="card-header" i18n="@@i18n.common.requiredKeys">required keys</div>
+        <ul class="list-group">
+          @for (info of infoFor(currentVault); track info.label) {
+            <li class="list-group-item">
+              <div class="fw-bold">{{info.label}}</div>
+              <div class="text-muted small">{{info.description}}</div>
             </li>
           }
         </ul>

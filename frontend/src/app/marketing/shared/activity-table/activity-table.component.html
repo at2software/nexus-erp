@@ -26,7 +26,27 @@
                         placement="right">warning</i>
                     }
                 </td>
-                <td class="text-truncate" [title]="activity.name">{{activity.name}}</td>
+                <td>
+                    <div class="text-truncate" [title]="activity.name">{{activity.name}}</div>
+                    <div class="progress mt-1" style="height:3px;">
+                        @if (activity.stats && activity.stats.total > 0) {
+                            <div class="progress-bar {{STATS_COLORS.completed}}"
+                                [style.width.%]="(activity.stats.completed / activity.stats.total) * 100"
+                                [ngbTooltip]="activity.stats.completed + ' completed'" placement="top"></div>
+                            <div class="progress-bar {{STATS_COLORS.overdue}}"
+                                [style.width.%]="(activity.stats.overdue / activity.stats.total) * 100"
+                                [ngbTooltip]="activity.stats.overdue + ' overdue'" placement="top"></div>
+                            <div class="progress-bar {{STATS_COLORS.skipped}}"
+                                [style.width.%]="(activity.stats.skipped / activity.stats.total) * 100"
+                                [ngbTooltip]="activity.stats.skipped + ' skipped'" placement="top"></div>
+                            <div class="progress-bar {{STATS_COLORS.pending}}"
+                                [style.width.%]="(activity.stats.pending / activity.stats.total) * 100"
+                                [ngbTooltip]="activity.stats.pending + ' pending'" placement="top"></div>
+                        } @else {
+                            <div class="progress-bar bg-secondary" style="width:100%;opacity:0.15"></div>
+                        }
+                    </div>
+                </td>
                 <td class="text-center text-truncate">
                     @if (activity.quick_action) {
                     <i class="text-primary" 

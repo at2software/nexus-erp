@@ -1,109 +1,132 @@
 @if (parent.current) {
-  <div class="row">
+<div class="row">
     <div class="col-8">
-      <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <span class="capitalize-first" i18n="@@i18n.common.information">information</span>
-          <div class="btn-group" ngbDropdown>
-            <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle" ngbDropdownToggle>
-              {{getCurrentPriceSourceText()}}
-            </button>
-            <div class="dropdown-menu" ngbDropdownMenu>
-              <button type="button" class="dropdown-item" (click)="setTimeBased(0)" i18n="@@i18n.common.individualInvoiceItem">individual invoice item</button>
-              <button type="button" class="dropdown-item" (click)="setTimeBased(1)" i18n="@@i18n.common.hourly">hourly</button>
-              <button type="button" class="dropdown-item" (click)="setTimeBased(8)" i18n="@@i18n.common.daily">daily</button>
-            </div>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="input-group mb-3">
-            <span class="input-group-text col-3 text-truncate" id="name" i18n="@@i18n.common.name">name</span>
-            <input type="text" class="form-control" [autosave]="parent.current" [(ngModel)]="parent.current.name">
-          </div>
-          @if (item && parent.current.time_based===0) {
-            <div>
-              <div class="d-flex mb-3 input-group">
-                <span class="input-group-text bg-transparent col-3 text-truncate"  i18n="@@i18n.common.price">price</span>
-                <span>
-                  <input type="text" class="form-control text-end" [(ngModel)]="item.price" style="width:100px;" [suffix]="global.currencySymbol()" [autosave]="item">
-                </span>
-                @if (item.type===0) {
-                  <span class="input-group-text bg-transparent">x</span>
-                  <span>
-                    <input type="text" class="form-control text-end" placeholder="qty" style="width:100px;" [(ngModel)]="item.qty" [autosave]="item" i18n-placeholder="@@i18n.common.qty">
-                  </span>
-                  <span>
-                    <input type="text" class="form-control" placeholder="unit name" style="width:100px;" [(ngModel)]="item.unit_name" [autosave]="item" i18n-placeholder="@@i18n.common.unitName">
-                  </span>
-                  <span class="input-group-text bg-transparent">= {{item.qty * item.price}} {{global.currencySymbol()}}</span>
-                }
-                @if (item.type!==0) {
-                  <span class="input-group-text bg-transparent">{{ item.getRepeatString() }}</span>
-                }
-              </div>
-              <div class="d-flex mb-3 input-group">
-                <span class="input-group-text bg-transparent col-3 text-truncate">
-                    <span i18n="@@i18n.common.vat">VAT</span>
-                    <span class="notranslate">:</span>
-                </span>
-                <span>
-                  <input type="text" class="form-control text-end" [(ngModel)]="item.vat_rate" [autosave]="item" style="width:75px;" suffix="%">
-                </span>
-                <select class="form-select form-control" aria-label="Default select example" [autosave]="item" [(ngModel)]="item.vat_calculation">
-                  <option [value]="0" i18n="@@i18n.common.net">net</option>
-                  <option [value]="1" i18n="@@i18n.common.gross">gross</option>
-                </select>
-              </div>
-              <div class="d-flex mb-3 input-group">
-                <span class="input-group-text bg-transparent col-3 text-truncate" i18n="@@i18n.common.recurrence">recurrence</span>
-                <select class="form-select form-control" aria-label="Default select example" [autosave]="item" [(ngModel)]="item.type">
-                  <option [value]="0" i18n="@@i18n.common.none">none</option>
-                  <option [value]="30" i18n="@@i18n.common.daily">daily</option>
-                  <option [value]="31" i18n="@@i18n.common.weekly">weekly</option>
-                  <option [value]="32" i18n="@@i18n.common.monthly">monthly</option>
-                  <option [value]="33" i18n="@@i18n.recurrence.quarterly">quarterly</option>
-                  <option [value]="34" i18n="@@i18n.common.yearly">yearly</option>
-                </select>
-              </div>
-              <div class="input-group mb-3">
-                <span class="input-group-text col-3 text-truncate" i18n="@@i18n.product.minItems">minimum item amount</span>
-                <input type="text" class="form-control" [autosave]="parent.current" [(ngModel)]="parent.current.minimum_amount">
-              </div>
-              <div class="input-group mb-3">
-                <span class="input-group-text col-3 text-truncate" i18n="@@i18n.product.packageMultiplier">package multiplier</span>
-                <input type="text" class="form-control" [autosave]="parent.current" [(ngModel)]="parent.current.package_amount">
-              </div>
-              <div class="input-group mb-3">
-                <span class="input-group-text col-3 text-truncate" i18n="@@i18n.common.weightG">weight (g)</span>
-                <input type="text" class="form-control" [autosave]="parent.current" [(ngModel)]="parent.current.weight">
-              </div>
-            </div>
-          }
-        </div>
-      </div>
-      @if (parent.current) {
         <div class="card mb-3">
-          <div class="card-header" i18n="@@i18n.common.additionalQuoteClauses">additional quote clauses</div>
-          <rte [object]="parent.current" key="quote"></rte>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="capitalize-first" i18n="@@i18n.common.information">information</span>
+                <div class="btn-group" ngbDropdown>
+                    <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle" ngbDropdownToggle>
+                        {{getCurrentPriceSourceText()}}
+                    </button>
+                    <div class="dropdown-menu" ngbDropdownMenu>
+                        <button type="button" class="dropdown-item" (click)="setTimeBased(0)"
+                            i18n="@@i18n.common.individualInvoiceItem">individual invoice item</button>
+                        <button type="button" class="dropdown-item" (click)="setTimeBased(1)"
+                            i18n="@@i18n.common.hourly">hourly</button>
+                        <button type="button" class="dropdown-item" (click)="setTimeBased(8)"
+                            i18n="@@i18n.common.daily">daily</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="mb-2 hstack gap-2">
+                    <span class="col-3 text-truncate" id="name" i18n="@@i18n.common.name">name</span>
+                    <input type="text" class="form-control" [autosave]="parent.current"
+                        [(ngModel)]="parent.current.name">
+                </div>
+                @if (item && parent.current.time_based===0) {
+                <div>
+                    <div class="hstack mb-2 flex-nowrap gap-2">
+                        <span i18n="@@i18n.common.price">price</span>
+                        <span>
+                            <input type="text" class="form-control text-end" [(ngModel)]="item.price"
+                                style="width:100px;" [suffix]="global.currencySymbol()" [autosave]="item">
+                        </span>
+                        @if (item.type===0) {
+                        <span class="mx-2">x</span>
+                        <div class="input-group">
+                            <span class="input-group-text" i18n="@@i18n.common.quantity">quantity</span>
+                            <input type="text" class="form-control" placeholder="unit name" style="max-width:100px; width:50px !important;"
+                                [(ngModel)]="item.unit_name" [autosave]="item"
+                                i18n-placeholder="@@i18n.common.unitName">
+                        </div>
+                        <span>=&nbsp;{{item.qty * item.price}}&nbsp;{{global.currencySymbol()}}</span>
+                        }
+                        @if (item.type!==0) {
+                        <span class="{{item.getRepeatColor()}}">{{ item.getRepeatString() }}</span>
+                        }
+                    </div>
+                    <div class="mb-2 hstack gap-2">
+                        <span class="text-truncate col-3">
+                            <span i18n="@@i18n.common.vat">VAT</span>
+                        </span>
+                        <span>
+                            <input type="text" class="form-control text-end" [(ngModel)]="item.vat_rate"
+                                [autosave]="item" style="width:75px;" suffix="%">
+                        </span>
+                        <select class="form-select form-control" aria-label="Default select example" [autosave]="item"
+                            [(ngModel)]="item.vat_calculation">
+                            <option [value]="0" i18n="@@i18n.common.net">net</option>
+                            <option [value]="1" i18n="@@i18n.common.gross">gross</option>
+                        </select>
+                    </div>
+                    <div class="mb-2 hstack gap-2">
+                        <span class="text-truncate col-3"
+                            i18n="@@i18n.common.recurrence">recurrence</span>
+                        <div class="btn-group" ngbDropdown>
+                            <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle-simple"
+                                [ngClass]="item.getRepeatColor()" ngbDropdownToggle>
+                                {{ item.type === 0 ? 'none' : item.getRepeatString() }}
+                            </button>
+                            <div ngbDropdownMenu>
+                                <button ngbDropdownItem (click)="setItemType(0)" i18n="@@i18n.common.none">none</button>
+                                <button ngbDropdownItem class="text-pink" (click)="setItemType(30)" i18n="@@i18n.common.daily">daily</button>
+                                <button ngbDropdownItem class="text-purple" (click)="setItemType(31)" i18n="@@i18n.common.weekly">weekly</button>
+                                <button ngbDropdownItem class="text-indigo" (click)="setItemType(32)" i18n="@@i18n.common.monthly">monthly</button>
+                                <button ngbDropdownItem class="text-blue" (click)="setItemType(33)" i18n="@@i18n.recurrence.quarterly">quarterly</button>
+                                <button ngbDropdownItem class="text-cyan" (click)="setItemType(34)" i18n="@@i18n.common.yearly">yearly</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                }
+            </div>
+            <ul-compact>
+                <li class="input-group compact">
+                    <span class="input-group-text col-3 text-truncate" i18n="@@i18n.product.minItems">minimum item
+                        amount</span>
+                    <input type="text" class="form-control" [autosave]="parent.current"
+                        [(ngModel)]="parent.current.minimum_amount">
+                </li>
+                <li class="input-group compact">
+                    <span class="input-group-text col-3 text-truncate" i18n="@@i18n.product.packageMultiplier">package
+                        multiplier</span>
+                    <input type="text" class="form-control" [autosave]="parent.current"
+                        [(ngModel)]="parent.current.package_amount">
+                </li>
+                <li class="input-group compact">
+                    <span class="input-group-text col-3 text-truncate" i18n="@@i18n.common.weightG">weight (g)</span>
+                    <input type="text" class="form-control" [autosave]="parent.current"
+                        [(ngModel)]="parent.current.weight">
+                </li>
+            </ul-compact>
         </div>
-      }
+        @if (parent.current) {
+        <div class="card mb-3">
+            <div class="card-header" i18n="@@i18n.common.additionalQuoteClauses">additional quote clauses</div>
+            <rte [object]="parent.current" key="quote"></rte>
+        </div>
+        }
     </div>
     <div class="col-4">
-      <div class="card sticky-side">
-        <div class="card-header capitalize-first d-flex justify-content-between align-items-center">
-          <span i18n="@@i18n.common.customers">customers</span>
-          <div class="chart-title" [ngbTooltip]="totalCustomers + ' customers total'">{{totalRevenue ? (totalRevenue | mshort) : (totalRevenue | loading)}}</div>
-        </div>
-        <ul class="list-group">
-          <li class="list-group-item d-flex justify-content-between align-items-center" *nxFor="let c of customers">
-            <div class="d-flex align-items-center overflow-hidden">
-              <avatar [object]="c" class="me-2 flex-shrink-0"></avatar>
-              <div class="text-truncate">{{c.name}}</div>
+        <div class="card sticky-side">
+            <div class="card-header capitalize-first d-flex justify-content-between align-items-center">
+                <span i18n="@@i18n.common.customers">customers</span>
+                <div class="chart-title" [ngbTooltip]="totalCustomers + ' customers total'">{{totalRevenue ?
+                    (totalRevenue | mshort) : (totalRevenue | loading)}}</div>
             </div>
-            <small class="text-muted ms-2 flex-shrink-0">{{c.revenue | mshort}}</small>
-          </li>
-        </ul>
-      </div>
+            <ul class="list-group">
+                @for (c of customers; track c.id) {
+                <li class="list-group-item d-flex justify-content-between align-items-center" [nx]="c" [tables]="customers">
+                    <div class="d-flex align-items-center overflow-hidden">
+                        <avatar [object]="c" class="me-2 flex-shrink-0"></avatar>
+                        <div class="text-truncate">{{c.name}}</div>
+                    </div>
+                    <small class="text-muted ms-2 flex-shrink-0">{{c.revenue | mshort}}</small>
+                </li>
+                }
+            </ul>
+        </div>
     </div>
-  </div>
+</div>
 }

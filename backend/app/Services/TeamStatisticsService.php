@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Http\Controllers\VacationController;
 use App\Models\Project;
 use App\Models\User;
 
@@ -46,16 +45,12 @@ class TeamStatisticsService {
             })->values();
     }
     public static function getTeamMonitorData() {
-        $vacationController = app(VacationController::class);
-
         $data = User::whereHas('activeEmployments')
             ->with(['current_focus', 'vacations', 'activeVacations', 'active_sick_notes', 'activeEmployments'])
             ->get()
             ->append(['availability_status', 'is_sick', 'is_on_vacation']);
 
         foreach ($data as &$d) {
-            $holidays = array_map(fn ($_) => $_->datum, $vacationController->indexHolidays($d->work_zip));
-
             $focusData       = $d->getFocusDisplayData();
             $d->focus_name   = $focusData['focus_name'];
             $d->focus_color  = $focusData['focus_color'];
@@ -63,12 +58,11 @@ class TeamStatisticsService {
             $d->focus_icon   = $d->current_focus?->icon ?? null;
 
             $work              = WorkingTimeService::getWorkingTimeFor($d);
-            $workloadStats     = $d->getWorkloadStats($work, $holidays);
-            $d->workinfo       = $workloadStats['workinfo'];
-            $d->average        = $workloadStats['average'];
-            $d->averageClass   = $workloadStats['averageClass'];
-            $d->required_hours = $d->getHpw();
+            $d->workinfo       = $work['workinfo'];
+            $d->average        = $work['average'];
+            $d->averageClass   = $work['averageClass'];
+            $d->required_hours = $work['required_hours'];
         }
-        return $data->sort(fn ($a, $b) => $b->availability_status - $a->availability_status);
+        return $data->sort(fn ($a, $b) => $b->availability_status - $a->availability_status)->values();
     }
 }

@@ -11,7 +11,7 @@
     @if (data.length > 0) {
     <ul class="list-group list-group-flush">
         @for (_ of data; track _.id) {
-        <li class="list-group-item d-flex text-nowrap" [nx]="_" [tables]="data" [class.compact]="indexExceedsSettings(i)">
+        <li class="list-group-item d-flex text-nowrap" [nx]="_" [tables]="data" [class.compact]="indexExceedsSettings(i()!)">
             <div>
                 <avatar [object]="_"></avatar>
             </div>

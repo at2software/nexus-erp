@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -13,7 +12,7 @@ class InvoiceReminder extends BaseModel {
     const REMINDER_PAYMENT_DURATION = 14;
 
     protected $appends  = ['class', 'icon', 'path'];
-    protected $access   = ['admin' => '*', 'project_manager'=>'', 'user'=>''];
+    protected $access   = ['admin' => '*', 'project_manager' => '', 'user' => ''];
     protected $fillable = ['stage', 'fee', 'file_dir', 'invoice_id'];
 
     public function invoice() {
@@ -81,9 +80,7 @@ class InvoiceReminder extends BaseModel {
         $template = str_replace('[content]', $content, $template);
         $template = Document::personalized($template, $invoice->company);
 
-        $pdf = Pdf::loadHTML($template);
-
-        File::saveTo($filename, $pdf->output(), $reminder, 'invoices.values');
+        File::saveTo($filename, Document::renderPdf($template), $reminder, 'invoices.values');
         return $reminder;
     }
 }

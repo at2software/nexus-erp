@@ -28,8 +28,6 @@ import { Toast } from '@shards/toast/toast';
 import { IHasAssignees } from 'src/interfaces/hasAssignees.interface';
 import { Product } from '@models/product/product.model';
 import { ConnectionProjects } from '@models/company/connection-projects.model';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
-import { CommentService } from '@models/comment/comment.service';
 import { getProjectActions } from './project.actions';
 import { Task } from '@models/tasks/task.model';
 import { IHasMarker } from 'src/enums/marker';
@@ -73,7 +71,9 @@ export class Project extends Serializable implements HasInvoiceItems, IHasFiles,
     remind_at?             : string
     revenue_last_12?       : number
     started_at?            : string
-    uninvoiced_hours      ?: number
+    uninvoiced_hours          ?: number
+    oldest_unbilled_focus_at  ?: string
+    invoiced_downpayments     ?: number
     work_estimated?        : number
     lead_probability      ?: number
     milestone_state_counts?: { todo: number, in_progress: number, done: number, total: number }
@@ -119,6 +119,7 @@ export class Project extends Serializable implements HasInvoiceItems, IHasFiles,
     serialize = () => {
         this.#computeStaticProperties()
         this.has_time_budget = this.is_time_based === 1
+        this.icon = `projects/${this.id}/icon`
     }
 
     postpone = (duration: number, onSuccess?: () => void, comment?: string) => NxGlobal.service.put(`projects/${this.id}/postpone`, { duration: duration, comment: comment }).subscribe((_) => {
@@ -199,6 +200,9 @@ export class Project extends Serializable implements HasInvoiceItems, IHasFiles,
     getExtState                = (): string => this.state?.name || ''
     getForecastSum             = () => this.assignees.reduce((a, b) => a + parseFloat('' + b.hours_planned), 0)
     getRemainingTime           = () => (this.work_estimated ?? 0) - this.hours_invested
+    timePercentage             = () => this.hours_invested / (this.work_estimated ?? 1)
+    worksharesTotal            = () => (this.var.workshares as any[] ?? []).reduce((a: number, b: any) => a + b.val, 0)
+    worksharePerc              = (u: any) => 100 * u.val / this.worksharesTotal()
     getName                    = () => this.name
     getAssignedUsers           = ():Assignee[] => this.assignees.filter(_ => _.assignee instanceof User)
     getAssignedCompanyContacts = ():Assignee[] => this.assignees.filter(_ => _.assignee instanceof CompanyContact)

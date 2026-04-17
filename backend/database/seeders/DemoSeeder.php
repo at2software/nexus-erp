@@ -51,8 +51,8 @@ class DemoSeeder extends Seeder {
         // Give each day-1 employee an initial customer + project
         $dayOneUsers = User::query()->where('created_at', '<=', $startDay->copy()->addDay())->get();
         foreach ($dayOneUsers as $activeUser) {
-            $customer = $this->createNewCustomer($startDay);
-            $project  = $customer['project'];
+            $customer       = $this->createNewCustomer($startDay);
+            $project        = $customer['project'];
             $project->state = 2;
             $project->save();
             $this->createNewAssignment($startDay, $project, $activeUser);
@@ -86,13 +86,11 @@ class DemoSeeder extends Seeder {
         $this->setParam('HR_HPD', 7.8, FloatParam::class, true);
         $this->setParam('HR_WORKDAYS', 21, FloatParam::class, true);
     }
-
     private function setParam(string $key, $value, string $type, bool $history): void {
-        $param = Param::get($key, ['type' => $type, 'history' => $history]);
+        $param        = Param::get($key, ['type' => $type, 'history' => $history]);
         $param->value = $value;
         $param->save();
     }
-
     public function createUsers(Carbon $startDay): void {
         $users = $this->demoSeederData()->users($startDay);
 
@@ -101,7 +99,7 @@ class DemoSeeder extends Seeder {
             $role    = $user['role'];
             unset($user['hired_at'], $user['role']);
 
-            $request  = Request::create('/', 'POST', $user);
+            $request = Request::create('/', 'POST', $user);
 
             $newUser = new User;
             $newUser->applyAndSave($request);
@@ -116,10 +114,9 @@ class DemoSeeder extends Seeder {
             ]);
         }
     }
-
     public function createUserEmployments(Carbon $startDay): void {
-        $users     = $this->demoSeederData()->users($startDay);
-        $allUsers  = User::orderBy('created_at')->get();
+        $users    = $this->demoSeederData()->users($startDay);
+        $allUsers = User::orderBy('created_at')->get();
 
         foreach ($allUsers as $i => $user) {
             $hiredAt = Carbon::parse($user->created_at ?? $startDay);
@@ -141,7 +138,6 @@ class DemoSeeder extends Seeder {
             ]);
         }
     }
-
     public function createVacationGrants(Carbon $startDay): void {
         $allUsers = User::orderBy('created_at')->get();
         $current  = $startDay->copy()->startOfYear();
@@ -165,21 +161,18 @@ class DemoSeeder extends Seeder {
             $current->addYear();
         }
     }
-
     public function createProductGroups(): void {
         foreach ($this->demoSeederData()->product_groups() as $productGroup) {
-            $request  = Request::create('/', 'POST', ['name' => $productGroup]);
+            $request = Request::create('/', 'POST', ['name' => $productGroup]);
             (new ProductGroup)->applyAndSave($request);
         }
     }
-
     public function createProducts(): void {
         foreach ($this->demoSeederData()->products() as $product) {
-            $request  = Request::create('/', 'POST', $product);
+            $request = Request::create('/', 'POST', $product);
             (new Product)->applyAndSave($request);
         }
     }
-
     public function createOrgaProject(): void {
         $orgaProject = new Project;
         $orgaProject->applyAndSave(Request::create('/', 'POST', [
@@ -205,7 +198,6 @@ class DemoSeeder extends Seeder {
             $currentDay->addDay();
         }
     }
-
     public function dailyActivity(Carbon $currentDay): void {
         if ($currentDay->isWeekend()) {
             return;
@@ -224,9 +216,9 @@ class DemoSeeder extends Seeder {
         $userCount = $activeUsers->count();
 
         // Scale customer/project creation with team size
-        $percentage_new_customer  = max(3, min(10, $userCount * 2));
-        $percentage_new_project   = max(3, min(8, $userCount));
-        $percentage_project_won   = 5;
+        $percentage_new_customer = max(3, min(10, $userCount * 2));
+        $percentage_new_project  = max(3, min(8, $userCount));
+        $percentage_project_won  = 5;
 
         if (rand(1, 100) <= $percentage_new_customer) {
             $this->createNewCustomer($currentDay);
@@ -298,7 +290,6 @@ class DemoSeeder extends Seeder {
             }
         }
     }
-
     public function userWorksADay(Carbon $date, User $user): void {
         $minutesThatDay     = rand(7 * 60, 9 * 60);
         $minutesBeforeBreak = $minutesThatDay * rand(30, 70) / 100;
@@ -329,11 +320,11 @@ class DemoSeeder extends Seeder {
         $end     = Carbon::now()->startOfMonth();
 
         // Ensure all history-enabled params exist in DB
-        $expensesParam  = Param::get('CASHFLOW_ANNUAL_EXPENSES', ['type' => FloatParam::class, 'history' => true]);
-        $bankParam      = Param::get('CASHFLOW_BANK_BALANCE', ['type' => FloatParam::class, 'history' => true]);
-        $hrWageParam    = Param::get('HR_HOURLY_WAGE', ['type' => FloatParam::class, 'history' => true]);
-        $hrHpdParam     = Param::get('HR_HPD', ['type' => FloatParam::class, 'history' => true]);
-        $hrWorkdaysParam = Param::get('HR_WORKDAYS', ['type' => FloatParam::class, 'history' => true]);
+        $expensesParam    = Param::get('CASHFLOW_ANNUAL_EXPENSES', ['type' => FloatParam::class, 'history' => true]);
+        $bankParam        = Param::get('CASHFLOW_BANK_BALANCE', ['type' => FloatParam::class, 'history' => true]);
+        $hrWageParam      = Param::get('HR_HOURLY_WAGE', ['type' => FloatParam::class, 'history' => true]);
+        $hrHpdParam       = Param::get('HR_HPD', ['type' => FloatParam::class, 'history' => true]);
+        $hrWorkdaysParam  = Param::get('HR_WORKDAYS', ['type' => FloatParam::class, 'history' => true]);
         $invoicesDegParam = Param::get('INVOICE_DEG_12M', ['type' => FloatParam::class, 'history' => true]);
 
         $bankBalance   = 45000.0;   // starting cash position
@@ -358,12 +349,12 @@ class DemoSeeder extends Seeder {
                 ->whereYear('created_at', $current->year)
                 ->whereMonth('created_at', $current->month)
                 ->sum('net');
-            $monthlyRevenue = (float) $monthlyRevenue;
+            $monthlyRevenue = (float)$monthlyRevenue;
 
             // Bank balance: drifts with revenue minus monthly expenses
             $monthlyExpenses = $annualExpenses / 12;
             $bankBalance += $monthlyRevenue - $monthlyExpenses;
-            $bankBalance  = max(5000, $bankBalance + rand(-2000, 2000)); // floor + noise
+            $bankBalance = max(5000, $bankBalance + rand(-2000, 2000)); // floor + noise
 
             // Hourly wage grows by ~3/yr starting at 90
             $hourlyWage = 90 + ($monthsElapsed / 12) * 3;
@@ -395,7 +386,6 @@ class DemoSeeder extends Seeder {
             'updated_at' => $date->toDateTimeString(),
         ]);
     }
-
     private function workdaysInMonth(Carbon $month): int {
         $days    = 0;
         $current = $month->copy()->startOfMonth();
@@ -431,29 +421,28 @@ class DemoSeeder extends Seeder {
         $assignment = new Assignment;
         $assignment->applyAndSave($request);
     }
-
     public function createNewCustomer(Carbon $date): array {
         $customer = $this->demoSeederData()->new_customer();
 
-        $customer['company']['created_at']        = $date;
-        $customer['company']['updated_at']        = $date;
-        $customer['contact']['created_at']        = $date;
-        $customer['contact']['updated_at']        = $date;
+        $customer['company']['created_at']         = $date;
+        $customer['company']['updated_at']         = $date;
+        $customer['contact']['created_at']         = $date;
+        $customer['contact']['updated_at']         = $date;
         $customer['company_contact']['created_at'] = $date;
         $customer['company_contact']['updated_at'] = $date;
 
-        $request  = Request::create('/', 'POST', $customer['company']);
-        $company  = new Company;
+        $request = Request::create('/', 'POST', $customer['company']);
+        $company = new Company;
         $company->applyAndSave($request);
 
-        $request  = Request::create('/', 'POST', $customer['contact']);
-        $contact  = new Contact;
+        $request = Request::create('/', 'POST', $customer['contact']);
+        $contact = new Contact;
         $contact->applyAndSave($request);
 
         $customer['company_contact']['company_id'] = $company->id;
         $customer['company_contact']['contact_id'] = $contact->id;
-        $request  = Request::create('/', 'POST', $customer['company_contact']);
-        $companyContact = new CompanyContact;
+        $request                                   = Request::create('/', 'POST', $customer['company_contact']);
+        $companyContact                            = new CompanyContact;
         $companyContact->applyAndSave($request);
 
         $project = $this->createNewProject($company);
@@ -464,11 +453,10 @@ class DemoSeeder extends Seeder {
             'project'         => $project,
         ];
     }
-
     public function createNewProject(Company $company): Project {
         [$project, $invoiceItems] = $this->demoSeederData()->new_project($company);
-        $request  = Request::create('/', 'POST', $project);
-        $project  = new Project;
+        $request                  = Request::create('/', 'POST', $project);
+        $project                  = new Project;
         $project->applyAndSave($request);
 
         foreach ($invoiceItems as $invoiceItem) {
@@ -479,7 +467,6 @@ class DemoSeeder extends Seeder {
         }
         return $project;
     }
-
     public function createNewFocus(Project $project, User $user, Carbon $start, float $duration): void {
         $focus = [
             'created_at' => $start,
@@ -489,7 +476,7 @@ class DemoSeeder extends Seeder {
             'user_id'    => $user->id,
             ...$project->toPoly(),
         ];
-        $request  = Request::create('/', 'POST', $focus);
+        $request = Request::create('/', 'POST', $focus);
         (new Focus)->applyAndSave($request);
     }
 }

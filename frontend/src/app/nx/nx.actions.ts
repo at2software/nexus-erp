@@ -7,16 +7,26 @@ export enum NxActionType {
 }
 
 export interface NxAction {
-    title            : string,                            // title to be displayed
-    action          ?: NxActionResolve,                   // what happens after this action has been triggered,  will be automatically subscribed, if type observable
-    group           ?: boolean,                           // whether this command can also be applied to multiple selected of the same type
-    label           ?: string,                            // right-side label of contextmenu
-    hotkey          ?: string,                            // global hotkey
-    on              ?: () => boolean,                     // test on when to be shown in contextmenu
+    /** Title to be displayed. */
+    title            : string,
+    /**
+     * What happens after this action has been triggered.
+     * Will be automatically subscribed if the return type is observable.
+     */
+    action          ?: NxActionResolve,
+    /** Whether this command can also be applied to multiple selected items of the same type. */
+    group           ?: boolean,
+    /** Right-side label of the context menu. */
+    label           ?: string,
+    /** Global hotkey. */
+    hotkey          ?: string,
+    /** Condition to determine when to show this in the context menu. */
+    on              ?: () => boolean,
     children        ?: NxAction[] | (() => NxAction[]),
     interrupt       ?: { service: any, args: any },
     type            ?: NxActionType
-    roles           ?: string
+    /** Multiple roles can be pipe separated. */
+    roles           ?: string | null
     unselectsingleActionResolved?: boolean
     context         ?: string
 

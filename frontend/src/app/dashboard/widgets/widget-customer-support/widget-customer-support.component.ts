@@ -1,6 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { BaseWidgetComponent } from '../base.widget.component';
-import { OptionType } from '../widget-options/widget-options.component';
+import { BaseWidgetComponent, WidgetOptions } from '../base.widget.component';
 import { Company } from 'src/models/company/company.model';
 import { WidgetsModule } from '../widgets.module';
 import { ShortPipe } from 'src/pipes/short.pipe';
@@ -22,15 +21,11 @@ export class WidgetCustomerSupportComponent extends BaseWidgetComponent {
     #widgetService = inject(WidgetService)
 
     defaultOptions = () => ({
-        'max-items': { type: OptionType.Number, value: 999, i18n: $localize`:@@i18n.common.maxItems:max items` },
-        'only-mine': { type: OptionType.Boolean, value: false, i18n: $localize`:@@i18n.common.onlyMine:only mine` },
-        'chart-only': { type: OptionType.Boolean, value: false, i18n: $localize`:@@i18n.common.chartOnly:chart only` }
+        ...WidgetOptions.maxItems,
+        ...WidgetOptions.onlyMine,
+        ...WidgetOptions.chartOnly,
     })
 
-    override ngOnInit() {
-        super.ngOnInit()
-        this.reload()
-    }
     reload(): void {
         this.#widgetService.indexCashflow('CUSTOMER_SUPPORT', { ...this.getOptionsURI(), withChart: '1' }, Company).subscribe((response: any) => {
             const data = response.objects || []

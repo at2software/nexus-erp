@@ -11,9 +11,6 @@ export enum InvoiceItemType {
     Monthly            = 32,
     Quarterly          = 33,
     Yearly             = 34,
-    PreparedInstalment = 40,
-    PreparedSupport    = 41,
-    PreparedRepeating  = 43,
 }
 
 export function getInvoiceItemTypeRepeatColor(type: InvoiceItemType): string {

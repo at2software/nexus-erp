@@ -1,5 +1,5 @@
-import { Component, ElementRef, ViewChild, AfterViewInit, Input, OnChanges, SimpleChanges } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ElementRef, ViewChild, AfterViewInit, OnChanges, SimpleChanges, input } from '@angular/core';
+
 import { Color } from '@constants/Color';
 import * as d3 from 'd3';
 import moment from 'moment';
@@ -14,19 +14,19 @@ export interface MonthlyRevenue {
     templateUrl: './revenue-spiral-chart.component.html',
     styleUrls: ['./revenue-spiral-chart.component.scss'],
     standalone: true,
-    imports: [CommonModule]
+    imports: []
 })
 export class RevenueSpiralChartComponent implements AfterViewInit, OnChanges {
 
     @ViewChild('spiralContainer') spiralContainer!: ElementRef<HTMLDivElement>;
 
-    @Input() data?: MonthlyRevenue[];
-    @Input() height: number = 400;
-    @Input() primaryColor: string = '#00ff99';
-    @Input() smoothing: number = 0;
+    data         = input<MonthlyRevenue[] | undefined>(undefined);
+    height       = input<number>(400);
+    primaryColor = input<string>('#00ff99');
+    smoothing    = input<number>(0);
 
     ngAfterViewInit() {
-        if (this.data) {
+        if (this.data()) {
             this.renderSpiral();
         }
     }
@@ -38,14 +38,16 @@ export class RevenueSpiralChartComponent implements AfterViewInit, OnChanges {
     }
 
     getSmoothedData(): MonthlyRevenue[] {
-        if (!this.data || this.smoothing === 0) return this.data || [];
-        
+        const data = this.data();
+        if (!data || this.smoothing() === 0) return data || [];
+
         const smoothed: MonthlyRevenue[] = [];
-        for (let i = this.smoothing; i < this.data.length; i++) {
-            const windowData = this.data.slice(i - this.smoothing, i + 1);
+        const smoothing = this.smoothing();
+        for (let i = smoothing; i < data.length; i++) {
+            const windowData = data.slice(i - smoothing, i + 1);
             const avgRevenue = windowData.reduce((sum, d) => sum + d.revenue, 0) / windowData.length;
             smoothed.push({
-                date: this.data[i].date,
+                date: data[i].date,
                 revenue: avgRevenue
             });
         }
@@ -53,14 +55,14 @@ export class RevenueSpiralChartComponent implements AfterViewInit, OnChanges {
     }
 
     renderSpiral() {
-        if (!this.spiralContainer || !this.data || this.data.length === 0) return;
+        if (!this.spiralContainer || !this.data() || this.data()!.length === 0) return;
         
         const displayData = this.getSmoothedData();
         if (displayData.length === 0) return;
 
         const container = this.spiralContainer.nativeElement;
         const width = container.clientWidth || 400;
-        const height = this.height;
+        const height = this.height();
         const centerX = width / 2;
         const centerY = height / 2;
         const maxRadius = Math.min(width, height) / 2 - 40;
@@ -84,14 +86,14 @@ export class RevenueSpiralChartComponent implements AfterViewInit, OnChanges {
 
         // Calculate max revenue for scaling from ORIGINAL data (not smoothed)
         // This ensures consistent scaling regardless of smoothing
-        const maxRevenue = Math.max(...(this.data?.map(d => d.revenue) || []));
+        const maxRevenue = Math.max(...(this.data()?.map(d => d.revenue) || []));
 
         // Color interpolator with hue rotation
         // Newest (t=1) = primary color
         // Oldest (t=0) = primary color rotated +90° and darkened
-        const primaryColorObj = new Color(this.primaryColor);
+        const primaryColorObj = new Color(this.primaryColor());
         const hueRotatedDark = primaryColorObj.clone().spin(120).darken(20);
-        const colorInterpolator = d3.interpolateRgb(hueRotatedDark.toHexString(), this.primaryColor);
+        const colorInterpolator = d3.interpolateRgb(hueRotatedDark.toHexString(), this.primaryColor());
 
         // Revenue scale - maps revenue directly to radius (max revenue = maxRadius)
         const revenueScale = d3.scaleLinear()
@@ -113,7 +115,6 @@ export class RevenueSpiralChartComponent implements AfterViewInit, OnChanges {
 
             // Time progress for color (0 = oldest, 1 = newest)
             const t = i / (dataLength - 1);
-
             return {
                 x: Math.cos(angleInRadians) * radius,
                 y: Math.sin(angleInRadians) * radius,

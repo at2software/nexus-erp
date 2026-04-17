@@ -32,6 +32,7 @@ export class Invoice extends Serializable implements HasInvoiceItems, IHasMarker
     vat              : number            = 0
     is_cancelled     : boolean           = false
     is_booked        : boolean           = false
+    stage            : number            = 0
     sent             : number            = 0
 
     is_overdue: boolean = false
@@ -108,7 +109,7 @@ export class Invoice extends Serializable implements HasInvoiceItems, IHasMarker
     }
 
     cancel = () => NxGlobal.service.post('invoices/' + this.id + '/cancel')
-    redo = () => NxGlobal.service.put(`invoices/${this.id}/redo`)
+    undo = () => NxGlobal.service.put(`invoices/${this.id}/undo`)
     updateValues = () => NxGlobal.service.put(`invoices/${this.id}/update-values`)
     sendToDatev = () => NxGlobal.service.post(`invoices/${this.id}/datev`).pipe(map((_:any)=>Object.assign(this, this._serialize(_))))
 

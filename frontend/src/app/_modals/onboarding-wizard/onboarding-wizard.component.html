@@ -95,8 +95,8 @@
             </p>
 
             <div class="mb-3">
-              <label class="form-label fw-semibold" i18n="@@i18n.settings.systemLanguageIso">language (ISO 639-1)</label>
-              <select class="form-select" [(ngModel)]="language">
+              <label class="form-label fw-semibold" for="wizLanguage" i18n="@@i18n.settings.systemLanguageIso">language (ISO 639-1)</label>
+              <select id="wizLanguage" class="form-select" [(ngModel)]="language">
                 <option value="" i18n="@@i18n.common.pleaseSelect">— select —</option>
                 @for (l of languages; track l.key) {
                   <option [value]="l.key">{{l.name}} ({{l.key}})</option>
@@ -105,8 +105,8 @@
             </div>
 
             <div class="mb-3">
-              <label class="form-label fw-semibold" i18n="@@i18n.settings.countryIso">country (ISO 3166)</label>
-              <select class="form-select" [(ngModel)]="country">
+              <label class="form-label fw-semibold" for="wizCountry" i18n="@@i18n.settings.countryIso">country (ISO 3166)</label>
+              <select id="wizCountry" class="form-select" [(ngModel)]="country">
                 <option value="" i18n="@@i18n.common.pleaseSelect">— select —</option>
                 @for (c of countries; track c.key) {
                   <option [value]="c.key">{{c.name}} ({{c.key}})</option>
@@ -115,8 +115,8 @@
             </div>
 
             <div class="mb-4">
-              <label class="form-label fw-semibold" i18n="@@i18n.settings.currencyIso">currency (ISO 4217)</label>
-              <select class="form-select" [(ngModel)]="currency">
+              <label class="form-label fw-semibold" for="wizCurrency" i18n="@@i18n.settings.currencyIso">currency (ISO 4217)</label>
+              <select id="wizCurrency" class="form-select" [(ngModel)]="currency">
                 <option value="" i18n="@@i18n.common.pleaseSelect">— select —</option>
                 @for (c of currencies; track c.key) {
                   <option [value]="c.key">{{c.name}} ({{c.key}})</option>
@@ -213,7 +213,7 @@
                 <span i18n="@@i18n.common.continue">continue</span>
                 <i class="ms-1">arrow_forward</i>
               </button>
-              <a class="text-muted small cursor-pointer" (click)="continueFromTeam()" i18n="@@i18n.onboarding.wizard.skipStep">skip this step</a>
+              <a class="text-muted small cursor-pointer" tabindex="0" (click)="continueFromTeam()" (keyup.enter)="continueFromTeam()" i18n="@@i18n.onboarding.wizard.skipStep">skip this step</a>
             </div>
           </div>
         }

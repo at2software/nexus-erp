@@ -1,0 +1,33 @@
+<div class="card mb-3">
+    <div class="card-header d-flex align-items-center hstack gap-2">
+        <n>marketing</n>
+        <span class="card-header-title" i18n="@@i18n.common.marketingActivities">marketing activities</span>
+    </div>
+    <ul class="list-group list-group-flush">
+        @for (a of activities; track $index) {
+            <li class="list-group-item" [nx]="a">
+                <div class="align-items-center hstack gap-2">
+                    @if (a.marketing_prospect?.company_contact?.company_id) {
+                        @let companyContact = a.marketing_prospect?.company_contact;
+                        @let contactName = companyContact?.contact?.card?.name || '';
+                        <img 
+                            class="avatar avatar-sm cursor-pointer" 
+                            [ngbTooltip]="contactName" 
+                            [smartLink]="'customers/' + companyContact?.company_id" 
+                            [src]="companyContact?.icon || ''" 
+                            alt="">
+                    }
+                    @else {
+                        @let prospectName = a.marketing_prospect?.card?.name || a.marketing_prospect?.company_contact?.contact?.card?.name || '';
+                        <n [ngbTooltip]="prospectName">customer</n>
+                    }
+                    <div class="flex-fill">
+                        <div>{{a.getName()}}</div>
+                        <div class="small text-muted">{{a.marketing_initiative_activity?.marketing_initiative?.name}}</div>
+                    </div>
+                    <div class="small text-muted">{{a.scheduled_at | date:'mediumDate'}}</div>
+                </div>
+            </li>
+        }
+    </ul>
+</div>

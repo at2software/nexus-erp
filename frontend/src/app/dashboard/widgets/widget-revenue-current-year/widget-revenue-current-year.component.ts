@@ -21,24 +21,12 @@ import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS } from '@charts/ChartOptions';
 })
 export class WidgetRevenueCurrentYearComponent extends BaseWidgetComponent implements OnInit {
     stats = inject(StatsService)
-    chartOptions: any
+    chartOptions: any = { ...EChartsStackedBarOptions, series: [] }
     echartsInstance: any
     data: any
     moneyPipe = inject(MoneyShortPipe)
     global = inject(GlobalService)
     avgCost: number = 0
-
-    ngOnInit() {
-        this.initChartOptions()
-        this.reload()
-    }
-
-    initChartOptions() {
-        this.chartOptions = {
-            ...EChartsStackedBarOptions,
-            series: []
-        }
-    }
 
     onChartInit(ec: any) {
         this.echartsInstance = ec
@@ -149,7 +137,6 @@ export class WidgetRevenueCurrentYearComponent extends BaseWidgetComponent imple
                         const sigCol: string = (revenueCurrentYear < this.avgCost) ? 'warning' : 'primary'
                         const f = { minimumFractionDigits: 2, maximumFractionDigits: 2 }
                         const currencySymbol = NxGlobal.global.currencySymbol()
-                        
                         return `
                           <div class="p-2 w-100">
                             <div class="hstack gap-2 w-100"><div class="flex-fill text-${sigCol}"><strong>Current Year:</strong></div><div class="text-end"> ${revenueCurrentYear.toLocaleString(undefined, f)} ${currencySymbol}</div></div>

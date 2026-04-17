@@ -1,4 +1,5 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Focus } from 'src/models/focus/focus.model';
 import { Observable, Subject } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
@@ -34,12 +35,13 @@ export abstract class TimetrackingComponent implements OnInit {
     showNotYetInvoiced: boolean = false
     dateRange?: StartEnd
     #dateRangeChange$ = new Subject<void>()
+    #destroyRef = inject(DestroyRef)
 
     protected focusService = inject(FocusService)
     #global = inject(GlobalService)
 
     ngOnInit(): void {
-        this.parent.onChange.subscribe(() => {
+        this.parent.onChange.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(() => {
             this.setupUsersFromWorkShares()
             this.reload()
         })
@@ -64,7 +66,6 @@ export abstract class TimetrackingComponent implements OnInit {
         if (this.dateRange?.endDate) {
             endDate = moment((this.dateRange.endDate as any).$d).format('YYYY-MM-DD')
         }
-
         return this.focusService.getFociFor(
             this.parent.current as any,
             selectedUserIds.length ? selectedUserIds : undefined,
@@ -166,4 +167,5 @@ export abstract class TimetrackingComponent implements OnInit {
     onDateRangeChange() {
         this.#dateRangeChange$.next()
     }
+
 }

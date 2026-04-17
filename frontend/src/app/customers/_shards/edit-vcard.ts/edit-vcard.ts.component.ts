@@ -1,4 +1,4 @@
-import { Component, inject, Input, OnDestroy, OnInit, ViewChildren } from '@angular/core';
+import { Component, computed, inject, model, OnDestroy, OnInit, ViewChildren } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { CompanyContact } from 'src/models/company/company-contact.model';
 import { CompanyContactService } from 'src/models/company/company-contact.service';
@@ -18,11 +18,11 @@ import { NexusModule } from '@app/nx/nexus.module';
 })
 export class EditVcardTsComponent implements OnInit, OnDestroy {
 
-    @Input() card: CompanyContact;
-    updateNameComponents:boolean = true
-    fnRow:number = -1
-    nRow:number = -1
-    searchQuery:string = ''
+    card = model.required<CompanyContact>()
+
+    fnRow = computed(() => this.card().contact.card.rows.findIndex(_ => _.key == 'FN'))
+    nRow  = computed(() => this.card().contact.card.rows.findIndex(_ => _.key == 'N'))
+    searchQuery = ''
 
     @ViewChildren(VcardComponent) vcards: any
 
@@ -30,50 +30,50 @@ export class EditVcardTsComponent implements OnInit, OnDestroy {
     #parent = inject(CustomerDetailGuard)
     #companyContactService = inject(CompanyContactService)
 
-    ngOnInit(): void {
-        this.#router.params.subscribe(_ => {
-            const cid = _['cid']
-            const card = this.#parent.current?.employees.find(_ => _.id == cid)
+    ngOnInit() {
+        this.#router.params.subscribe(params => {
+            const card = this.#parent.current?.employees.find(_ => _.id == params['cid'])
             if (card) {
-                this.card = card
-                this.card.contact.card?.rows.forEach((x, i:number) => {
-                    if (x.key == 'FN') this.fnRow = i;
-                    if (x.key == 'N') this.nRow = i;
-                })
+                this.card.set(card)
                 setTimeout(() => this.#parent.current.var.selectedEmployee = this.card)
             }
         })
     }
+
     ngOnDestroy() {
-        if(this.#parent?.current?.var){
+        if (this.#parent?.current?.var) {
             this.#parent.current.var.selectedEmployee = undefined
         }
     }
-    onCompanySelect(company:Company) {
-        if (this.card.company_id !== company.id) {
+
+    onCompanySelect(company: Company) {
+        if (this.card().company_id !== company.id) {
             this.searchQuery = ''
             this.#companyContactService.store({
                 company_id: company.id,
-                contact_id: this.card.contact_id,
+                contact_id: this.card().contact_id,
                 vcard: "TEL:\nEMAIL:\nTEL;type=cell:\nTITLE:"
-            }).subscribe((response:any) => {
-                this.card.contact.companies.push(Company.fromJson(response.company))
+            }).subscribe((response: any) => {
+                this.card().contact.companies.push(Company.fromJson(response.company))
             })
         }
     }
-    onUnlink(company:Company) {
-        this.card.contact.companies.remove(company)
-        this.#companyContactService.unlink(this.card.contact_id, company.id).subscribe()
+
+    onUnlink(company: Company) {
+        this.card().contact.companies.remove(company)
+        this.#companyContactService.unlink(this.card().contact_id, company.id).subscribe()
     }
 
     save() {
-        this.card.update({ vcard: this.card.__vcardExchangeString }).subscribe()
-        if (this.card instanceof CompanyContact) {
-            this.card.contact.update({ vcard: this.card.contact.__vcardExchangeString }).subscribe()
+        const card = this.card()
+        card.update({ vcard: card.__vcardExchangeString }).subscribe()
+        if (card instanceof CompanyContact) {
+            card.contact.update({ vcard: card.contact.__vcardExchangeString }).subscribe()
         }
     }
-    updateVcard() {
-        this.card.contact.update({'vcard': this.card.contact.card?.toString() }).subscribe()
-    }
 
+    updateVcard() {
+        const contact = this.card().contact
+        contact.update({ vcard: contact.card.toString() }).subscribe()
+    }
 }

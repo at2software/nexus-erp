@@ -1,7 +1,7 @@
 @use 'sass:color';
 @use 'colors';
 @use 'var';
-@use 'node_modules/bootstrap/scss/bootstrap' with (
+@use 'bootstrap/scss/bootstrap' with (
     $border-radius             : var.$border-radius,
     $card-border-radius        : var.$border-radius,
     $btn-border-width          : var.$btn-border-width,
@@ -154,11 +154,6 @@ ul.list-group:not(:last-child) > li.list-group-item:last-child {
     .form-control {
         box-shadow: none;
     }
-    
-    &:focus {
-        box-shadow: inset var.light-top(), inset var.dark-bottom(), inset 0 0 0 1px var(--bs-primary);
-        border-width: var(--bs-border-width);
-    }
 }
 
 .form-floating {
@@ -206,4 +201,7 @@ ul.list-group:not(:last-child) > li.list-group-item:last-child {
     background-color: transparent !important;
     border-color: var(--bs-list-group-border-color) !important;
     color: var(--bs-primary) !important;
+}
+.progress {
+    box-shadow: var.liquid-glass(), var.shadow-down(2px, 4px) !important;
 }

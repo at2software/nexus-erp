@@ -33,7 +33,6 @@ export abstract class DetailGuard<T extends Serializable> {
     canActivate(route: ActivatedRouteSnapshot): Promise<boolean> | boolean {
 
         const id = route.paramMap.get('id')
-
         return new Promise<boolean>(resolve => {
             if (id) {
                 this.show(id).subscribe(async (result: T) => {
@@ -80,7 +79,6 @@ export abstract class DetailGuard<T extends Serializable> {
         if (navData.visibleWhen && !navData.visibleWhen(this.current)) {
             return this.#router.parseUrl(parentPath)
         }
-
         return true
     }
 

@@ -1,6 +1,5 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { BaseWidgetComponent } from '../base.widget.component';
-import { Subject } from 'rxjs';
 import { deepCopy } from 'src/constants/deepClone';
 import moment from 'moment';
 import { CASHFLOW_CHART_I18N, CASHFLOW_CHART_KEYS, CASHFLOW_I18N, EXPENSE_KEY, CASHFLOW_CHART_CHARTS } from './widget-cashflow.options';
@@ -18,32 +17,29 @@ import { ParamService } from '@models/param.service';
     standalone: true,
     imports: [WidgetsModule]
 })
-export class WidgetCashflowComponent extends BaseWidgetComponent implements OnDestroy, OnInit {
-
+export class WidgetCashflowComponent extends BaseWidgetComponent implements OnInit {
 
     mshort = new MoneyPipe()
     shortPipe = this.mshort
-    chartOptions: any = {}    
+    chartOptions: any = {
+            ...EChartsSimpleOptions,
+            series: [],
+            tooltip: {
+                ...EChartsSimpleOptions.tooltip,
+                formatter: (params: any) => this.formatTooltip(params)
+            }
+        }
     echartsInstance: any
 
-    #destroy$ = new Subject<void>()
     #paramService = inject(ParamService)
 
-    filteredKeys = () => CASHFLOW_CHART_KEYS.filter(_ => (this.options && _ in this.options) ? this.options[_].value : [])
+    filteredKeys = () => CASHFLOW_CHART_KEYS.filter(_ => (this.options && _ in this.options) ? this.options()[_].value : [])
     defaultOptions = () => {
         const ret:Record<string, any> = {}
         CASHFLOW_CHART_KEYS.forEach(_ => ret[_] = { type:OptionType.Boolean, value:true, i18n: CASHFLOW_CHART_I18N[_] })
         return ret
     }    
-    ngOnInit() {
-        super.ngOnInit()
-        this.initChartOptions()
-        this.reload()
-    }
-    ngOnDestroy() {
-        this.#destroy$.next()
-        this.#destroy$.complete()
-    }
+
     reload() {
         if (!this.hasInvoicesExpenses) {
             return;
@@ -141,17 +137,6 @@ export class WidgetCashflowComponent extends BaseWidgetComponent implements OnDe
         })
     }
 
-    initChartOptions() {
-        this.chartOptions = {
-            ...EChartsSimpleOptions,
-            series: [],
-            tooltip: {
-                ...EChartsSimpleOptions.tooltip,
-                formatter: (params: any) => this.formatTooltip(params)
-            }
-        }
-    }
-
 
     #getSeriesColor(seriesName: string, index: number, darkenAmount: number = 0): string {
         // Find the key that matches this series name
@@ -198,7 +183,6 @@ export class WidgetCashflowComponent extends BaseWidgetComponent implements OnDe
             <span class="flex-fill">∑</span>
             <span class="text-end" style="font-family: monospace;">${totalValue}</span>
         </div>`
-        
         return html
     }
 

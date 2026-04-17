@@ -1,11 +1,11 @@
 <div class="btn-group dropdown form-control bg-transparent">
   <input #searchbox
-    [(ngModel)]="query"
+    [ngModel]="query()"
     class="form-control show"
     type="search"
     placeholder="search"
     i18n-placeholder="@@i18n.common.search"
-    (keyup)="search($event)"
+    (keydown)="onKeydown($event)"
     (input)="onInput($event)"
     (focus)="onFocus()"
     (blur)="onBlur()"
@@ -14,25 +14,16 @@
     [attr.aria-expanded]="hasResults()"
     aria-controls="search-dropdown"
     autocomplete="off">
-    @if (has_icon) {
-      <span class="input-group-text" id="inputGroup-sizing-sm">
-        <div class="avatar avatar-xs">
-          @if (selected) {
-            <img src="{{selected.icon}}" class="avatar-img" alt="">
-          }
-        </div>
-      </span>
-    }
     <scrollbar #dropdown id="search-dropdown" class="dropdown-menu fade start-0 overflow-auto" [class.show]="shouldShowDropdown()"
       [class.d-none]="!shouldShowDropdown()">
-      @for (res of results; track res.id; let i = $index) {
+      @for (res of results(); track res.id; let i = $index) {
         <div class="dropdown-item hstack gap-2 pointer"
           (click)="selectItem(res, $event)" tabindex="0" (keydown.enter)="selectItem(res, $event)"
           (mousedown)="preventBlur($event)"
           (mouseenter)="setCurrentIndex(i)"
-          [class.active]="i===currentIndex"
+          [class.active]="i === currentIndex()"
           role="option"
-          [attr.aria-selected]="i===currentIndex">
+          [attr.aria-selected]="i === currentIndex()">
           <div>
             @switch (res.class) {
               @case ('CompanyContact') {
@@ -54,3 +45,11 @@
       <ng-content></ng-content>
     </scrollbar>
   </div>
+
+    @if (has_icon()) {
+        <div class="avatar avatar-sm icon-avatar">
+          @if (selected()) {
+            <img src="{{selected()?.icon}}" class="avatar-img" alt="">
+          }
+        </div>
+    }

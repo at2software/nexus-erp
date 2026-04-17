@@ -1,7 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { Project } from 'src/models/project/project.model';
-import { BaseWidgetComponent } from '../base.widget.component';
-import { OptionType } from '../widget-options/widget-options.component';
+import { BaseWidgetComponent, WidgetOptions } from '../base.widget.component';
 import { WidgetsModule } from '../widgets.module';
 import { PermissionsDirective } from '@directives/permissions.directive';
 import { WidgetService } from '@models/widget.service';
@@ -21,15 +20,10 @@ export class WidgetProjectManagerComponent extends BaseWidgetComponent {
     #widgetService = inject(WidgetService)
 
     defaultOptions = () => ({
-        'only-mine': {type: OptionType.Boolean, value: false, i18n: $localize`:@@i18n.common.onlyMine:only mine`},
-        'only-mine-as-pm': {type: OptionType.Boolean, value: false, i18n: $localize`:@@i18n.common.onlyMineAsProjectManager:only mine as project manager`},
-        'chart-only': {type: OptionType.Boolean, value: false, i18n: $localize`:@@i18n.common.chartOnly:chart only`}
+        ...WidgetOptions.onlyMine,
+        ...WidgetOptions.onlyMineAsPm,
+        ...WidgetOptions.chartOnly,
     })
-
-    override ngOnInit() {
-        super.ngOnInit()
-        this.reload()
-    }
 
     reload(): void {
         const options = { ...this.getOptionsURI() }
@@ -64,8 +58,8 @@ export class WidgetProjectManagerComponent extends BaseWidgetComponent {
             // Combine chart data from both sources for stacked display
             if (responses.projects.history && responses.acquisitions.history) {
                 this.chartData = [
-                    Array.isArray(responses.projects.history) ? responses.projects.history[0] : responses.projects.history,
-                    Array.isArray(responses.acquisitions.history) ? responses.acquisitions.history[0] : responses.acquisitions.history
+                    [responses.projects.history].flat()[0],
+                    [responses.acquisitions.history].flat()[0]
                 ]
             }
         })

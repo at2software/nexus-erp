@@ -14,8 +14,20 @@ class Connection extends BaseModel {
     protected $with     = ['company1', 'company2'];
     protected $casts    = ['net' => PrecomputedAuth::class];
     protected $fillable = ['company1_id', 'company2_id'];
-    protected $access   = ['admin' => '*', 'project_manager'=>'cru', 'user'=>'cru'];
+    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
+    public static function obfuscateNet($connections) {
+        return $connections->map(function ($conn) {
+            $data = $conn->toArray();
+            foreach (['company1', 'company2'] as $company) {
+                if (isset($data[$company]['net'])) {
+                    $net                   = $data[$company]['net'];
+                    $data[$company]['net'] = $net > 0 ? round(log10($net), 2) : 0;
+                }
+            }
+            return $data;
+        });
+    }
     public function getOtherCompany($companyId) {
         return ($this->company1_id == $companyId) ? $this->company2 : $this->company1;
     }

@@ -1,5 +1,5 @@
-<div class="progress progress-thin {{background()}}" style="height: 2px;">
-    <div class="progress-bar {{foreground()}}" style="height: 2px;" role="progressbar" [ngStyle]="perc()"
-        [attr.aria-valuenow]="progress * 100" aria-valuemin="0" aria-valuemax="100">
+<div class="progress progress-thin {{background()}}" [style.height.px]="height()">
+    <div class="progress-bar {{foreground()}}" [style.height.px]="height()" role="progressbar" [ngStyle]="perc()"
+        [attr.aria-valuenow]="progress() * 100" aria-valuemin="0" aria-valuemax="100">
     </div>
 </div>

@@ -1,5 +1,5 @@
 
-import { Component, inject, Input, OnInit } from '@angular/core';
+import { Component, inject, input, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { GlobalService } from '@models/global.service';
 
@@ -13,22 +13,21 @@ import { GlobalService } from '@models/global.service';
 })
 export class HeaderLinkItemComponent implements OnInit {
 
-    @Input() routerLink: string
-    @Input() ngbTooltip: string
-    @Input() roles: string
-    @Input() title: string
-    @Input() exact: boolean = true
-    @Input() active?:boolean
+    routerLink = input<string>()
+    ngbTooltip  = input<string>()
+    roles       = input<string>()
+    title       = input<string>()
+    exact       = input(true)
+    active      = input<boolean>()
 
     rolesAllowed: boolean = true
     global = inject(GlobalService)
     routerLinkActiveOptions = ({ exact: false })
 
     ngOnInit() {
-        this.routerLinkActiveOptions.exact = this.routerLink == '.'
-        if (this.roles) {
-            // Check role permission
-            const requiredRoles = this.roles.split('|')
+        this.routerLinkActiveOptions.exact = this.routerLink() == '.'
+        if (this.roles()) {
+            const requiredRoles = this.roles()!.split('|')
             this.rolesAllowed = this.global.user?.hasAnyRole(requiredRoles) || false
         }
     }

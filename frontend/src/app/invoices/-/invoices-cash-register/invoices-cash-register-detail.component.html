@@ -17,7 +17,8 @@
                 <col style="width:100px;">
             </colgroup>
             <tbody>
-                <tr *nxFor="let e of entries">
+                @for (e of entries; track e.id) {
+                <tr [nx]="e" [tables]="entries">
                     <td class="small text-muted text-nowrap">{{e.occured_at | date}}</td>
                     <td class="text-truncate">{{e.description}}</td>
                     <td class="text-truncate">{{e.approver}}</td>
@@ -26,6 +27,7 @@
                     </td>
                     <td class="text-nowrap text-end">{{(e.value + e.var.current) | money}}</td>
                 </tr>
+                }
             </tbody>
         </table>
     </div>

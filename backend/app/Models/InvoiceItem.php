@@ -33,6 +33,7 @@ class InvoiceItem extends BaseModel {
         'project_id',
         'qty',
         'text',
+        'stage',
         'type',
         'unit_name',
         'vat_calculation',
@@ -155,9 +156,9 @@ class InvoiceItem extends BaseModel {
             ->selectRaw('user_id, SUM(duration) as duration')
             ->groupBy('user_id')
             ->get()
-            ->map(fn($focus) => [
-                'user_id' => $focus->user_id,
-                'duration' => floatval($focus->duration)
+            ->map(fn ($focus) => [
+                'user_id'  => $focus->user_id,
+                'duration' => floatval($focus->duration),
             ])
             ->values();
     }

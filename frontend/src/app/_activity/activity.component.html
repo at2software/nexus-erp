@@ -5,7 +5,7 @@
         <button #buttonRef
           class="nav-link"
           [class.active]="srv.activeTabIndex === i"
-          [class.has-badge]="tab.badge"
+          [class.has-badge]="tab.badge()"
           id="activity-tab-{{i}}"
           data-bs-toggle="tab"
           [class.d-none]="tab.hidden()"
@@ -14,11 +14,11 @@
           [attr.aria-controls]="'activity-'+ i"
           [attr.aria-selected]="srv.activeTabIndex === i"
           (click)="srv.setActiveTab(i)">
-          @if (tab.icon) {
-            <i>{{tab.icon}}</i>
+          @if (tab.icon()) {
+             <i>{{tab.icon()}}</i>
           }
-          @if (tab.nicon) {
-            <n>{{tab.nicon}}</n>
+          @if (tab.nicon()) {
+            <n>{{tab.nicon()}}</n>
           }
         </button>
       </li>

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\NLog;
-use Str;
+use Illuminate\Support\Str;
 
 class CorsController extends Controller {
     public function curlId(int $id) {
@@ -15,7 +15,7 @@ class CorsController extends Controller {
         $this->validateRequest();
         return $this->_curl(request('url'));
     }
-    private function validateRequest($additional=[]) {
+    private function validateRequest($additional = []) {
         request()->validate(array_merge([
             'method' => 'required|in:get,post,put,delete,patch',
             'url'    => 'required|string',
@@ -23,6 +23,7 @@ class CorsController extends Controller {
     }
     private function _curl(string $url) {
         $headers = request('headers', []);
+        $timeout = (int)request('timeout', 5);  // caller can override, default 5s
         $ch      = curl_init();
 
         curl_setopt_array($ch, [
@@ -34,7 +35,7 @@ class CorsController extends Controller {
             CURLOPT_CUSTOMREQUEST  => Str::upper(request('method')),
             // Critical: Add timeouts to prevent blocking
             CURLOPT_CONNECTTIMEOUT => 2,    // 2 seconds to establish connection
-            CURLOPT_TIMEOUT        => 5,            // 5 seconds max for entire request
+            CURLOPT_TIMEOUT        => $timeout,     // configurable, default 5s
             // Performance optimizations
             CURLOPT_ENCODING       => '',          // Accept gzip/deflate
             CURLOPT_TCP_NODELAY    => true,     // Disable Nagle's algorithm for faster response

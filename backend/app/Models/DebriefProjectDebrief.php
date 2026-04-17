@@ -30,7 +30,9 @@ class DebriefProjectDebrief extends BaseModel {
             ->withTimestamps();
     }
     public function positives() {
-        return $this->hasMany(DebriefPositive::class);
+        return $this->belongsToMany(DebriefPositive::class, 'debrief_positive_project_debrief')
+            ->withPivot(['id', 'reported_by_user_id'])
+            ->withTimestamps();
     }
     public function isCompleted() {
         return $this->status === 'completed';

@@ -8,7 +8,6 @@ import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { MarketingService } from '@models/marketing/marketing.service';
 import { MarketingWorkflow } from '@models/marketing/marketing-workflow.model';
 import { MarketingActivity } from '@models/marketing/marketing-activity.model';
-import { MarketingInitiativeActivity } from '@models/marketing/marketing-initiative-activity.model';
 import { IActivityBase } from '@models/marketing/activity-base.interface';
 import { NexusModule } from 'src/app/nx/nexus.module';
 import { Color } from 'src/constants/Color';
@@ -217,7 +216,6 @@ export class MarketingWorkflowDetailComponent implements OnInit {
         if (!parent) {
             return activity.day_offset;
         }
-
         return this.getAbsoluteDay(parent) + activity.day_offset;
     }
 

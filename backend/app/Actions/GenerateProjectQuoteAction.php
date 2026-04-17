@@ -7,14 +7,18 @@ use App\Models\Document;
 use App\Models\File;
 use App\Models\Invoice;
 use App\Models\Project;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\ProjectProjectState;
 use Illuminate\Http\Response;
 
 class GenerateProjectQuoteAction {
     public function execute(Project $project): Response {
+        ProjectProjectState::create([
+            'project_id'       => $project->id,
+            'project_state_id' => 6,
+        ]);
         $template                                  = Document::getPdfTemplate();
         [$items, $footer, $all, $discounts, $lang] = Invoice::enhancedItemsForPdf(
-            $project->indexedItems()->get(),
+            $project->indexedItems()->whereStage(0)->get(),
             $project->company
         );
 
@@ -22,7 +26,7 @@ class GenerateProjectQuoteAction {
         $template = str_replace('[content]', $content, $template);
         $template = Document::personalized($template, $project->addressee, withContactInfo: false, project: $project);
 
-        $data     = Pdf::loadHTML($template)->stream()->getContent();
+        $data     = Document::renderPdf($template);
         $filename = $this->makeFileName($project, $lang);
 
         File::saveTo('quotes/'.$filename, $data, $project, 'invoices.values');
@@ -35,21 +39,19 @@ class GenerateProjectQuoteAction {
         $content          = '';
         $content .= $project->param('PROJECT_PREFIX', true)->localizedValue($lang, $formality);
         $content .= '<br>';
+        foreach ($project->getQuoteDescriptions() as $description) {
+            $content .= "<div>$description</div><br>";
+        }
         $content .= Invoice::getInvoiceBlade($items, $footer, $discounts, $lang);
         if ($hasOptionalItems) {
             $content .= '<div style="font-size:10pt;">'.__('pdf.quote_optional_items_note', [], $lang).'</div>';
         }
         $content .= '<br>';
 
-        foreach ($project->getQuoteDescriptions() as $description) {
-            $content .= "<div>$description</div><br>";
-        }
-
         $content .= $project->param('PROJECT_SUFFIX', true)->localizedValue($lang, $formality);
-        $content  = str_replace('[payment-plan]', $this->renderPaymentPlanHtml($project, $lang), $content);
+        $content = str_replace('[payment-plan]', $this->renderPaymentPlanHtml($project, $lang), $content);
         return $content;
     }
-
     private function renderPaymentPlanHtml(Project $project, string $lang): string {
         $steps = $project->getEffectivePaymentPlan();
         if (empty($steps)) {
@@ -64,9 +66,9 @@ class GenerateProjectQuoteAction {
 
         $rows = '';
         foreach ($steps as $step) {
-            $percentage = (int) ($step['percentage'] ?? 0);
+            $percentage = (int)($step['percentage'] ?? 0);
             $trigger    = $step['trigger'] ?? '';
-            $months     = (int) ($step['months'] ?? 0);
+            $months     = (int)($step['months'] ?? 0);
             $amount     = $net * ($percentage / 100);
             $formatted  = number_format($amount, 2, ',', '.');
 
@@ -81,17 +83,16 @@ class GenerateProjectQuoteAction {
             };
 
             $rows .= "<tr><td style='padding:3px 8px;'>{$percentage}%</td>"
-                   . "<td style='padding:3px 8px;'>{$label}</td>"
-                   . "<td style='padding:3px 8px; text-align:right;'>€ {$formatted}</td></tr>";
+                   ."<td style='padding:3px 8px;'>{$label}</td>"
+                   ."<td style='padding:3px 8px; text-align:right;'>€ {$formatted}</td></tr>";
         }
-
         return "<table style='width:100%; border-collapse:collapse; margin:8px 0; font-size:10pt;'>"
-             . "<tr style='font-weight:bold; border-bottom:1px solid #ccc;'>"
-             . "<td style='padding:3px 8px;'>{$headerPct}</td>"
-             . "<td style='padding:3px 8px;'>{$headerDue}</td>"
-             . "<td style='padding:3px 8px; text-align:right;'>{$headerAmt}</td></tr>"
-             . $rows
-             . '</table>';
+             ."<tr style='font-weight:bold; border-bottom:1px solid #ccc;'>"
+             ."<td style='padding:3px 8px;'>{$headerPct}</td>"
+             ."<td style='padding:3px 8px;'>{$headerDue}</td>"
+             ."<td style='padding:3px 8px; text-align:right;'>{$headerAmt}</td></tr>"
+             .$rows
+             .'</table>';
     }
     private function makeFileName(Project $project, string $lang): string {
         return date('Y-m-d').' '.__('pdf.quote', [], $lang).' '.File::filename_safe($project->name).'.pdf';

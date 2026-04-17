@@ -37,9 +37,14 @@ class DebriefProblem extends BaseModel {
         }
     }
     public function scopeSearch($query, $term) {
-        return $query->where(function ($q) use ($term) {
-            $q->where('title', 'LIKE', "%{$term}%")
-                ->orWhere('description', 'LIKE', "%{$term}%");
+        $words = array_filter(preg_split('/[\s\-_]+/', trim($term)), fn ($w) => strlen($w) > 0);
+        return $query->where(function ($q) use ($words) {
+            foreach ($words as $word) {
+                $q->where(function ($inner) use ($word) {
+                    $inner->where('title', 'LIKE', "%{$word}%")
+                        ->orWhere('description', 'LIKE', "%{$word}%");
+                });
+            }
         });
     }
     public function scopeByCategory($query, $categoryId) {

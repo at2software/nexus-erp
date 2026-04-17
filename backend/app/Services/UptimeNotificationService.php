@@ -2,12 +2,12 @@
 
 namespace App\Services;
 
-use App\Http\Controllers\PluginChatController;
-use App\Http\Controllers\PluginController;
+use App\Jobs\ChatSendMessageJob;
 use App\Mail\UptimeDownMail;
 use App\Mail\UptimeUpMail;
 use App\Models\UptimeCheck;
 use App\Models\UptimeMonitor;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -39,9 +39,9 @@ class UptimeNotificationService {
 
         $this->sendEmails($monitor, $check, $emailRecipients, $isRecovery);
 
-        $this->sendChatMessages($monitor, $check, $chatRecipients, $isRecovery);
+        $this->sendChatMessages($monitor, $check, $isRecovery);
     }
-    private function getRecipients(UptimeMonitor $monitor): \Illuminate\Support\Collection {
+    private function getRecipients(UptimeMonitor $monitor): Collection {
         $monitor->load(['projects.projectManager', 'recipients', 'createdBy']);
 
         if ($monitor->projects->isEmpty()) {
@@ -49,11 +49,11 @@ class UptimeNotificationService {
             if ($creator) {
                 return collect([
                     (object)[
-                        'user'                 => $creator,
-                        'email'                => $creator->email,
-                        'notify_via_email'     => true,
-                        'notify_via_chat'      => true,
-                        'notify_on_recovery'   => true,
+                        'user'               => $creator,
+                        'email'              => $creator->email,
+                        'notify_via_email'   => true,
+                        'notify_via_chat'    => true,
+                        'notify_on_recovery' => true,
                     ],
                 ]);
             }
@@ -61,20 +61,20 @@ class UptimeNotificationService {
         }
 
         $projectManagers = $monitor->projects->map(fn ($project) => [
-            'user'                 => $project->projectManager,
-            'email'                => $project->projectManager?->email,
-            'project_id'           => $project->id,
-            'notify_via_email'     => true,
-            'notify_via_chat'      => true,
-            'notify_on_recovery'   => true,
+            'user'               => $project->projectManager,
+            'email'              => $project->projectManager?->email,
+            'project_id'         => $project->id,
+            'notify_via_email'   => true,
+            'notify_via_chat'    => true,
+            'notify_on_recovery' => true,
         ])->filter(fn ($data) => $data['user'] !== null);
 
         $explicitRecipients = $monitor->recipients->map(fn ($user) => [
-            'user'                 => $user,
-            'email'                => $user->email,
-            'notify_via_email'     => (bool)$user->pivot->notify_via_email,
-            'notify_via_chat'      => (bool)$user->pivot->notify_via_chat,
-            'notify_on_recovery'   => (bool)$user->pivot->notify_on_recovery,
+            'user'               => $user,
+            'email'              => $user->email,
+            'notify_via_email'   => (bool)$user->pivot->notify_via_email,
+            'notify_via_chat'    => (bool)$user->pivot->notify_via_chat,
+            'notify_on_recovery' => (bool)$user->pivot->notify_on_recovery,
         ]);
 
         $allRecipients = $projectManagers->concat($explicitRecipients);
@@ -84,7 +84,6 @@ class UptimeNotificationService {
         })->map(function ($recipient) {
             return (object)$recipient;
         });
-
         return $uniqueRecipients;
     }
     private function sendEmails(UptimeMonitor $monitor, UptimeCheck $check, $recipients, bool $isRecovery): void {
@@ -101,7 +100,7 @@ class UptimeNotificationService {
             }
         }
     }
-    private function sendChatMessages(UptimeMonitor $monitor, UptimeCheck $check, $recipients, bool $isRecovery): void {
+    private function sendChatMessages(UptimeMonitor $monitor, UptimeCheck $check, bool $isRecovery): void {
         $monitor->load('projects');
 
         if ($monitor->projects->isEmpty()) {
@@ -109,15 +108,25 @@ class UptimeNotificationService {
         }
 
         $uniqueProjects = $monitor->projects->unique('id');
-        $message = $this->formatChatMessage($monitor, $check, $isRecovery);
+        $message        = $this->formatChatMessage($monitor, $check, $isRecovery);
+
+        $props = $isRecovery ? [
+            'from_webhook'         => 'true',
+            'override_username'    => 'Service Recovered',
+            'override_icon_url'    => asset('icons/icon-uptime-recovered.png'),
+        ] : [
+            'from_webhook'         => 'true',
+            'override_username'    => 'Uptime Alert',
+            'override_icon_url'    => asset('icons/icon-uptime-warning.png'),
+        ];
 
         foreach ($uniqueProjects as $project) {
-            \App\Jobs\ChatSendMessageJob::dispatch($message, project: $project);
+            ChatSendMessageJob::dispatch($message, $props, project: $project);
         }
     }
     private function formatChatMessage(UptimeMonitor $monitor, UptimeCheck $check, bool $isRecovery): string {
         if ($isRecovery) {
-            return "### :white_check_mark: Service Recovered\n\n".
+            return "### Service Recovered\n\n".
                    "**{$monitor->name}** is back online\n\n".
                    "- **URL**: {$monitor->url}\n".
                    "- **Status**: UP\n".
@@ -125,7 +134,7 @@ class UptimeNotificationService {
                    "- **Recovered At**: {$check->checked_at->format('Y-m-d H:i:s')}";
         }
 
-        $message = "### :x: Uptime Alert\n\n".
+        $message = "### Uptime Alert\n\n".
                    "**{$monitor->name}** is currently down\n\n".
                    "- **URL**: {$monitor->url}\n".
                    '- **Status**: '.strtoupper($check->status)."\n";
@@ -143,7 +152,6 @@ class UptimeNotificationService {
         }
 
         $message .= "- **Checked At**: {$check->checked_at->format('Y-m-d H:i:s')}";
-
         return $message;
     }
 }

@@ -21,7 +21,7 @@ class PluginLinkController extends Controller {
     }
     public function createPluginLinkWithChannel(Project $project) {
         $data = (array)$this->getBody();
-        
+
         $chatController = PluginController::getByKey($data['type'], PluginChatController::class);
 
         if ($chatController) {

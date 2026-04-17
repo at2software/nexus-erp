@@ -1,10 +1,11 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Company } from '@models/company/company.model';
 import { MarketingService } from '@models/marketing/marketing.service';
 import { BaseWidgetComponent } from '../base.widget.component';
 import { WidgetsModule } from '../widgets.module';
 import { NexusModule } from '@app/nx/nexus.module';
-import { Subject, takeUntil } from 'rxjs';
+
 
 @Component({
     selector: 'widget-remarketing',
@@ -13,9 +14,9 @@ import { Subject, takeUntil } from 'rxjs';
     styleUrl: './widget-remarketing.component.scss',
     imports: [WidgetsModule, NexusModule]
 })
-export class WidgetRemarketingComponent extends BaseWidgetComponent implements OnDestroy, OnInit {
+export class WidgetRemarketingComponent extends BaseWidgetComponent {
 
-    #destroy$ = new Subject<void>()
+    #destroyRef = inject(DestroyRef)
 
     service = inject(MarketingService)
 
@@ -24,15 +25,8 @@ export class WidgetRemarketingComponent extends BaseWidgetComponent implements O
 
     defaultOptions = () => ({})
 
-    ngOnInit() {
-        this.reload()
-    }
-    ngOnDestroy() {
-        this.#destroy$.next()
-        this.#destroy$.complete()
-    }
     reload() {
-        this.service.getRemarketing().pipe(takeUntil(this.#destroy$)).subscribe((result:any) => {
+        this.service.getRemarketing().pipe(takeUntilDestroyed(this.#destroyRef)).subscribe((result:any) => {
             this.observed = result.observed.map(this.#toCompany).sort((a: Company, b: Company) => b.remarketingProgress - a.remarketingProgress)
         })
     }

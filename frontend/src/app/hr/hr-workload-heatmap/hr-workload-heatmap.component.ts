@@ -1,4 +1,4 @@
-import { Component, inject, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, inject, input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgbPopoverModule } from '@ng-bootstrap/ng-bootstrap';
@@ -62,7 +62,8 @@ interface WeekColumn {
     imports: [CommonModule, FormsModule, NgbPopoverModule, RouterModule, UlCompactComponent, AvatarComponent, NexusModule]
 })
 export class HrWorkloadHeatmapComponent implements OnChanges {
-    @Input() user!: User;
+    
+    user = input.required<User>()
 
     #userService = inject(UserService);
 
@@ -72,7 +73,7 @@ export class HrWorkloadHeatmapComponent implements OnChanges {
     selectedDay: DailyWorkload | null = null;
 
     ngOnChanges(changes: SimpleChanges): void {
-        if (changes['user'] && this.user) {
+        if (changes['user'] && this.user()) {
             this.loadData();
         }
     }
@@ -81,7 +82,7 @@ export class HrWorkloadHeatmapComponent implements OnChanges {
         const start = moment().startOf('day').format('YYYY-MM-DD');
         const end = moment().add(3, 'months').format('YYYY-MM-DD');
 
-        this.#userService.showDailyWorkload(this.user, start, end).subscribe((data:any) => {
+        this.#userService.showDailyWorkload(this.user(), start, end).subscribe((data:any) => {
             data.daily_workload.forEach((day:any) => {
                 day.elements = day.elements.map((el:any) => {
                     el.project = el.project ? Project.fromJson(el.project) : undefined;

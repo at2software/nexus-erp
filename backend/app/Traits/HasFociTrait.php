@@ -2,7 +2,6 @@
 
 namespace App\Traits;
 
-use App\Enums\InvoiceItemType;
 use App\Models\Company;
 use App\Models\Focus;
 use App\Models\InvoiceItem;
@@ -24,7 +23,7 @@ trait HasFociTrait {
 
     // Sum relations for eager loading to prevent N+1
     public function hoursInvestedSum() {
-        return $this->hasOne(\App\Models\Focus::class, 'parent_id')
+        return $this->hasOne(Focus::class, 'parent_id')
             ->where('parent_type', get_class($this))
             ->selectRaw('parent_id, SUM(duration) as total')
             ->groupBy('parent_id');
@@ -110,7 +109,7 @@ trait HasFociTrait {
                 $newItem->company_id = $this->id;
             }
             if ($this instanceof Project) {
-                $newItem->type       = InvoiceItemType::PreparedSupport;
+                $newItem->stage      = 1;
                 $newItem->project_id = $this->id;
             }
             $newItem->save();

@@ -19,8 +19,8 @@ class CheckVatId extends Command {
         'RO[1-9][0-9]{,9}', 'SE[0-9]{10}01', 'SK[0-9]{10}', 'SI[0-9]{8}', 'ES[A-Z0-9][0-9]{7}[A-Z0-9]',
         'CZ[0-9]{8,10}', 'HU[0-9]{8}', 'CY[A-Z0-9]{8}[A-Z]',
     ];
-    private $checkVatId       = null;
-    private $response         = null;
+    private $checkVatId = null;
+    private $response   = null;
     private $company;
     private $isValid          = false;
     private $errorDescription = 'unprocessed';
@@ -96,7 +96,6 @@ class CheckVatId extends Command {
             $this->errorDescription = 'VAT service returned invalid response';
             return false;
         }
-
         return $this->response->isValid ?? false;
     }
     private function getSuccessMessage() {
@@ -110,7 +109,6 @@ class CheckVatId extends Command {
         if (! $this->response) {
             return $this->errorDescription;
         }
-
         return match ($this->response->userError ?? null) {
             'VALID'                     => 'Die angefragte USt-IdNr. ist gültig.',
             'INVALID'                   => 'Die angefragte USt-IdNr. ist ungültig.',

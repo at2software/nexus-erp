@@ -158,7 +158,6 @@ export class PluginInstanceFactory {
             }
             return true
         })
-        
         return link ? this.instanceFor(link) as T : undefined
     }
 
@@ -239,7 +238,6 @@ export class PluginInstanceFactory {
         // Use sub-plugin class if available and loaded, otherwise main type
         const SubPluginClass = pluginConfig.sub?.()
         const PluginClass = SubPluginClass || pluginConfig.type
-        
         return new PluginClass()
     }
 

@@ -20,7 +20,9 @@ class SentinelController extends Controller {
     public function indexActive(Request $request) {
         $query = Sentinel::select()
             ->where('trigger', SentinelTriggerType::Always)
-            ->whereHas('subscribers', function (Builder $_) { $_->where('users.id', Auth::Id()); });
+            ->whereHas('subscribers', function (Builder $_) {
+                $_->where('users.id', Auth::Id());
+            });
         $triggers = [];
         foreach ($query->get() as $sentinel) {
             $items     = ['sentinel' => $sentinel, 'items' => []];

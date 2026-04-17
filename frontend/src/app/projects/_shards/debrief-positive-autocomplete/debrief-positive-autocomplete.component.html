@@ -1,0 +1,50 @@
+<div class="positive-autocomplete">
+    <div class="input-group">
+        <div ngbDropdown>
+            <button ngbDropdownToggle class="btn btn-sm btn-outline-light">
+                @if (selectedCategoryId()) {
+                    {{ selectedCategoryName() }}
+                } @else {
+                    <span i18n="@@i18n.debrief.noCategory">no category</span>
+                }
+            </button>
+            <div ngbDropdownMenu>
+                <button ngbDropdownItem (click)="selectedCategoryId.set(null)" i18n="@@i18n.debrief.noCategory">no category</button>
+                @for (cat of categories(); track cat.id) {
+                    <button ngbDropdownItem (click)="selectedCategoryId.set(cat.id)">{{ cat.name }}</button>
+                }
+            </div>
+        </div>
+        <div class="flex-grow-1 position-relative">
+            <input type="text"
+                   class="form-control form-control-sm"
+                   [ngModel]="searchTerm()"
+                   (ngModelChange)="onInput($event)"
+                   (focus)="onFocus()"
+                   (blur)="onBlur()"
+                   (keyup.enter)="onAdd()"
+                   placeholder="Add something that went well..."
+                   i18n-placeholder="@@i18n.debrief.addPositivePlaceholder">
+            @if (showDropdown() && searchResults().length > 0) {
+                <div class="dropdown-menu show w-100">
+                    @for (positive of searchResults(); track positive.id) {
+                        <button class="dropdown-item d-flex align-items-center gap-2" (mousedown)="selectPositive(positive)">
+                            <span class="flex-grow-1">{{ positive.title }}</span>
+                            @if (positive.category) {
+                                <small class="text-muted">{{ positive.category.name }}</small>
+                            }
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+        @if (isSearching()) {
+            <span class="input-group-text">
+                <span class="spinner-border spinner-border-sm"></span>
+            </span>
+        }
+        <button class="btn btn-sm btn-primary" (click)="onAdd()" [disabled]="!searchTerm().trim()">
+            <i>add</i>
+        </button>
+    </div>
+</div>

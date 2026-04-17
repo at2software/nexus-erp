@@ -19,7 +19,7 @@
         </div>
       }
       <div class="pt-2" [ngbTooltip]="tipContent" tooltipClass="flexible-tooltip">
-        <progress-bar [progress]="data.revenue / data.expenses" [style]="'primary'" overStyle="success"></progress-bar>
+        <progress-bar [height]="3" [progress]="data.revenue / data.expenses" [style]="'primary'" overStyle="success"></progress-bar>
       </div>
       <ng-template #tipContent>
         <ul class="list-group" style="width:auto !important;">

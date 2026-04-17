@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, OnChanges, Output, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { InvoiceItemService } from '@models/invoice/invoice-item.service';
 import { CommonModule, registerLocaleData } from '@angular/common';
 import locale from '@angular/common/locales/de';
@@ -15,8 +16,8 @@ import { moveInvoiceItems, reindexInvoiceItems } from './invoice-item.reorder.co
 import { HasInvoiceItems } from '../../../../interfaces/hasInvoiceItems.interface';
 import { InvoiceItemAnnotationType, InvoiceItemRowComponent } from './invoice-item/invoice-item-row.component';
 import { ModalInvoiceDiscountComponent } from '@app/_modals/modal-invoice-discount/modal-invoice-discount.component';
-import { CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
-import { forkJoin, Subscription } from 'rxjs';
+import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
+import { forkJoin } from 'rxjs';
 import { GlobalService } from '@models/global.service';
 import { NxGlobal } from '@app/nx/nx.global';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
@@ -28,7 +29,9 @@ import { HotkeyDirective } from '@directives/hotkey.directive';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 
-type TNewItems = 'item'|'paydown'|'group'|'discount'
+type TNewItems = 'item' | 'paydown' | 'group' | 'discount'
+interface VatEntry { title: string; value: number }
+
 @Component({
     selector: 'invoice-prepare',
     templateUrl: './invoice-prepare.html',
@@ -36,155 +39,160 @@ type TNewItems = 'item'|'paydown'|'group'|'discount'
     standalone: true,
     imports: [ToolbarComponent, CommonModule, NexusModule, CdkTableModule, InvoiceItemRowComponent, MoneyPipe, NgbDropdownModule, NgbTooltipModule, CdkDrag, CdkDropList, HotkeyDirective, SpinnerComponent]
 })
-export class InvoicePrepare implements OnChanges, OnInit, OnDestroy {
-
-    vat: any
-    net: number = 0
-    gross: number = 0
-    lastGroup: InvoiceItem | undefined = undefined
-    selection: InvoiceItem[] = []
-    selectionNet: number
-    selectionQty: number
-    subscription:Subscription
-    broadcastSubscription:Subscription
-    loading: boolean = false
+export class InvoicePrepare {
 
     #invoiceService = inject(InvoiceItemService)
     #modalGroups    = inject(InputModalService)
-    #modalService  = inject(ModalBaseService)
+    #modalService   = inject(ModalBaseService)
     #global         = inject(GlobalService)
 
-    @Input() parent: HasInvoiceItems
-    @Input() items:InvoiceItem[]
-    @Input() companyRef: Company
-    @Input() showTools: boolean = true
-    @Input() allowedNewItems:TNewItems[] = ['item','paydown','group','discount']
-    @Input() withInstalments: boolean = true
-    @Input() annotationType: InvoiceItemAnnotationType = 'invoice'
-    @Output() dataLoaded: EventEmitter<InvoiceItem[]> = new EventEmitter<InvoiceItem[]>()
+    parent          = input.required<HasInvoiceItems>()
+    items           = input<InvoiceItem[] | undefined>(undefined)
+    stageFilter     = input<number | undefined>(undefined)
+    companyRef      = input<Company | undefined>(undefined)
+    showTools       = input<boolean>(true)
+    allowedNewItems = input<TNewItems[]>(['item', 'paydown', 'group', 'discount'])
+    withInstalments = input<boolean>(true)
+    annotationType  = input<InvoiceItemAnnotationType>('invoice')
 
-    constructor() { registerLocaleData(locale); }
+    dataLoaded = output<InvoiceItem[]>()
 
-    regularItems:InvoiceItem[] = []
-    instalmentItems:InvoiceItem[] = []
-    remaining:number
-    isInvoice:boolean
+    _items       = signal<InvoiceItem[]>([])
+    vat          = signal<VatEntry[]>([])
+    net          = signal<number>(0)
+    gross        = signal<number>(0)
+    lastGroup    = signal<InvoiceItem | undefined>(undefined)
+    selection    = signal<InvoiceItem[]>([])
+    selectionNet = signal<number>(0)
+    selectionQty = signal<number>(0)
+    loading      = signal<boolean>(false)
 
-    ngOnInit() {
-        this.broadcastSubscription = NxGlobal.broadcast$.subscribe(broadcast => {
-            if (!this.items || this.items.length === 0) return
+    regularItems    = computed(() => this.withInstalments() ? this._items().filter(_ => _.type !== InvoiceItemType.Instalment) : this._items())
+    instalmentItems = computed(() => this.withInstalments() ? this._items().filter(_ => _.type === InvoiceItemType.Instalment) : [])
+    remaining       = computed(() => this.gross() + this.instalmentItems().reduce((acc, _) => acc + _.gross, 0))
+    isInvoice       = computed(() => this.parent() instanceof Invoice)
+    company         = computed(() => this.parent() instanceof Company ? this.parent() as Company : undefined)
+    project         = computed(() => this.parent() instanceof Project ? this.parent() as Project : undefined)
+    invoice         = computed(() => this.parent() instanceof Invoice ? this.parent() as Invoice : undefined)
+    product         = computed(() => this.parent() instanceof Product ? this.parent() as Product : undefined)
+    effectiveCompany = computed(() => this.company() ?? this.project()?.company ?? this.invoice()?.company ?? this.companyRef())
+
+    constructor() {
+        registerLocaleData(locale)
+
+        effect(() => {
+            const itemsVal = this.items()
+            if (itemsVal !== undefined) {
+                const updated = this.#reindex(itemsVal)
+                this._items.set(updated)
+                this.dataLoaded.emit(updated)
+            }
+        })
+
+        effect(() => {
+            this.parent()
+            if (untracked(() => this.items()) === undefined) {
+                this.reload()
+            }
+        })
+
+        NxGlobal.broadcast$.pipe(takeUntilDestroyed()).subscribe(broadcast => {
+            const currentItems = this._items()
+            if (!currentItems.length) return
 
             const updatedItem = broadcast.data as InvoiceItem
-            const isOurItem = this.items.some(item => item === updatedItem)
+            if (!currentItems.some(item => item === updatedItem)) return
 
-            if (!isOurItem) return
-
-            const hasNonPersistent = this.items.some(item => item.isNonPersistantRecord)
-            if (hasNonPersistent) {
-                this.reindex(this.items)
-                this.dataLoaded.emit(this.items)
+            if (currentItems.some(item => item.isNonPersistantRecord)) {
+                this.#reindex(currentItems)
+                this.dataLoaded.emit(currentItems)
             } else {
                 this.reload()
             }
         })
-        this.subscription = this.#global.onSelectionIn(() => this.items, 'net', 'pt').subscribe(_ => {
-            [this.selection, this.selectionNet, this.selectionQty] = _
+
+        this.#global.onSelectionIn(() => this._items(), 'net', 'pt')
+            .pipe(takeUntilDestroyed())
+            .subscribe(([selection, selectionNet, selectionQty]) => {
+                this.selection.set(selection)
+                this.selectionNet.set(selectionNet)
+                this.selectionQty.set(selectionQty)
+            })
+    }
+
+    clear = () => this._items.set([])
+
+    reload() {
+        const parent = this.parent()
+        if (!parent) return
+        this.loading.set(true)
+        this.#invoiceService.getInvoiceItems(parent, { append: 'my_prediction', with: 'predictions' }).subscribe(x => {
+            const stage = this.stageFilter()
+            if (stage !== undefined) x = x.filter(item => item.stage === stage && !item.invoice_id)
+            x = x.sort((a, b) => a.position - b.position)
+            const updated = this.#reindex(x)
+            this._items.set(updated)
+            this.dataLoaded.emit(updated)
+            this.loading.set(false)
         })
     }
 
-    ngOnChanges(changes:any) {
-        if ('parent' in changes && changes.parent !== undefined) {
-            // Only reload from parent if no items array was provided
-            if (!this.items || this.items.length === 0) {
-                this.reload()
-                this.items = this.parent.invoice_items
-            }
-        }
-        if ('items' in changes && changes.items !== undefined) {
-            this.reindex(this.items)
-            this.computeVariables()
-            this.dataLoaded.emit(this.items)
-        }
-    }
-    ngOnDestroy() {
-        this.subscription?.unsubscribe()
-        this.broadcastSubscription?.unsubscribe()
-    }
-    computeVariables() {
-        this.regularItems = this.withInstalments ? this.items.filter(_ => _.type !== InvoiceItemType.Instalment) : this.items
-        this.instalmentItems = this.withInstalments ? this.items.filter(_ => _.type === InvoiceItemType.Instalment) : []
-        this.remaining = this.gross + this.instalmentItems.reduce((acc, _) => acc + _.gross, 0)
-        this.isInvoice = (this.parent instanceof Invoice) ? true : false
-    }
-
-    company = (): Company | undefined => this.parent instanceof Company ? this.parent as Company : undefined
-    project = (): Project | undefined => this.parent instanceof Project ? this.parent as Project : undefined
-    invoice = (): Invoice | undefined => this.parent instanceof Invoice ? this.parent as Invoice : undefined
-    product = (): Product | undefined => this.parent instanceof Product ? this.parent as Product : undefined
-    getCompany = () => this.company() ?? this.project()?.company ?? this.invoice()?.company ?? this.companyRef
-
-    clear = () => this.items.splice(0, this.items.length)
-    reload() {
-        if (this.parent) {
-            this.loading = true
-            this.#invoiceService.getInvoiceItems(this.parent, { append: 'my_prediction', with: 'predictions' }).subscribe(x => {
-                x = x.sort((a, b) => (a.position - b.position))
-                const updated = this.reindex(x)
-                this.items.splice(0, this.items.length, ...updated) // keep the potential parent reference
-                this.computeVariables()
-                this.dataLoaded.emit(this.items)
-                this.loading = false
-            })
-        }
-    }
-    reindex (_: InvoiceItem[]): InvoiceItem[] {
-        const { items, net, gross, vat } = reindexInvoiceItems(_)
-        this.net              = net
-        this.gross            = gross
-        this.vat              = vat
+    #reindex(items: InvoiceItem[]): InvoiceItem[] {
+        const { items: reindexed, net, gross, vat } = reindexInvoiceItems(items)
+        this.net.set(net)
+        this.gross.set(gross)
+        this.vat.set(vat)
         this.#global.forceSelectionUpdate()
-        this.computeVariables()
-        return items
+        return reindexed
     }
-    hasNewSet = (_:TNewItems) => this.allowedNewItems.contains(_)
 
-    onQuickQtyChange () {
-        this.reindex(this.items)
+    hasNewSet = (_: TNewItems) => this.allowedNewItems().contains(_)
+
+    onQuickQtyChange() {
+        this._items.set(this.#reindex(this._items()))
     }
-    onDrop = (e: any) => {
-        const order = moveInvoiceItems(this.items, e.previousIndex, e.currentIndex)
+
+    onDrop = (e: CdkDragDrop<InvoiceItem[]>) => {
+        const regularItems = [...this.regularItems()]
+        const order = moveInvoiceItems(regularItems, e.previousIndex, e.currentIndex)
+
+        // Keep non-regular rows in place and inject reordered regular rows in their new sequence.
+        const reorderedRegularQueue = [...regularItems]
+        const reordered = this._items().map(item => {
+            if (item.type === InvoiceItemType.Instalment) return item
+            return reorderedRegularQueue.shift() ?? item
+        })
+
         this.#invoiceService.reorder(order).subscribe()
-        this.reindex(this.items)
+        this._items.set(this.#reindex(reordered))
     }
+
     singleActionResolved(e: ActionEmitterType) {
-        if (e.action.title == $localize`:@@i18n.common.delete:delete`) {
-            this.reload()
-        }
-        else if (e.action.title == $localize`:@@i18n.invoices.combine:combine`) {
-            this.reload()
-        }
-        else if (e.action.title == 'active') {
-            this.reload()
-        }
-        else if (e.action.title == 'inactive') {
+        const reloadTitles = [
+            $localize`:@@i18n.common.delete:delete`,
+            $localize`:@@i18n.invoices.combine:combine`,
+            'active',
+            'inactive'
+        ]
+        if (reloadTitles.includes(e.action.title)) {
             this.reload()
         } else {
-            this.reindex(this.items)
+            this._items.set(this.#reindex(this._items()))
         }
     }
+
     onNewItem = (continueWith?: InvoiceItem) => {
         const item = continueWith ?? this.#getNewItem()
-        this.#modalService.open(ModalEditInvoiceItemComponent, item, this.companyRef, 'Add', '@@i18n.invoice.addNewInvoiceItem', 'Add & next').then(_ => {
+        this.#modalService.open(ModalEditInvoiceItemComponent, item, this.companyRef(), 'Add', '@@i18n.invoice.addNewInvoiceItem', 'Add & next').then(_ => {
             if ('item' in _) {
-                const key = InvoiceItem.parentField(this.parent)
+                const key = InvoiceItem.parentField(this.parent())
                 if (key) {
-                    (_.item as any)[key] = this.parent.id
+                    (_.item as any)[key] = this.parent().id
                     const payload = _.item.getPrimitives(['my_prediction'])
-                    payload[key] = this.parent.id
+                    payload[key] = this.parent().id
                     payload.position = this.#getNextPosition()
                     _.item.store(payload).subscribe((x: InvoiceItem) => {
-                        this.items.push(InvoiceItem.fromJson(x))
-                        this.reindex(this.items)
+                        this._items.set(this.#reindex([...this._items(), InvoiceItem.fromJson(x)]))
                     })
                     if (_.continue) {
                         this.onNewItem(_.item)
@@ -193,13 +201,14 @@ export class InvoicePrepare implements OnChanges, OnInit, OnDestroy {
             }
         }).catch()
     }
-    onNewPaydown(continueWith?: InvoiceItem) {
+
+    onNewPaydown = (continueWith?: InvoiceItem) => {
         const item = continueWith ?? this.#getNewItem()
-        this.#modalService.open(ModalEditInvoiceItemComponent, item, this.companyRef, 'Add', 'New paydown').then(_ => {
+        this.#modalService.open(ModalEditInvoiceItemComponent, item, this.companyRef(), 'Add', 'New paydown').then(_ => {
             if ('item' in _) {
-                const key = InvoiceItem.parentField(this.parent)
+                const key = InvoiceItem.parentField(this.parent())
                 if (key) {
-                    (_.item as any)[key] = this.parent.id
+                    (_.item as any)[key] = this.parent().id
 
                     const payload = _.item.getPrimitives(['my_prediction'])
                     payload.position = this.#getNextPosition()
@@ -208,18 +217,17 @@ export class InvoicePrepare implements OnChanges, OnInit, OnDestroy {
 
                     const payloadCompany = _.item.getPrimitives(['my_prediction'])
                     payloadCompany[key] = null
-                    payloadCompany.company_id = this.parent.getCompanyId()
-                    if (this.parent instanceof Project) {
-                        const asProject = this.parent as Project
-                        payloadCompany.text = `<b>${asProject.name}</b><br>${payloadCompany.text}`
-                        if (asProject.po_number) {
-                            payloadCompany.text = `${asProject.po_number}<br>${payloadCompany.text}`
+                    payloadCompany.company_id = this.parent().getCompanyId()
+                    const proj = this.project()
+                    if (proj) {
+                        payloadCompany.text = `<b>${proj.name}</b><br>${payloadCompany.text}`
+                        if (proj.po_number) {
+                            payloadCompany.text = `${proj.po_number}<br>${payloadCompany.text}`
                         }
                     }
 
-                    forkJoin([_.item.store(payload), _.item.store(payloadCompany)]).subscribe((a:InvoiceItem[]) => {
-                        this.items.push(InvoiceItem.fromJson(a[0]))
-                        this.reindex(this.items)
+                    forkJoin([_.item.store(payload), _.item.store(payloadCompany)]).subscribe((a: InvoiceItem[]) => {
+                        this._items.set(this.#reindex([...this._items(), InvoiceItem.fromJson(a[0])]))
                     })
 
                     if (_.continue) {
@@ -235,49 +243,39 @@ export class InvoicePrepare implements OnChanges, OnInit, OnDestroy {
             const { text } = result
             const group = this.#getNewItem(InvoiceItemType.Header)
             group.text = text
-            
-            // Calculate correct position to put group at the end
             const payload = group.getPrimitives(['my_prediction'])
             payload.position = this.#getNextPosition()
-            
-            group.store(payload).subscribe((x:InvoiceItem) => {
-                this.items.push(InvoiceItem.fromJson(x))
-                this.reindex(this.items)
+            group.store(payload).subscribe((x: InvoiceItem) => {
+                this._items.set(this.#reindex([...this._items(), InvoiceItem.fromJson(x)]))
             })
         }
     }).catch()
 
     onNewDiscount = () => this.#modalService.open(ModalInvoiceDiscountComponent, 'add discount', this.#getBasePrice()).then((res) => {
         if (res) {
-            const _ = this.#getNewItem(InvoiceItemType.Discount);
-            ({
-                title: _.text,
-                price: _.price,
-                qty: _.qty,
-                unit: _.unit_name
-            } = res)
-            
-            // Calculate correct position to put discount at the end
+            const _ = this.#getNewItem(InvoiceItemType.Discount)
+            _.text = res.title
+            _.price = res.price
+            _.qty = res.qty
+            _.unit_name = res.unit
             const payload = _.getPrimitives(['my_prediction'])
             payload.position = this.#getNextPosition()
-            
-            _.store(payload).subscribe((x:InvoiceItem) => {
-                this.items.push(InvoiceItem.fromJson(x))
-                this.reindex(this.items)
+            _.store(payload).subscribe((x: InvoiceItem) => {
+                this._items.set(this.#reindex([...this._items(), InvoiceItem.fromJson(x)]))
             })
         }
     })
 
-    #getFilteredCompanyNet = () => this.company()?.invoice_items.filter(a => a.type === InvoiceItemType.Default).reduce((a,b) => a + b.net, 0) ?? undefined
-    #getBasePrice = () => this.project()?.net ?? this.#getFilteredCompanyNet() ?? 0
-    #getParentField = (): string => this.company() ? 'company_id' : this.project() ? 'project_id' : 'project_id'
+    #getFilteredCompanyNet = () => this.company()?.invoice_items.filter(a => a.type === InvoiceItemType.Default).reduce((a, b) => a + b.net, 0) ?? undefined
+    #getBasePrice          = () => this.project()?.net ?? this.#getFilteredCompanyNet() ?? 0
 
     #getNewItem = (t: InvoiceItemType = InvoiceItemType.Default) => {
-        const data: any = { type: t, position: 0 }
-        if (this.parent?.id) {
-            data[this.#getParentField()] = this.parent.id
+        const key = InvoiceItem.parentField(this.parent())
+        const data: Record<string, unknown> = { type: t, position: 0 }
+        if (key && this.parent()?.id) {
+            data[key] = this.parent().id
         }
-        const company = this.getCompany()
+        const company = this.effectiveCompany()
         if (company?.getParam('INVOICE_DISCOUNT')) {
             data['discount'] = parseFloat(company.getParam('INVOICE_DISCOUNT') ?? '0')
         }
@@ -287,16 +285,8 @@ export class InvoicePrepare implements OnChanges, OnInit, OnDestroy {
         return InvoiceItem.fromJson(data)
     }
 
-    /**
-     * Calculates the next position for a new invoice item to be placed at the end
-     * @returns The position number for the new item
-     */
     #getNextPosition = (): number => {
-        const nextPosition = Math.max(...this.items.map(ii => ii.position)) + 1
-        if (!nextPosition || nextPosition === Infinity || nextPosition === -Infinity) {
-            return 0
-        }
-        return nextPosition
+        const next = Math.max(...this._items().map(ii => ii.position)) + 1
+        return (!next || next === Infinity || next === -Infinity) ? 0 : next
     }
-
 }

@@ -63,7 +63,6 @@ export class HrStatsPredictionAccuracyComponent implements OnInit {
     #createChartOptions(user: PredictionAccuracyData): any {
         const months = user.monthly_accuracy.map(item => item.month).sort();
         const series = this.#createSeries(user, months);
-
         return {
             ...EChartsSimpleOptions,
             xAxis: {
@@ -99,7 +98,6 @@ export class HrStatsPredictionAccuracyComponent implements OnInit {
                     tooltipContent += `<strong style="color: ${cyanColor};">Without Overhead:</strong><br/>`;
                     tooltipContent += `<div class="d-flex justify-content-between"><span>Average:</span><span class="ms-2">${monthData.focused.average_bias_factor.toFixed(2)}x</span></div>`;
                     tooltipContent += `<div class="d-flex justify-content-between"><span>Range:</span><span class="ms-2">${monthData.focused.min_bias_factor.toFixed(2)}x to ${monthData.focused.max_bias_factor.toFixed(2)}x</span></div>`;
-
                     return `<div class="card">${tooltipContent}</div>`;
                 }
             },
@@ -117,7 +115,6 @@ export class HrStatsPredictionAccuracyComponent implements OnInit {
             const data = monthDataMap.get(month);
             return data ? data.focused.max_bias_factor - data.focused.min_bias_factor : null;
         });
-
         return [
             {
                 name: 'Range Base',
@@ -196,7 +193,6 @@ export class HrStatsPredictionAccuracyComponent implements OnInit {
         const isOverEstimated = overallAverage < 1;
         const deviation = isOverEstimated ? (1 - overallAverage) * 100 : (overallAverage - 1) * 100;
         const maxDeviation = Math.max(50, deviation * 1.2); // Ensure at least 50% range
-
         return {
             ...EChartsSimpleOptions,
             backgroundColor: 'transparent',

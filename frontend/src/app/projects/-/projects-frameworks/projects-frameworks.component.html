@@ -54,7 +54,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr *nxFor="let framework of filteredFrameworks">
+              @for (framework of filteredFrameworks; track framework.id) {
+              <tr [nx]="framework" [tables]="filteredFrameworks">
                 <td><avatar [object]="framework.projects[0].company"></avatar></td>
                 <td><a class="text-decoration-none text-white" [href]="framework.url" target="_blank">{{framework.name}}</a></td>
                 <td>
@@ -81,6 +82,7 @@
                   </span>
                 </td>
               </tr>
+              }
             </tbody>
           </table>
         </div>

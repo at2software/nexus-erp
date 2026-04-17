@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Traits\HasTasksTrait;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -27,7 +29,7 @@ class Milestone extends BaseModel {
         'workload_hours',
     ];
     protected $appends = ['computed_workload_percent'];
-    protected $access  = ['admin' => '*', 'project_manager'=>'*', 'user'=>'*'];
+    protected $access  = ['admin' => '*', 'project_manager' => '*', 'user' => '*'];
 
     public function getChildrenAttribute() {
         return $this->dependees()->withPivot(['dependant_id', 'dependee_id'])->get();
@@ -80,8 +82,8 @@ class Milestone extends BaseModel {
             return 0;
         }
 
-        $startedAt   = $this->started_at ? \Carbon\Carbon::parse($this->started_at) : now();
-        $dueAt       = $this->due_at ? \Carbon\Carbon::parse($this->due_at) : now()->addDays(7);
+        $startedAt   = $this->started_at ? Carbon::parse($this->started_at) : now();
+        $dueAt       = $this->due_at ? Carbon::parse($this->due_at) : now()->addDays(7);
         $workingDays = $this->countWorkingDaysBetween($startedAt, $dueAt);
 
         if ($workingDays <= 0) {
@@ -96,12 +98,18 @@ class Milestone extends BaseModel {
         if ($avgDailyHours <= 0) {
             return 100.0;
         }
-
         return round(($dailyHours / $avgDailyHours) * 100, 1);
     }
-    private function countWorkingDaysBetween(\Carbon\Carbon $start, \Carbon\Carbon $end): int {
+    public function getDailyHours(User $user): float {
+        $workloadPercent = $this->computed_workload_percent;
+        if ($workloadPercent === null || $workloadPercent === 0) {
+            return 0;
+        }
+        return ($workloadPercent / 100) * $user->hpd;
+    }
+    private function countWorkingDaysBetween(Carbon $start, Carbon $end): int {
         $workingDays = 0;
-        $period      = \Carbon\CarbonPeriod::create($start, $end);
+        $period      = CarbonPeriod::create($start, $end);
 
         foreach ($period as $date) {
             $dayOfWeek = $date->dayOfWeekIso;
@@ -109,7 +117,6 @@ class Milestone extends BaseModel {
                 $workingDays++;
             }
         }
-
         return max($workingDays, 1);
     }
 }

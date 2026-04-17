@@ -1,0 +1,17 @@
+.positive-autocomplete {
+    .dropdown-menu {
+        max-height: 250px;
+        overflow-y: auto;
+        top: 100%;
+        left: 0;
+        z-index: 1050;
+    }
+
+    .dropdown-item {
+        cursor: pointer;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+    }
+}

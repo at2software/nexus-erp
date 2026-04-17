@@ -14,7 +14,8 @@
 
   @if (!getOptions()['chart-only']?.value) {
     <ul-compact [badge]="this.badgeCount(data) > 0 ? '' + this.badgeCount(data) : undefined">
-      <li class="list-group-item d-flex text-nowrap {{_.markerClass()}}" [class.compact]="indexExceedsSettings(i) && !_.badge" *nxFor="let _ of data; let i = index" [ngbTooltip]="getProbabilityTooltip(_)">
+      @for (_ of data; track _.id; let i = $index) {
+      <li class="list-group-item d-flex text-nowrap {{_.markerClass()}}" [nx]="_" [tables]="data" [class.compact]="indexExceedsSettings(i) && !_.badge" [ngbTooltip]="getProbabilityTooltip(_)">
         <div>
           <avatar [object]="_"></avatar>
         </div>
@@ -26,6 +27,7 @@
           <progress-bar [progress]="_.lead_probability || 0" [style]="'purple'" [title]="((_.lead_probability || 0) * 100).toFixed(1) + '%'"></progress-bar>
         </div>
       </li>
+      }
     </ul-compact>
   }
 

@@ -28,6 +28,5 @@ export const deepMerge = (...objects: any[]) => {
         const source = objects.shift();
         deepMergeInner(target, source);
     }
-
     return target;
 }

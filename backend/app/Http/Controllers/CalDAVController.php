@@ -7,7 +7,9 @@ use App\DAV\OwnPDOBasicAuthBackend;
 use App\DAV\OwnPrincipalBackend;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Sabre\CalDAV;
+use Sabre\CalDAV\ICSExportPlugin;
 use Sabre\DAV;
 use Sabre\DAVACL;
 
@@ -28,7 +30,7 @@ class CalDAVController extends Controller {
         return $this->createResponseWithCorrectHeader($request);
     }
     public function startCardDAVServer(string $rootUri) {
-        $pdo = \DB::connection()->getPdo();
+        $pdo = DB::connection()->getPdo();
         $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         $server = $this->createCardDAVServer($pdo);
 
@@ -42,7 +44,7 @@ class CalDAVController extends Controller {
         $aclPlugin = new DAVACL\Plugin;
         $server->addPlugin($aclPlugin);
 
-        $icsPlugin = new \Sabre\CalDAV\ICSExportPlugin;
+        $icsPlugin = new ICSExportPlugin;
         $server->addPlugin($icsPlugin);
 
         // And off we go!

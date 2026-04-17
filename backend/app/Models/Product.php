@@ -19,9 +19,9 @@ class Product extends BaseModel {
     protected $fillable = ['name', 'unit_name', 'is_active', 'is_discountable', 'vat', 'recurrence', 'product_group_id', 'created_at', 'updated_at'];
     protected $touches  = ['group'];
     protected $casts    = [
-        'net'     => PrecomputedAuth::class,
+        'net' => PrecomputedAuth::class,
     ];
-    protected $access = ['admin' => '*', 'project_manager'=>'r', 'user'=>'r'];
+    protected $access = ['admin' => '*', 'project_manager' => 'r', 'user' => 'r'];
 
     public function getIconAttribute() {
         return '../icons/product.jpg';

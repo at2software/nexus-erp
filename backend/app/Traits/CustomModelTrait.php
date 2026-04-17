@@ -35,7 +35,9 @@ trait CustomModelTrait {
         return DB::select('describe '.$this->getTable());
     }
     public function getVirtualColumns() {
-        return array_values(array_map(function ($_) { return $_->Field; }, Arr::where($this->getColumnDescriptions(), function ($_) {
+        return array_values(array_map(function ($_) {
+            return $_->Field;
+        }, Arr::where($this->getColumnDescriptions(), function ($_) {
             return $_->Extra == 'VIRTUAL GENERATED';
         })));
     }
@@ -61,59 +63,59 @@ trait CustomModelTrait {
      */
     private static array $modelRoleAccess = [
         // === PROJECTS ===
-        'Project'            => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
-        'Assignment'         => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
-        'AssignmentRole'     => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
-        'UptimeMonitor'      => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
-        'UptimeCheck'        => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
-        'ProjectUptimeMonitor' => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
-        'DebriefPositive'    => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
-        'DebriefProblem'     => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
+        'Project'                => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
+        'Assignment'             => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
+        'AssignmentRole'         => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
+        'UptimeMonitor'          => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
+        'UptimeCheck'            => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
+        'ProjectUptimeMonitor'   => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
+        'DebriefPositive'        => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
+        'DebriefProblem'         => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
         'DebriefProblemCategory' => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
-        'DebriefProjectDebrief' => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
-        'DebriefSolution'    => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
+        'DebriefProjectDebrief'  => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
+        'DebriefSolution'        => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
 
         // === COMPANIES / CRM ===
-        'Company'            => ['create' => ['project_manager', 'marketing'], 'read' => ['user', 'project_manager', 'marketing'], 'update' => ['project_manager', 'marketing'], 'delete' => []],
-        'CompanyContact'     => ['create' => ['project_manager', 'marketing'], 'read' => ['user', 'project_manager', 'marketing'], 'update' => ['project_manager', 'marketing'], 'delete' => []],
-        'Contact'            => ['create' => ['project_manager', 'marketing'], 'read' => ['user', 'project_manager', 'marketing'], 'update' => ['project_manager', 'marketing'], 'delete' => []],
-        'Connection'         => ['create' => ['project_manager', 'marketing'], 'read' => ['user', 'project_manager', 'marketing'], 'update' => ['project_manager', 'marketing'], 'delete' => []],
-        'ConnectionProject'  => ['create' => ['project_manager', 'marketing'], 'read' => ['user', 'project_manager', 'marketing'], 'update' => ['project_manager', 'marketing'], 'delete' => []],
+        'Company'           => ['create' => ['project_manager', 'marketing'], 'read' => ['user', 'project_manager', 'marketing'], 'update' => ['project_manager', 'marketing'], 'delete' => []],
+        'CompanyContact'    => ['create' => ['project_manager', 'marketing'], 'read' => ['user', 'project_manager', 'marketing'], 'update' => ['project_manager', 'marketing'], 'delete' => []],
+        'Contact'           => ['create' => ['project_manager', 'marketing'], 'read' => ['user', 'project_manager', 'marketing'], 'update' => ['project_manager', 'marketing'], 'delete' => []],
+        'Connection'        => ['create' => ['project_manager', 'marketing'], 'read' => ['user', 'project_manager', 'marketing'], 'update' => ['project_manager', 'marketing'], 'delete' => []],
+        'ConnectionProject' => ['create' => ['project_manager', 'marketing'], 'read' => ['user', 'project_manager', 'marketing'], 'update' => ['project_manager', 'marketing'], 'delete' => []],
 
         // === INVOICES ===
-        'Invoice'            => ['create' => ['invoicing'], 'read' => ['invoicing'], 'update' => ['invoicing'], 'delete' => ['invoicing']],
-        'InvoiceItem'        => ['create' => ['invoicing', 'project_manager'], 'read' => ['invoicing', 'project_manager'], 'update' => ['invoicing', 'project_manager'], 'delete' => ['invoicing', 'project_manager']],
-        'InvoiceReminder'    => ['create' => ['invoicing'], 'read' => ['invoicing'], 'update' => ['invoicing'], 'delete' => ['invoicing']],
+        'Invoice'               => ['create' => ['invoicing'], 'read' => ['invoicing'], 'update' => ['invoicing'], 'delete' => ['invoicing']],
+        'InvoiceItem'           => ['create' => ['invoicing', 'project_manager'], 'read' => ['invoicing', 'project_manager'], 'update' => ['invoicing', 'project_manager'], 'delete' => ['invoicing', 'project_manager']],
+        'InvoiceReminder'       => ['create' => ['invoicing'], 'read' => ['invoicing'], 'update' => ['invoicing'], 'delete' => ['invoicing']],
         'InvoiceItemPrediction' => ['create' => ['invoicing', 'project_manager'], 'read' => ['invoicing', 'project_manager'], 'update' => ['invoicing', 'project_manager'], 'delete' => ['invoicing', 'project_manager']],
 
         // === PRODUCTS ===
-        'Product'            => ['create' => ['product_manager'], 'read' => ['user', 'project_manager', 'product_manager'], 'update' => ['product_manager'], 'delete' => ['product_manager']],
-        'ProductGroup'       => ['create' => ['product_manager'], 'read' => ['user', 'project_manager', 'product_manager'], 'update' => ['product_manager'], 'delete' => ['product_manager']],
+        'Product'      => ['create' => ['product_manager'], 'read' => ['user', 'project_manager', 'product_manager'], 'update' => ['product_manager'], 'delete' => ['product_manager']],
+        'ProductGroup' => ['create' => ['product_manager'], 'read' => ['user', 'project_manager', 'product_manager'], 'update' => ['product_manager'], 'delete' => ['product_manager']],
 
         // === MARKETING ===
-        'MarketingActivity'          => ['create' => ['marketing'], 'read' => ['marketing'], 'update' => ['marketing'], 'delete' => ['marketing']],
-        'MarketingInitiative'        => ['create' => ['marketing'], 'read' => ['marketing'], 'update' => ['marketing'], 'delete' => ['marketing']],
-        'MarketingInitiativeActivity'=> ['create' => ['marketing'], 'read' => ['marketing'], 'update' => ['marketing'], 'delete' => ['marketing']],
-        'MarketingPerformanceMetric' => ['create' => ['marketing'], 'read' => ['marketing'], 'update' => ['marketing'], 'delete' => ['marketing']],
-        'MarketingProspect'          => ['create' => ['marketing'], 'read' => ['marketing'], 'update' => ['marketing'], 'delete' => ['marketing']],
-        'MarketingProspectActivity'  => ['create' => ['marketing'], 'read' => ['marketing'], 'update' => ['marketing'], 'delete' => ['marketing']],
-        'MarketingWorkflow'          => ['create' => ['marketing'], 'read' => ['marketing'], 'update' => ['marketing'], 'delete' => ['marketing']],
+        'MarketingActivity'           => ['create' => ['marketing'], 'read' => ['marketing'], 'update' => ['marketing'], 'delete' => ['marketing']],
+        'MarketingInitiative'         => ['create' => ['marketing'], 'read' => ['marketing'], 'update' => ['marketing'], 'delete' => ['marketing']],
+        'MarketingInitiativeActivity' => ['create' => ['marketing'], 'read' => ['marketing'], 'update' => ['marketing'], 'delete' => ['marketing']],
+        'MarketingPerformanceMetric'  => ['create' => ['marketing'], 'read' => ['marketing'], 'update' => ['marketing'], 'delete' => ['marketing']],
+        'MarketingProspect'           => ['create' => ['marketing'], 'read' => ['marketing'], 'update' => ['marketing'], 'delete' => ['marketing']],
+        'MarketingProspectActivity'   => ['create' => ['marketing'], 'read' => ['marketing'], 'update' => ['marketing'], 'delete' => ['marketing']],
+        'MarketingWorkflow'           => ['create' => ['marketing'], 'read' => ['marketing'], 'update' => ['marketing'], 'delete' => ['marketing']],
 
         // === HR ===
-        'UserEmployment'     => ['create' => ['hr'], 'read' => ['hr'], 'update' => ['hr'], 'delete' => []],
-        'UserGroup'          => ['create' => ['hr'], 'read' => ['hr', 'project_manager'], 'update' => ['hr'], 'delete' => []],
-        'UserPaidTime'       => ['create' => ['hr'], 'read' => ['hr'], 'update' => ['hr'], 'delete' => []],
-        'VacationGrant'      => ['create' => ['hr'], 'read' => ['hr', 'user'], 'update' => ['hr'], 'delete' => []],
-        'Vacation'           => ['create' => ['hr', 'user'], 'read' => ['hr', 'user'], 'update' => ['hr'], 'delete' => []],
+        'UserEmployment' => ['create' => ['hr'], 'read' => ['hr'], 'update' => ['hr'], 'delete' => []],
+        'UserGroup'      => ['create' => ['hr'], 'read' => ['hr', 'project_manager'], 'update' => ['hr'], 'delete' => []],
+        'UserPaidTime'   => ['create' => ['hr'], 'read' => ['hr'], 'update' => ['hr'], 'delete' => []],
+        'VacationGrant'  => ['create' => ['hr'], 'read' => ['hr', 'user'], 'update' => ['hr'], 'delete' => []],
+        'Vacation'       => ['create' => ['hr', 'user'], 'read' => ['hr', 'user'], 'update' => ['hr'], 'delete' => []],
 
         // === FINANCIAL ===
-        'Cash'               => ['create' => ['financial'], 'read' => ['financial'], 'update' => ['financial'], 'delete' => []],
-        'CashRegister'       => ['create' => ['financial'], 'read' => ['financial'], 'update' => ['financial'], 'delete' => []],
-        'Expense'            => ['create' => ['financial'], 'read' => ['financial'], 'update' => ['financial'], 'delete' => []],
-        'ExpenseCategory'    => ['create' => ['financial'], 'read' => ['financial'], 'update' => ['financial'], 'delete' => []],
+        'Cash'            => ['create' => ['financial'], 'read' => ['financial'], 'update' => ['financial'], 'delete' => []],
+        'CashRegister'    => ['create' => ['financial'], 'read' => ['financial'], 'update' => ['financial'], 'delete' => []],
+        'Expense'         => ['create' => ['financial'], 'read' => ['financial'], 'update' => ['financial'], 'delete' => []],
+        'ExpenseCategory' => ['create' => ['financial'], 'read' => ['financial'], 'update' => ['financial'], 'delete' => []],
 
         // === USERS ===
-        'User'               => ['create' => [], 'read' => ['user', 'project_manager'], 'update' => ['user', 'project_manager'], 'delete' => []],
+        'User' => ['create' => [], 'read' => ['user', 'project_manager'], 'update' => ['user', 'project_manager'], 'delete' => []],
     ];
 
     private static array $standardRoleAccess = [
@@ -236,11 +238,9 @@ trait CustomModelTrait {
     public function canBeAccessedByUser($crud = 'read'): bool {
         return self::checkRoleAccess(get_class($this), $crud);
     }
-
     public static function hasUserAccess($crud = 'read'): bool {
         return self::checkRoleAccess(static::class, $crud);
     }
-
     private static function checkRoleAccess(string $modelClass, string $crud): bool {
         $user = request()->user();
         if (! $user) {
@@ -249,10 +249,9 @@ trait CustomModelTrait {
         if ($user->hasRole('admin')) {
             return true;
         }
-        $modelName   = str_replace('App\\Models\\', '', $modelClass);
-        $accessMap   = self::$modelRoleAccess[$modelName] ?? self::$standardRoleAccess;
+        $modelName    = str_replace('App\\Models\\', '', $modelClass);
+        $accessMap    = self::$modelRoleAccess[$modelName] ?? self::$standardRoleAccess;
         $allowedRoles = $accessMap[$crud] ?? [];
-
         return $user->hasAnyRole($allowedRoles);
     }
     public function matches(array $attributes): bool {

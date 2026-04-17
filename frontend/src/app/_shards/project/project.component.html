@@ -1,63 +1,51 @@
-<div class="background" [style.backgroundColor]="project.state.color || '#000'"></div>
+@let p = project();
+@let state = p.state;
+@let color = state.color;
+
+<div class="background" [style.backgroundColor]="color || '#000'"></div>
 <div class="icon">
-  @if (project.state.isPrepared()) {
-    <i [style.color]="project.state.color">search</i>
+  @if (state.isPrepared()) {
+    <i [style.color]="color">search</i>
   }
-  @if (project.state.isRunning() && project.is_time_based) {
-    <i [style.color]="project.state.color">schedule</i>
+  @if (state.isRunning()) {
+    <i [style.color]="color">{{ p.is_time_based ? 'schedule' : 'attach_money' }}</i>
   }
-  @if (project.state.isRunning() && !project.is_time_based) {
-    <i [style.color]="project.state.color">attach_money</i>
+  @if (state.isFinishedSuccessful()) {
+    <i [style.color]="color">check_circle</i>
   }
-  @if (project.state.isFinishedSuccessful()) {
-    <i [style.color]="project.state.color">check_circle</i>
+  @if (state.isFinishedFailed()) {
+    <i [style.color]="color">cancel</i>
   }
-  @if (project.state.isFinishedFailed()) {
-    <i [style.color]="project.state.color">cancel</i>
-  }
-  @if (project.state.isFinishedIgnored()) {
-    <i [style.color]="project.state.color">swap_horiz</i>
+  @if (state.isFinishedIgnored()) {
+    <i [style.color]="color">swap_horiz</i>
   }
 </div>
 
-@if (project.progress <= 1) {
+@if (p.progress <= 1) {
   <div class="outline" style="border-color: #000;">
     <div class="outline-limit">
-      <div class="outline-limit-height" [style.height.%]="project.progress * 100">
-        <div class="outline" [style.borderColor]="project.state.color"></div>
+      <div class="outline-limit-height" [style.height.%]="p.progress * 100">
+        <div class="outline" [style.borderColor]="color"></div>
       </div>
     </div>
   </div>
 }
-
-@if (project.progress > 1) {
-  <div class="outline" [style.borderColor]="project.state.color">
+@if (p.progress > 1) {
+  <div class="outline" [style.borderColor]="color">
     <div class="outline-limit">
-      <div class="outline-limit-height" [style.height.%]="(project.progress - 1) * 100">
+      <div class="outline-limit-height" [style.height.%]="(p.progress - 1) * 100">
         <div class="outline" style="border-color: var(--color-danger);"></div>
       </div>
     </div>
   </div>
 }
 
-@if (!click && !noRouting) {
-  <div
-    class="link cursor-pointer"
-    [ngbTooltip]="tooltip()"
-    smartLink="/projects/{{project.id}}">
-  </div>
+@if (!click() && !noRouting()) {
+  <div class="link cursor-pointer" [ngbTooltip]="tooltip()" smartLink="/projects/{{p.id}}"></div>
 }
-@if (!click && noRouting) {
-  <div
-    class="link cursor-pointer"
-    [ngbTooltip]="tooltip()"
-    >
-  </div>
+@if (!click() && noRouting()) {
+  <div class="link cursor-pointer" [ngbTooltip]="tooltip()"></div>
 }
-@if (click) {
-  <div
-    class="link cursor-pointer"
-    [ngbTooltip]="tooltip()"
-    (click)="click()" tabindex="0" (keydown.enter)="click()">
-  </div>
+@if (click()) {
+  <div class="link cursor-pointer" [ngbTooltip]="tooltip()" (click)="click()" tabindex="0" (keydown.enter)="click()"></div>
 }

@@ -41,7 +41,6 @@ class LiveSharingController extends Controller {
             $validated['enabled'],
             $validated['url']
         ));
-
         return response()->json(['status' => 'success']);
     }
     public function getActiveSharings() {

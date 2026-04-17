@@ -94,6 +94,7 @@
                 @for (span of week; track span) {
                   <div
                     class="event-span"
+                    [nx]="span.calendarEntry"
                                  [ngStyle]="{
                                      'grid-column': (span.startDay + 1) + ' / ' + (span.endDay + 2),
                                      'grid-row': span.row + 1

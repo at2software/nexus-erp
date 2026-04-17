@@ -13,7 +13,10 @@ class CancelInvoiceAction {
     ) {}
 
     public function execute(Invoice $invoice): array {
-        $title = Param::get('INVOICE_CANCEL_TITLE')->value;
+        $lang      = $invoice->company->getLanguage();
+        $formality = $invoice->company->getFormality();
+
+        $title = Param::get('INVOICE_CANCEL_TITLE')->localizedValue($lang, $formality) ?? '';
 
         $items = $invoice->invoiceItems;
         $items->each(function (&$_) {
@@ -26,14 +29,16 @@ class CancelInvoiceAction {
         [$cancellationInvoice, $zugferdPdf, $filename] = $this->createInvoiceAction->execute(
             $items,
             $title,
-            Param::get('INVOICE_CANCEL_PREFIX')->value,
-            Param::get('INVOICE_CANCEL_SUFFIX')->value,
+            Param::get('INVOICE_CANCEL_PREFIX')->localizedValue($lang, $formality) ?? '',
+            Param::get('INVOICE_CANCEL_SUFFIX')->localizedValue($lang, $formality) ?? '',
             $invoice->company,
             ZugferdInvoiceType::CORRECTION,
             $invoice
         );
 
-        Invoice::batchAssign($invoice->invoiceItems()->get(), null, $invoice->company->id);
+        // Free original items so they reappear in their billing section (stage-based)
+        $invoice->invoiceItems()->update(['invoice_id' => null]);
+
         $invoice->setCancelledAttributes();
         $cancellationInvoice->cancellation_invoice_id = $invoice->id;
         $cancellationInvoice->setCancelledAttributes();

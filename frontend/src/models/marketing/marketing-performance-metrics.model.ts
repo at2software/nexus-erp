@@ -62,4 +62,35 @@ export class MarketingPerformanceMetric extends Serializable {
             default: return '#6b7280'; // Gray
         }
     }
+
+    formatValue(): string {
+        const stats = this.activity_stats;
+        if (!stats) return '';
+        switch (this.metric_type) {
+            case 'percentage':
+            case 'conversion':
+                return `${((stats.completed / stats.total) * 100).toFixed(1)}%`;
+            case 'currency':
+                return `$${stats.completed.toLocaleString()}`;
+            case 'duration':
+                return `${stats.completed}h`;
+            default:
+                return stats.completed.toString();
+        }
+    }
+
+    formatTargetValue(): string {
+        const value = this.target_value ?? 0;
+        switch (this.metric_type) {
+            case 'percentage':
+            case 'conversion':
+                return `${value}%`;
+            case 'currency':
+                return `$${value.toLocaleString()}`;
+            case 'duration':
+                return `${value}h`;
+            default:
+                return value.toString();
+        }
+    }
 }

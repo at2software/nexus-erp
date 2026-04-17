@@ -14,13 +14,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  * but we still want to keep track that we indirectly had a project with them.
  */
 /**
- * @property \App\Models\Connection $connection
+ * @property Connection $connection
  */
 class ConnectionProject extends BaseModel {
     use HasFactory;
 
     protected $fillable = ['project_id', 'connection_id'];
-    protected $access   = ['admin' => '*', 'project_manager'=>'cru', 'user'=>'cru'];
+    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
     public function connection() {
         return $this->belongsTo(Connection::class);

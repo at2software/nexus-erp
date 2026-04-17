@@ -177,7 +177,7 @@
 
             <!-- Required Activity -->
             <div class="row mb-3 align-items-center">
-                <label class="col-3 col-form-label" i18n="@@i18n.marketing.required_activity">required</label>
+                <span class="col-3 col-form-label" i18n="@@i18n.marketing.required_activity">required</span>
                 <div class="col-8">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="activityRequired"
@@ -231,7 +231,7 @@
 </div>
 
 @if (showActivityModal) {
-<div class="modal-backdrop fade show" (click)="resetActivityForm()"></div>
+<div class="modal-backdrop fade show" tabindex="0" (click)="resetActivityForm()" (keyup.enter)="resetActivityForm()"></div>
 }
 
 <!-- Recursive Activity Branch Template -->

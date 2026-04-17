@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\I18n;
 use App\Traits\HasI18nTrait;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -22,10 +23,10 @@ class MarketingActivity extends BaseModel {
         'quick_action',
     ];
     protected $casts = [
-        'day_offset'               => 'integer',
-        'is_required'              => 'boolean',
-        'has_external_dependency'  => 'boolean',
-        'description'              => \App\Casts\I18n::class,
+        'day_offset'              => 'integer',
+        'is_required'             => 'boolean',
+        'has_external_dependency' => 'boolean',
+        'description'             => I18n::class,
     ];
 
     // Relationships

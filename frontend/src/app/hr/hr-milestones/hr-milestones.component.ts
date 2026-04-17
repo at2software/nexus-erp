@@ -1,6 +1,7 @@
-import { Component, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Subject, takeUntil } from 'rxjs';
+import { Component, DestroyRef, OnInit, inject, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+
 import { GlobalService } from 'src/models/global.service';
 import { MilestoneService } from 'src/models/milestones/milestone.service';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
@@ -20,10 +21,10 @@ import { HrTeamService } from '../hr-team/hr-team.service';
     templateUrl: './hr-milestones.component.html',
     styleUrls: ['./hr-milestones.component.scss'],
     standalone: true,
-    imports: [CommonModule, ToolbarComponent, CustomGanttComponent, NgbDropdownModule]
+    imports: [ToolbarComponent, CustomGanttComponent, NgbDropdownModule]
 })
-export class HrMilestonesComponent implements OnInit, OnDestroy {
-    @ViewChild(CustomGanttComponent) ganttComponent?: CustomGanttComponent;
+export class HrMilestonesComponent implements OnInit {
+    ganttComponent = viewChild(CustomGanttComponent);
 
     allMilestones: Milestone[] = [];
     ganttRows: GanttRow[] = [];
@@ -32,7 +33,7 @@ export class HrMilestonesComponent implements OnInit, OnDestroy {
     currentViewMode: string = localStorage.getItem('hrMilestonesViewMode') || 'Week';
     loading: boolean = true;
     error: string | null = null;
-    #destroy$ = new Subject<void>();
+    #destroyRef = inject(DestroyRef);
 
     get workloadUser() {
         return this.#hrTeamService.getUser();
@@ -47,7 +48,7 @@ export class HrMilestonesComponent implements OnInit, OnDestroy {
 
     ngOnInit(): void {
         // Reload when selected user changes
-        this.#hrTeamService.onUserChange.pipe(takeUntil(this.#destroy$)).subscribe(() => {
+        this.#hrTeamService.onUserChange.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(() => {
             this.loadMilestones();
         });
     }
@@ -64,7 +65,7 @@ export class HrMilestonesComponent implements OnInit, OnDestroy {
         this.error = null;
 
         this.#milestoneService.indexUserMilestones(userId)
-            .pipe(takeUntil(this.#destroy$))
+            .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe({
                 next: (groups: any[]) => {
                     groups.forEach(_ => {
@@ -167,7 +168,7 @@ export class HrMilestonesComponent implements OnInit, OnDestroy {
                 if (result?.text?.trim()) {
                     this.#projectService.createMilestone(project.id, {
                         name: result.text.trim()
-                    }).pipe(takeUntil(this.#destroy$))
+                    }).pipe(takeUntilDestroyed(this.#destroyRef))
                         .subscribe({
                             next: () => {
                                 Toast.success($localize`:@@i18n.milestone.created:milestone created`);
@@ -193,7 +194,7 @@ export class HrMilestonesComponent implements OnInit, OnDestroy {
                         name: result.text.trim(),
                         parent_type: 'App\\Models\\Project',
                         parent_id: project.id
-                    }).pipe(takeUntil(this.#destroy$))
+                    }).pipe(takeUntilDestroyed(this.#destroyRef))
                         .subscribe({
                             next: () => {
                                 Toast.success($localize`:@@i18n.task.created:Task created`);
@@ -211,8 +212,4 @@ export class HrMilestonesComponent implements OnInit, OnDestroy {
             });
     }
 
-    ngOnDestroy() {
-        this.#destroy$.next();
-        this.#destroy$.complete();
-    }
 }

@@ -71,7 +71,6 @@ export class Milestone extends Serializable {
 				action: () => this.assignTo(user.id)
 			});
 		});
-
 		return actions;
 	}
 

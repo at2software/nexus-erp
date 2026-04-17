@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\UptimeCheck;
 use App\Models\UptimeMonitor;
 use Carbon\Carbon;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -48,7 +49,7 @@ class UptimeCheckService {
                 $status       = 'down';
                 $errorMessage = "Unexpected status code: {$statusCode} (expected: {$monitor->expected_status_code})";
             }
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+        } catch (ConnectionException $e) {
             $responseTime = (int)round((microtime(true) - $startTime) * 1000);
             $status       = 'down';
             $errorMessage = 'Connection failed: '.$e->getMessage();
@@ -73,7 +74,6 @@ class UptimeCheckService {
             'last_check_at' => Carbon::now(),
             'last_status'   => $status,
         ]);
-
         return $check;
     }
     public function shouldNotify(UptimeMonitor $monitor, UptimeCheck $check): bool {
@@ -96,7 +96,6 @@ class UptimeCheckService {
         if ($monitor->last_notified_at && Carbon::now()->diffInHours($monitor->last_notified_at) >= 24) {
             return true;
         }
-
         return false;
     }
     public function shouldNotifyRecovery(UptimeMonitor $monitor, UptimeCheck $check): bool {
@@ -108,12 +107,10 @@ class UptimeCheckService {
             ->where('id', '!=', $check->id)
             ->latest('checked_at')
             ->first();
-
         return $previousCheck && $previousCheck->status !== 'up';
     }
     public function cleanupOldChecks(int $daysToKeep = 90): int {
         $cutoffDate = Carbon::now()->subDays($daysToKeep);
-
         return UptimeCheck::where('checked_at', '<', $cutoffDate)->delete();
     }
 }

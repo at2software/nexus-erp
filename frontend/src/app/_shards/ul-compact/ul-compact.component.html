@@ -1,10 +1,11 @@
+@let _badge = badge();
 <ul class="list-group" [class.compact-list-compacted]="compacted" #list>
   <li class="compact-list-row" (click)="toggle()" (keyup.enter)="toggle()" tabindex="0">
-    @if (!badge) {
+    @if (!_badge) {
       <i class="compact-list-toggle-button" [innerHTML]="compacted ? 'expand_more' : 'expand_less' | safe:'html'"></i>
     }
-    @if (badge) {
-      <div class="compact-list-toggle-badge">{{badge}}</div>
+    @if (_badge) {
+      <div class="compact-list-toggle-badge">{{_badge}}</div>
     }
   </li>
   <ng-content></ng-content>

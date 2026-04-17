@@ -6,6 +6,7 @@ use App\Models\BaseCollection;
 use App\Models\Company;
 use App\Models\ConnectionProject;
 use App\Models\Project;
+use Illuminate\Support\Facades\DB;
 
 class ConnectionProjectCollection extends BaseCollection {
     public function mapSimple(Company $_, ?Project $_project = null, bool $includeProjectCount = false) {
@@ -18,7 +19,7 @@ class ConnectionProjectCollection extends BaseCollection {
                 'other_company' => $otherCompany->only(['id', 'class', 'name', 'icon']),
             ];
             if ($includeProjectCount && $_project) {
-                $projectCount = \DB::table('connection_projects')
+                $projectCount = DB::table('connection_projects')
                     ->join('projects', 'projects.id', '=', 'connection_projects.project_id')
                     ->where('connection_projects.connection_id', $connection->id)
                     ->where('projects.company_id', $_project->company_id)

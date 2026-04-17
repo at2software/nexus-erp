@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 import { MantisPlugin } from '@models/http/plugin.mantis';
 import { User } from '@models/user/user.model';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
@@ -10,7 +10,7 @@ import { ModalBaseComponent } from '@app/_modals/modal-base.component';
     templateUrl: './mantis-user-selection.component.html',
     styleUrls: ['./mantis-user-selection.component.scss'],
     standalone: true,
-    imports: [FormsModule, CommonModule]
+    imports: [FormsModule]
 })
 export class MantisUserSelectionComponent extends ModalBaseComponent<string> {
 

@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NexusModule } from '@app/nx/nexus.module';
 import { SentinelService } from '@models/sentinel.service';
-import { takeUntil } from 'rxjs';
 import { TabTasksBaseComponent } from '../tab-tasks-base.component';
 
 @Component({
@@ -17,7 +17,7 @@ export class TabTasksSentinelsComponent extends TabTasksBaseComponent {
     #sentinelService = inject(SentinelService)
 
     override reload() {
-        this.#sentinelService.indexActive().pipe(takeUntil(this.destroy$)).subscribe((data: any) => {
+        this.#sentinelService.indexActive().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data: any) => {
             this.response = data || []
             this.countChanged.emit(this.response.reduce((sum: number, s: any) => sum + (s.items?.length ?? 0), 0))
         })

@@ -12,7 +12,7 @@ class KeycloakAuthMiddleware {
         $username = $request->getUser();
         $password = $request->getPassword();
         if (empty($username) || empty($password)) {
-            $response  = $this->createUnauthorizedResponse();
+            $response = $this->createUnauthorizedResponse();
             $response->headers->set('WWW-Authenticate', 'Basic realm="_"');
             return $response;
         }
@@ -26,10 +26,10 @@ class KeycloakAuthMiddleware {
         try {
             $response = $client->post('realms/'.$realm.'/protocol/openid-connect/token', [$headers,
                 'form_params' => [
-                    'grant_type'    => 'password',
-                    'audience'      => $clientid,
-                    'username'      => $username,
-                    'password'      => $password,
+                    'grant_type' => 'password',
+                    'audience'   => $clientid,
+                    'username'   => $username,
+                    'password'   => $password,
                 ],
                 'auth' => [
                     $clientid, '',

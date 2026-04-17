@@ -54,11 +54,6 @@ export class ProfileSentinelTriggerModalComponent extends ModalBaseComponent<boo
         return excluded.includes(tableName);
     }
 
-    #tableToModelName = (name: string) => name
-        .replace(/_([a-z])/g, (_, l) => l.toUpperCase())
-        .replace(/^([a-z])/, (_, l) => l.toUpperCase())
-        .replace(/s$/, '');
-
     onSuccess = () => true
 
     onTriggerTypeChange() {

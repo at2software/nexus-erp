@@ -1,43 +1,9 @@
 <!-- Main Content -->
- 
 
 <div class="row" col-slider>
+
+    <!-- Left: Initiatives list with inline filters -->
     <div class="col-3">
-        <div class="card" data-tour="initiatives-filter">
-            <div class="card-header">
-                <div><i>filter_alt</i></div>
-                <div i18n="@@i18n.common.filter">filter</div>
-            </div>
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
-                    [class.active]="statusFilter === ''"
-                    (click)="filterByStatus('')" tabindex="0" (keydown.enter)="filterByStatus('')">
-                    <span i18n="@@i18n.marketing.total_initiatives">total initiatives</span>
-                    <span class="badge bg-primary rounded-pill">{{stats.total}}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
-                    [class.active]="statusFilter === 'active'"
-                    (click)="filterByStatus('active')" tabindex="0" (keydown.enter)="filterByStatus('active')">
-                    <span i18n="@@i18n.common.active">active</span>
-                    <span class="badge bg-primary rounded-pill">{{stats.active}}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
-                    [class.active]="statusFilter === 'paused'"
-                    (click)="filterByStatus('paused')" tabindex="0" (keydown.enter)="filterByStatus('paused')">
-                    <span i18n="@@i18n.marketing.paused">paused</span>
-                    <span class="badge bg-warning rounded-pill">{{stats.paused}}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
-                    [class.active]="statusFilter === 'completed'"
-                    (click)="filterByStatus('completed')" tabindex="0" (keydown.enter)="filterByStatus('completed')">
-                    <span i18n="@@i18n.common.completed">completed</span>
-                    <span class="badge bg-success rounded-pill">{{stats.completed}}</span>
-                </li>
-            </ul>
-        </div>
-    </div>
-    <!-- Initiatives List -->
-    <div class="col-md-3">
         <div class="card sticky-top" data-tour="initiatives-list">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div i18n="@@i18n.marketing.initiatives">initiatives</div>
@@ -45,6 +11,43 @@
                     <i class="text-primary">add</i>
                 </button>
             </div>
+
+            <!-- Filter badges -->
+            <div class="d-flex gap-1 p-2 border-bottom" data-tour="initiatives-filter">
+                <span class="badge cursor-pointer py-1 px-2"
+                    [class.bg-primary]="statusFilter === ''"
+                    [class.bg-dark]="statusFilter !== ''"
+                    (click)="filterByStatus('')" tabindex="0" (keydown.enter)="filterByStatus('')"
+                    i18n-ngbTooltip="@@i18n.marketing.total_initiatives" ngbTooltip="all">
+                    <i style="font-size:0.8rem;vertical-align:middle">filter_alt</i>
+                    <span class="ms-1 notranslate">{{stats.total}}</span>
+                </span>
+                <span class="badge cursor-pointer py-1 px-2"
+                    [class.bg-primary]="statusFilter === 'active'"
+                    [class.bg-dark]="statusFilter !== 'active'"
+                    (click)="filterByStatus('active')" tabindex="0" (keydown.enter)="filterByStatus('active')"
+                    i18n-ngbTooltip="@@i18n.common.active" ngbTooltip="active">
+                    <i style="font-size:0.8rem;vertical-align:middle">play_circle</i>
+                    <span class="ms-1 notranslate">{{stats.active}}</span>
+                </span>
+                <span class="badge cursor-pointer py-1 px-2"
+                    [class.bg-warning]="statusFilter === 'paused'"
+                    [class.bg-dark]="statusFilter !== 'paused'"
+                    (click)="filterByStatus('paused')" tabindex="0" (keydown.enter)="filterByStatus('paused')"
+                    i18n-ngbTooltip="@@i18n.marketing.paused" ngbTooltip="paused">
+                    <i style="font-size:0.8rem;vertical-align:middle">pause_circle</i>
+                    <span class="ms-1 notranslate">{{stats.paused}}</span>
+                </span>
+                <span class="badge cursor-pointer py-1 px-2"
+                    [class.bg-success]="statusFilter === 'completed'"
+                    [class.bg-dark]="statusFilter !== 'completed'"
+                    (click)="filterByStatus('completed')" tabindex="0" (keydown.enter)="filterByStatus('completed')"
+                    i18n-ngbTooltip="@@i18n.common.completed" ngbTooltip="completed">
+                    <i style="font-size:0.8rem;vertical-align:middle">check_circle</i>
+                    <span class="ms-1 notranslate">{{stats.completed}}</span>
+                </span>
+            </div>
+
             @if (isLoading) {
             <div class="card-body">
                 <div class="text-center p-4">
@@ -90,10 +93,59 @@
         </div>
     </div>
 
-    <!-- Initiative Details -->
-    <div class="col-md-6">
+    <!-- Middle: Initiative detail -->
+    <div class="col-6">
         <router-outlet></router-outlet>
     </div>
+
+    <!-- Right: Recent activity feed -->
+    <div class="col-3">
+        @if (selectedInitiativeId) {
+        <div class="card sticky-top">
+            <div class="card-header">
+                <span i18n="@@i18n.marketing.recent_activity">recent activity</span>
+            </div>
+            @if (isLoadingRecent) {
+            <div class="card-body text-center py-3">
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden" i18n="@@i18n.common.loading">loading</span>
+                </div>
+            </div>
+            }
+            @if (!isLoadingRecent && recentActivities.length === 0) {
+            <div class="card-body">
+                <p class="text-muted small mb-0" i18n="@@i18n.marketing.no_recent_activity">no recent activity</p>
+            </div>
+            }
+            @if (!isLoadingRecent && recentActivities.length > 0) {
+            <ul class="list-group list-group-flush">
+                @for (activity of recentActivities; track activity.id) {
+                <li class="list-group-item px-3 py-2 cursor-pointer"
+                    [routerLink]="['/marketing/prospects', activity.marketing_prospect_id]">
+                    <div class="d-flex justify-content-between align-items-start gap-1 mb-1">
+                        <div class="small text-truncate flex-grow-1">
+                            {{activity.marketing_prospect?.name || activity.marketing_prospect?.email || activity.marketing_prospect_id}}
+                        </div>
+                        <span class="badge flex-shrink-0" [class]="getActivityStatusClass(activity.status)">
+                            {{activity.status}}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center gap-1">
+                        <div class="text-muted text-truncate" style="font-size:0.72rem">
+                            {{activity.marketing_initiative_activity?.name}}
+                        </div>
+                        <div class="text-muted flex-shrink-0" style="font-size:0.72rem">
+                            {{activity.updated_at | date:'dd.MM'}}
+                        </div>
+                    </div>
+                </li>
+                }
+            </ul>
+            }
+        </div>
+        }
+    </div>
+
 </div>
 
 <!-- Create Initiative Modal -->

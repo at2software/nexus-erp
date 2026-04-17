@@ -172,7 +172,7 @@ class OwnCalDAVBackend extends AbstractBackend {
         return $this->getCalendarObjectsBetween($calendarId);
     }
 
-    public function getCalendarObjectsBetween($calendarId, $start=null, $end=null) {
+    public function getCalendarObjectsBetween($calendarId, $start = null, $end = null) {
         if (! is_array($calendarId)) {
             throw new \InvalidArgumentException('The value passed to $calendarId is expected to be an array with a calendarId and an instanceId');
         }

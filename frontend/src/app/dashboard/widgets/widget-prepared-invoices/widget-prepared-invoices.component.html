@@ -16,7 +16,7 @@
     <ul-compact>
       @for (_ of data; track _.id; let i = $index) {
         <li class="list-group-item d-flex text-nowrap"
-          [class.compact]="i >= (options['max-items']?.value ?? 0)"
+          [class.compact]="i >= (options()['max-items']?.value ?? 0)"
           [nx]="_"
           context="widgetPreparedInvoices"
           [tables]="data"

@@ -1,4 +1,4 @@
-@for (a of actions; track a) {
+@for (a of actions(); track a) {
   <li (click)="onClick(a)" (keyup.enter)="onClick(a)" tabindex="0" class="dropdown-item nx-menu" nxSubMenu>
     <a class="d-flex text-decoration-none text-white align-items-center">
       <div class="flex-fill me-3 text-truncate">{{a.title}}</div>

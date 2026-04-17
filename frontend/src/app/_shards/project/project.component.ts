@@ -1,5 +1,5 @@
 
-import { Component, HostBinding, Input } from '@angular/core';
+import { Component, HostBinding, input } from '@angular/core';
 import { SmartLinkDirective } from '@directives/smart-link.directive';
 import { NgbTooltip } from '@ng-bootstrap/ng-bootstrap';
 import { Project } from 'src/models/project/project.model';
@@ -12,10 +12,10 @@ import { Project } from 'src/models/project/project.model';
     standalone: true
 })
 export class ProjectComponent {
-    @Input() project   : Project
-    @Input() title    ?: string
-    @Input() click    ?: ()=>void
-    @Input() noRouting : boolean = false
-    @HostBinding('class.is-internal') get isInternal () { return this.project.is_internal }
-    tooltip = () => this.title ? this.title : this.project.name + ' (' + Math.round(100 * this.project.progress) + '%)'
+    project   = input.required<Project>()
+    title     = input<string>()
+    click     = input<()=>void>()
+    noRouting = input<boolean>(false)
+    @HostBinding('class.is-internal') get isInternal () { return this.project().is_internal }
+    tooltip = () => this.title() ? this.title() : this.project().name + ' (' + Math.round(100 * this.project().progress) + '%)'
 }

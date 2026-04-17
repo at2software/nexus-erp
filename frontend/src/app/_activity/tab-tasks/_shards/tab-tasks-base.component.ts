@@ -1,32 +1,27 @@
-import { Directive, EventEmitter, inject, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { DestroyRef, Directive, inject, input, OnInit, output } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { GlobalService } from '@models/global.service';
-import { Subject, takeUntil } from 'rxjs';
 
 @Directive()
-export abstract class TabTasksBaseComponent implements OnInit, OnDestroy {
+export abstract class TabTasksBaseComponent implements OnInit {
 
-    @Input() roles?: string
-    @Output() countChanged = new EventEmitter<number>()
+    roles        = input<string>()
+    countChanged = output<number>()
 
-    protected destroy$ = new Subject<void>()
+    protected readonly destroyRef = inject(DestroyRef)
     protected global = inject(GlobalService)
 
     ngOnInit() {
-        this.global.init.pipe(takeUntil(this.destroy$)).subscribe(() => {
+        this.global.init.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
             if (this.#hasRoles()) this.reload()
         })
-    }
-
-    ngOnDestroy() {
-        this.destroy$.next()
-        this.destroy$.complete()
     }
 
     abstract reload(): void
 
     #hasRoles(): boolean {
-        if (!this.roles) return true
-        const roleNames = this.roles.split('|').map(r => r.trim()).filter(Boolean)
+        if (!this.roles()) return true
+        const roleNames = this.roles()!.split('|').map(r => r.trim()).filter(Boolean)
         return this.global.user?.hasAnyRole(roleNames) ?? false
     }
 }

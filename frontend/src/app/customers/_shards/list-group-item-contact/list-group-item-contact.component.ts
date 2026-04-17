@@ -1,4 +1,4 @@
-import { Component, HostBinding, Input, OnChanges } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { VcardClass } from 'src/models/vcard/VcardClass';
 import { User } from 'src/models/user/user.model';
 import { CompanyContact } from 'src/models/company/company-contact.model';
@@ -13,81 +13,72 @@ import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
     selector: 'list-group-item-contact',
     templateUrl: './list-group-item-contact.component.html',
     styleUrls: ['./list-group-item-contact.component.scss'],
-    host: { class: 'list-group-item d-flex py-1 px-2 align-items-center gap-2' },
+    host: { class: 'list-group-item d-flex py-1 px-2 align-items-center gap-2', '[class.active]': 'active()' },
     standalone: true,
     imports: [NexusModule, NgbTooltipModule]
 })
-export class ListGroupItemContactComponent implements OnChanges {
+export class ListGroupItemContactComponent {
 
-    @Input() role: string
-    @Input() roleColor: string = 'muted'
-    @Input() imageUrl: string | undefined = undefined
-    @Input() primary: boolean = false
-    @Input() contact: VcardClass
-    @Input() badgeColor: string
-    @Input() active: boolean = false
-    @Input() showQuickContact: boolean = true
-    @Input() subject:string = ''
-    @Input() mantisInstance: any = undefined
-    @Input() gitInstance: any = undefined
-    @Input() mattermostInstance: any = undefined
+    contact           = input.required<VcardClass>()
+    role              = input<string>()
+    roleColor         = input('muted')
+    imageUrl          = input<string>()
+    primary           = input(false)
+    badgeColor        = input<string>()
+    active            = input(false)
+    showQuickContact  = input(true)
+    subject           = input('')
+    mantisInstance    = input<any>()
+    gitInstance       = input<any>()
+    mattermostInstance = input<any>()
 
-    @HostBinding('class.active') get _active() { return this.active; };
+    isUser           = computed(() => this.contact() instanceof User)
+    isCompanyContact = computed(() => this.contact() instanceof CompanyContact)
+    asUser           = computed(() => this.contact() as User)
+    asCompanyContact = computed(() => this.contact() as CompanyContact)
+    hasImage         = computed(() => this.isUser() || this.imageUrl() !== undefined)
 
-    hasImage = () => this.imageUrl !== undefined
+    mantisUserId    = computed(() => this.contact()?.getUserIdForPlugin?.('X-NEXUS-MANTISBT'))
+    mantisIconClass = computed(() => this.contact()?.getInstanceIconClass(this.mantisInstance()) || '')
+    mantisTooltip   = computed(() => this.contact()?.getInstanceTooltip(this.mantisInstance()) || '')
 
-    ngOnChanges() {
-        if (this.contact) {
-            if (this.isUser()) this.imageUrl = this.contact.icon
-        }
-    }
-    isUser = () => this.contact instanceof User
-    isCompanyContact = () => this.contact instanceof CompanyContact
-    asUser = () => this.contact as User
-    asCompanyContact = () => this.contact as CompanyContact
-    trimmed = (p: string): string => p.replace(/[\s,\\/-]/ig, '')
-    whatsapp = (p: string): string => this.trimmed(p).replace(/^\\+/ig, '')
-    getEncodedSubject = () => encodeURIComponent(this.subject)
+    gitUsername  = computed(() => this.contact()?.getUserIdForPlugin?.('X-NEXUS-GIT'))
+    gitIconClass = computed(() => this.contact()?.getInstanceIconClass(this.gitInstance()) || '')
+    gitTooltip   = computed(() => this.contact()?.getInstanceTooltip(this.gitInstance()) || '')
 
-    toggleFav = (event?: Event) => {
+    mattermostUserId    = computed(() => this.contact()?.getUserIdForPlugin?.('X-NEXUS-MATTERMOST'))
+    mattermostIconClass = computed(() => this.contact()?.getInstanceIconClass(this.mattermostInstance()) || '')
+    mattermostTooltip   = computed(() => this.contact()?.getInstanceTooltip(this.mattermostInstance()) || '')
+
+    encodedSubject = computed(() => encodeURIComponent(this.subject()))
+
+    trimmed  = (p: string) => p.replace(/[\s,\\/-]/ig, '')
+    whatsapp = (p: string) => this.trimmed(p).replace(/^\\+/ig, '')
+
+    toggleFav(event?: Event) {
         event?.stopPropagation()
-        this.contact.update({ is_favorite: !this.asCompanyContact().is_favorite }).subscribe()
+        this.contact().update({ is_favorite: !this.asCompanyContact().is_favorite }).subscribe()
     }
 
-    getMantisUserId = (): string | undefined => this.contact?.getUserIdForPlugin?.('X-NEXUS-MANTISBT')
-    getMantisIconClass = () => this.contact?.getInstanceIconClass(this.mantisInstance) || ''
-    getMantisTooltip = () => this.contact?.getInstanceTooltip(this.mantisInstance) || ''
-
-    openMantisProfile = (event: Event) => {
+    openMantisProfile(event: Event) {
         event.preventDefault()
         event.stopPropagation()
-        this.contact?.openProfile(MantisPlugin)
+        this.contact()?.openProfile(MantisPlugin)
     }
 
-    // Git integration methods
-    getGitUsername = (): string | undefined => this.contact?.getUserIdForPlugin?.('X-NEXUS-GIT')
-    getGitIconClass = () => this.contact?.getInstanceIconClass(this.gitInstance) || ''
-    getGitTooltip = () => this.contact?.getInstanceTooltip(this.gitInstance) || ''
-
-    openGitProfile = (event: Event) => {
+    openGitProfile(event: Event) {
         event.preventDefault()
         event.stopPropagation()
-        this.contact?.openProfile(GitLabPlugin)
+        this.contact()?.openProfile(GitLabPlugin)
     }
 
-    // Mattermost integration methods
-    getMattermostUserId = (): string | undefined => this.contact?.getUserIdForPlugin?.('X-NEXUS-MATTERMOST')
-    getMattermostIconClass = () => this.contact?.getInstanceIconClass(this.mattermostInstance) || ''
-    getMattermostTooltip = () => this.contact?.getInstanceTooltip(this.mattermostInstance) || ''
-
-    openMattermostProfile = (event: Event) => {
+    openMattermostProfile(event: Event) {
         event.preventDefault()
         event.stopPropagation()
-        this.contact?.openProfile(MattermostPlugin)
+        this.contact()?.openProfile(MattermostPlugin)
     }
 
     openWhatsAppWeb(phone: string) {
-        const url = `https://web.whatsapp.com/send/?phone=${phone}&text&type=phone_number&app_absent=0`;
-        window.open(url, 'whatsappweb');
+        window.open(`https://web.whatsapp.com/send/?phone=${phone}&text&type=phone_number&app_absent=0`, 'whatsappweb')
     }
 }

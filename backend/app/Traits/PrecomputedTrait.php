@@ -3,7 +3,7 @@
 namespace App\Traits;
 
 use App\Casts\Precomputed;
-use Str;
+use Illuminate\Support\Str;
 
 class PropagationState {
     public static bool $isPropagating = true;

@@ -9,7 +9,6 @@ import { NexusHttpService } from '../http/http.nexus';
 import { Company } from '../company/company.model';
 import { NxGlobal } from '@app/nx/nx.global';
 import { TInvoicing } from '@app/projects/id/project-invoicing/project-invoicing.component';
-import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { Milestone } from '@models/milestones/milestone.model';
 import { Serializable } from '@models/serializable';
 
@@ -49,20 +48,18 @@ export class ProjectService extends NexusHttpService<Project> {
     indexReporting = (params:any) => this.aget('projects/reporting', params, Project)
     
     makeInvoice(project:Project, type:TInvoicing, success?: () => unknown) {
-        const download = NxGlobal.global.user!.getFloatParam('INVOICE_DOWNLOAD', 1)
-        if (download === 1) {
-            this.getFile(`projects/${project.id}/invoice`, { type: type }, success)
-        } else {
-            this.get(`projects/${project.id}/invoice`, { type: type }).subscribe(success)
+        // Map TInvoicing enum to backend stage: PartialInvoice→2, SupportInvoice→1, FinalInvoice→0
+        const stageMap: Partial<Record<TInvoicing, number>> = {
+            [TInvoicing.PartialInvoice]:  2,
+            [TInvoicing.SupportInvoice]:  1,
+            [TInvoicing.FinalInvoice]:    0,
         }
-    }
-    makeInstallmentInvoice(project:Project, items:InvoiceItem[], success?: () => unknown) {
+        const stage = stageMap[type] ?? 0
         const download = NxGlobal.global.user!.getFloatParam('INVOICE_DOWNLOAD', 1)
         if (download === 1) {
-            this.postFile(`projects/${project.id}/installment-invoice`, { items: items }, success)
+            this.getFile(`projects/${project.id}/invoice`, { type: stage }, success)
         } else {
-            const cleanItems = items.map(item => item.snapshotData)
-            this.post(`projects/${project.id}/installment-invoice`, { items: cleanItems }).subscribe(success)
+            this.get(`projects/${project.id}/invoice`, { type: stage }).subscribe(success)
         }
     }
 

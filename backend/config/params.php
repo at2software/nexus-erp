@@ -45,6 +45,7 @@ return [
     'INVOICE_DOWNLOAD'                     => ['type' => FloatParam::class, 'history' => false],
     'INVOICE_EMAIL_SUBJECT'                => ['type' => StringParam::class, 'history' => false],
     'INVOICE_EMAIL_TEXT'                   => ['type' => TextParam::class, 'history' => false],
+    'INVOICE_EMAIL_TEXT_SEPA'              => ['type' => TextParam::class, 'history' => false],
     'INVOICE_FIRST_TS'                     => ['type' => TextParam::class, 'history' => false],
     'INVOICE_GRACE_PERIOD'                 => ['type' => FloatParam::class, 'history' => false, 'default' => 7],
     'INVOICE_HOUR_UNIT'                    => ['type' => StringParam::class, 'history' => false],
@@ -117,6 +118,9 @@ return [
     'MARKETING_VIDEO_CONTENT_DESC'           => ['type' => TextParam::class, 'history' => false],
     'MARKETING_DOCUMENTS_DESC'               => ['type' => TextParam::class, 'history' => false],
     'VACATION_MAIL_SUBJECT'                  => ['type' => StringParam::class, 'history' => false],
+    'SETTINGS_GIT_PIPELINE'                  => ['type' => TextParam::class,   'history' => false],
     'WEBDAV_TOKEN'                           => ['type' => StringParam::class, 'history' => false],
     'NOTIFICATION_EMAIL_ON_FRAMEWORK_UPDATE' => ['type' => StringParam::class, 'history' => false],
+    'PROJECT_WORK_THRESHOLDS'                => ['type' => TextParam::class, 'history' => false],
+    'PROJECT_WORK_THRESHOLD_NOTIFIED'        => ['type' => TextParam::class, 'history' => false],
 ];

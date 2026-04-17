@@ -23,6 +23,8 @@ import { WidgetMissingProjectManagerComponent } from "./widgets/widget-missing-p
 import { WidgetProjectManagerComponent } from "./widgets/widget-project-manager/widget-project-manager.component"
 import { WidgetInvoiceManagerComponent } from "./widgets/widget-invoice-manager/widget-invoice-manager.component"
 import { WidgetUptimeMonitorsComponent } from "./widgets/widget-uptime-monitors/widget-uptime-monitors.component"
+import { WidgetMarketingActivitiesComponent } from "./widgets/widget-marketing-activities/widget-marketing-activities.component"
+import { WidgetProjectAnalysisComponent } from "./widgets/widget-project-analysis/widget-project-analysis.component"
 
 export interface TWidget { widget:Type<any>, i18n:string, on?:()=>boolean, key?:string }
 export interface TAWidget { widget:Type<any>, i18n:string, on?:()=>boolean, key:string }
@@ -40,10 +42,12 @@ const ALL_WIDGETS:Record<string, TWidget> = {
     'widget-missing-project-manager': { widget: WidgetMissingProjectManagerComponent, i18n:$localize`:@@i18n.project.missingProjectManager:missing project manager`, on:()=>hasRole('project_manager') },
     'widget-project-acquisitions': { widget: WidgetProjectAcquisitionsComponent, i18n:$localize`:@@i18n.common.acquisitions:acquisitions`, on:()=>hasRole('project_manager') },
     'widget-project-manager'     : { widget: WidgetProjectManagerComponent, i18n:$localize`:@@i18n.common.projectManager:project manager`, on:()=>hasRole('project_manager') },
+    'widget-project-analysis'    : { widget: WidgetProjectAnalysisComponent, i18n:$localize`:@@i18n.widget-project-analysis:project analysis`, on:()=>hasRole('project_manager') },
     'widget-project-running'     : { widget: WidgetProjectRunningComponent, i18n:$localize`:@@i18n.widget-project-running:running projects`, on:()=>hasRole('project_manager') },
     'widget-project-timebased'   : { widget: WidgetProjectTimebasedComponent, i18n:$localize`:@@i18n.common.timeBasedProjects:time based projects`, on:()=>hasRole('project_manager') },
     'widget-prepared-invoices'   : { widget: WidgetPreparedInvoicesComponent, i18n:$localize`:@@i18n.common.preparedInvoices:prepared invoices`, on: ()=>hasRole('financial') },
     'widget-invoice-manager'     : { widget: WidgetInvoiceManagerComponent, i18n:$localize`:@@i18n.widget-invoice-manager:invoice manager`, on: ()=>hasRole('financial') },
+    'widget-marketing-activities'   : { widget: WidgetMarketingActivitiesComponent, i18n:$localize`:@@i18n.common.marketingActivities:marketing activities` },
     'widget-marketing-remarketing'   : { widget: WidgetRemarketingComponent, i18n:$localize`:@@i18n.common.remarketing:remarketing` },
     'widget-unpaid-invoices'     : { widget: WidgetUnpaidInvoicesComponent, i18n:$localize`:@@i18n.invoice.unpaidInvoices:unpaid invoices`, on: ()=>hasRole('financial') },
     'widget-cashflow'            : { widget: WidgetCashflowComponent, i18n:$localize`:@@i18n.common.cashFlow:cash flow`, on: ()=>hasRole('financial') },

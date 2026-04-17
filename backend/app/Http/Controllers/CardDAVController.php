@@ -17,7 +17,7 @@ class CardDAVController extends Controller {
     /**
      * Create a CardDAV response with the correct headers.
      */
-    public function createResponseWithCorrectHeader(Request $request): \Illuminate\Http\Response {
+    public function createResponseWithCorrectHeader(Request $request): Response {
         $response = new Response;
         if (! $request->isMethod('GET')) {
             $response->header('Content-Type', 'application/xml');
@@ -32,7 +32,7 @@ class CardDAVController extends Controller {
     /**
      * Handle CardDAV requests.
      */
-    public function handleCardDAV(Request $request): \Illuminate\Http\Response {
+    public function handleCardDAV(Request $request): Response {
         $routeName = $request->route()->getName();
         $this->startCardDAVServer($routeName);
         return $this->createResponseWithCorrectHeader($request);
@@ -77,6 +77,7 @@ class CardDAVController extends Controller {
         // Sync plugin
         $syncPlugin = new DAV\Sync\Plugin;
         $server->addPlugin($syncPlugin);
+
         // Browser plugin (optional, for debugging)
         // $browserPlugin = new DAV\Browser\Plugin();
         // $server->addPlugin($browserPlugin);

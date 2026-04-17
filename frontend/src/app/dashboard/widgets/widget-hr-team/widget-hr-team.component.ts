@@ -1,11 +1,12 @@
-import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BaseWidgetComponent } from '../base.widget.component';
 import { StatsService } from 'src/models/stats-service';
 import { User } from 'src/models/user/user.model';
 import { WidgetsModule } from '../widgets.module';
 import { ShortPipe } from 'src/pipes/short.pipe';
 import { CommonModule } from '@angular/common';
-import { Subject } from 'rxjs';
+import { timer } from 'rxjs';
 
 @Component({
     selector: 'widget-hr-team',
@@ -14,27 +15,21 @@ import { Subject } from 'rxjs';
     standalone: true,
     imports: [WidgetsModule, ShortPipe, CommonModule]
 })
-export class WidgetHrTeamComponent extends BaseWidgetComponent implements OnInit, OnDestroy {
+export class WidgetHrTeamComponent extends BaseWidgetComponent implements OnInit {
 
-    #destroy$ = new Subject<void>()
+    defaultOptions = () => ({})
 
     stats = inject(StatsService)
-    data: any
-    interval?:NodeJS.Timeout
-    ngOnInit() {
-        this.reload()
-        this.interval = setInterval(() => this.reload, 60000)
+    data: User[] = []
+
+    constructor() {
+        super()
+        timer(0, 60000).pipe(takeUntilDestroyed()).subscribe(() => this.reload())
     }
-    ngOnDestroy() {
-        if (this.interval) clearInterval(this.interval)
-        this.#destroy$.next()
-        this.#destroy$.complete()
-    }
-    defaultOptions = () => ({})
+
     reload(): void {
-        this.stats.showTeamStatus().subscribe((data:User[]) => {
+        this.stats.showTeamStatus().subscribe((data: User[]) => {
             this.data = data
         })
     }
-
 }

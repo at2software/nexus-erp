@@ -3,6 +3,14 @@ import { Invoice } from "./invoice.model"
 import { NxGlobal } from "src/app/nx/nx.global"
 
 export function getInvoiceActions(self: Invoice): NxAction[] {
+    const navigateAfterInvoiceAction = (projectId?: string) => {
+        if (projectId) {
+            self.navigate('projects/' + projectId + '/invoicing')
+            return
+        }
+        self.navigate('customers/' + self.company.id + '/billing')
+    }
+
     return [
         { title: $localize`:@@i18n.common.open:open`, action: () => self.navigate(self.frontendUrl()) },
         { title: $localize`:@@i18n.invoice.sendMail:send mail`, action: () => self.sendMail(), on: () => !self.paid_at },
@@ -15,23 +23,21 @@ export function getInvoiceActions(self: Invoice): NxAction[] {
         //     ]
         // },
         {
-            title: $localize`:@@i18n.invoice.reverse:reverse`, action: () => {
-                self.cancel().subscribe(() => self.navigate('customers/' + self.company.id + '/billing'))
+            title: $localize`:@@i18n.invoice.cancel:cancel`, action: () => {
+                self.confirm($localize`:@@i18n.invoice.confirmCancel:Are you sure you want to cancel this invoice? This will create a cancellation invoice.`).then(() => self.cancel().subscribe(() => {
+                    const projectItem = self.invoice_items?.find((item: any) => item.project_id)
+                    navigateAfterInvoiceAction(projectItem?.project_id)
+                }))
             }
         },
         {
-            title: $localize`:@@i18n.invoice.retract:retract`,
+            title: $localize`:@@i18n.invoice.undo:undo`,
             on: () => self.isLatestInvoice(), 
             type: NxActionType.Destructive,
             action: () => {
-                self.confirm().then(() => self.redo().subscribe((response: any) => {
+                self.confirm($localize`:@@i18n.invoice.confirmUndo:Are you sure you want to undo this invoice?`).then(() => self.undo().subscribe((response: any) => {
                     NxGlobal.global.settings['INVOICE_NO_CURRENT'] = response.INVOICE_NO_CURRENT
-                    if (response.item && 'project_id' in response.item && response.item.project_id) {
-                        self.navigate('projects/' + response.item.project_id + '/invoicing')
-                    }
-                    else {
-                        self.navigate('customers/' + self.company.id + '/billing')
-                    }
+                    navigateAfterInvoiceAction(response?.item?.project_id)
                 }))
             }
         },

@@ -1,7 +1,7 @@
 
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 import { MantisPlugin } from '@models/http/plugin.mantis';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 
@@ -10,7 +10,7 @@ import { ModalBaseComponent } from '@app/_modals/modal-base.component';
     templateUrl: './mantis-project-selection.component.html',
     styleUrls: ['./mantis-project-selection.component.scss'],
     standalone: true,
-    imports: [FormsModule, CommonModule]
+    imports: [FormsModule]
 })
 export class MantisProjectSelectionComponent extends ModalBaseComponent<string> {
 

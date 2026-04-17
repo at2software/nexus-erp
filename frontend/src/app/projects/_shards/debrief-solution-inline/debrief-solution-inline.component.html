@@ -1,6 +1,9 @@
 <div class="solution-inline">
+    @let p = problem();
+    @let isReadonly = readonly();
+
     <div class="linked-solutions mb-3">
-        @for (solution of problem.solutions; track solution.id) {
+        @for (solution of p.solutions; track solution.id) {
             <div class="solution-item d-flex align-items-center gap-2 mb-2 p-2 rounded" [nx]="solution">
                 <div class="flex-grow-1">
                     <div class="solution-title">{{ solution.title }}</div>
@@ -12,18 +15,18 @@
                     @for (star of [1, 2, 3, 4, 5]; track star) {
                         <i class="star-icon"
                            [class.filled]="(solution.effectiveness_rating || 0) >= star"
-                           [class.cursor-pointer]="!readonly"
-                           [attr.tabindex]="readonly ? null : 0"
-                           (click)="!readonly && rateSolution(solution, star)"
-                           (keydown.enter)="!readonly && rateSolution(solution, star)"
-                           (keydown.space)="!readonly && rateSolution(solution, star)"
-                           [ngbTooltip]="readonly ? '' : 'Rate effectiveness'"
+                           [class.cursor-pointer]="!isReadonly"
+                           [attr.tabindex]="isReadonly ? null : 0"
+                           (click)="!isReadonly && rateSolution(solution, star)"
+                           (keydown.enter)="!isReadonly && rateSolution(solution, star)"
+                           (keydown.space)="!isReadonly && rateSolution(solution, star)"
+                           [ngbTooltip]="isReadonly ? '' : 'Rate effectiveness'"
                            i18n-ngbTooltip="@@i18n.debrief.rateEffectiveness">
                             {{ (solution.effectiveness_rating || 0) >= star ? 'star' : 'star_border' }}
                         </i>
                     }
                 </div>
-                @if (!readonly) {
+                @if (!isReadonly) {
                     <button class="btn btn-sm btn-link text-muted p-0"
                             (click)="unlinkSolution(solution)"
                             ngbTooltip="Unlink solution"
@@ -35,27 +38,27 @@
         }
     </div>
 
-    @if (!readonly) {
+    @if (!isReadonly) {
         <div class="add-solution">
             <div class="input-group mb-2">
                 <input type="text"
                        class="form-control form-control-sm"
-                       [(ngModel)]="searchTerm"
-                       (input)="onSearchChange()"
+                       [ngModel]="searchTerm()"
+                       (ngModelChange)="onSearchChange($event)"
                        (focus)="onFocus()"
                        (blur)="onBlur()"
                        placeholder="Search or add solution..."
                        i18n-placeholder="@@i18n.debrief.searchSolutions">
-                @if (isSearching) {
+                @if (isSearching()) {
                     <span class="input-group-text">
                         <span class="spinner-border spinner-border-sm"></span>
                     </span>
                 }
             </div>
 
-            @if (showDropdown && (searchResults.length > 0 || searchTerm.length >= 2)) {
+            @if (showDropdown() && (searchResults().length > 0 || searchTerm().length >= 2)) {
                 <div class="dropdown-menu show w-100 position-relative">
-                    @for (solution of searchResults; track solution.id) {
+                    @for (solution of searchResults(); track solution.id) {
                         <button class="dropdown-item d-flex align-items-center gap-2" (mousedown)="linkSolution(solution)">
                             <span class="flex-grow-1">{{ solution.title }}</span>
                             @if (solution.avg_effectiveness_rating) {
@@ -68,11 +71,11 @@
                         </button>
                     }
 
-                    @if (searchResults.length === 0 && searchTerm.length >= 2) {
+                    @if (searchResults().length === 0 && searchTerm().length >= 2) {
                         <div class="dropdown-item text-muted" i18n="@@i18n.debrief.noSolutionsFound">no solutions found</div>
                     }
 
-                    @if (searchTerm.length >= 2) {
+                    @if (searchTerm().length >= 2) {
                         <div class="dropdown-divider"></div>
                         <button class="dropdown-item text-primary" (mousedown)="toggleCreateForm()">
                             <i class="me-2">add</i>
@@ -82,18 +85,19 @@
                 </div>
             }
 
-            @if (showCreateForm) {
+            @if (showCreateForm()) {
                 <div class="create-form mt-2 p-2 border rounded">
                     <div class="input-group">
                         <input type="text"
                                class="form-control form-control-sm"
-                               [(ngModel)]="newSolutionTitle"
+                               [ngModel]="newSolutionTitle()"
+                               (ngModelChange)="newSolutionTitle.set($event)"
                                placeholder="Solution title..."
                                i18n-placeholder="@@i18n.debrief.solutionTitle">
                         <button class="btn btn-sm btn-primary" (click)="createAndLinkSolution()">
                             <i>add</i>
                         </button>
-                        <button class="btn btn-sm btn-outline-light" (click)="showCreateForm = false">
+                        <button class="btn btn-sm btn-outline-light" (click)="showCreateForm.set(false)">
                             <i>close</i>
                         </button>
                     </div>

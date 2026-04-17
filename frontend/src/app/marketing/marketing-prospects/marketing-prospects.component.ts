@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { MarketingService } from '@models/marketing/marketing.service';
 import { MarketingProspect } from '@models/marketing/marketing.prospect.model';
 import { MarketingInitiative } from '@models/marketing/marketing-initiative.model';
@@ -13,15 +13,16 @@ import { ScrollbarComponent } from "@app/app/scrollbar/scrollbar.component";
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
 import { NxGlobal } from 'src/app/nx/nx.global';
 import { MarketingProspectActivity } from '@models/marketing/marketing-prospect-activity.model';
-import { UlCompactComponent } from "@shards/ul-compact/ul-compact.component";
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
+import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
+import { User } from '@models/user/user.model';
 
 @Component({
     selector: 'marketing-prospects',
     templateUrl: './marketing-prospects.component.html',
     styleUrls: ['./marketing-prospects.component.scss'],
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, NgbTooltipModule, NexusModule, AvatarComponent, ScrollbarComponent, UlCompactComponent, EmptyStateComponent]
+    imports: [CommonModule, FormsModule, RouterModule, NgbDropdownModule, NgbTooltipModule, NexusModule, AvatarComponent, ScrollbarComponent, EmptyStateComponent, ToolbarComponent]
 })
 export class MarketingProspectsComponent implements OnInit {
 
@@ -35,7 +36,8 @@ export class MarketingProspectsComponent implements OnInit {
     initiatives: MarketingInitiative[] = [];
     selectedProspect?: MarketingProspect;
     isLoading = false;
-    availableUsers: any[] = [];
+
+    get availableUsers(): User[] { return NxGlobal.global.team ?? []; }
 
     // Filters
     searchTerm = '';
@@ -50,7 +52,8 @@ export class MarketingProspectsComponent implements OnInit {
         {
             key: 'new',
             label: $localize`:@@i18n.common.new:new`,
-            badgeClass: 'bg-info rounded-pill',
+            badgeClass: 'bg-cyan rounded-pill',
+            icon: 'person_add',
             count: 0,
             selected: true
         },
@@ -58,6 +61,7 @@ export class MarketingProspectsComponent implements OnInit {
             key: 'engaged',
             label: $localize`:@@i18n.marketing.engaged:engaged`,
             badgeClass: 'bg-primary rounded-pill',
+            icon: 'forum',
             count: 0,
             selected: true
         },
@@ -65,6 +69,7 @@ export class MarketingProspectsComponent implements OnInit {
             key: 'converted',
             label: $localize`:@@i18n.marketing.converted:converted`,
             badgeClass: 'bg-success rounded-pill',
+            icon: 'verified',
             count: 0,
             selected: true
         },
@@ -72,6 +77,7 @@ export class MarketingProspectsComponent implements OnInit {
             key: 'unresponsive',
             label: $localize`:@@i18n.marketing.unresponsive:unresponsive`,
             badgeClass: 'bg-warning rounded-pill',
+            icon: 'voice_over_off',
             count: 0,
             selected: true
         },
@@ -79,6 +85,7 @@ export class MarketingProspectsComponent implements OnInit {
             key: 'disqualified',
             label: $localize`:@@i18n.marketing.disqualified:disqualified`,
             badgeClass: 'bg-danger rounded-pill',
+            icon: 'block',
             count: 0,
             selected: true
         },
@@ -86,6 +93,7 @@ export class MarketingProspectsComponent implements OnInit {
             key: 'on_hold',
             label: $localize`:@@i18n.marketing.on_hold:on hold`,
             badgeClass: 'bg-secondary rounded-pill',
+            icon: 'pause_circle',
             count: 0,
             selected: true
         }
@@ -163,7 +171,26 @@ export class MarketingProspectsComponent implements OnInit {
         this.#marketingService.indexInitiatives({ status: 'active' })
             .subscribe((response: any) => {
                 this.initiatives = response.data || response;
+                this.#refreshInitiativeOverdueCounts();
             });
+    }
+
+    #refreshInitiativeOverdueCounts() {
+        const params: any = {};
+        if (this.userFilter) params.user_id = parseInt(this.userFilter);
+        this.#marketingService.indexProspects(params).subscribe((prospects: MarketingProspect[]) => {
+            const counts = new Map<string, number>();
+            prospects.forEach(p => {
+                if (p.has_overdue_activities && p.marketing_initiative?.id &&
+                    !['unresponsive', 'disqualified', 'on_hold'].includes(p.status)) {
+                    const key = String(p.marketing_initiative.id);
+                    counts.set(key, (counts.get(key) || 0) + 1);
+                }
+            });
+            this.initiatives.forEach(i => {
+                i.overdue_prospects_count = counts.get(String(i.id)) ?? 0;
+            });
+        });
     }
 
     #loadProspects() {
@@ -179,16 +206,6 @@ export class MarketingProspectsComponent implements OnInit {
         this.#marketingService.indexProspects(params)
             .subscribe((response: any) => {
                 this.prospects = response.data || response;
-
-                // Extract unique users from prospects for filter
-                const usersMap = new Map();
-                this.prospects.forEach(p => {
-                    if (p.user && !usersMap.has(p.user.id)) {
-                        usersMap.set(p.user.id, p.user);
-                    }
-                });
-                this.availableUsers = Array.from(usersMap.values());
-
                 this.#calculateStats();
                 this.isLoading = false;
 
@@ -294,6 +311,38 @@ export class MarketingProspectsComponent implements OnInit {
         }
     }
 
+    get selectedUser(): User | undefined {
+        return this.availableUsers.find(u => String(u.id) === String(this.userFilter));
+    }
+
+    get selectedUserName(): string {
+        return this.selectedUser?.fullName ?? this.userFilter;
+    }
+
+    setUserFilter(id: any) {
+        this.userFilter = id ? String(id) : '';
+        this.#loadInitiatives();
+        this.onFilterChange();
+    }
+
+    overdueCountForInitiative(initiative: MarketingInitiative): number {
+        return initiative.overdue_prospects_count ?? 0;
+    }
+
+    isSubscribedToInitiative(initiative: MarketingInitiative): boolean {
+        const checkId = this.userFilter ? parseInt(this.userFilter) : NxGlobal.global.user?.id;
+        return initiative.users?.some(u => u.id === checkId) ?? false;
+    }
+
+    get totalOverdueCount(): number {
+        return this.initiatives.reduce((sum, i) => sum + (i.overdue_prospects_count ?? 0), 0);
+    }
+
+    setInitiativeFilter(id: any) {
+        this.initiativeFilter = id ? String(id) : '';
+        this.onFilterChange();
+    }
+
     onSearch = () => this.#loadProspects();
 
     onFilterChange = () => {
@@ -302,6 +351,12 @@ export class MarketingProspectsComponent implements OnInit {
     };
 
     actionsResolved = () => this.#loadProspects();
+
+    navigateToProspect(event: MouseEvent, prospect: MarketingProspect) {
+        if (!event.ctrlKey && !event.shiftKey) {
+            this.#router.navigate(['/marketing/prospects', prospect.id]);
+        }
+    }
 
     filterByStatus(status: string) {
         this.statusFilter = status;
@@ -323,7 +378,7 @@ export class MarketingProspectsComponent implements OnInit {
 
     getStatusBadgeClass(status: string): string {
         switch (status) {
-            case 'new': return 'bg-info';
+            case 'new': return 'bg-cyan';
             case 'engaged': return 'bg-primary';
             case 'converted': return 'bg-success';
             case 'unresponsive': return 'bg-warning';

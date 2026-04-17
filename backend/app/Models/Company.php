@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Builders\CompanyBuilder;
 use App\Casts\Precomputed;
 use App\Casts\PrecomputedAuth;
+use App\Collections\CompanyCollection;
 use App\Enums\InvoiceItemType;
 use App\Enums\Recurrence;
 use App\Helpers\NLog;
@@ -52,6 +53,12 @@ class Company extends BaseModel {
     ];
     protected $access = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'r'];
 
+    public function newCollection(array $models = []) {
+        return new CompanyCollection($models);
+    }
+    public function onlyAvatar(): array {
+        return $this->only(['id', 'name', 'icon']);
+    }
     public function getIconAttribute() {
         return 'companies/'.$this->id.'/icon?'.($this->updated_at ? $this->updated_at->timestamp : '');
     }
@@ -253,7 +260,7 @@ class Company extends BaseModel {
             ->with('productSource');
     }
     public function preparedInvoiceItems() {
-        return $this->invoiceItems()->whereIn('type', [...Invoice::ITEMS_ADDING_TO_INVOICE, InvoiceItemType::Header])->whereInvoiceId(null)->oldest('position');
+        return $this->invoiceItems()->whereStage(0)->whereIn('type', [...Invoice::ITEMS_ADDING_TO_INVOICE, InvoiceItemType::Header])->whereInvoiceId(null)->oldest('position');
     }
 
     /**
@@ -391,7 +398,7 @@ class Company extends BaseModel {
             // Normalize phone numbers
             if (preg_match('/^TEL[^:]*:(.+)$/i', $line, $matches)) {
                 $phoneNumber = trim($matches[1]);
-                $normalized  = \App\Traits\VcardTrait::normalizePhoneNumber($phoneNumber);
+                $normalized  = VcardTrait::normalizePhoneNumber($phoneNumber);
 
                 // Check for duplicates
                 $key = preg_replace('/[^\d]/', '', $normalized);

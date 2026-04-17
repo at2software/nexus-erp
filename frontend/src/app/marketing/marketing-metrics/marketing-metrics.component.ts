@@ -1,5 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { MarketingService } from '@models/marketing/marketing.service';
 import { MarketingPerformanceMetric } from '@models/marketing/marketing-performance-metrics.model';
@@ -17,7 +17,7 @@ const ActivityStatsColors = MarketingActivity.STATS_COLORS;
     templateUrl: './marketing-metrics.component.html',
     styleUrls: ['./marketing-metrics.component.scss'],
     standalone: true,
-    imports: [CommonModule, FormsModule, NexusModule, NgbTooltipModule, EmptyStateComponent, GuidedTourComponent]
+    imports: [FormsModule, NexusModule, NgbTooltipModule, EmptyStateComponent, GuidedTourComponent]
 })
 export class MarketingMetricsComponent implements OnInit {
     #marketingService = inject(MarketingService);
@@ -191,39 +191,6 @@ export class MarketingMetricsComponent implements OnInit {
 
     getMetricTypeInfo(type: string) {
         return this.metricTypes.find(t => t.value === type);
-    }
-
-    formatMetricValue(metric: MarketingPerformanceMetric): string {
-        switch (metric.metric_type) {
-            case 'percentage': {
-                const percentage = (metric!.activity_stats!.completed / metric!.activity_stats!.total) * 100;
-                return `${percentage.toFixed(1)}%`; 
-            }
-            case 'conversion':
-                return `${(metric!.activity_stats!.completed / metric!.activity_stats!.total * 100).toFixed(1)}%`;
-            case 'currency':
-                return `$${metric!.activity_stats!.completed.toLocaleString()}`;
-            case 'duration':
-                return `${metric!.activity_stats!.completed}h`;
-            default:
-                return metric!.activity_stats!.completed.toString();
-        }
-    }
-
-    formatTargetValue(metric: MarketingPerformanceMetric): string {
-        const value = metric.target_value ?? 0;
-        switch (metric.metric_type) {
-            case 'percentage':
-                return `${value}%`;
-            case 'conversion':
-                return `${value}%`;
-            case 'currency':
-                return `$${value.toLocaleString()}`;
-            case 'duration':
-                return `${value}h`;
-            default:
-                return value.toString();
-        }
     }
 
     getCompletedTooltip(count: number): string {

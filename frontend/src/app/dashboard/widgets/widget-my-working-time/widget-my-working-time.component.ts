@@ -25,92 +25,47 @@ export class WidgetMyWorkingTimeComponent extends BaseWidgetComponent implements
     requiredWorkThisWeek: number = 0
     chartOptions: any
     echartsInstance: any
-    VARIANCE = .95
-    ngOnInit() {
-        this.reload()
-    }
+
     defaultOptions = () => ({})
+    
     reload(): void {
         this.stats?.showMyWorkingTime().subscribe((response: any) => {
-            const vacationMap = (v: any) => {
-                const day = moment(v.started_at)
-                const end = moment(v.ended_at)
-                const r = []
-                while (day <= end) {
-                    r.push(day.format('YYYY-MM-DD'))
-                    day.add(1, 'day')
+            const workInfo = response.workinfo ?? []
+
+            // Append today if missing from workinfo but present in data
+            const today = moment().format('YYYY-MM-DD')
+            if (!workInfo.some((e: any) => e.key === today)) {
+                const todayEntry = (response.data ?? []).find((e: any) => e.key === today)
+                if (todayEntry) {
+                    workInfo.push({
+                        key: today,
+                        day: moment().format('DD.MM.YYYY'),
+                        value: Number(todayEntry.value ?? 0),
+                        class: 'work-bar-default',
+                        required: 8
+                    })
                 }
-                return r
             }
-            const parseDay = (day: moment.Moment) => {
-                const dayString = day.format('YYYY-MM-DD')
-                const isVacation = vacationDays.includes(dayString) || response.holidays.includes(dayString) || day.day() === 0 || day.day() === 6
-                const workInfo = findDay(dayString, data)
-                const reqHoursToday = hpw[(day.day() + 6) % 7]
-                return [dayString, isVacation, workInfo, reqHoursToday]
-            }
-            const findDay = (day: string, array: any[]) => array.find(_ => _.key === day)
-            const data: any[] = response.data
-            const earliest = moment.min(data.map(_ => moment(_.key)))
-            let currentDay = earliest.clone()
-            const set = [
-                ...response.vacation_start.map((_: any) => vacationMap(_)),
-                ...response.vacation_end.map((_: any) => vacationMap(_))
-            ]
-            const vacationDays = [...new Set(set.flattened())]
-            const dataOk = []
-            const dataLow = []
-            const dataVac = []
-            let workingHoursTotal = 0
-            let requiredHoursTotal = 0
-            const hpw = this.global.user?.getHpwArray() ?? [0, 0, 0, 0, 0, 0, 0]
-            while (currentDay < moment().startOf('day')) {
-                const [dayString, isVacation, workInfo, reqHoursToday] = parseDay(currentDay)
-                const nodeOk = { x: dayString, y: 0 }
-                const nodeLow = { x: dayString, y: 0 }
-                const nodeVac = { x: dayString, y: 0 }
-                dataOk.push(nodeOk)
-                dataLow.push(nodeLow)
-                dataVac.push(nodeVac)
-                if (workInfo) {
-                    let ptr = nodeLow
-                    if (reqHoursToday * this.VARIANCE <= workInfo.value) ptr = nodeOk
-                    if (isVacation) ptr = nodeVac
-                    workingHoursTotal += workInfo.value
-                    ptr.y = workInfo.value
-                }
-                if (!isVacation) {
-                    requiredHoursTotal += reqHoursToday
-                }
-                currentDay.add(1, 'day')
-            }
+
+            const dataOk: { x: string, y: number }[] = []
+            const dataLow: { x: string, y: number }[] = []
+            const dataVac: { x: string, y: number }[] = []
+
+            workInfo.forEach((entry: any) => {
+                const dayKey = entry.key ?? moment(entry.day, 'DD.MM.YYYY').format('YYYY-MM-DD')
+                const value = Number(entry.value ?? 0)
+
+                dataOk.push({ x: dayKey, y: entry.class === 'work-bar-default' ? value : 0 })
+                dataLow.push({ x: dayKey, y: entry.class === 'work-bar-danger' ? value : 0 })
+                dataVac.push({ x: dayKey, y: entry.class === 'work-bar-holiday' ? value : 0 })
+            })
 
             // week progress
-            this.workThisWeek = 0
-            this.requiredWorkThisWeek = 0
-            currentDay = moment().startOf('week')
-            while (currentDay < moment().endOf('week')) {
-                const [, isVacation, workInfo, reqHoursToday] = parseDay(currentDay)
-                if (workInfo) {
-                    this.workThisWeek += workInfo.value
-                }
-                if (!isVacation) {
-                    this.requiredWorkThisWeek += reqHoursToday
-                }
-                currentDay.add(1, 'day')
-            }
+            this.workThisWeek = Number(response.work_this_week ?? 0)
+            this.requiredWorkThisWeek = Number(response.required_work_this_week ?? 0)
 
-            // add current day (but except it from stats)
-            const today = moment()
-            const [dayString, , workInfo, ] = parseDay(today)
-            if (workInfo) {
-                dataOk.push({ x: dayString, y: workInfo.value })
-                dataLow.push({ x: dayString, y: 0 })
-                dataVac.push({ x: dayString, y: 0 })
-            }
-
-            this.averageSoll = this.global.user?.getHpw() ?? 0
-            this.average = this.averageSoll * workingHoursTotal / requiredHoursTotal
+            this.averageSoll = Number(response.required_hours ?? this.global.user?.getHpw() ?? 0)
+            this.average = Number(response.average ?? 0)
 
             // Generate ECharts data directly
             const echartsData = [
@@ -151,7 +106,7 @@ export class WidgetMyWorkingTimeComponent extends BaseWidgetComponent implements
                     formatter: (params: any) => {
                         if (!params || params.length === 0) return ''
                         
-                        const date = new Date(params[0].axisValue).toISOString().split('T')[0]
+                        const date = moment(params[0].axisValue).format('YYYY-MM-DD')
                         let html = `<div style="font-weight: bold; margin-bottom: 8px;">${date}</div>`
                         
                         params.forEach((param: any) => {
@@ -164,7 +119,6 @@ export class WidgetMyWorkingTimeComponent extends BaseWidgetComponent implements
                                 </div>`
                             }
                         })
-                        
                         return html
                     }
                 }

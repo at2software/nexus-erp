@@ -23,13 +23,17 @@ abstract class PluginChatController extends PluginController {
         $found = $user->encryptions()->where('key', static::getKey())->first()?->my_id;
         return $found;
     }
-
     abstract public function getDirectChannelIdFor(string $userId): ?string;
 
     // ###### outbound communication
     abstract public function createOrUpdatePost(string $cacheId, string $channelId, string $message, $props = null);
     abstract public function createPost(string $channelId, string $message, $props = null);
     abstract public function updatePost(string $id, string $message, $props = null, ?string $channelId = null);
+    abstract public function deletePost(string $id): void;
+
+    /** Returns ['posts' => [id => post], 'order' => [id, ...]] or empty array on failure */
+    abstract public function getChannelPosts(string $channelId, int $page = 0, int $perPage = 200): array;
+
     abstract public function createChannel(string $name, string $display_name, string $purpose, string $header): ?string;
     abstract public function addUsersToChannel(string $channelId, User ...$users);
     abstract public function removeUserFromChannel($channelId, User $id);
@@ -42,24 +46,31 @@ abstract class PluginChatController extends PluginController {
     abstract public function updatePosition(string $position, string $userId): void;
     abstract public function updateStatus(string $status, string $userId): void;
     public function _createOrUpdatePost(string $cacheId, string $channelId, string $message, $props, string $dataKey) {
-        $postId = Cache::get($cacheId);
+        $key    = static::getKey().'_'.$cacheId;
+        $postId = Cache::get($key) ?? $this->findExistingPost($cacheId, $channelId);
         if (! $postId) {
-            $data = $this->createPost($channelId, $message, $props);
-            Cache::put($cacheId, $data[$dataKey], now()->addMinutes(59));
+            $data   = $this->createPost($channelId, $message, $props);
+            $postId = $data[$dataKey] ?? null;
         } else {
             $this->updatePost($postId, $message, $props);
         }
+        if ($postId) {
+            Cache::put($key, $postId, now()->addHours(24));
+        }
     }
-    public function getOrCreateChannel($project, string $purpose, string $header, ?string $postfix=null) {
+    protected function findExistingPost(string $cacheId, string $channelId): ?string {
+        return null;
+    }
+    public function getOrCreateChannel($project, string $purpose, string $header, ?string $postfix = null) {
         return $this->getChannelIdFor($project, $postfix) ?? $this->createChannelFor($project, $purpose, $header, $postfix);
     }
-    public function createChannelFor(Project $project, string $purpose, string $header, ?string $postfix=null) {
+    public function createChannelFor(Project $project, string $purpose, string $header, ?string $postfix = null) {
         if (! empty($postfix)) {
             $postfix = '_'.strtolower($postfix);
         }
         return $this->createChannel($this->getChannelNameFor($project).$postfix, $project->name.' '.$postfix, $purpose, $header);
     }
-    public function getChannelIdFor(Project $project, ?string $postfix=null): ?string {
+    public function getChannelIdFor(Project $project, ?string $postfix = null): ?string {
         if (! empty($postfix)) {
             $postfix = '_'.strtolower($postfix);
         }

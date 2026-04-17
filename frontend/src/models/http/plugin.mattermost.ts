@@ -165,7 +165,6 @@ export class MattermostPlugin extends ChatPluginInstance {
                             if ((resolvedUser as any)._icon) commentData._icon = (resolvedUser as any)._icon
                             if ((resolvedUser as any).iconBaseUrl !== undefined) commentData.iconBaseUrl = (resolvedUser as any).iconBaseUrl
                         }
-
                         return commentData
                     })
 

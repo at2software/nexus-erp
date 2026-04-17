@@ -16,8 +16,8 @@
         </tr>
     </thead>
     <tbody>
-        @for (x of invoices; track x.id) {
-        <tr class="align-middle {{x.markerClass()}}" [nx]="x" [tables]="invoices" context="invoice.module.table">
+        @for (x of _invoices(); track x.id) {
+        <tr class="align-middle {{x.markerClass()}}" [nx]="x" [tables]="_invoices()" context="invoice.module.table">
             <td class="text-start" [class.text-muted]="x.is_cancelled">
                 {{ x.created_at | date }}
             </td>
@@ -129,18 +129,18 @@
         }
     </tbody>
     <tfoot>
-        @if (selection.length) {
+        @if (selection().length) {
         <tr class="sticky-footer selection-row">
             <td></td>
             <td></td>
             <td i18n="@@i18n.common.selection">selection</td>
             <td></td>
             <td></td>
-            <td class="text-end">{{ selectionNet | money }}</td>
-            <td class="text-end">{{ selectionGross | money }}</td>
+            <td class="text-end">{{ selectionNet() | money }}</td>
+            <td class="text-end">{{ selectionGross() | money }}</td>
             <td></td>
         </tr>
-        } @if (!selection.length) {
+        } @else {
         <tr class="sticky-footer">
             <td></td>
             <td></td>
@@ -148,13 +148,13 @@
             <td></td>
             <td></td>
             <td class="text-end">
-                <strong>{{ net | money }}</strong>
+                <strong>{{ net() | money }}</strong>
             </td>
             <td class="text-end">
-                <strong>{{ gross | money }}</strong>
-                @if (gross_remaining !== gross) {
+                <strong>{{ gross() | money }}</strong>
+                @if (gross_remaining() !== gross()) {
                 <span ngbTooltip="remaining after instalments" i18n-ngbTooltip="@@i18n.invoices.remainingAfterInstalments">{{
-                    gross_remaining | money
+                    gross_remaining() | money
                 }}</span>
                 }
             </td>
@@ -162,9 +162,9 @@
         </tr>
         }
     </tfoot>
-    @if (observer) {
+    @if (observer()) {
     <continuous-marker
-        [observer]="observer"
+        [observer]="observer()!"
         (dataReceived)="onResult($event)"
     ></continuous-marker>
     }

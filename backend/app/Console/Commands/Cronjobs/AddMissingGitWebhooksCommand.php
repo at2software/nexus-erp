@@ -8,7 +8,6 @@ use App\Models\PluginLink;
 use Illuminate\Console\Command;
 
 class AddMissingGitWebhooksCommand extends Command {
-
     protected $signature   = 'webhooks:add-missing {--fresh=}';
     protected $description = 'Adds missing Git webhooks to GitLab projects';
     private $git;
@@ -49,7 +48,7 @@ class AddMissingGitWebhooksCommand extends Command {
         }
         try {
             $hookResponse = $this->git->indexWebhooks($link);
-            if (! $hookResponse) {
+            if ($hookResponse === null) {
                 return false;
             }
             if (is_array($hookResponse)) {

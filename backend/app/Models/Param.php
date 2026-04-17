@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Param extends BaseModel {
     protected $fillable = ['key', 'value', 'has_history', 'type'];
-    protected $access   = ['admin' => '*', 'project_manager'=>'cru', 'user'=>'cru'];
+    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
     protected function casts(): array {
         return [
@@ -28,7 +28,7 @@ class Param extends BaseModel {
     private $has_pending_changes = false;
     private static $paramCache   = [];
     private $cached_value;
-    public $parent_path          = null;
+    public $parent_path = null;
 
     public function latestFor($poly): ?HasOne {
         $subQuery = $this->type::select('id')->where($poly)->latest()->limit(1);
@@ -98,10 +98,12 @@ class Param extends BaseModel {
         $response['data'] = $data->toArray();
         return $response;
     }
-    public function linkTo($model, $fallback=true): static {
-        $this->model    = $model;
-        $this->fallback = $fallback;
-        return $this;
+    public function linkTo($model, $fallback = true): static {
+        $clone           = clone $this;
+        $clone->model    = $model;
+        $clone->fallback = $fallback;
+        unset($clone->cached_value);
+        return $clone;
     }
     public function getFallbackAttribute() {
         // Ensure value is resolved first to determine if fallback was used
@@ -217,7 +219,7 @@ class Param extends BaseModel {
         $this->pending_updated_at  = null;
         $this->has_pending_changes = false;
     }
-    private function getRel($history=false) {
+    private function getRel($history = false) {
         $relation = $history ? 'historyDataForPoly' : 'dataForPoly';
         if ($this->model) {
             if ($this->$relation($this->model->toPoly())->exists()) {
@@ -255,7 +257,7 @@ class Param extends BaseModel {
      * @param mixed $attrs type, history
      * @param mixed $doNotCreate
      */
-    public static function get($key, $attrs=[], $doNotCreate = false): ?Param {
+    public static function get($key, $attrs = [], $doNotCreate = false): ?Param {
         if (! empty(self::$paramCache[$key])) {
             return self::$paramCache[$key];
         }

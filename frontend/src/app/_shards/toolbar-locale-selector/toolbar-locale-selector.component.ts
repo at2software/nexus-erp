@@ -1,5 +1,5 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, computed, model } from '@angular/core';
+
 import { FormsModule } from '@angular/forms';
 import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 
@@ -8,18 +8,18 @@ export type LocaleKey = 'de-formal' | 'de-informal' | 'en-formal' | 'en-informal
 @Component({
     selector: 'toolbar-locale-selector',
     standalone: true,
-    imports: [CommonModule, FormsModule, NgbDropdownModule],
+    imports: [FormsModule, NgbDropdownModule],
     template: `
         <div ngbDropdown class="d-inline-block">
             <button type="button" class="btn btn-primary dropdown-toggle-simple" ngbDropdownToggle>
                 <i class="me-1">translate</i>
-                <span>{{currentLabel}}</span>
+                <span>{{currentLabel()}}</span>
             </button>
             <div ngbDropdownMenu>
                 @for (option of localeOptions; track option.key) {
                 <button type="button" ngbDropdownItem
-                        [class.active]="option.key === locale"
-                        (click)="selectLocale(option.key)">
+                        [class.active]="option.key === locale()"
+                        (click)="locale.set(option.key)">
                     {{option.label}}
                 </button>
                 }
@@ -28,8 +28,7 @@ export type LocaleKey = 'de-formal' | 'de-informal' | 'en-formal' | 'en-informal
     `
 })
 export class ToolbarLocaleSelectorComponent {
-    @Input() locale: LocaleKey = 'de-formal';
-    @Output() localeChange = new EventEmitter<LocaleKey>();
+    locale = model<LocaleKey>('de-formal');
 
     localeOptions: { key: LocaleKey; label: string }[] = [
         { key: 'de-formal', label: 'DE - formal' },
@@ -38,12 +37,5 @@ export class ToolbarLocaleSelectorComponent {
         { key: 'en-informal', label: 'EN - informal' },
     ];
 
-    get currentLabel(): string {
-        return this.localeOptions.find(o => o.key === this.locale)?.label || 'DE - formal';
-    }
-
-    selectLocale(key: LocaleKey) {
-        this.locale = key;
-        this.localeChange.emit(key);
-    }
+    currentLabel = computed(() => this.localeOptions.find(o => o.key === this.locale())?.label || 'DE - formal');
 }

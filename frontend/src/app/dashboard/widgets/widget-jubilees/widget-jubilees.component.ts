@@ -21,9 +21,6 @@ export class WidgetJubileesComponent extends BaseWidgetComponent implements OnIn
     jubilees:any[] = []
     env= environment
 
-    ngOnInit() {
-        this.reload()
-    }
     reload(): void {
         this.#widgetService.indexJubilees().subscribe(data => {
             let jubilees:any[] = []

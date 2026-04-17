@@ -69,7 +69,8 @@
 
       @if (parent.current) {
         <ul-compact class="list-group">
-          <li class="list-group-item d-flex text-nowrap p-0 compact" *nxFor="let con of connections">
+          @for (con of connections; track con.id) {
+          <li class="list-group-item d-flex text-nowrap p-0 compact" [nx]="con" [tables]="connections">
             <div class="hstack gap-2 p-2 w-100" (click)="selectItem(con, $event)" (keyup.enter)="selectItem(con, $event)" tabindex="0">
               <div>
                 <avatar [object]="con.otherCompany(parent.current)"></avatar>
@@ -77,6 +78,7 @@
               <div class="flex-fill text-truncate">{{con.otherCompany(parent.current)?.name}}</div>
             </div>
           </li>
+          }
         </ul-compact>
       }
     </div>
@@ -89,7 +91,7 @@
           <div class="card-header">
             <span i18n="@@i18n.common.revenue">revenue</span>
             <span class="badge bg-lighter ms-2 py-1 px-1" ngbTooltip="accumulated revenue of the last 12 months" i18n="@@i18n.common.12m" i18n-ngbTooltip="@@i18n.invoice.revenue12m">12m</span>
-            <div class="chart-title ms-auto">{{(revenueChart.value ? revenueChart.value : 0) | money}}</div>
+            <div class="chart-title ms-auto">{{(revenueChart.value() ? revenueChart.value() : 0) | money}}</div>
           </div>
           <chart-card-range #revenueChart keyPath="{{parent.current.getParamPath('INVOICE_REVENUE_12M,INVOICE_DEG_12M')}}" [color]="['white','primary']"></chart-card-range>
         </div>

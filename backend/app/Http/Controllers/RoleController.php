@@ -27,24 +27,20 @@ class RoleController extends Controller {
                 ->toArray(),
         ];
     }
-
     public function assign(Role $role, User $user): array {
         abort_if($user->id == 1, 403, 'Cannot modify superadmin.');
         abort_if(Auth::id() == $user->id && $role->name === 'admin', 403, 'Cannot remove your own admin role.');
 
         $user->assignRole($role->name);
         Cache::forget('roles');
-
         return $this->index();
     }
-
     public function remove(Role $role, User $user): array {
         abort_if($user->id == 1, 403, 'Cannot modify superadmin.');
         abort_if(Auth::id() == $user->id && $role->name === 'admin', 403, 'Cannot remove your own admin role.');
 
         $user->removeRole($role->name);
         Cache::forget('roles');
-
         return $this->index();
     }
 }

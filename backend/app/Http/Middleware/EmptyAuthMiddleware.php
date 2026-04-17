@@ -10,7 +10,7 @@ class EmptyAuthMiddleware {
     public function handle(Request $request, Closure $next): Response {
         $username = $request->getUser();
         if (empty($username)) {
-            $response  = $this->createUnauthorizedResponse();
+            $response = $this->createUnauthorizedResponse();
             $response->headers->set('WWW-Authenticate', 'Basic realm="_"');
             return $response;
         }

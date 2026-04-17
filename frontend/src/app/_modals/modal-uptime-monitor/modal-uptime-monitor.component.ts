@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 import { UptimeMonitor } from '@models/uptime/uptime-monitor.model';
 import { UptimeMonitorService } from '@models/uptime/uptime-monitor.service';
 import { Injectable } from '@angular/core';
@@ -11,7 +11,7 @@ import { Injectable } from '@angular/core';
     templateUrl: './modal-uptime-monitor.component.html',
     styleUrls: ['./modal-uptime-monitor.component.scss'],
     standalone: true,
-    imports: [CommonModule, FormsModule]
+    imports: [FormsModule]
 })
 export class ModalUptimeMonitorComponent {
     monitor!: UptimeMonitor;
@@ -98,7 +98,6 @@ export class UptimeMonitorModalService {
             modalRef.componentInstance.isCreating = true;
             modalRef.componentInstance.projectIds = projectIds || [];
         }
-
         return modalRef.result;
     }
 }

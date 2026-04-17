@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Actions\GenerateProjectQuoteAction;
 use App\Builders\ProjectBuilder;
 use App\Casts\Permission;
 use App\Casts\Precomputed;
@@ -14,8 +15,8 @@ use App\Traits\HasAssignmentsTrait;
 use App\Traits\HasFilesTrait;
 use App\Traits\HasFociTrait;
 use App\Traits\HasInvoiceItemsTrait;
-use App\Traits\HasProjectStateTrait;
 use App\Traits\HasPaymentPlanTrait;
+use App\Traits\HasProjectStateTrait;
 use App\Traits\HasQuoteDescriptionsTrait;
 use App\Traits\HasTasksTrait;
 use App\Traits\PrecomputedTrait;
@@ -23,8 +24,27 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Http\Response;
 
 class Project extends BaseModel {
+    public static function withParentHierarchy($collection): ProjectCollection {
+        $allProjects = collect();
+        foreach ($collection as $project) {
+            $allProjects->push($project);
+            $parentId = $project->project_id;
+            while ($parentId) {
+                $parent = static::find($parentId);
+                if ($parent) {
+                    $allProjects->push($parent);
+                    $parentId = $parent->project_id;
+                } else {
+                    $parentId = null;
+                }
+            }
+        }
+        return new ProjectCollection($allProjects->unique('id')->values()->all());
+    }
+
     use CanMakeInvoiceTrait;
     use HasAssignmentsTrait;
     use HasFactory;
@@ -68,6 +88,9 @@ class Project extends BaseModel {
     }
     public function newCollection(array $models = []) {
         return new ProjectCollection($models);
+    }
+    public function makeQuote(): Response {
+        return app(GenerateProjectQuoteAction::class)->execute($this);
     }
 
     // ######################
@@ -192,7 +215,7 @@ class Project extends BaseModel {
         return $this->invoiceItems()->whereNull('invoice_id')->whereNull('company_id')->whereIn('type', InvoiceItemType::ProjectTotalRemaining);
     }
     public function supportItems() {
-        return $this->invoiceItems()->whereIn('type', [InvoiceItemType::Default, InvoiceItemType::PreparedSupport])->where('net', '>', 0)->whereInvoiceId(null)->whereCompanyId(null);
+        return $this->invoiceItems()->whereStage(1)->whereIn('type', InvoiceItemType::TotalRemaining)->where('net', '>', 0)->whereInvoiceId(null)->whereCompanyId(null);
     }
     public function milestones() {
         return $this->hasMany(Milestone::class);
@@ -207,7 +230,13 @@ class Project extends BaseModel {
         return $this->hasManyThrough(InvoiceItemPrediction::class, InvoiceItem::class);
     }
     public function preparedInvoiceItems() {
-        return $this->invoiceItems()->whereIn('type', [...Invoice::ITEMS_ADDING_TO_INVOICE, InvoiceItemType::Header])->whereInvoiceId(null)->oldest('position');
+        return $this->invoiceItems()->whereStage(0)->whereIn('type', [...Invoice::ITEMS_ADDING_TO_INVOICE, InvoiceItemType::Header])->whereInvoiceId(null)->oldest('position');
+    }
+    public function supportInvoiceItems() {
+        return $this->invoiceItems()->whereStage(1)->whereIn('type', [...Invoice::ITEMS_ADDING_TO_INVOICE, InvoiceItemType::Header])->whereInvoiceId(null)->oldest('position');
+    }
+    public function downpaymentInvoiceItems() {
+        return $this->invoiceItems()->whereStage(2)->whereIn('type', [...Invoice::ITEMS_ADDING_TO_INVOICE, InvoiceItemType::Header])->whereInvoiceId(null)->oldest('position');
     }
     public function product() {
         return $this->belongsTo(Product::class);
@@ -271,6 +300,86 @@ class Project extends BaseModel {
             return $this->individual_wage;
         }
         return $this->company->getWage($baseWage);
+    }
+    public function postpone(int $duration, ?string $comment = null): static {
+        $map = [
+            1 => ['period' => 'weeks',  'amount' => 1,  'label' => '1 Wochen'],
+            2 => ['period' => 'weeks',  'amount' => 2,  'label' => '2 Wochen'],
+            3 => ['period' => 'months', 'amount' => 1,  'label' => '1 Monate'],
+            4 => ['period' => 'months', 'amount' => 2,  'label' => '2 Monate'],
+            5 => ['period' => 'months', 'amount' => 3,  'label' => '3 Monate'],
+            6 => ['period' => 'months', 'amount' => 6,  'label' => '6 Monate'],
+            7 => ['period' => 'months', 'amount' => 12, 'label' => '1 Jahr'],
+        ];
+        $config = $map[$duration] ?? null;
+        if (! $config) {
+            return $this;
+        }
+        $method           = 'add'.ucfirst($config['period']);
+        $this->remind_at  = now()->$method($config['amount'])->toDateTimeString();
+        $this->save();
+
+        $text = ($comment ? $comment.'<br>' : '').'Frist verlängert ('.$config['label'].')';
+        Comment::create([
+            ...$this->toPoly(),
+            'text'    => $text,
+            'user_id' => request()->user()->id,
+            'is_mini' => true,
+        ]);
+        return $this;
+    }
+    public function setParent(?int $parentId): void {
+        if ($this->pluginLinks) {
+            $this->pluginLinks->each(fn ($_) => $_->delete());
+        }
+        $this->assignees()->delete();
+
+        if ($parentId) {
+            $parent = Project::findOrFail($parentId);
+            foreach ($parent->assignees()->get() as $assignee) {
+                Assignment::firstOrCreate([
+                    ...$this->toPoly(),
+                    ...$assignee->assignee->toPoly('assignee'),
+                    'role_id' => $assignee->role_id,
+                ]);
+            }
+            foreach ($parent->pluginLinks()->get() as $link) {
+                PluginLink::firstOrCreate([
+                    'name' => $link->name,
+                    'type' => $link->type,
+                    'url'  => $link->url,
+                    ...$this->toPoly(),
+                ]);
+            }
+            $this->project_manager_id = $parent->project_manager_id;
+            $this->product_id         = $parent->product_id;
+        } else {
+            $this->project_manager_id = null;
+            $this->product_id         = null;
+        }
+    }
+    public function moveItemsToCustomer($itemsQuery, array $itemUpdates = []): void {
+        Invoice::disablePropagation();
+
+        $maxPos = $this->company->invoiceItems()->max('position') ?? 0;
+
+        InvoiceItem::create([
+            'company_id' => $this->company->id,
+            'position'   => ++$maxPos,
+            'type'       => InvoiceItemType::Header,
+            'text'       => ($this->po_number ? $this->po_number.' ' : '').$this->name,
+        ]);
+
+        $itemsQuery->get()->each(function ($item) use (&$maxPos, $itemUpdates) {
+            $item->update([
+                'company_id' => $this->company_id,
+                'position'   => ++$maxPos,
+                ...$itemUpdates,
+            ]);
+        });
+
+        Invoice::enablePropagation();
+        $this->propagateDirty();
     }
     public function newEloquentBuilder($query) {
         return new ProjectBuilder($query);

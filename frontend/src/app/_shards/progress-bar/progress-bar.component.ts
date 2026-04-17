@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 /**
  * Progress bar that allows percentages over 100%
@@ -13,10 +13,11 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProgressBarComponent {
-  @Input() style:string
-  @Input() overStyle:string = 'danger'
-  @Input() progress:number
-  perc = ():any => ({width: ((this.progress <= 1 ? this.progress : this.progress - 1) * 100) + '%'})
-  background = () => this.progress > 1 ? 'bg-' + this.style : ''
-  foreground = () => this.progress > 1 ? 'bg-' + this.overStyle : 'bg-' + this.style
+  style     = input<string>()
+  overStyle = input<string>('danger')
+  progress  = input.required<number>()
+  height    = input<number>(2)
+  perc = () => { const p = this.progress(); return { width: ((p > 1 ? p - 1 : p) * 100) + '%' } }
+  background = () => this.progress() > 1 ? 'bg-' + this.style() : ''
+  foreground = () => 'bg-' + (this.progress() > 1 ? this.overStyle() : this.style())
 }

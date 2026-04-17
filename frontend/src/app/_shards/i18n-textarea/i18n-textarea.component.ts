@@ -1,5 +1,5 @@
-import { Component, Input, forwardRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectorRef, Component, forwardRef, inject, input } from '@angular/core';
+
 import { FormsModule, ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 type I18nValue = string | { language: string, formality: string, text: string }[];
@@ -7,7 +7,7 @@ type I18nValue = string | { language: string, formality: string, text: string }[
 @Component({
     selector: 'i18n-textarea',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [FormsModule],
     templateUrl: './i18n-textarea.component.html',
     styleUrls: ['./i18n-textarea.component.scss'],
     providers: [{
@@ -17,10 +17,12 @@ type I18nValue = string | { language: string, formality: string, text: string }[
     }]
 })
 export class I18nTextareaComponent implements ControlValueAccessor {
-    @Input() placeholder?: string;
-    @Input() rows: number = 3;
-    @Input() label?: string;
-    @Input() showPlaceholderInfo: boolean = true;
+    #cdr = inject(ChangeDetectorRef);
+
+    placeholder         = input<string|undefined>();
+    rows                = input<number|undefined>();
+    label               = input<string|undefined>();
+    showPlaceholderInfo = input<boolean|undefined>();
 
     currentLanguage = 'de';
     currentFormality = 'formal';
@@ -36,20 +38,29 @@ export class I18nTextareaComponent implements ControlValueAccessor {
     // ControlValueAccessor implementation
     writeValue(value: I18nValue): void {
         if (Array.isArray(value)) {
-            // Localized - array of i18n objects
             this.#i18nVariants = value;
-            // Set default to first variant or de-formal
             const defaultVariant = value.find(v => v.language === 'de' && v.formality === 'formal') || value[0];
             if (defaultVariant) {
                 this.currentLanguage = defaultVariant.language;
                 this.currentFormality = defaultVariant.formality;
                 this.#internalValue = defaultVariant.text;
             }
+        } else if (value === '@@i18n') {
+            // Backend marker without resolved variants (e.g. no i18n records yet) — initialize as empty localized state
+            this.#i18nVariants = [
+                { language: 'de', formality: 'formal',   text: '' },
+                { language: 'de', formality: 'informal', text: '' },
+                { language: 'en', formality: 'formal',   text: '' },
+                { language: 'en', formality: 'informal', text: '' },
+            ];
+            this.currentLanguage = 'de';
+            this.currentFormality = 'formal';
+            this.#internalValue = '';
         } else {
-            // Plain string
             this.#i18nVariants = [];
             this.#internalValue = value || '';
         }
+        this.#cdr.markForCheck();
     }
 
     registerOnChange(fn: (value: I18nValue) => void): void {

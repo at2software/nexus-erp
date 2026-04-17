@@ -8,11 +8,12 @@
 @use './scss/dropdown';
 @use './scss/input';
 @use './scss/nexus';
-@use 'node_modules/material-icons/iconfont/material-icons';
-@use 'node_modules/leaflet/dist/leaflet.css';
-
-@use 'node_modules/frappe-gantt/dist/frappe-gantt.css';
+@use 'material-icons/iconfont/material-icons';
 @use './scss/frappe-gantt-dark';
+
+@use 'frappe-gantt';
+
+@import 'leaflet/dist/leaflet.css';
 
 i {
     @extend .material-icons-outlined;

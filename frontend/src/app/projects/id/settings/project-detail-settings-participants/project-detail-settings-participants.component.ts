@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChild, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterModule } from '@angular/router';
 import { ProjectDetailGuard } from '@app/projects/project-details.guard';
 import { ProjectService } from 'src/models/project/project.service';
@@ -22,7 +22,7 @@ interface ParticipatingCompany {
     templateUrl: './project-detail-settings-participants.component.html',
     styleUrls: ['./project-detail-settings-participants.component.scss'],
     standalone: true,
-    imports: [CommonModule, RouterModule, ConnectionsListComponent, NexusModule, NgbTooltipModule, EmptyStateComponent]
+    imports: [RouterModule, ConnectionsListComponent, NexusModule, NgbTooltipModule, EmptyStateComponent]
 })
 export class ProjectDetailSettingsParticipantsComponent implements OnInit {
 

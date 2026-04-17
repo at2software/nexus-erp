@@ -6201,6 +6201,70 @@
         <source>on hold</source>
       </segment>
     </unit>
+    <unit id="i18n.marketing.open_linkedin">
+      <notes>
+        <note category="location">src/models/marketing/marketing.prospect.model.ts</note>
+      </notes>
+      <segment>
+        <source>Open LinkedIn</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.mark_status">
+      <notes>
+        <note category="location">src/models/marketing/marketing.prospect.model.ts</note>
+      </notes>
+      <segment>
+        <source>Mark...</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.mark_new">
+      <notes>
+        <note category="location">src/models/marketing/marketing.prospect.model.ts</note>
+      </notes>
+      <segment>
+        <source>Mark New</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.mark_engaged">
+      <notes>
+        <note category="location">src/models/marketing/marketing.prospect.model.ts</note>
+      </notes>
+      <segment>
+        <source>Mark Engaged</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.mark_converted">
+      <notes>
+        <note category="location">src/models/marketing/marketing.prospect.model.ts</note>
+      </notes>
+      <segment>
+        <source>Mark Converted</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.mark_unresponsive">
+      <notes>
+        <note category="location">src/models/marketing/marketing.prospect.model.ts</note>
+      </notes>
+      <segment>
+        <source>Mark Unresponsive</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.mark_disqualified">
+      <notes>
+        <note category="location">src/models/marketing/marketing.prospect.model.ts</note>
+      </notes>
+      <segment>
+        <source>Mark Disqualified</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.mark_on_hold">
+      <notes>
+        <note category="location">src/models/marketing/marketing.prospect.model.ts</note>
+      </notes>
+      <segment>
+        <source>Mark On Hold</source>
+      </segment>
+    </unit>
     <unit id="i18n.common.remarketing_intervals">
       <notes>
         <note category="location">src/app/marketing/marketing-remarketing/marketing-remarketing.component.html:3,6</note>
@@ -9874,6 +9938,14 @@
         <source>email text</source>
       </segment>
     </unit>
+    <unit id="i18n.invoice.emailTextSepa">
+      <notes>
+        <note category="location">src/app/settings/invoices/settings-invoices.component.html:97,98</note>
+      </notes>
+      <segment>
+        <source>email text (SEPA debit)</source>
+      </segment>
+    </unit>
     <unit id="i18n.invoice.datev">
       <notes>
         <note category="location">src/app/settings/invoices/settings-invoices.component.html:15,16</note>
@@ -10201,6 +10273,30 @@
       </notes>
       <segment>
         <source>email address for framework update notifications</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.emailThresholds">
+      <notes>
+        <note category="location">src/app/settings/settings-projects/settings-projects-notifications/settings-projects-notifications.component.html:10</note>
+      </notes>
+      <segment>
+        <source>email thresholds</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.emailThresholdsDesc">
+      <notes>
+        <note category="location">src/app/settings/settings-projects/settings-projects-notifications/settings-projects-notifications.component.html:12</note>
+      </notes>
+      <segment>
+        <source>Send an email to the project manager when hours invested divided by estimated work exceeds a threshold. Notifications reset automatically if the ratio drops below the threshold again.</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.noThresholds">
+      <notes>
+        <note category="location">src/app/settings/settings-projects/settings-projects-notifications/settings-projects-notifications.component.html:21</note>
+      </notes>
+      <segment>
+        <source>no thresholds configured</source>
       </segment>
     </unit>
     <unit id="i18n.payment.defaultPlansTitle">

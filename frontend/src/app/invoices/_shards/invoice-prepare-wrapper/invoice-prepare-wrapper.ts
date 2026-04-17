@@ -1,158 +1,109 @@
-import { Component, Input, Output, EventEmitter, ViewChild, OnChanges, OnInit, TemplateRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, computed, input, output, signal, TemplateRef, viewChild } from '@angular/core';
+
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { TextParamEditorComponent } from '@shards/text-param-editor/text-param-editor.component';
 import { InvoicePrepare } from '@app/invoices/_shards/invoice-prepare/invoice-prepare';
 import { CustomerPaymentDetailsComponent } from '@app/customers/_shards/customer-payment-details/customer-payment-details.component';
-import { TBillingConsideration } from '@models/company/company.model';
-import { Company } from '@models/company/company.model';
+import { TBillingConsideration, Company } from '@models/company/company.model';
 import { Project } from '@models/project/project.model';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
-import { InvoiceItemType } from '../../../../enums/invoice-item.type';
 import { SafePipe } from '../../../../pipes/safe.pipe';
 
 @Component({
     selector: 'invoice-prepare-wrapper',
     standalone: true,
-    imports: [CommonModule, NgbTooltipModule, TextParamEditorComponent, InvoicePrepare, CustomerPaymentDetailsComponent, SafePipe],
+    imports: [NgbTooltipModule, TextParamEditorComponent, InvoicePrepare, CustomerPaymentDetailsComponent, SafePipe],
     templateUrl: './invoice-prepare-wrapper.html',
     styleUrls: ['./invoice-prepare-wrapper.scss']
 })
-export class InvoicePrepareWrapper implements OnInit, OnChanges {
+export class InvoicePrepareWrapper {
 
-    @Input() parent: Company | Project
-    @Input() items: InvoiceItem[] | undefined
-    @Input() annotationType: 'invoice' | 'quote' | 'support' | 'none' = 'invoice'
-    @Input() showMiniCards: boolean = true
-    @Input() additionalBillingConsiderations: TBillingConsideration[] = []
-    @Input() allowedNewItems: ('item'|'paydown'|'group'|'discount')[] = ['item','paydown','group','discount']
-    @Input() withInstalments: boolean = true
-    @Input() mode: 'invoice' | 'quote' = 'invoice'
-    @Input() additionalItems?: TemplateRef<any>
-    @Input() projectPaymentDuration?: string
-    @Input() onChangeProjectPaymentDuration?: () => void
-    @Input() onRemoveProjectPaymentDuration?: () => void
-    @Output() considerationsChanged = new EventEmitter<TBillingConsideration[]>()
+    parent                          = input.required<Company | Project>()
+    items                           = input<InvoiceItem[] | undefined>(undefined)
+    stageFilter                     = input<number | undefined>(undefined)
+    annotationType                  = input<'invoice' | 'quote' | 'support' | 'none'>('invoice')
+    showMiniCards                   = input<boolean>(true)
+    additionalBillingConsiderations = input<TBillingConsideration[]>([])
+    allowedNewItems                 = input<('item' | 'paydown' | 'group' | 'discount')[]>(['item', 'paydown', 'group', 'discount'])
+    withInstalments                 = input<boolean>(true)
+    mode                            = input<'invoice' | 'quote'>('invoice')
+    additionalItems                 = input<TemplateRef<unknown> | undefined>(undefined)
+    projectPaymentDuration          = input<string | undefined>(undefined)
+    onChangeProjectPaymentDuration  = input<(() => void) | undefined>(undefined)
+    onRemoveProjectPaymentDuration  = input<(() => void) | undefined>(undefined)
+    considerationsChanged = output<TBillingConsideration[]>()
 
-    @ViewChild(InvoicePrepare) table: InvoicePrepare
+    readonly table = viewChild(InvoicePrepare)
 
-    allBillingConsiderations: TBillingConsideration[] = []
-    prefixKey: string = 'INVOICE_PREFIX'
-    suffixKey: string = 'INVOICE_SUFFIX'
-    prefixTo: any
-    suffixTo: any
-    prefixObject: any
-    suffixObject: any
-    companyLocale: string = 'de-formal'
+    readonly allBillingConsiderations = signal<TBillingConsideration[]>([])
 
-    get company(): Company {
-        return this.parent instanceof Company ? this.parent : this.parent.company
-    }
+    readonly prefixKey = computed(() => this.mode() === 'quote' ? 'PROJECT_PREFIX' : 'INVOICE_PREFIX')
+    readonly suffixKey = computed(() => this.mode() === 'quote' ? 'PROJECT_SUFFIX' : 'INVOICE_SUFFIX')
+    readonly #textParamTarget = computed(() => {
+        const parent = this.parent()
+        if (this.mode() === 'quote' && parent instanceof Project) {
+            return { to: parent.personalized, object: parent }
+        }
+        const company = this.company()
+        return { to: company, object: company }
+    })
+    readonly company = computed<Company>(() => this.parent() instanceof Company ? this.parent() as Company : (this.parent() as Project).company)
+    readonly prefixTo = computed(() => this.#textParamTarget().to)
+    readonly prefixObject = computed(() => this.#textParamTarget().object)
+    readonly companyLocale = computed(() => this.company()?.getLocale() ?? 'de-formal')
+    readonly hasVatIssues = computed(() => this.allBillingConsiderations().some(c => c.tooltip?.toLowerCase().includes('vat')))
 
     #recalculateBillingConsiderations(items: InvoiceItem[] = []) {
-        const considerations = [...this.additionalBillingConsiderations]
+        const considerations = [...this.additionalBillingConsiderations()]
+        const company = this.company()
 
         for (const item of items) {
             if (item.invoice_id) continue
-            if (!item.isRegularItem() && item.type !== InvoiceItemType.PreparedInstalment) continue
+            if (!item.isRegularItem()) continue
 
-            if (item.hasVatDespiteId(this.company)) {
-                considerations.push({
-                    type: 'error',
-                    label: item.text,
-                    tooltip: 'item has VAT but company has VAT ID',
-                    invoice_item_id: item.id
-                })
+            if (item.hasVatDespiteId(company)) {
+                considerations.push({ type: 'error', label: item.text, tooltip: 'item has VAT but company has VAT ID', invoice_item_id: item.id })
             }
-            if (item.hasVatExceptionWithoutId(this.company)) {
-                considerations.push({
-                    type: 'error',
-                    label: item.text,
-                    tooltip: 'item has no VAT but company has no VAT ID',
-                    invoice_item_id: item.id
-                })
+            if (item.hasVatExceptionWithoutId(company)) {
+                considerations.push({ type: 'error', label: item.text, tooltip: 'item has no VAT but company has no VAT ID', invoice_item_id: item.id })
             }
-            if (item.hasVatWhenNotNeeded(this.company)) {
-                considerations.push({
-                    type: 'error',
-                    label: item.text,
-                    tooltip: 'item has VAT but company does not need VAT',
-                    invoice_item_id: item.id
-                })
+            if (item.hasVatWhenNotNeeded(company)) {
+                considerations.push({ type: 'error', label: item.text, tooltip: 'item has VAT but company does not need VAT', invoice_item_id: item.id })
             }
         }
 
         setTimeout(() => {
-            this.allBillingConsiderations = considerations
+            this.allBillingConsiderations.set(considerations)
             this.considerationsChanged.emit(considerations)
         })
-    }
-
-    #updateProperties() {
-        this.prefixKey = this.mode === 'quote' ? 'PROJECT_PREFIX' : 'INVOICE_PREFIX'
-        this.suffixKey = this.mode === 'quote' ? 'PROJECT_SUFFIX' : 'INVOICE_SUFFIX'
-
-        if (this.mode === 'quote' && this.parent instanceof Project) {
-            this.prefixTo = this.parent.personalized
-            this.suffixTo = this.parent.personalized
-            this.prefixObject = this.parent
-            this.suffixObject = this.parent
-        } else {
-            this.prefixTo = this.company
-            this.suffixTo = this.company
-            this.prefixObject = this.company
-            this.suffixObject = this.company
-        }
-
-        this.companyLocale = this.company?.getLocale() || 'de-formal'
-    }
-
-    ngOnInit() {
-        this.#updateProperties()
-    }
-
-    ngOnChanges() {
-        this.#updateProperties()
     }
 
     handleTableLoaded(items: InvoiceItem[]) {
         this.#recalculateBillingConsiderations(items)
     }
 
-    trackBillingConsideration = (index: number, item: TBillingConsideration) => {
-        return item.invoice_item_id || item.label + item.type
+    trackBillingConsideration(_index: number, item: TBillingConsideration) {
+        return item.invoice_item_id || item.label + item.type || _index
     }
 
-    hasVatIssues = (): boolean => {
-        return this.allBillingConsiderations.some(c => 
-            c.tooltip?.includes('VAT') || 
-            c.tooltip?.includes('vat')
-        )
-    }
+    fixVatIssues() {
+        const items = this.items()
+        if (!items) return
 
-    fixVatIssues = () => {
-        if (!this.items) return
-
-        const correctVatRate = this.company.getInvoiceItemVatRate()
-        const itemsToFix = this.items.filter(item => 
-            item.hasImplausibleVat(this.company)
-        )
-
+        const company = this.company()
+        const correctVatRate = company.getInvoiceItemVatRate()
+        const itemsToFix = items.filter(item => item.hasImplausibleVat(company))
         if (itemsToFix.length === 0) return
 
-        // Update all items with the correct VAT rate
         itemsToFix.forEach(item => {
             item.vat_rate = correctVatRate
             item.updateDynamicAttributes()
             item.update().subscribe()
         })
 
-        // Recalculate billing considerations after a short delay
         setTimeout(() => {
-            this.#recalculateBillingConsiderations(this.items)
-            if (this.table) {
-                this.table.reload()
-            }
+            this.#recalculateBillingConsiderations(items)
+            this.table()?.reload()
         }, 300)
     }
 }

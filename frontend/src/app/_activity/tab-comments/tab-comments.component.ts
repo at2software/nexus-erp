@@ -1,6 +1,7 @@
 import { Company } from 'src/models/company/company.model';
 import { CommentService } from '@models/comment/comment.service';
-import { Component, inject, Input, OnChanges, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, effect, inject, input, model, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Comment } from 'src/models/comment/comment.model';
 import { Project } from 'src/models/project/project.model';
 import { User } from 'src/models/user/user.model';
@@ -10,9 +11,8 @@ import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { GitService } from '@models/git.service';
 import { GlobalService } from '@models/global.service';
 import { NgbTooltipModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
-import { CommonModule } from '@angular/common';
+
 import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
-import { Subject, takeUntil } from 'rxjs';
 import { ChatPluginInstance } from '@models/http/chat.plugin.instance';
 
 
@@ -20,14 +20,15 @@ import { ChatPluginInstance } from '@models/http/chat.plugin.instance';
     selector: 'app-tab-comments',
     templateUrl: './tab-comments.component.html',
     styleUrls: ['./tab-comments.component.scss'],
-    imports: [TabCommentComponent, NexusModule, ScrollbarComponent, NgbTooltipModule, NgbDropdownModule, CommonModule],
+    imports: [TabCommentComponent, NexusModule, ScrollbarComponent, NgbTooltipModule, NgbDropdownModule],
     standalone: true
 })
-export class TabCommentsComponent implements OnChanges, OnDestroy {
+export class TabCommentsComponent {
 
-    @Input() quickLinks?: Company
-    @Input() projects: Project[] = []
-    @Input() currentProject?: Project
+    quickLinks     = input<Company>()
+    projects       = model<Project[]>()
+    currentProject = input<Project>()
+    path           = input.required<string>()
 
     stickies: Comment[] = []
     comments: Comment[] = []
@@ -41,22 +42,19 @@ export class TabCommentsComponent implements OnChanges, OnDestroy {
     #gitService = inject(GitService)
     #globalService = inject(GlobalService)
     #pluginFactory = inject(PluginInstanceFactory)
-    #destroy$ = new Subject<void>()
+    #destroyRef = inject(DestroyRef)
 
-    @Input() path: string
-    @ViewChild('commentTextarea') commentTextarea?: ElementRef<HTMLTextAreaElement>
-    @ViewChild(ScrollbarComponent) scrollbar?: ScrollbarComponent
+    readonly commentTextarea = viewChild<ElementRef<HTMLTextAreaElement>>('commentTextarea');
+    readonly scrollbar = viewChild(ScrollbarComponent);
 
     selectedTarget: 'nexus' | ChatPluginInstance = 'nexus'
     availableChatTargets: ChatPluginInstance[] = []
 
-    ngOnChanges() { 
-        this.reload()
-    }
-
-    ngOnDestroy() {
-        this.#destroy$.next()
-        this.#destroy$.complete()
+    constructor() {
+        effect(() => {
+            this.path();
+            this.reload();
+        });
     }
 
     reload() {
@@ -80,7 +78,7 @@ export class TabCommentsComponent implements OnChanges, OnDestroy {
             })
         }
 
-        this.#commentService.indexFor(this.path).subscribe(nexusComments => {
+        this.#commentService.indexFor(this.path()).subscribe(nexusComments => {
             this.allComments = nexusComments.map(c => {
                 c.var = c.var || {}
                 c.var.source = 'nexus'
@@ -89,20 +87,20 @@ export class TabCommentsComponent implements OnChanges, OnDestroy {
             this.filterAndSortComments()
             
             // Load activity from all plugin types
-            if (this.currentProject) {
+            if (this.currentProject()) {
                 this.loadPluginActivity()
             }
         })
     }
 
     loadPluginActivity() {
-        if (!this.currentProject) return
+        if (!this.currentProject()) return
 
         // Load from all plugin types (automatically deduplicates)
-        const instances = this.#pluginFactory.getInstances(this.currentProject,['IRepositoryPluginProperty', 'ITaskPluginProperty', 'IChatPluginProperty'])
+        const instances = this.#pluginFactory.getInstances(this.currentProject(),['IRepositoryPluginProperty', 'ITaskPluginProperty', 'IChatPluginProperty'])
         
         instances.forEach(instance => {
-            instance.init.pipe(takeUntil(this.#destroy$)).subscribe(() => {
+            instance.init.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(() => {
                 this.loadFromInstance(instance)
             })
         })
@@ -111,10 +109,10 @@ export class TabCommentsComponent implements OnChanges, OnDestroy {
     loadFromInstance(instance: any) {
         const projectId = (instance as any).projectId || 
                          this.extractProjectId(instance) || 
-                         this.currentProject?.id?.toString() || ''
+                         this.currentProject()?.id?.toString() || ''
 
         instance.getActivityComments(projectId, 150, this.resolveUser.bind(this))
-            .pipe(takeUntil(this.#destroy$))
+            .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe({
                 next: (commentData: any[]) => {
                     const comments = commentData.map(data => {
@@ -132,8 +130,8 @@ export class TabCommentsComponent implements OnChanges, OnDestroy {
     }
 
     extractProjectId(instance: any): string | undefined {
-        if (instance._baseUrl && this.currentProject) {
-            const [gitInstance, path] = this.#gitService.instanceAndPath(this.currentProject)
+        if (instance._baseUrl && this.currentProject()) {
+            const [gitInstance, path] = this.#gitService.instanceAndPath(this.currentProject()!)
             if (gitInstance === instance && path) {
                 return path.replace(/^\/|\/$/g, '').replace(/^projects\//, '')
             }
@@ -145,18 +143,17 @@ export class TabCommentsComponent implements OnChanges, OnDestroy {
     resolveUser(email?: string, username?: string, name?: string, pluginAttributeName?: string): User | undefined {
         const searchSources: any[] = [
             ...(this.#globalService.teamAll || []),
-            ...(this.currentProject?.assignees?.map((a: any) => a.assignee).filter((u: any) => u?.class === 'User' || u?.class === 'CompanyContact') || [])
+            ...(this.currentProject()?.assignees?.map((a: any) => a.assignee).filter((u: any) => u?.class === 'User' || u?.class === 'CompanyContact') || [])
         ]
-        
         return searchSources.find((u: User) => {
             // Check plugin-specific attribute (X-NEXUS-GIT or X-NEXUS-MANTISBT)
             if (pluginAttributeName && username) {
-                const attrValue = u.card?.get(pluginAttributeName)?.[0]?.val()
+                const attrValue = u.card.get(pluginAttributeName)?.[0]?.val()
                 if (attrValue === username) return true
             }
             
             // Check email
-            if (email && u.card?.get('EMAIL')?.some((e: any) => e.val() === email)) return true
+            if (email && u.card.get('EMAIL')?.some((e: any) => e.val() === email)) return true
             
             // Partial name matching
             if (name) {
@@ -164,7 +161,6 @@ export class TabCommentsComponent implements OnChanges, OnDestroy {
                                 name.toLowerCase().includes(u.name?.toLowerCase())
                 if (nameMatch) return true
             }
-            
             return false
         })
     }
@@ -187,7 +183,7 @@ export class TabCommentsComponent implements OnChanges, OnDestroy {
     }
 
     scrollToBottom() {
-        const el = this.scrollbar?.el?.nativeElement
+        const el = this.scrollbar()?.el?.nativeElement
         if (el) el.scrollTop = el.scrollHeight
     }
 
@@ -203,7 +199,6 @@ export class TabCommentsComponent implements OnChanges, OnDestroy {
             }
             groups.get(dateKey)!.push(comment)
         })
-
         return Array.from(groups.entries()).map(([dateKey, comments]) => ({
             date: dateKey,
             header: this.getDayHeader(new Date(dateKey)),
@@ -221,7 +216,6 @@ export class TabCommentsComponent implements OnChanges, OnDestroy {
         if (diffDays === 0) return $localize`:@@i18n.common.today:today`
         if (diffDays === 1) return $localize`:@@i18n.common.yesterday:yesterday`
         if (diffDays < 7) return `${diffDays} ${$localize`:@@i18n.common.daysAgo:days ago`}`
-
         return date.toLocaleDateString()
     }
 
@@ -231,7 +225,7 @@ export class TabCommentsComponent implements OnChanges, OnDestroy {
     }
 
     onQuickLinksLoaded(p:Project[]) {
-        this.projects = p
+        this.projects.set(p)
     }
 
     onNew(event: any) {
@@ -239,7 +233,7 @@ export class TabCommentsComponent implements OnChanges, OnDestroy {
         if (!text) return
         
         if (this.selectedTarget === 'nexus') {
-            this.#commentService.store({ text, path: this.path }).subscribe(() => {
+            this.#commentService.store({ text, path: this.path() }).subscribe(() => {
                 this.reload()
                 event.target.value = ''
                 this.resetTextareaHeight()
@@ -283,8 +277,7 @@ export class TabCommentsComponent implements OnChanges, OnDestroy {
     }
 
     resetTextareaHeight() {
-        if (this.commentTextarea?.nativeElement) {
-            this.commentTextarea.nativeElement.style.height = 'auto'
-        }
+        const el = this.commentTextarea()?.nativeElement
+        if (el) el.style.height = 'auto'
     }
 }

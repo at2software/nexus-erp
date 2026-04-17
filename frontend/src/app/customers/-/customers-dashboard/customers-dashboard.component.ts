@@ -152,7 +152,6 @@ export class CustomersDashboardComponent extends TableSearchSortBase<Company> im
             filters.sort_by = this.sortData.key;
             filters.sort_direction = this.sortData.sortMode === SortMode.ASCENDING ? 'asc' : 'desc';
         }
-
         return filters;
     };
 

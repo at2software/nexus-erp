@@ -1,6 +1,6 @@
-import { NxAction, NxActionType } from "src/app/nx/nx.actions"
+import { NxAction } from "src/app/nx/nx.actions"
 import { Comment } from "./comment.model"
-import { ModalConfirmComponent } from "@app/_modals/modal-confirm/modal-confirm.component"
+import { NxGlobal } from "src/app/nx/nx.global"
 
 export function getCommentActions(self: Comment): NxAction[] {
     return [
@@ -12,13 +12,6 @@ export function getCommentActions(self: Comment): NxAction[] {
                 { title: $localize`:@@i18n.comment.notice:notice`, action: () => self.update({ type: 3 }).subscribe() },
             ]
         },
-        {
-            title: $localize`:@@i18n.common.delete:delete`,
-            interrupt: { service: ModalConfirmComponent, args: { message: 'Really delete this comment?', title: 'Attention' } },
-            action: () => self.delete(),
-            type: NxActionType.Destructive,
-            group: true,
-            hotkey: 'CTRL+DELETE'
-        },
+        NxGlobal.deleteAction(self, 'Really delete this comment?'),
     ]
 }

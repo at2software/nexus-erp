@@ -78,7 +78,6 @@ export class ProjectsDashboardComponent implements OnInit, AfterViewInit {
             filters.sort_by        = this.sortData.key;
             filters.sort_direction = this.sortData.sortMode === SortMode.ASCENDING ? 'asc' : 'desc';
         }
-
         return filters;
     };
 
@@ -122,11 +121,10 @@ export class ProjectsDashboardComponent implements OnInit, AfterViewInit {
         }
     }
     reload() {
+        const filters: any = this.filters()
         this.projects = []
         this.hasLoaded = false
-        const filters: any = this.filters()
-        this.continuous.observer = this.#projectService.index(filters)
-        this.continuous.ngOnChanges()
+        this.continuous.observer.set(this.#projectService.index(filters))
     }
     updateCookie() {
         const cookieData = this.#cookieData()

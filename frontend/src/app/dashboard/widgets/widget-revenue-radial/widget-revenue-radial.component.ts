@@ -2,7 +2,7 @@ import { Component, ElementRef, ViewChild, AfterViewInit, inject } from '@angula
 import * as d3 from 'd3';
 import { InvoiceService } from '@models/invoice/invoice.service';
 import { NexusModule } from 'src/app/nx/nexus.module';
-import { CommonModule } from '@angular/common';
+
 import { Color } from '@constants/Color';
 import { MoneyPipe } from 'src/pipes/money.pipe';
 
@@ -21,7 +21,7 @@ interface MonthlyRevenueData {
     templateUrl: './widget-revenue-radial.component.html',
     styleUrls: ['./widget-revenue-radial.component.scss'],
     standalone: true,
-    imports: [CommonModule, NexusModule],
+    imports: [NexusModule],
     providers: [MoneyPipe]
 })
 export class WidgetRevenueRadialComponent implements AfterViewInit {

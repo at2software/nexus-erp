@@ -1,4 +1,4 @@
-import { Component, inject, Input } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 import { FileService } from '@models/file/file.service';
 import { File } from '@models/file/file.model';
 import { IHasFiles } from '@models/file/has_files.interface';
@@ -15,9 +15,10 @@ import { NexusModule } from '@app/nx/nexus.module';
     imports: [DatePipe, DndDirective, FileComponent, NexusModule, CommonModule]
 })
 export class MediaPreviewComponent {
-    @Input() parent:IHasFiles
+    
+    parent = input.required<IHasFiles>()
+
     #fileService = inject(FileService)
-    show = (_:File) => {
-        this.#fileService.show(_)
-    }
+
+    show = (_:File) => this.#fileService.show(_)
 }

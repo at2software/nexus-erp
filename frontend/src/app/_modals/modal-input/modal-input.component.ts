@@ -1,4 +1,4 @@
-import { Component, ElementRef, Injectable, ViewChild, AfterViewInit, inject } from '@angular/core';
+import { Component, ElementRef, Injectable, afterNextRender, inject, viewChild } from '@angular/core';
 import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { FormsModule } from '@angular/forms';
 import { HotkeyDirective } from '@directives/hotkey.directive';
@@ -14,8 +14,8 @@ import { ModalBaseComponent } from '../modal-base.component';
     standalone: true,
     imports: [FormsModule, HotkeyDirective, SafePipe]
 })
-export class ModalInputComponent extends ModalBaseComponent<string> implements AfterViewInit {
-    @ViewChild('inputField') inputField: ElementRef
+export class ModalInputComponent extends ModalBaseComponent<string> {
+    readonly inputField = viewChild.required<ElementRef>('inputField');
 
     modalTitle: string = ''
     result: string = ''
@@ -24,16 +24,18 @@ export class ModalInputComponent extends ModalBaseComponent<string> implements A
 
     activeModal: NgbActiveModal = inject(NgbActiveModal)
 
+    constructor() {
+        super();
+        afterNextRender(() => this.inputField().nativeElement.focus());
+    }
+
     init(args: any): void {
         this.modalTitle = args.title
         this.infoMessage = args.message
+        if (args.initialValue !== undefined) this.result = args.initialValue
     }
     onSuccess() {
         return this.result
-    }
-
-    ngAfterViewInit() {
-        this.inputField.nativeElement.focus()
     }
     decline = () => this.activeModal.close(undefined)
     accept = () => this.activeModal.close({text: this.result, more: false})

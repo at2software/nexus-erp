@@ -39,7 +39,6 @@ export class FocusService extends NexusHttpService<Focus> {
         if (endDate) {
             params.end_date = endDate
         }
-
         return this.aget(`${_.getApiPathWithId()}/foci`, params)
     }
     uninvoicedFoci = (_: Serializable) => this.aget(`foci/uninvoiced/${_.getApiPathWithId()}`)

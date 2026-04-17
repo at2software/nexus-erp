@@ -1,7 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 import { Sentinel } from '@models/sentinel.model';
 import { SentinelService } from '@models/sentinel.service';
 import { GlobalService } from '@models/global.service';
@@ -20,7 +20,7 @@ import { AutosaveDirective } from '@directives/autosave.directive';
     templateUrl: './profile-sentinel-detail.component.html',
     styleUrl: './profile-sentinel-detail.component.scss',
     standalone: true,
-    imports: [CommonModule, FormsModule, PermissionsDirective, AutosaveDirective]
+    imports: [FormsModule, PermissionsDirective, AutosaveDirective]
 })
 export class ProfileSentinelDetailComponent implements OnInit {
     sentinel?: Sentinel;

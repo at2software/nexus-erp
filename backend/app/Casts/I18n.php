@@ -12,10 +12,12 @@ class I18n implements CastsAttributes {
     public function get(Model $model, string $key, mixed $value, array $attributes): mixed {
         // If value is the marker, return array of i18n objects
         if ($value === $this->markerValue && $model->exists) {
-            $i18nRecords = I18nModel::where([
-                'parent_type' => get_class($model),
-                'parent_id'   => $model->getKey(),
-            ])->get();
+            $i18nRecords = $model->relationLoaded('i18n')
+                ? $model->getRelation('i18n')
+                : I18nModel::where([
+                    'parent_type' => get_class($model),
+                    'parent_id'   => $model->getKey(),
+                ])->get();
 
             if ($i18nRecords->isNotEmpty()) {
                 return $i18nRecords->map(fn ($record) => [
@@ -55,7 +57,6 @@ class I18n implements CastsAttributes {
                     );
                 }
             }
-
             return $this->markerValue;
         }
 
@@ -106,7 +107,6 @@ class I18n implements CastsAttributes {
                     ]
                 );
             }
-
             return $this->markerValue;
         }
 

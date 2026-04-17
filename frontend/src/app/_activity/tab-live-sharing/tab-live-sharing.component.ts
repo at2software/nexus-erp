@@ -1,28 +1,28 @@
-import { Component, inject, OnInit, OnDestroy, ViewChild } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, DestroyRef, OnInit, ViewChild, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
 import { ActivityTabComponent } from '../activity-tab.component';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { NexusModule } from '@app/nx/nexus.module';
 import { LiveSharingService, ActiveSharing } from '@models/live-sharing.service';
 import { WebSocketService } from 'src/services/websocket.service';
-import { Subject, takeUntil } from 'rxjs';
 import { environment } from 'src/environments/environment';
 
 @Component({
     selector: 'activity-tab-live-sharing',
     standalone: true,
-    imports: [ActivityTabComponent, ScrollbarComponent, NexusModule, CommonModule],
+    imports: [ActivityTabComponent, ScrollbarComponent, NexusModule],
     templateUrl: './tab-live-sharing.component.html',
     styleUrls: ['./tab-live-sharing.component.scss']
 })
-export class TabLiveSharingComponent implements OnInit, OnDestroy {
+export class TabLiveSharingComponent implements OnInit {
 
     @ViewChild(ActivityTabComponent) tabComponent!: ActivityTabComponent;
     readonly componentType = TabLiveSharingComponent;
 
     #liveSharingService = inject(LiveSharingService);
     #wsService = inject(WebSocketService);
-    #destroy$ = new Subject<void>();
+    #destroyRef = inject(DestroyRef);
 
     sharingEnabled = false;
     featureEnabled = false;
@@ -31,21 +31,21 @@ export class TabLiveSharingComponent implements OnInit, OnDestroy {
 
     ngOnInit() {
         this.#liveSharingService.featureEnabled$
-            .pipe(takeUntil(this.#destroy$))
+            .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe(enabled => this.featureEnabled = enabled);
 
         this.#liveSharingService.sharingEnabled$
-            .pipe(takeUntil(this.#destroy$))
+            .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe(enabled => this.sharingEnabled = enabled);
 
         this.#liveSharingService.activeSharings$
-            .pipe(takeUntil(this.#destroy$))
+            .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe(sharings => {
                 this.activeSharings = sharings;
             });
 
         this.#wsService.connected$
-            .pipe(takeUntil(this.#destroy$))
+            .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe(connected => this.wsConnected = connected);
     }
 
@@ -69,8 +69,4 @@ export class TabLiveSharingComponent implements OnInit, OnDestroy {
             .substring(0, 2);
     }
 
-    ngOnDestroy() {
-        this.#destroy$.next();
-        this.#destroy$.complete();
-    }
 }

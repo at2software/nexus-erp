@@ -3,7 +3,8 @@
     <div class="card sticky-side">
       <div class="card-header" i18n="@@i18n.common.categories">categories</div>
       <ul class="list-group">
-        <li class="list-group-item py-1 d-flex px-3" *nxFor="let _ of categories">
+        @for (_ of categories; track _.id) {
+        <li class="list-group-item py-1 d-flex px-3" [nx]="_" [tables]="categories">
           <div class="pe-3">
             <i class="cursor-pointer" (click)="toggleCategoryVisibility(_)" (keyup.enter)="toggleCategoryVisibility(_)" tabindex="0" [style.color]="_.var.visible ? _.colorCss : '#666666'">
               {{_.var.visible ? 'visibility' : 'visibility_off' }}
@@ -12,6 +13,7 @@
           <div class="flex-fill text-truncate pe-3">{{_.name}}</div>
           <div class="small text-muted text-nowrap text-monospace">{{sumFor(_) | money}}</div>
         </li>
+        }
       </ul>
     </div>
   </div>
@@ -42,7 +44,8 @@
             <col style="width:24px;">
           </colgroup>
           <tbody>
-            <tr *nxFor="let _ of getItems()" [class.d-none]="!(categoryFor(_)?.var.visible ?? true)">
+            @for (_ of getItems(); track _.id) {
+            <tr [nx]="_" [tables]="getItems()" [class.d-none]="!(categoryFor(_)?.var.visible ?? true)">
               <td class="ps-3 pe-2">
                 <div style="width: 4px; height: 24px;" [style.backgroundColor]="categoryFor(_)?.colorCss ?? '#666666'"></div>
               </td>
@@ -79,6 +82,7 @@
                 }
               </td>
             </tr>
+            }
           </tbody>
           <tfoot>
             @if (selectionExpenses.length) {

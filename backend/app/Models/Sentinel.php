@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Enums\SentinelTriggerType;
-use App\Http\Controllers\PluginMattermostController;
 use App\Http\Middleware\Auth;
+use App\Jobs\ChatSendMessageJob;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class Sentinel extends BaseModel {
@@ -14,7 +16,7 @@ class Sentinel extends BaseModel {
 
     protected $fillable = ['name', 'trigger', 'table_name', 'trigger_variable', 'condition', 'result', 'user_id'];
     protected $appends  = ['subscribers'];
-    protected $access   = ['admin' => '*', 'project_manager'=>'*', 'user'=>'*'];
+    protected $access   = ['admin' => '*', 'project_manager' => '*', 'user' => '*'];
 
     public function getSubscribersAttribute() {
         return $this->subscribers()->get();
@@ -300,7 +302,7 @@ class Sentinel extends BaseModel {
                 $channel_id = $options->firstWhere('key', 'channel_id')->value ?? null;
                 $message    = $interpolate($options->firstWhere('key', 'message')->value ?? '');
                 if ($channel_id && $message) {
-                    \App\Jobs\ChatSendMessageJob::dispatch($message, channelId: $channel_id);
+                    ChatSendMessageJob::dispatch($message, channelId: $channel_id);
                 }
                 break;
         }
@@ -391,10 +393,10 @@ class Sentinel extends BaseModel {
             $method = substr($relation, 0, -2);
             if (method_exists($model, $method)) {
                 $result = $model->$method();
-                if ($result instanceof \Illuminate\Support\Collection || is_array($result)) {
+                if ($result instanceof Collection || is_array($result)) {
                     return $result;
                 }
-                if ($result instanceof \Illuminate\Database\Eloquent\Relations\Relation) {
+                if ($result instanceof Relation) {
                     return $result->get();
                 }
             }
@@ -404,7 +406,7 @@ class Sentinel extends BaseModel {
         // Handle relation property
         if (method_exists($model, $relation)) {
             $result = $model->$relation;
-            if ($result instanceof \Illuminate\Support\Collection || is_array($result)) {
+            if ($result instanceof Collection || is_array($result)) {
                 return $result;
             }
         }
@@ -481,6 +483,7 @@ class Sentinel extends BaseModel {
         if (str_starts_with($path, $triggerVar.'.')) {
             return data_get($model, substr($path, strlen($triggerVar) + 1));
         }
+
         // No match - return null
         return null;
     }
@@ -498,6 +501,7 @@ class Sentinel extends BaseModel {
             if (str_starts_with($path, $triggerVar.'.')) {
                 return (string)data_get($model, substr($path, strlen($triggerVar) + 1), '');
             }
+
             // No match - return empty
             return '';
         }, $template);

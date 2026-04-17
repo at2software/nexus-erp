@@ -1,5 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MarketingService } from '@models/marketing/marketing.service';
@@ -17,7 +17,7 @@ const ActivityStatsColors = MarketingActivity.STATS_COLORS;
     templateUrl: './marketing-workflows.component.html',
     styleUrl: './marketing-workflows.component.scss',
     standalone: true,
-    imports: [CommonModule, FormsModule, NexusModule, RouterModule, NgbTooltipModule, EmptyStateComponent, GuidedTourComponent]
+    imports: [FormsModule, NexusModule, RouterModule, NgbTooltipModule, EmptyStateComponent, GuidedTourComponent]
 })
 export class MarketingWorkflowsComponent implements OnInit {
     #marketingService = inject(MarketingService);

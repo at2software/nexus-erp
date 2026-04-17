@@ -1,11 +1,11 @@
-@if (parent) {
-<div class="card mb-3" [dnd]="parent.getApiPathWithId() + '/media'" [dndAllowed]="['image/', 'application/pdf']"
-    (dndUploaded)="parent.refresh().subscribe()">
+@let _parent = parent();
+@if (_parent) {
+<div class="card mb-3" [dnd]="_parent.getApiPathWithId() + '/media'" (dndUploaded)="_parent.refresh().subscribe()">
     <div class="card-header" i18n="@@i18n.common.media">media</div>
-    @if (parent.files.length) {
+    @if (_parent.files.length) {
     <ul class="list-group">
-        @for (file of parent.files; track file.id) {
-        <li class="list-group-item hstack gap-2" [nx]="file" [tables]="parent.files">
+        @for (file of _parent.files; track file.id) {
+        <li class="list-group-item hstack gap-2" [nx]="file" [tables]="_parent.files">
             <div>
                 <file [color]="file.colorCss" [size]="32" (click)="show(file)"><i>{{file.getIcon()}}</i></file>
             </div>

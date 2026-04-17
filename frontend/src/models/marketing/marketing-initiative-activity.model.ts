@@ -4,7 +4,7 @@ import { AutoWrap, AutoWrapArray } from '@constants/autowrap';
 import { MarketingInitiative } from './marketing-initiative.model';
 import { MarketingWorkflow } from './marketing-workflow.model';
 import { MarketingPerformanceMetric } from './marketing-performance-metrics.model';
-import { QuickActionType } from './marketing-activity.model';
+import { QuickActionType, TActivityStats } from './marketing-activity.model';
 import { IActivityBase } from './activity-base.interface';
 
 export class MarketingInitiativeActivity extends Serializable implements IActivityBase {
@@ -21,6 +21,7 @@ export class MarketingInitiativeActivity extends Serializable implements IActivi
     has_external_dependency?: boolean;
     parent_activity_id?: string;
     quick_action?: QuickActionType;
+    stats?: TActivityStats;
 
     // Relationships
     @AutoWrap('MarketingInitiative') marketing_initiative?: MarketingInitiative;

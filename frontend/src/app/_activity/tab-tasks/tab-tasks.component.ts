@@ -1,5 +1,5 @@
 import { ActivityTabComponent } from '@activity/activity-tab.component';
-import { Component, inject, ViewChild } from '@angular/core';
+import { Component, inject, ViewChild, OnInit } from '@angular/core';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { TabTasksHrComponent } from './_shards/tab-tasks-hr/tab-tasks-hr.component';
 import { TabTasksSentinelsComponent } from './_shards/tab-tasks-sentinels/tab-tasks-sentinels.component';
@@ -26,7 +26,7 @@ import { GlobalService } from '@models/global.service';
         TabTasksInvoiceableComponent
     ]
 })
-export class TabTasksComponent {
+export class TabTasksComponent implements OnInit {
 
     @ViewChild(ActivityTabComponent) tabComponent: ActivityTabComponent
 
@@ -41,6 +41,6 @@ export class TabTasksComponent {
     onCount(key: string, n: number) {
         this.#counts.set(key, n)
         const total = Array.from(this.#counts.values()).reduce((a, b) => a + b, 0)
-        this.tabComponent.badge = total > 0 ? '!' : undefined
+        this.tabComponent.badge.set(total > 0 ? '!' : undefined)
     }
 }

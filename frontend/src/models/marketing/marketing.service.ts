@@ -22,6 +22,7 @@ export class MarketingService extends NexusHttpService<MarketingInitiative> {
     getFunnel          = (filters: any = {}) => this.get(`marketing/funnel`, filters, Object)
     getRemarketing     = () => this.get(`marketing/remarketing`, {}, Object)
     getRemarketingDue  = () => this.aget(`marketing/remarketing/due`, {}, Object)
+    getDashboardStats  = () => this.get(`marketing/dashboard`, {}, Object)
 
     // ============================================
     // Initiative Methods
@@ -38,7 +39,8 @@ export class MarketingService extends NexusHttpService<MarketingInitiative> {
     removeInitiativeChannel     = (initiativeId: string, leadSourceId: number) => this.delete(`marketing/initiatives/${initiativeId}/channels/${leadSourceId}`, {}, Object)
     subscribeToInitiative       = (initiativeId: string, userId: string) => this.post(`marketing/initiatives/${initiativeId}/users`, { user_id: userId, role: 'member' }, Object)
     unsubscribeFromInitiative   = (initiativeId: string, userId: string) => this.delete(`marketing/initiatives/${initiativeId}/users/${userId}`, {}, Object)
-    showInitiativeStats         = (id: string) => this.get(`marketing/initiatives/${id}/stats`, {}, Object)
+    showInitiativeStats             = (id: string) => this.get(`marketing/initiatives/${id}/stats`, {}, Object)
+    indexInitiativeRecentActivity   = (id: string) => this.aget(`marketing/initiatives/${id}/activity`, {}, MarketingProspectActivity)
     indexInitiativesForAddon    = (leadSourceId: string) => this.aget('marketing/initiatives/for-addon', { lead_source_id: leadSourceId }, MarketingInitiative)
 
     // ============================================
@@ -51,7 +53,7 @@ export class MarketingService extends NexusHttpService<MarketingInitiative> {
     updateProspect                    = (id: string, data: any) => this.put(`marketing/prospects/${id}`, data, MarketingProspect)
     destroyProspect                   = (id: string) => this.delete(`marketing/prospects/${id}`, {}, Object)
     storeProspectFromAddon            = (data: any) => this.post('marketing/prospects/from-addon', data, MarketingProspect)
-    indexProspectActivitiesForAddon   = (params: any) => this.aget<MarketingProspectActivity>('marketing/prospects/activities-for-addon', params)
+    indexProspectActivitiesForAddon   = (params: any) => this.aget('marketing/prospects/activities-for-addon', params, MarketingProspectActivity)
     updateProspectActivityStatus      = (prospectId: string, activityId: string, data: any) => this.put<MarketingProspectActivity>(`marketing/prospects/${prospectId}/activities/${activityId}/status`, data)
     showProspectStats                 = (params?: any) => this.get('marketing/prospects/stats', params)
     linkToCompany                     = (prospectId: string, companyId: string) => this.post(`marketing/prospects/${prospectId}/link-to-company`, { company_id: companyId }, MarketingProspect)

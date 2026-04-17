@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, input } from '@angular/core';
 
 @Component({
     selector: 'file',
@@ -7,7 +7,7 @@ import { Component, Input } from '@angular/core';
     standalone: true
 })
 export class FileComponent {
-    @Input() color:string
-    @Input() size:number = 64
-    getWidth = () => this.size * .75
+    color = input<string|undefined>()
+    size = input<number|undefined>()
+    getWidth = () => this.size() ? this.size()! * .75 : 0
 }

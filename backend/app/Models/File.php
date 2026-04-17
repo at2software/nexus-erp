@@ -17,7 +17,7 @@ class File extends BaseModel {
     use ProvidesFileIcons;
 
     protected $fillable = ['name', 'parent_type', 'parent_id', 'dir', 'mime', 'category', 'tags', 'file_size', 'dimensions', 'uploaded_by'];
-    protected $access   = ['admin' => '*', 'project_manager'=>'cru', 'user'=>'cru'];
+    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
     public function parent() {
         return $this->morphTo();

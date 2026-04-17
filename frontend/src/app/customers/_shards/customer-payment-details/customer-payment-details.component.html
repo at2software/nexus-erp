@@ -5,26 +5,28 @@
       @if (!hasDiscount()) {
         <i (click)="onChangeParam('INVOICE_DISCOUNT')" (keyup.enter)="onChangeParam('INVOICE_DISCOUNT')" tabindex="0" class="text-primary pointer ms-1" ngbTooltip="add discount">discount</i>
       }
-      @if (!current?.getParam('INVOICE_DD_IBAN')) {
+      @if (!current()?.getParam('INVOICE_DD_IBAN')) {
         <i (click)="onChangeSepa()" (keyup.enter)="onChangeSepa()" tabindex="0" class="text-primary pointer ms-1" ngbTooltip="add SEPA">account_balance</i>
       }
-      @if (!current?.vat_id) {
+      @if (!current()?.vat_id) {
         <i (click)="onChangeVat()" (keyup.enter)="onChangeVat()" tabindex="0" class="text-primary pointer ms-1" ngbTooltip="add VAT ID">fingerprint</i>
       }
     </div>
   </div>
   <ul class="list-group">
-    @if (additionalItems) {
-      <ng-container *ngTemplateOutlet="additionalItems"></ng-container>
+    @if (additionalItems()) {
+      <ng-container *ngTemplateOutlet="additionalItems()"></ng-container>
     }
     <li class="list-group-item list-group-item-action d-flex py-1 align-items-center">
       <div ngbTooltip="invoice language" i18n-ngbTooltip="@@i18n.invoice.invoiceLanguage" class="text-muted me-2"><i>translate</i></div>
-      <company-locale-selector class="flex-fill" [company]="current" mode="inline" (localeChanged)="onLocaleChanged()"></company-locale-selector>
+      @if (current()) {
+        <company-locale-selector class="flex-fill" [company]="current()!" mode="inline" (localeChanged)="onLocaleChanged()"></company-locale-selector>
+      }
     </li>
     @if (hasDiscount()) {
       <li class="list-group-item list-group-item-action d-flex py-1">
         <div ngbTooltip="discount" class="text-muted me-2" i18n-ngbTooltip="@@i18n.common.discount"><i>discount</i></div>
-        <div (click)="onChangeParam('INVOICE_DISCOUNT')" (keyup.enter)="onChangeParam('INVOICE_DISCOUNT')" tabindex="0" class="pointer flex-fill">{{current?.getParam('INVOICE_DISCOUNT')}} %</div>
+        <div (click)="onChangeParam('INVOICE_DISCOUNT')" (keyup.enter)="onChangeParam('INVOICE_DISCOUNT')" tabindex="0" class="pointer flex-fill">{{current()?.getParam('INVOICE_DISCOUNT')}} %</div>
         <div><i class="text-primary pointer" (click)="removeDiscount()" (keyup.enter)="removeDiscount()" tabindex="0">delete</i></div>
       </li>
     }
@@ -33,36 +35,36 @@
       <div
         (click)="handlePaymentDurationClick()" tabindex="0" (keydown.enter)="handlePaymentDurationClick()"
         class="pointer flex-fill"
-        [class.text-muted]="!hasProjectPaymentDuration"
-        [class.text-primary]="hasProjectPaymentDuration"
-        [ngbTooltip]="hasProjectPaymentDuration ? 'individual project payment duration' : 'default customer value'"
+        [class.text-muted]="!hasProjectPaymentDuration()"
+        [class.text-primary]="hasProjectPaymentDuration()"
+        [ngbTooltip]="hasProjectPaymentDuration() ? 'individual project payment duration' : 'default customer value'"
         i18n-ngbTooltip="@@i18n.invoice.paymentDurationTooltip">
-        {{effectivePaymentDuration}} <span i18n="@@i18n.common.days">days</span>
+        {{effectivePaymentDuration()}} <span i18n="@@i18n.common.days">days</span>
       </div>
-      @if (hasProjectPaymentDuration && onRemoveProjectPaymentDuration) {
-        <div><i class="text-primary pointer" (click)="onRemoveProjectPaymentDuration()" (keyup.enter)="onRemoveProjectPaymentDuration()" tabindex="0">delete</i></div>
+      @if (hasProjectPaymentDuration() && onRemoveProjectPaymentDuration()) {
+        <div><i class="text-primary pointer" (click)="onRemoveProjectPaymentDuration()?.()" (keyup.enter)="onRemoveProjectPaymentDuration()?.()" tabindex="0">delete</i></div>
       }
     </li>
     <li class="list-group-item list-group-item-action d-flex py-1">
       <div ngbTooltip="invoicing email" i18n-ngbTooltip="@@i18n.invoices.invoicingEmail" class="text-truncate me-2"><i>email</i></div>
-      <div (click)="onChangeEmail()" (keyup.enter)="onChangeEmail()" tabindex="0" class="text-truncate pointer flex-fill" [ngbTooltip]="current?.invoice_email">{{current?.invoice_email}}</div>
+      <div (click)="onChangeEmail()" (keyup.enter)="onChangeEmail()" tabindex="0" class="text-truncate pointer flex-fill" [ngbTooltip]="current()?.invoice_email">{{current()?.invoice_email}}</div>
     </li>
-    @if (current?.getParam('INVOICE_DD_MANDATE')) {
+    @if (current()?.getParam('INVOICE_DD_MANDATE')) {
       <li class="list-group-item list-group-item-action d-flex py-1">
         <div class="text-muted me-2"><i>account_balance</i></div>
         <div (click)="onChangeSepa()" (keyup.enter)="onChangeSepa()" tabindex="0" class="pointer flex-fill">
-          <span ngbTooltip="mandate reference" i18n-ngbTooltip="@@i18n.invoice.mandateReference">{{current?.getParam('INVOICE_DD_MANDATE')}}</span>
+          <span ngbTooltip="mandate reference" i18n-ngbTooltip="@@i18n.invoice.mandateReference">{{current()?.getParam('INVOICE_DD_MANDATE')}}</span>
           <br>
-            <span ngbTooltip="IBAN" i18n-ngbTooltip="@@i18n.common.IBAN">{{current?.getParam('INVOICE_DD_IBAN')}}</span>
-          </div>
-          <div><i class="text-primary pointer" (click)="removeSepa()" (keyup.enter)="removeSepa()" tabindex="0">delete</i></div>
-        </li>
-      }
-      @if (current?.vat_id) {
-        <li class="list-group-item list-group-item-action d-flex py-1">
-          <div ngbTooltip="VAT-ID" i18n-ngbTooltip="@@i18n.common.VATID" class="text-truncate me-2"><i>fingerprint</i></div>
-          <div (click)="onChangeVat()" (keyup.enter)="onChangeVat()" tabindex="0" class="text-truncate pointer flex-fill" [ngbTooltip]="current?.vat_id">{{current?.vat_id}}</div>
-        </li>
-      }
-    </ul>
-  </div>
+          <span ngbTooltip="IBAN" i18n-ngbTooltip="@@i18n.common.IBAN">{{current()?.getParam('INVOICE_DD_IBAN')}}</span>
+        </div>
+        <div><i class="text-primary pointer" (click)="removeSepa()" (keyup.enter)="removeSepa()" tabindex="0">delete</i></div>
+      </li>
+    }
+    @if (current()?.vat_id) {
+      <li class="list-group-item list-group-item-action d-flex py-1">
+        <div ngbTooltip="VAT-ID" i18n-ngbTooltip="@@i18n.common.VATID" class="text-truncate me-2"><i>fingerprint</i></div>
+        <div (click)="onChangeVat()" (keyup.enter)="onChangeVat()" tabindex="0" class="text-truncate pointer flex-fill" [ngbTooltip]="current()?.vat_id">{{current()?.vat_id}}</div>
+      </li>
+    }
+  </ul>
+</div>

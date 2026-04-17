@@ -1,9 +1,9 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { RouterModule, Router } from '@angular/router';
 import { GlobalService } from '@models/global.service';
 import { User } from '@models/user/user.model';
-import { Subject, takeUntil } from 'rxjs';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { Color } from '@constants/Color';
 
@@ -14,11 +14,10 @@ import { Color } from '@constants/Color';
   templateUrl: './hr-stats.component.html',
   styleUrl: './hr-stats.component.scss'
 })
-export class HrStatsComponent implements OnInit, OnDestroy {
-  
-  
+export class HrStatsComponent implements OnInit {
+
   team: User[] = [];
-  #destroy$ = new Subject<void>();
+  #destroyRef = inject(DestroyRef);
   #global = inject(GlobalService);
   #router = inject(Router);
 
@@ -32,7 +31,7 @@ export class HrStatsComponent implements OnInit, OnDestroy {
     {
       title: 'Workload',
       description: 'Track team workload and productivity metrics',
-      route: 'workload', 
+      route: 'workload',
       icon: 'assessment'
     },
     {
@@ -50,14 +49,9 @@ export class HrStatsComponent implements OnInit, OnDestroy {
   ];
 
   ngOnInit() {
-    this.#global.init.pipe(takeUntil(this.#destroy$)).subscribe(() => {
+    this.#global.init.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(() => {
       this.team = this.#global.team
     });
-  }
-
-  ngOnDestroy() {
-    this.#destroy$.next();
-    this.#destroy$.complete();
   }
 
   navigateToStats(route: string) {
@@ -65,14 +59,9 @@ export class HrStatsComponent implements OnInit, OnDestroy {
   }
 
   getHpwBadgeColor(hpw: number): string {
-    // Everything below 20 hours is red, 20-40 hours transitions red to green
-    if (hpw < 20) {
-      return Color.fromHsl(0, 70, 45).toHexString(); // Red
-    }
-    
-    const normalizedHpw = Math.min(hpw, 40); // Cap at 40 for full green
-    const hue = ((normalizedHpw - 20) / 20) * 120; // 20hrs = red (0), 40hrs = green (120)
-    return Color.fromHsl(hue, 70, 45).toHexString();
+    if (!hpw) return new Color('#6c757d').toHexString()
+    if (hpw >= 38) return new Color('#198754').toHexString()
+    if (hpw >= 20) return new Color('#fd7e14').toHexString()
+    return new Color('#dc3545').toHexString()
   }
-  
 }

@@ -94,8 +94,8 @@ export class HrAddEmployeeModalComponent extends ModalBaseComponent<void> {
     #userService = inject(UserService)
     #global      = inject(GlobalService)
 
-    init(): void {}
-    onSuccess(): void {}
+    init(): void { /* noop */ }
+    onSuccess(): void { /* noop */ }
 
     onCreate() {
         this.#userService.create({

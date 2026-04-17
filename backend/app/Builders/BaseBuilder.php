@@ -15,7 +15,7 @@ class BaseBuilder extends Builder {
         }
         return Carbon::parse($max);
     }
-    public function selectCluster($keyColumn, $valueColumn, $format='%Y-%m') {
+    public function selectCluster($keyColumn, $valueColumn, $format = '%Y-%m') {
         return $this->selectRaw("DATE_FORMAT($keyColumn, '$format') `key`, SUM($valueColumn) `value`");
     }
     public function clusterBy($column = 'created_at', $format = '%Y-%m', $sumColumn = 'net', $key = 'month', $sumKey = 'sum'): BaseBuilder {
@@ -98,7 +98,7 @@ class BaseBuilder extends Builder {
         return $this;
     }
 
-    public function whereMorph($obj, $key='parent') {
+    public function whereMorph($obj, $key = 'parent') {
         return $this->where($key.'_type', get_class($obj))->where($key.'_id', $obj->id);
     }
     public function withRequest(): Builder {

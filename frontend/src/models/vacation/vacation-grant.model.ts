@@ -30,4 +30,36 @@ export class VacationGrant extends Serializable {
 
     remainingHours = () => this.amount + this.vacations.reduce((a, b) => a + b.delta(), 0)
     remainingDays = (_:User) => this.remainingHours() / _.getAverageHpd()
+
+    // States that count toward the running balance (approved + sick leave)
+    #countsTowardBalance = (v: Vacation) => [1, 3].includes(v.state)
+
+    chartMin(): number {
+        let running = this.amount
+        let min = 0
+        this.vacations.forEach(v => {
+            if (this.#countsTowardBalance(v)) {
+                running += v.amount
+                if (running < min) min = running
+            }
+        })
+        return Math.min(min, -this.amount * 0.2)
+    }
+
+    chartMax(): number {
+        return this.amount * 1.1
+    }
+
+    chartDxFor(vacation: Vacation): number {
+        let running = this.amount
+        const idx = this.vacations.findIndex(v => v.id === vacation.id)
+        for (let i = idx + 1; i < this.vacations.length; i++) {
+            if (this.#countsTowardBalance(this.vacations[i])) running += this.vacations[i].amount
+        }
+        return running
+    }
+
+    remainingHoursAfter(vacation: Vacation): number {
+        return this.chartDxFor(vacation) + (this.#countsTowardBalance(vacation) ? vacation.amount : 0)
+    }
 }

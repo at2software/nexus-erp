@@ -1,88 +1,82 @@
 import { ObserverTrigger } from 'src/enums/observer-trigger';
 import { SentinelNode } from '@models/sentinel-node.model';
 import { SentinelNodeType } from '../../../../enums/sentinel-node.type';
-import { Component, ElementRef, EventEmitter, Input, Output, OnChanges } from '@angular/core';
+import { NgClass } from '@angular/common';
+import { Component, computed, input, output } from '@angular/core';
 import { Sentinel } from '@models/sentinel.model';
 import { SENTINEL_CONDITIONS } from '../sentinel-condition.model';
-import { SENTINEL_COMMANDS, SentinelCommand } from '../sentinel-command.model';
+import { SENTINEL_COMMANDS } from '../sentinel-command.model';
 import { SentinelOptionFieldType } from '../sentinel-option-field-type.model';
 import { SentinelOptionField } from '../sentinel-condition-option-field.model';
-import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'profile-sentinel-node',
   templateUrl: './profile-sentinel-node.component.html',
   styleUrl: './profile-sentinel-node.component.scss',
   standalone: true,
-  imports: [CommonModule]
+  imports: [NgClass]
 })
-export class ProfileSentinelNodeComponent implements OnChanges {
-  @Input() node!: SentinelNode;
-  @Input() sentinel!: Sentinel;
-  @Input() width: number = 0;
-  @Input() height: number = 0;
-  @Input() column: number = 0;
-  @Input() row: number = 0;
-  @Output() deleteNode = new EventEmitter<void>();
-  @Output() editNode = new EventEmitter<void>();
+export class ProfileSentinelNodeComponent {
+  node = input.required<SentinelNode>();
+  sentinel = input.required<Sentinel>();
+  width = input<number>(0);
+  height = input<number>(0);
+  column = input<number>(0);
+  row = input<number>(0);
 
-  SentinelNodeType = SentinelNodeType;
-  ObserverTrigger = ObserverTrigger;
-  allConditions = SENTINEL_CONDITIONS;
-  allCommands = SENTINEL_COMMANDS;
+  deleteNode = output<void>();
+  editNode = output<void>();
 
-  columnOptions?: SentinelOptionField[];
-  options?: SentinelOptionField[];
-  commands?: SentinelCommand[];
+  readonly SentinelNodeType = SentinelNodeType;
+  readonly ObserverTrigger = ObserverTrigger;
+  readonly allConditions = SENTINEL_CONDITIONS;
+  readonly allCommands = SENTINEL_COMMANDS;
 
-  constructor(private el: ElementRef) {}
+  readonly #parsedCondition = computed(() => {
+    if (this.node().type !== SentinelNodeType.Condition) return null;
+    const conditions = JSON.parse(this.sentinel().condition || '[]');
+    const col = this.column();
+    const row = this.row();
+    if (conditions.length <= col || conditions[col].length <= row) return null;
+    return conditions[col][row];
+  });
 
-  ngOnChanges(changes: any){
-    if ('sentinel' in changes) {
-      this.reload();
+  readonly columnOptions = computed<SentinelOptionField[] | undefined>(() => {
+    const condition = this.#parsedCondition();
+    if (!condition) return undefined;
+    const defaultCondition = this.getCondition(condition.key);
+    return condition.options?.filter((o: SentinelOptionField) =>
+      defaultCondition?.options?.filter((x: SentinelOptionField) => x.key === o.key).first()?.type === SentinelOptionFieldType.Column
+    );
+  });
+
+  readonly options = computed<SentinelOptionField[] | undefined>(() => {
+    const condition = this.#parsedCondition();
+    if (!condition) return undefined;
+    const defaultCondition = this.getCondition(condition.key);
+    return condition.options?.filter((o: SentinelOptionField) =>
+      defaultCondition?.options?.filter((x: SentinelOptionField) => x.key === o.key).first()?.type !== SentinelOptionFieldType.Column
+    );
+  });
+
+  readonly commandLabel = computed<string | undefined>(() => {
+    const result = this.sentinel().result;
+    if (!result) return undefined;
+    const commands = JSON.parse(result);
+    if (commands.length >= 1) {
+      return this.allCommands.filter(c => c.key === commands[0].key).first()?.label;
     }
-  }
+    return undefined;
+  });
 
-  reload() {
-    if(this.node?.type == SentinelNodeType.Condition){
-      const conditions = JSON.parse(this.sentinel.condition || '[]');
-      if (conditions.length > this.column && conditions[this.column].length > this.row) {
-        const condition = conditions[this.column][this.row];
-        const defaultCondition = this.getCondition(condition.key);
-        this.columnOptions = condition.options?.filter((o: SentinelOptionField) => defaultCondition?.options?.filter(x => x.key == o.key).first()?.type == SentinelOptionFieldType.Column);
-        this.options = condition.options?.filter((o: SentinelOptionField) => defaultCondition?.options?.filter(x => x.key == o.key).first()?.type != SentinelOptionFieldType.Column);
-      }
-    }
-  }
+  readonly isCondition = computed(() => this.node().type === SentinelNodeType.Condition);
 
-  onDelete() {
-    this.deleteNode.emit();
-  }
-
-  onEdit() {
-    this.editNode.emit();
-  }
-
-  getCondition(key?: string){
-    if(key == undefined) return undefined;
-    return this.allConditions.filter(condition => condition.key == key).first();
-  }
-
-  getNodeTypeClass(type: SentinelNodeType){
+  getNodeTypeClass(type: SentinelNodeType) {
     return SentinelNodeType[type].toLocaleLowerCase();
   }
 
-  isCondition = () => this.node.type == SentinelNodeType.Condition;
-
-  getCommandLabel() {
-    if(this.sentinel.result){
-      const commands = JSON.parse(this.sentinel.result);
-      if(commands.length >= 1){
-        const key = commands[0].key;
-        return this.allCommands.filter(command => command.key == key).first()?.label;
-      }
-    }
-    return undefined;
+  getCondition(key?: string) {
+    if (key === undefined) return undefined;
+    return this.allConditions.filter(condition => condition.key === key).first();
   }
-
 }

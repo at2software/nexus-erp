@@ -1,5 +1,5 @@
 <div class="model-field-editor">
-  @for (field of fields; track field.field) {
+  @for (field of fields(); track field.field) {
     <div class="field-row" [class.enabled]="field.enabled">
       <div class="field-checkbox">
         <input type="checkbox" class="form-check-input" [(ngModel)]="field.enabled" (change)="onFieldToggle(field)">
@@ -11,10 +11,10 @@
             <input type="text" class="field-input" [(ngModel)]="field.value" (ngModelChange)="onValueChange()"
               (keyup)="onInputKeyup($event, field)" (focus)="onInputFocus(field)" (blur)="onInputBlur()"
               [placeholder]="'Value or {{variable}}'">
-            @if (activeField === field.field && suggestions.length > 0) {
+            @if (activeField() === field.field && suggestions().length > 0) {
               <div class="suggestions-dropdown">
-                @for (suggestion of suggestions; track $index; let i = $index) {
-                  <div class="suggestion-item" [class.active]="i === suggestionIndex"
+                @for (suggestion of suggestions(); track $index; let i = $index) {
+                  <div class="suggestion-item" [class.active]="i === suggestionIndex()"
                     [class.relation]="suggestion.type === 'relation'" (mousedown)="selectSuggestion(field, suggestion)">
                     <span class="suggestion-name">{{suggestion.name}}</span>
                     <small class="text-muted">{{suggestion.type}}</small>

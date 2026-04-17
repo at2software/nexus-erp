@@ -5,7 +5,7 @@ import { GlobalService } from '@models/global.service';
 import { CustomerDetailGuard } from '@app/customers/customers.details.guard';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
-import { CommonModule } from '@angular/common';
+
 import { REPEATING_TYPES } from '../../../../enums/invoice-item.type';
 import { Invoice } from '@models/invoice/invoice.model';
 import { TBillingConsideration } from '@models/company/company.model';
@@ -17,7 +17,7 @@ import { NexusModule } from '@app/nx/nexus.module';
     templateUrl: './customer-billing.component.html',
     styleUrls: ['./customer-billing.component.scss'],
     standalone: true,
-    imports: [ToolbarComponent, ScrollbarComponent, CommonModule, InvoicePrepareWrapper, NexusModule]
+    imports: [ToolbarComponent, ScrollbarComponent, InvoicePrepareWrapper, NexusModule]
 })
 export class CustomerBillingComponent implements OnInit {
 
@@ -39,7 +39,7 @@ export class CustomerBillingComponent implements OnInit {
     }
 
     makeInvoice = () => {
-        this.invoicingContent?.table?.clear()
+        this.invoicingContent?.table()?.clear()
         this.#companyService.makeInvoice(this.parent.current, () => {
             this.#router.navigate(['customers/'+this.parent.current.id+'/invoices'])
         })
@@ -53,6 +53,6 @@ export class CustomerBillingComponent implements OnInit {
     }
 
     activateRepeatingItems = () => {
-        this.#companyService.activateRepeatingItems(this.parent.current.id).subscribe(() => this.invoicingContent?.table?.reload())
+        this.#companyService.activateRepeatingItems(this.parent.current.id).subscribe(() => this.invoicingContent?.table()?.reload())
     }
 }

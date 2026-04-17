@@ -1,0 +1,27 @@
+<div class="card mb-3">
+  <div class="card-header">
+    <span i18n="@@i18n.marketing.initiatives">initiatives</span>
+    <div class="card-header-actions">
+      <button class="card-header-action btn text-primary" type="button" (click)="openAddModal()"
+        i18n-title="@@i18n.common.add" title="add">
+        <i>add</i>
+      </button>
+    </div>
+  </div>
+  @if (activityRows.length === 0) {
+    <div class="card-body text-muted small text-center py-3" i18n="@@i18n.marketing.noInitiativesForCompany">no open initiative activities</div>
+  }
+  @if (activityRows.length > 0) {
+    <ul class="list-group list-group-flush">
+      @for (activity of activityRows; track activity.id) {
+        <li class="list-group-item d-flex align-items-center gap-2 py-2" [nx]="activity" [tables]="activityRows">
+          <i [class]="statusClass(activity.status)" [ngbTooltip]="activity.status">{{statusIcon(activity.status)}}</i>
+          <span class="small text-nowrap" [class.text-danger]="activity.isOverdue()" [class.text-muted]="!activity.isOverdue()">{{activity.scheduled_at | date:'dd.MM.'}}</span>
+          <span class="text-truncate small flex-fill">{{activity.marketing_prospect?.company_contact?.name}}</span>
+          <span class="text-truncate text-muted small" style="max-width: 40%">{{activity.marketing_initiative_activity?.name}}</span>
+          <avatar [object]="activity.marketing_prospect?.user" size="24" [ngbTooltip]="activity.marketing_prospect?.user?.name" container="body"></avatar>
+        </li>
+      }
+    </ul>
+  }
+</div>

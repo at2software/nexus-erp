@@ -52,7 +52,7 @@ class ChatSendMessageJob implements ShouldQueue {
                         $message .= $chatController->getIconFor($this->project);
                     }
                     if ($this->imagePath) {
-                        $message = $chatController->getImageMarkdown($this->imagePath) . $message;
+                        $message = $chatController->getImageMarkdown($this->imagePath).$message;
                     }
                     if ($this->cacheId) {
                         $chatController->createOrUpdatePost($this->cacheId, $channelId, $message, $this->props);

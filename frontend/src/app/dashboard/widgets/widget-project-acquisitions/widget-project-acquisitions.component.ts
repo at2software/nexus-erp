@@ -1,7 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { Project } from 'src/models/project/project.model';
-import { BaseWidgetComponent } from '../base.widget.component';
-import { OptionType } from '../widget-options/widget-options.component';
+import { BaseWidgetComponent, WidgetOptions } from '../base.widget.component';
 import { WidgetsModule } from '../widgets.module';
 import { PermissionsDirective } from '@directives/permissions.directive';
 import { WidgetService } from '@models/widget.service';
@@ -20,16 +19,12 @@ export class WidgetProjectAcquisitionsComponent extends BaseWidgetComponent {
     #widgetService = inject(WidgetService)
 
     defaultOptions = () => ({
-        'max-items': {type:OptionType.Number, value:999, i18n: $localize`:@@i18n.common.maxItems:max items`},
-        'only-mine': {type:OptionType.Boolean, value:false, i18n: $localize`:@@i18n.common.onlyMine:only mine`},
-        'only-mine-as-pm': {type:OptionType.Boolean, value:false, i18n: $localize`:@@i18n.common.onlyMineAsProjectManager:only mine as project manager`},
-        'chart-only': {type:OptionType.Boolean, value:false, i18n: $localize`:@@i18n.common.chartOnly:chart only`}
+        ...WidgetOptions.maxItems,
+        ...WidgetOptions.onlyMine,
+        ...WidgetOptions.onlyMineAsPm,
+        ...WidgetOptions.chartOnly,
     })
 
-    override ngOnInit () {
-        super.ngOnInit()
-        this.reload()
-    }
     reload(): void {
         const options = { ...this.getOptionsURI() }
         if (this.hasInvoicesModule) {

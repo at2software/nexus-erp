@@ -1,4 +1,5 @@
-import { Component, HostBinding, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, DestroyRef, HostBinding, inject, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
 import { GlobalService } from 'src/models/global.service';
 import { ParamService } from 'src/models/param.service';
@@ -16,7 +17,6 @@ import { CommonModule } from '@angular/common';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { BaseWidgetListener } from './widgets/base.widget.listener';
 import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
-import { Subject, takeUntil } from 'rxjs';
 import { ActivityService } from '@app/_activity/activity.service';
 import { TabAttentionComponent } from '@app/_activity/tab-attention/tab-attention.component';
 import { GuidedTourComponent } from '@shards/guided-tour/guided-tour.component';
@@ -29,9 +29,9 @@ import { WidgetSuperadminWarningComponent } from './widgets/widget-superadmin-wa
     standalone: true,
     imports: [HeaderModule, ToolbarComponent, ScrollbarComponent, CommonModule, CdkDropList, EmptyStateComponent, NgbDropdownModule, CdkDrag, CdkDropList, GuidedTourComponent, WidgetSuperadminWarningComponent],
 })
-export class DashboardComponent implements OnDestroy, OnInit {
+export class DashboardComponent implements OnInit {
 
-    #destroy$ = new Subject<void>()
+    #destroyRef = inject(DestroyRef)
 
     @HostBinding('class.is_editing') is_editing: boolean = false
 
@@ -53,10 +53,10 @@ export class DashboardComponent implements OnDestroy, OnInit {
     mWidgets = WidgetFactory.availableWidgets()
 
     ngOnInit() {
-        this.global.init.pipe(takeUntil(this.#destroy$)).subscribe(() => {
-            this.#listener.updated.pipe(takeUntil(this.#destroy$)).subscribe((args) => this.onWidgetOptionsChanged(...args))
-            this.#listener.deleted.pipe(takeUntil(this.#destroy$)).subscribe((args) => this.onWidgetDelete(...args))
-            this.route.params.pipe(takeUntil(this.#destroy$)).subscribe(_ => {
+        this.global.init.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(() => {
+            this.#listener.updated.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe((args) => this.onWidgetOptionsChanged(...args))
+            this.#listener.deleted.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe((args) => this.onWidgetDelete(...args))
+            this.route.params.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(_ => {
                 if ('dashboard' in _) {
                     this.currentDashboard = parseInt(_['dashboard'])
                 }
@@ -70,11 +70,6 @@ export class DashboardComponent implements OnDestroy, OnInit {
             // Switch to history tab when dashboard loads
             this.#activityService.switchToTabByComponent(TabAttentionComponent)
         })
-    }
-
-    ngOnDestroy() {
-        this.#destroy$.next()
-        this.#destroy$.complete()
     }
 
     addReloadListeners() {
@@ -148,6 +143,6 @@ export class DashboardComponent implements OnDestroy, OnInit {
 
     updateDashboards = () => {
         this.addReloadListeners()
-        this.global.user?.updateParam('DASHBOARDS', { value: JSON.stringify(this.global.dashboards) }).pipe(takeUntil(this.#destroy$)).subscribe()
+        this.global.user?.updateParam('DASHBOARDS', { value: JSON.stringify(this.global.dashboards) }).pipe(takeUntilDestroyed(this.#destroyRef)).subscribe()
     }
 }

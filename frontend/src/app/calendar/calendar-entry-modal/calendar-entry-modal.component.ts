@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, Input } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { NgbActiveModal, NgbDatepickerModule, NgbDateStruct } from '@ng-bootstrap/ng-bootstrap';
 import { CalendarEntry } from 'src/models/vcalendar/calendar-entry.model';
 import { RecurrenceType, VCalendarEvent } from 'src/models/vcalendar/vcalendar-event.model';
@@ -26,8 +26,9 @@ export class CalendarEntryModalComponent implements OnInit {
 
     confirmation = inject(ConfirmationService)
 
-    @Input() calendarEntry?: CalendarEntry;
-    @Input() date?: Date;
+    calendarEntry?: CalendarEntry;
+    date?: Date;
+
     editedStartDate: NgbDateStruct;
     editedStartDateTemp: NgbDateStruct;
     editedEndDate?: NgbDateStruct;
@@ -43,53 +44,51 @@ export class CalendarEntryModalComponent implements OnInit {
     editedEndTime: { hour: number, minute: number } = { hour: 10, minute: 0 }
 
     constructor(public activeModal: NgbActiveModal) {
-      this.generateLocalizedDaysAndMonths();
+        this.generateLocalizedDaysAndMonths();
     }
 
     generateLocalizedDaysAndMonths(): void {
         const locale = navigator.language || 'en-US';
+        const weekStart = new Date(2024, 0, 1);
 
         this.monthNames = Array.from({ length: 12 }, (_, i) =>
             new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(2000, i, 1))
         );
 
-        const weekStart = new Date(2024, 0, 1);
-        this.daysOfWeek = Array.from({ length: 7 }, (_, i) => {
-            const currentDate = new Date(weekStart);
-            return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(new Date(currentDate.setDate(currentDate.getDate() + (i === 0 ? 0 : i))));
-        });
-        this.daysOfWeekEn = Array.from({ length: 7 }, (_, i) => {
-            const currentDate = new Date(weekStart);
-            return new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(new Date(currentDate.setDate(currentDate.getDate() + (i === 0 ? 0 : i)))).substring(0, 2).toUpperCase();
-        });
-        this.daysOfWeekLong = Array.from({ length: 7 }, (_, i) => {
-            const currentDate = new Date(weekStart);
-            return new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(new Date(currentDate.setDate(currentDate.getDate() + (i === 0 ? 0 : i))));
-        });
+        const fmtDays = (opts: Intl.DateTimeFormatOptions, loc = locale) =>
+            Array.from({ length: 7 }, (_, i) => {
+                const d = new Date(weekStart);
+                d.setDate(d.getDate() + i);
+                return new Intl.DateTimeFormat(loc, opts).format(d);
+            });
+
+        this.daysOfWeek = fmtDays({ weekday: 'short' });
+        this.daysOfWeekLong = fmtDays({ weekday: 'long' });
+        this.daysOfWeekEn = fmtDays({ weekday: 'short' }, 'en-US').map(d => d.substring(0, 2).toUpperCase());
     }
 
     ngOnInit() {
-      if (this.calendarEntry) {
-        this.calendarEntry = Object.assign(CalendarEntry.fromJson({}), this.calendarEntry);
-        this.calendarEntry.vcalendar_event = Object.assign(new VCalendarEvent(), this.calendarEntry.vcalendar_event);
-        this.editedStartDate = this.dateToNgbDateStruct(this.calendarEntry.vcalendar_event.start_date);
-        this.editedStartDateTemp = this.editedStartDate;
-        this.editedEndDate = this.dateToNgbDateStruct(this.calendarEntry.vcalendar_event.end_date!);
-        this.editedStartTime = this.dateToTime(this.calendarEntry.vcalendar_event.start_date);
-        this.editedStartTimeTemp = this.editedStartTime
-        this.editedEndTime = this.dateToTime(this.calendarEntry.vcalendar_event.end_date!);
-        this.isSetUp = true;
-      }
-      if (this.date) {
-        this.calendarEntry = CalendarEntry.fromJson({});
-        this.editedStartDate = this.dateToNgbDateStruct(this.date);
-        this.editedStartDateTemp = this.editedStartDate;
-        this.editedEndDate = this.dateToNgbDateStruct(this.date);
-        this.editedStartTime = { hour: 10, minute: 0 }
-        this.editedStartTimeTemp = this.editedStartTime
-        this.editedEndTime = { hour: 10, minute: 0 }
-        this.isSetUp = true;
-      }
+        if (this.calendarEntry) {
+            const calendarEntry = Object.assign(CalendarEntry.fromJson({}), this.calendarEntry);
+            calendarEntry.vcalendar_event = Object.assign(new VCalendarEvent(), calendarEntry.vcalendar_event);
+            this.calendarEntry = calendarEntry;
+            this.editedStartDate = this.dateToNgbDateStruct(calendarEntry.vcalendar_event.start_date);
+            this.editedStartDateTemp = this.editedStartDate;
+            this.editedEndDate = this.dateToNgbDateStruct(calendarEntry.vcalendar_event.end_date!);
+            this.editedStartTime = this.dateToTime(calendarEntry.vcalendar_event.start_date);
+            this.editedStartTimeTemp = this.editedStartTime
+            this.editedEndTime = this.dateToTime(calendarEntry.vcalendar_event.end_date!);
+            this.isSetUp = true;
+        } else if (this.date) {
+            this.calendarEntry = CalendarEntry.fromJson({});
+            this.editedStartDate = this.dateToNgbDateStruct(this.date);
+            this.editedStartDateTemp = this.editedStartDate;
+            this.editedEndDate = this.dateToNgbDateStruct(this.date);
+            this.editedStartTime = { hour: 10, minute: 0 }
+            this.editedStartTimeTemp = this.editedStartTime
+            this.editedEndTime = { hour: 10, minute: 0 }
+            this.isSetUp = true;
+        }
     }
 
     dateToNgbDateStruct(date: Date): NgbDateStruct {
@@ -108,8 +107,9 @@ export class CalendarEntryModalComponent implements OnInit {
 
     close(deleted: boolean = false) {
         const calendarEntry = CalendarEntry.fromJson({});
-        if(!deleted) calendarEntry.vcalendar = this.getEditedVCalendarString();
-        if(this.calendarEntry?.id) calendarEntry.id = this.calendarEntry?.id;
+        if (!deleted) calendarEntry.vcalendar = this.getEditedVCalendarString();
+        const inputCalendarEntry = this.calendarEntry;
+        if (inputCalendarEntry?.id) calendarEntry.id = inputCalendarEntry.id;
         this.activeModal.close(calendarEntry);
     }
 
@@ -178,17 +178,14 @@ export class CalendarEntryModalComponent implements OnInit {
         return d1.getTime() - d2.getTime();
     }
     compareTimes(time1: { hour: number, minute: number }, time2: { hour: number, minute: number }): number {
-        const d1 = new Date();
-        const d2 = new Date();
-        d1.setHours(time1.hour, time1.minute, 0, 0);
-        d2.setHours(time2.hour, time2.minute, 0, 0);
-        return d1.getTime() - d2.getTime();
+        return (time1.hour * 60 + time1.minute) - (time2.hour * 60 + time2.minute);
     }
 
 
     getEditedVCalendarString(): string {
-        if (!this.calendarEntry) return '';
-        const vcalendarEvent = this.calendarEntry.vcalendar_event;
+        const calendarEntry = this.calendarEntry;
+        if (!calendarEntry) return '';
+        const vcalendarEvent = calendarEntry.vcalendar_event;
         const dtStart = this.formatDate(this.editedStartDate, this.editedStartTime, vcalendarEvent.entire_day);
         const dtEnd = this.editedEndDate ? this.formatDate(this.editedEndDate, this.editedEndTime, vcalendarEvent.entire_day, true) : '';
         const rruleByDay = vcalendarEvent.isWeekdayDependent && vcalendarEvent.rrule == RecurrenceType.Monthly && vcalendarEvent.byDayOccurence && vcalendarEvent.byDayWeekday ? ';BYDAY=' + vcalendarEvent.byDayOccurence + vcalendarEvent.byDayWeekday : '';
@@ -205,27 +202,13 @@ export class CalendarEntryModalComponent implements OnInit {
             (this.editedEndDate && dtStart != dtEnd ? "DTEND" + dtEnd + "\n" : "") +
             "END:VEVENT\n" +
             "END:VCALENDAR";
-
         return vCalendar;
     }
     formatDate(ngbDate: NgbDateStruct, time?: { hour: number, minute: number }, entireDay: boolean = false, isEndDate: boolean = false): string {
         if (entireDay) {
-            let year = ngbDate.year;
-            let month = ngbDate.month;
-            let day = ngbDate.day;
-
-            if (isEndDate) {
-                const jsDate = new Date(year, month - 1, day);
-                jsDate.setDate(jsDate.getDate() + 1);
-                year = jsDate.getFullYear();
-                month = jsDate.getMonth() + 1;
-                day = jsDate.getDate();
-            }
-
-            const yearString = year.toString();
-            const monthString = month.toString().padStart(2, '0');
-            const dayString = day.toString().padStart(2, '0');
-            return ':' + yearString + monthString + dayString;
+            const d = new Date(ngbDate.year, ngbDate.month - 1, ngbDate.day);
+            if (isEndDate) d.setDate(d.getDate() + 1);
+            return ':' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
         }
         const date = new Date(ngbDate.year, ngbDate.month - 1, ngbDate.day, time?.hour || 0, time?.minute || 0);
         const timezone = this.getLocalTimezone();
@@ -237,7 +220,7 @@ export class CalendarEntryModalComponent implements OnInit {
         return Intl.DateTimeFormat().resolvedOptions().timeZone;
     }
     onDelete() {
-        this.confirmation.confirm({ title: 'Attention', message: 'Do you really want to delete this calendar item?'})
+        this.confirmation.confirm({ title: 'Attention', message: 'Do you really want to delete this calendar item?' })
             .then(response => {
                 if (response) {
                     this.close(true);

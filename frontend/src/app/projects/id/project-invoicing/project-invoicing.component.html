@@ -1,5 +1,5 @@
 <toolbar>
-    @if (invoicingType > 0 && (!project.company.requires_po || project.po_number?.length)) {
+    @if (invoicingType > 0 && (!project.company.requires_po || project.po_number?.length) && (invoicingType !== 1 || hasDownpaymentItems)) {
     <button class="btn"
         [class.btn-primary]="!isCreatingInvoice && !hasBillingConcerns"
         [class.btn-danger]="!isCreatingInvoice && hasBillingConcerns"
@@ -20,22 +20,42 @@
     </button>
     }
 
-    @if (invoicingType === 2) {
-    <div ngbDropdown>
-        <button class="btn btn-plain dropdown-toggle-simple" ngbDropdownToggle>
-            <i>more_vert</i>
+    @if (invoicingType === 1) {
+    <div class="btn-group" ngbDropdown>
+        <button type="button" class="btn btn-primary" (click)="onCreateDownpaymentInstalmentItem()">
+            <i>add</i>
+            <span i18n="invoice item|short description for invoice item@@i18n.invoice.item">item</span>
         </button>
-        <div ngbDropdownMenu>
-            <button ngbDropdownItem (click)="onCreateNewSupportItem()" class="hstack gap-2">
-                <i>add</i>
-                <span i18n="@@i18n.projects.createSupportItem">create support item</span>
+        <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" ngbDropdownToggle>
+            <span class="visually-hidden" i18n="@@i18n.invoices.toggleDropdown">toggle dropdown</span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+            <button class="dropdown-item hstack gap-2" (click)="onCreateDownpaymentHeaderItem()">
+                <span class="flex-fill" i18n="@@i18n.common.header">header</span>
             </button>
-            @if (supportItems.length) {
-            <button ngbDropdownItem (click)="moveSupportToCustomer()" class="hstack gap-2">
-                <i>call_made</i>
-                <span i18n="@@i18n.projects.moveToCustomer">move to customer</span>
+            <button class="dropdown-item hstack gap-2" (click)="onCreateDownpaymentDiscountItem()">
+                <span class="flex-fill" i18n="@@i18n.common.discount">discount</span>
             </button>
-            }
+        </div>
+    </div>
+    }
+
+    @if (invoicingType === 2) {
+    <div class="btn-group" ngbDropdown>
+        <button type="button" class="btn btn-primary" (click)="onCreateSupportRegularItem()">
+            <i>add</i>
+            <span i18n="invoice item|short description for invoice item@@i18n.invoice.item">item</span>
+        </button>
+        <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" ngbDropdownToggle>
+            <span class="visually-hidden" i18n="@@i18n.invoices.toggleDropdown">toggle dropdown</span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+            <button class="dropdown-item hstack gap-2" (click)="onCreateSupportHeaderItem()">
+                <span class="flex-fill" i18n="@@i18n.common.header">header</span>
+            </button>
+            <button class="dropdown-item hstack gap-2" (click)="onCreateSupportDiscountItem()">
+                <span class="flex-fill" i18n="@@i18n.common.discount">discount</span>
+            </button>
         </div>
     </div>
     }
@@ -70,33 +90,121 @@
 
 <div class="row">
     <div class="col-md-3">
-        <div class="card" ngbDropdown>
-            <button class="btn bg-primary-4 text-white text-start d-flex justify-content-between align-items-center" ngbDropdownToggle>
-                <div class="d-flex align-items-center gap-2">
-                    <i>view_list</i>
-                    <span>
-                        @if (invoicingType === 0) {
-                        <span i18n="@@i18n.common.quote">quote</span>
-                        }
-                        @if (invoicingType === 1) {
-                        <span i18n="@@i18n.invoices.downpayment-invoice">downpayment invoice</span>
-                        }
-                        @if (invoicingType === 2) {
-                        <span i18n="@@i18n.invoices.support-invoice">support invoice</span>
-                        }
-                        @if (invoicingType === 3) {
-                        <span i18n="@@i18n.invoices.final-invoice">final invoice</span>
-                        }
-                    </span>
-                </div>
-            </button>
-            <ul class="dropdown-menu w-100" ngbDropdownMenu>
-                <li><a class="dropdown-item" (click)="onInvoicingTypeChange(0)" (keyup.enter)="onInvoicingTypeChange(0)" tabindex="0" i18n="@@i18n.common.quote">quote</a></li>
-                <li><a class="dropdown-item" (click)="onInvoicingTypeChange(1)" (keyup.enter)="onInvoicingTypeChange(1)" tabindex="0" i18n="@@i18n.invoices.downpayment-invoice">downpayment invoice</a></li>
-                <li><a class="dropdown-item" (click)="onInvoicingTypeChange(2)" (keyup.enter)="onInvoicingTypeChange(2)" tabindex="0" i18n="@@i18n.invoices.support-invoice">support invoice</a></li>
-                <li><a class="dropdown-item" (click)="onInvoicingTypeChange(3)" (keyup.enter)="onInvoicingTypeChange(3)" tabindex="0" i18n="@@i18n.invoices.final-invoice">final invoice</a></li>
+        <!-- Quote card -->
+        @if (invoicingType === 0 && project) {
+        <div class="card mb-3">
+            <div class="card-header" i18n="@@i18n.common.quote">quote</div>
+            <project-invoicing-gauge
+                [net]="project.net"
+                [budgetCurve]="budgetCurve"
+                [timeMult]="timeMult"
+                [customerRate]="project.company.quote_acceptance_rate">
+            </project-invoicing-gauge>
+        </div>
+        }
+
+        <!-- Downpayment invoice card -->
+        @if (invoicingType === 1 && project) {
+        <div class="card mb-3">
+            <div class="card-header" i18n="@@i18n.invoices.downpayment-invoice">downpayment invoice</div>
+            <ul class="list-group">
+                <li class="list-group-item hstack gap-2 py-1">
+                    <div class="flex-fill text-muted small" i18n="@@i18n.common.totalBudget">total budget</div>
+                    <div class="small">{{project.net | money}}</div>
+                </li>
+                @if (pendingDownpayments > 0) {
+                <li class="list-group-item hstack gap-2 py-1">
+                    <div class="flex-fill text-muted small" i18n="@@i18n.invoices.pending">pending</div>
+                    <div class="small text-warning">{{pendingDownpayments | money}}</div>
+                </li>
+                }
+                <li class="list-group-item hstack gap-2 py-1">
+                    <div class="flex-fill text-muted small" i18n="@@i18n.invoices.invoiced">invoiced</div>
+                    <div class="small" [class.text-success]="invoicedDownpayments > 0" [class.text-muted]="invoicedDownpayments === 0">{{invoicedDownpayments | money}}</div>
+                </li>
+                <li class="list-group-item hstack gap-2 py-1">
+                    <div class="flex-fill text-muted small" i18n="@@i18n.common.remaining">remaining</div>
+                    <div class="small">{{downpaymentRemaining | money}}</div>
+                </li>
             </ul>
         </div>
+        }
+
+        <!-- Support invoice card -->
+        @if (invoicingType === 2 && project) {
+        <div class="card mb-3">
+            <div class="card-header" i18n="@@i18n.invoices.support-invoice">support invoice</div>
+            <ul class="list-group">
+                <li class="list-group-item hstack gap-2 py-1 cursor-pointer"
+                    [class.text-warning]="(project.uninvoiced_hours ?? 0) > 0"
+                    [class.text-muted]="(project.uninvoiced_hours ?? 0) === 0"
+                    (click)="navigateToSupport($event)" (keyup.enter)="navigateToSupport($event)" tabindex="0">
+                    @if ((project.uninvoiced_hours ?? 0) > 0) {
+                    <i class="text-warning">schedule</i>
+                    <div class="flex-fill small" i18n="@@i18n.common.unbilledFoci">unbilled foci</div>
+                    <div class="small">{{project.uninvoiced_hours | number:'1.1-1'}}h</div>
+                    <i class="small">chevron_right</i>
+                    } @else {
+                    <i>check_circle</i>
+                    <div class="flex-fill small" i18n="@@i18n.common.unbilledFoci">unbilled foci</div>
+                    <div class="small text-muted">0h</div>
+                    }
+                </li>
+                @if (project.oldest_unbilled_focus_at) {
+                <li class="list-group-item hstack gap-2 py-1 text-muted">
+                    <i class="small">history</i>
+                    <div class="flex-fill small" i18n="@@i18n.invoices.oldestUnbilledFocus">oldest unbilled</div>
+                    <div class="small">{{project.oldest_unbilled_focus_at | date:'dd.MM.yy'}}</div>
+                </li>
+                }
+            </ul>
+        </div>
+        }
+
+        <!-- Final invoice card -->
+        @if (invoicingType === 3 && project) {
+        <div class="card mb-3">
+            <div class="card-header" i18n="@@i18n.invoices.final-invoice">final invoice</div>
+            <ul class="list-group">
+                <li class="list-group-item d-flex flex-column gap-1 py-2 px-2">
+                    <div class="hstack gap-2">
+                        <div class="flex-fill text-muted small" i18n="@@i18n.invoices.invoiced">invoiced</div>
+                        <div class="small">{{invoicedTotal | money}}</div>
+                    </div>
+                    <div class="progress" style="height: 4px;">
+                        <div class="progress-bar bg-success" [style.width.%]="invoicingProgress * 100"></div>
+                    </div>
+                    <div class="hstack gap-2">
+                        <div class="flex-fill text-muted small" i18n="@@i18n.common.remaining">remaining</div>
+                        <div class="small" [class.text-warning]="project.net_remaining > 0">{{project.net_remaining | money}}</div>
+                    </div>
+                </li>
+                @if (project.work_estimated) {
+                <li class="list-group-item d-flex flex-column gap-1 py-2 px-2">
+                    <div class="hstack gap-2">
+                        <div class="flex-fill text-muted small" i18n="@@i18n.common.time">time</div>
+                        <div class="small">{{project.hours_invested | number:'1.1-1'}}h / {{project.work_estimated | number:'1.0-0'}}h</div>
+                    </div>
+                    <div class="progress" style="height: 4px;">
+                        <div class="progress-bar"
+                            [class.bg-primary]="project.timePercentage() <= 1"
+                            [class.bg-danger]="project.timePercentage() > 1"
+                            [style.width.%]="(project.timePercentage() > 1 ? 1 : project.timePercentage()) * 100">
+                        </div>
+                    </div>
+                </li>
+                }
+                <li class="list-group-item hstack gap-2 py-1">
+                    <div class="flex-fill text-muted small" i18n="@@i18n.invoices.avgPaymentDays">avg. payment</div>
+                    @if (project.company.avg_payment_days !== null) {
+                    <div class="small">{{project.company.avg_payment_days}} d</div>
+                    } @else {
+                    <div class="small text-muted">—</div>
+                    }
+                </li>
+            </ul>
+        </div>
+        }
     </div>
 
     <div class="col-md-9 annotate annotate-left">
@@ -107,10 +215,9 @@
             @if (invoicingType === 1) {
             <invoice-prepare-wrapper
                 [parent]="project"
-                [items]="downpaymentItems"
+                [stageFilter]="2"
                 [annotationType]="'invoice'"
                 [allowedNewItems]="[]"
-                [withInstalments]="false"
                 [additionalBillingConsiderations]="backendConsiderations"
                 [additionalItems]="projectPaymentDetails"
                 [projectPaymentDuration]="project.getParam('INVOICE_PAYMENT_DURATION')"
@@ -123,7 +230,7 @@
             @if (invoicingType === 2) {
             <invoice-prepare-wrapper
                 [parent]="project"
-                [items]="supportItems"
+                [stageFilter]="1"
                 [annotationType]="'support'"
                 [allowedNewItems]="[]"
                 [additionalBillingConsiderations]="backendConsiderations"
@@ -138,7 +245,7 @@
             @if (invoicingType === 3) {
             <invoice-prepare-wrapper
                 [parent]="project"
-                [items]="finalItems"
+                [stageFilter]="0"
                 [annotationType]="'invoice'"
                 [additionalBillingConsiderations]="backendConsiderations"
                 [additionalItems]="projectPaymentDetails"
@@ -156,15 +263,27 @@
             <!-- quote -->
             <invoice-prepare-wrapper
                 [parent]="project"
-                [items]="project.invoice_items"
+                [stageFilter]="0"
                 [mode]="'quote'"
                 [annotationType]="'invoice'"
+                [allowedNewItems]="['item', 'group', 'discount']"
                 [additionalBillingConsiderations]="backendConsiderations"
                 [additionalItems]="projectPaymentDetails"
                 [projectPaymentDuration]="project.getParam('INVOICE_PAYMENT_DURATION')"
                 [onChangeProjectPaymentDuration]="onChangePaymentDuration"
                 [onRemoveProjectPaymentDuration]="removePaymentDuration"
                 (considerationsChanged)="onConsiderationsChanged($event)">
+
+                @if (quoteDescriptions.length) {
+                    @for (desc of quoteDescriptions; track ('quoteDesc:' + desc)) {
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div [innerHTML]="desc | safe:'html'"></div>
+                            </div>
+                        </div>
+                    }
+                }
+
             </invoice-prepare-wrapper>
         </div>
         }
@@ -191,7 +310,7 @@
             {{adresseeName()}}
         </div>
         <ul ngbDropdownMenu>
-            @for (x of getAssignedContacts(); track x.id) {
+            @for (x of getAssignedContacts(); track ('contact:' + x.id)) {
             <li>
                 <a class="dropdown-item d-flex align-items-center gap-2" (click)="onAddCompanyContact(x)" (keyup.enter)="onAddCompanyContact(x)" tabindex="0">
                     <div class="avatar avatar-sm">

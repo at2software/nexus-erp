@@ -7,7 +7,7 @@ use App\Models\Vcard;
 trait VcardTrait {
     private ?Vcard $_cached_vcard = null;
 
-    public function setVcardAttribute(VCard|string $value, $preservePhotos = true) {
+    public function setVcardAttribute(Vcard|string $value, $preservePhotos = true) {
         // Create a Vcard instance if we got a string
         $vcard = ($value instanceof Vcard) ? $value : new Vcard($value);
 

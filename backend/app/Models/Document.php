@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Barryvdh\DomPDF\Facade\Pdf;
 use horstoeko\zugferd\codelists\ZugferdInvoiceType;
 use horstoeko\zugferd\ZugferdDocumentBuilder;
 use horstoeko\zugferd\ZugferdDocumentPdfMerger;
@@ -13,26 +14,26 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 class Document extends BaseModel {
     use HasFactory;
 
-    protected $access = ['admin' => '*', 'project_manager'=>'cru', 'user'=>'cru'];
+    protected $access = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
     public static function getPdfTemplate($title = '', $omit = []) {
         $template = file_get_contents(public_path('pdf/template.html'));
         $template = str_replace('[documentTitle]', $title, $template);
 
         // Fill company identity from settings params
-        $name    = Param::get('ME_NAME')->value ?? '';
-        $email   = Param::get('ME_EMAIL')->value ?? '';
-        $phone   = Param::get('ME_PHONE')->value ?? '';
-        $fax     = Param::get('ME_FAX')->value ?? '';
-        $iban    = Param::get('ME_IBAN')->value ?? '';
-        $bic     = Param::get('ME_BIC')->value ?? '';
-        $swift   = Param::get('ME_SWIFT')->value ?? '';
-        $vatId   = Param::get('ME_VAT_ID')->value ?? '';
-        $hregNo  = Param::get('ME_HREG_NO')->value ?? '';
+        $name     = Param::get('ME_NAME')->value ?? '';
+        $email    = Param::get('ME_EMAIL')->value ?? '';
+        $phone    = Param::get('ME_PHONE')->value ?? '';
+        $fax      = Param::get('ME_FAX')->value ?? '';
+        $iban     = Param::get('ME_IBAN')->value ?? '';
+        $bic      = Param::get('ME_BIC')->value ?? '';
+        $swift    = Param::get('ME_SWIFT')->value ?? '';
+        $vatId    = Param::get('ME_VAT_ID')->value ?? '';
+        $hregNo   = Param::get('ME_HREG_NO')->value ?? '';
         $hregName = Param::get('ME_HREG_NAME')->value ?? '';
-        $owners  = Param::get('ME_COMPANY_OWNERS')->value ?? '';
+        $owners   = Param::get('ME_COMPANY_OWNERS')->value ?? '';
 
-        $me = Company::find(Param::get('ME_ID')->value);
+        $me       = Company::find(Param::get('ME_ID')->value);
         $street   = $me?->vcard?->getFirstAttr('ADR', [])['STREET'] ?? '';
         $postcode = $me?->vcard?->getFirstAttr('ADR', [])['POSTALCODE'] ?? '';
         $city     = $me?->vcard?->getFirstAttr('ADR', [])['LOCALITY'] ?? '';
@@ -66,13 +67,12 @@ class Document extends BaseModel {
 
             $template = $dom->saveHTML();
         }
-
         return $template;
     }
     public static function pdfBlockRow($key, $value) {
         return '<div style="display:block; width:100%; margin:0; padding:0;"><div style="float:right;display:inline-block;">'.$value.'</div><div style="display:inline-block; font-weight: bold;">'.$key.'</div></div>';
     }
-    public static function personalized($template, CompanyContact|Company|null $contact, $headers = [], $withContactInfo = true, ?\App\Models\Project $project = null) {
+    public static function personalized($template, CompanyContact|Company|null $contact, $headers = [], $withContactInfo = true, ?Project $project = null) {
         $company      = $contact instanceof Company ? $contact : ($contact?->company ?? null);
         $lang         = $company?->getLanguage() ?? 'de';
         $replacements = self::personalizationArray($contact, $project);
@@ -101,7 +101,7 @@ class Document extends BaseModel {
         $template = str_replace('[invoice_date]', $invoice->created_at->format('d.m.Y'), $template);
         return $template;
     }
-    private static function getPaymentDuration(?\App\Models\Project $project, CompanyContact|Company|null $contact): string {
+    private static function getPaymentDuration(?Project $project, CompanyContact|Company|null $contact): string {
         // Cascade: project -> customer -> global default
         // Do NOT pass fallback=true here — that would return the global default
         // for entities without a custom value, making the condition truthy and
@@ -114,10 +114,10 @@ class Document extends BaseModel {
         }
         return Param::get('INVOICE_PAYMENT_DURATION')->value ?? '14';
     }
-    public static function personalizationArray(CompanyContact|Company|null $contact = null, ?\App\Models\Project $project = null) {
+    public static function personalizationArray(CompanyContact|Company|null $contact = null, ?Project $project = null) {
         $replaces = [];
         // general - payment duration with cascading logic: project -> customer -> global default
-        $INVOICE_PAYMENT_DURATION = self::getPaymentDuration($project, $contact);
+        $INVOICE_PAYMENT_DURATION     = self::getPaymentDuration($project, $contact);
         $replaces['dayNow']           = date('d.m.Y');
         $replaces['day+due']          = date('d.m.Y', strtotime('+'.$INVOICE_PAYMENT_DURATION.' days'));
         $replaces['payment-duration'] = $INVOICE_PAYMENT_DURATION;
@@ -138,6 +138,9 @@ class Document extends BaseModel {
             }
         }
         return $replaces;
+    }
+    public static function renderPdf(string $template): string {
+        return Pdf::loadHTML($template)->output();
     }
     public static function getBase64QrCode($text) {
         return 'data:image/png;base64, '.base64_encode(QrCode::size(500)->format('png')->generate($text));

@@ -350,6 +350,11 @@ class LinearRegressionForecast extends Command {
         if ($shouldStore && $forecast) {
             $this->storeResults($bestFeatures, $bestCoefficients, $bestR2, $forecast, $evaluationDate);
         }
+
+        // Generate company-level forecasts for active customers
+        if ($shouldStore) {
+            $this->generateCompanyForecasts($evaluationDate);
+        }
     }
 
     /**
@@ -1260,5 +1265,100 @@ class LinearRegressionForecast extends Command {
         }
         $param->value = $value;
         $param->save();
+    }
+    private function generateCompanyForecasts(Carbon $evaluationDate): void {
+        $revenueParam = Param::where('key', 'INVOICE_REVENUE_12M')->first();
+        if (! $revenueParam) {
+            return;
+        }
+
+        // Active companies: had INVOICE_REVENUE_12M > 0 stored in last 12 months
+        $activeCompanyIds = FloatParam::where('param_id', $revenueParam->id)
+            ->where('parent_type', Company::class)
+            ->whereNotNull('parent_id')
+            ->whereBetween('created_at', [
+                $evaluationDate->copy()->subYear()->startOfMonth(),
+                $evaluationDate->copy(),
+            ])
+            ->where('value', '>', 0)
+            ->distinct()
+            ->pluck('parent_id');
+
+        $this->info("Generating forecasts for {$activeCompanyIds->count()} active companies...");
+
+        foreach ($activeCompanyIds as $companyId) {
+            $company = Company::find($companyId);
+            if (! $company) {
+                continue;
+            }
+
+            $forecast = $this->forecastCompanyRevenue($company, $evaluationDate);
+            if ($forecast !== null) {
+                $param             = $company->param('STATS_LINREG_FORECAST_12M');
+                $param->created_at = $evaluationDate;
+                $param->updated_at = $evaluationDate;
+                $param->value      = $forecast;
+                $param->save();
+            }
+        }
+    }
+    private function forecastCompanyRevenue(Company $company, Carbon $evaluationDate): ?float {
+        // Load all company invoices once for efficient in-memory aggregation
+        $allInvoices = Invoice::where('company_id', $company->id)
+            ->whereBetween('created_at', [
+                $evaluationDate->copy()->subYears(8),
+                $evaluationDate,
+            ])
+            ->get(['created_at', 'net']);
+
+        // Rolling 12M revenue sum ending at a given date
+        $rev12M = function (Carbon $asOf) use ($allInvoices): float {
+            $from = $asOf->copy()->subYear();
+            $to   = $asOf->copy();
+            return $allInvoices
+                ->filter(fn ($inv) => $inv->created_at >= $from && $inv->created_at <= $to)
+                ->sum('net');
+        };
+
+        // Build training data: each month from 5 years ago to 1 year ago
+        $endDate      = $evaluationDate->copy()->subYear();
+        $startDate    = $endDate->copy()->subYears(5);
+        $trainingData = [];
+        $current      = $startDate->copy();
+
+        while ($current->lt($endDate)) {
+            $futurePoint = $current->copy()->addMonths(12);
+            if ($futurePoint->gt($evaluationDate)) {
+                $current->addMonth();
+
+                continue;
+            }
+
+            $trainingData[] = [
+                'dependent_y' => $rev12M($futurePoint),
+                'lag_3'       => $rev12M($current->copy()->subMonths(3)),
+                'lag_6'       => $rev12M($current->copy()->subMonths(6)),
+                'lag_12'      => $rev12M($current->copy()->subMonths(12)),
+            ];
+
+            $current->addMonth();
+        }
+
+        if (count($trainingData) < 12) {
+            return null;
+        }
+
+        $result = $this->calculateLinearRegression($trainingData, ['lag_3', 'lag_6', 'lag_12']);
+        if (! $result) {
+            return null;
+        }
+
+        // Predict using current-period lag features
+        $coefficients = $result['coefficients'];
+        $prediction   = $coefficients[0]
+            + $coefficients[1] * $rev12M($evaluationDate->copy()->subMonths(3))
+            + $coefficients[2] * $rev12M($evaluationDate->copy()->subMonths(6))
+            + $coefficients[3] * $rev12M($evaluationDate->copy()->subMonths(12));
+        return max(0.0, $prediction);
     }
 }

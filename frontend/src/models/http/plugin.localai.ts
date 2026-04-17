@@ -1,4 +1,4 @@
-import { catchError, map, Observable, of, timeout } from "rxjs";
+import { catchError, map, Observable, of, switchMap, throwError, timeout } from "rxjs";
 import { PluginInstance } from "./plugin.instance";
 import { IAIPlugin, IAIModel, IAICompletion } from "../ai/ai.plugin.interface";
 import { environment } from "src/environments/environment";
@@ -25,23 +25,24 @@ export class LocalAIPlugin extends PluginInstance implements IAIPlugin {
     
     #payload = (url: string, method: string, params: any = {}) => {
         const headers = ['Content-Type: application/json'];
-        if (this.enc.value.login && this.enc.value.password) {
+        if (this.enc?.value?.login && this.enc?.value?.password) {
             const credentials = btoa(`${this.enc.value.login}:${this.enc.value.password}`);
             headers.push('Authorization: Basic ' + credentials);
         }
         return Object.assign({
-            url: this._baseUrl.substring(0, this.enc.value.url.length) + '/' + url,
-            method: method.toLowerCase(), // Use lowercase method like Mantis
-            headers: headers
+            url: (this._baseUrl || '').replace(/\/+$/, '') + '/' + url,
+            method: method.toLowerCase(),
+            headers: headers,
+            timeout: 120
         }, { data: params });
     };
 
-    get(url: string, params?: any, ...args: any) { 
+    get(url: string, params?: any, ...args: any) {
         const payload = this.#payload(url, 'GET', params);
         return super.post('', payload, ...args);
     }
-    
-    post(url: string, params?: any, ...args: any) { 
+
+    post(url: string, params?: any, ...args: any) {
         const payload = this.#payload(url, 'POST', params);
         return super.post('', payload, ...args);
     }
@@ -98,45 +99,49 @@ export class LocalAIPlugin extends PluginInstance implements IAIPlugin {
         return this.models.find(model => model.id === id);
     }
 
-    // Create completion using OpenAI-compatible API
+    // Create completion using OpenAI-compatible API, with fallback to text completions
     createCompletion(prompt: string, model?: string): Observable<IAICompletion> {
         const selectedModel = model || this.getDefaultModel()?.id || 'default';
-        
-        const payload = {
+
+        const errorCompletion: IAICompletion = {
+            id: '', object: 'chat.completion', created: Date.now(), model: selectedModel,
+            choices: [{ index: 0, message: { role: 'assistant', content: 'Error: Failed to generate completion' }, finish_reason: 'error' }],
+            usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+        };
+        return this.post('v1/chat/completions', {
             model: selectedModel,
-            messages: [
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ],
+            messages: [{ role: 'user', content: prompt }],
             max_tokens: 2048,
             temperature: 0.7
-        };
-
-        return this.post('v1/chat/completions', payload).pipe(
-            map((response: any) => response as IAICompletion),
-            catchError(() => {
-                return of({
-                    id: '',
-                    object: 'chat.completion',
-                    created: Date.now(),
-                    model: selectedModel,
-                    choices: [{
-                        index: 0,
-                        message: {
-                            role: 'assistant',
-                            content: 'Error: Failed to generate completion'
-                        },
-                        finish_reason: 'error'
-                    }],
-                    usage: {
-                        prompt_tokens: 0,
-                        completion_tokens: 0,
-                        total_tokens: 0
+        }).pipe(
+            switchMap((response: any) => {
+                if (response?.error) {
+                    const msg: string = response.error.message || ''
+                    // Only fall back to text completions for the gRPC "unimplemented" error
+                    // (model supports text completions but not chat completions)
+                    if (!msg.includes('unimplemented')) {
+                        return throwError(() => new Error(msg))
                     }
-                } as IAICompletion);
-            })
+                    return this.post('v1/completions', {
+                        model: selectedModel,
+                        prompt,
+                        max_tokens: 2048,
+                        temperature: 0.7
+                    }).pipe(
+                        map((textResponse: any) => ({
+                            ...textResponse,
+                            choices: (textResponse.choices || []).map((c: any) => ({
+                                ...c,
+                                message: { role: 'assistant', content: c.text || '' },
+                                finish_reason: c.finish_reason || 'stop'
+                            }))
+                        } as IAICompletion)),
+                        catchError(() => of(errorCompletion))
+                    );
+                }
+                return of(response as IAICompletion);
+            }),
+            catchError(() => of(errorCompletion))
         );
     }
 

@@ -35,9 +35,16 @@ class InvoiceMail extends Mailable {
     }
 
     public function content(): Content {
+        $text = null;
+        if ($this->_invoice->company->has_direct_debit) {
+            $text = Param::get('INVOICE_EMAIL_TEXT_SEPA')->localizedValue($this->_lang, $this->_formality);
+        }
+        if (empty($text)) {
+            $text = Param::get('INVOICE_EMAIL_TEXT')->localizedValue($this->_lang, $this->_formality);
+        }
         return new Content(
             view: 'mail.invoice',
-            with: ['content' => Param::get('INVOICE_EMAIL_TEXT')->localizedValue($this->_lang, $this->_formality)],
+            with: ['content' => $text],
         );
     }
     public function attachments(): array {

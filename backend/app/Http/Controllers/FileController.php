@@ -10,6 +10,7 @@ use App\Models\Param;
 use App\Models\Project;
 use App\Models\User;
 use App\Traits\ControllerHasPermissionsTrait;
+use App\Traits\VcardTrait;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class FileController extends Controller {
@@ -46,7 +47,7 @@ class FileController extends Controller {
             Document::pdfBlockRow('Ende', $data->end)
             .'</div>';
 
-        $content  = $info.
+        $content = $info.
             '<div style="margin-top: -4cm;">'
             .view('TravelExpense', ['data' => $data, 'user' => $request->user()->name, 'total' => $total])->render()
             .'</div>';
@@ -105,6 +106,6 @@ class FileController extends Controller {
         return $this->uploadMedia($_);
     }
     public static function usesVcardTrait($obj) {
-        return in_array(\App\Traits\VcardTrait::class, class_uses_recursive($obj));
+        return in_array(VcardTrait::class, class_uses_recursive($obj));
     }
 }

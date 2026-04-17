@@ -29,16 +29,15 @@ class MarketingPerformanceMetric extends BaseModel {
     }
     public function prospectActivities() {
         // Find initiative activities that were created from workflow activities linked to this metric
-        $initiativeActivityIds = \App\Models\MarketingInitiativeActivity::whereIn('marketing_workflow_id', function($query) {
+        $initiativeActivityIds = MarketingInitiativeActivity::whereIn('marketing_workflow_id', function ($query) {
             $query->select('marketing_workflow_id')
                 ->from('marketing_activities')
-                ->whereIn('id', function($subQuery) {
+                ->whereIn('id', function ($subQuery) {
                     $subQuery->select('marketing_activity_id')
                         ->from('marketing_activity_metric')
                         ->where('marketing_performance_metric_id', $this->id);
                 });
         })->pluck('id');
-
         return MarketingProspectActivity::whereIn('marketing_initiative_activity_id', $initiativeActivityIds);
     }
 
@@ -68,11 +67,11 @@ class MarketingPerformanceMetric extends BaseModel {
     public function getActivityStatistics(): array {
         $baseQuery = $this->prospectActivities();
 
-        $total       = (clone $baseQuery)->count();
-        $completed   = (clone $baseQuery)->where('status', 'completed')->count();
-        $skipped     = (clone $baseQuery)->where('status', 'skipped')->count();
-        $overdue     = (clone $baseQuery)->where('status', 'pending')->where('scheduled_at', '<', now())->count();
-        $pending     = (clone $baseQuery)->where('status', 'pending')->count() - $overdue;
+        $total     = (clone $baseQuery)->count();
+        $completed = (clone $baseQuery)->where('status', 'completed')->count();
+        $skipped   = (clone $baseQuery)->where('status', 'skipped')->count();
+        $overdue   = (clone $baseQuery)->where('status', 'pending')->where('scheduled_at', '<', now())->count();
+        $pending   = (clone $baseQuery)->where('status', 'pending')->count() - $overdue;
         return [
             'total'     => $total,
             'completed' => $completed,

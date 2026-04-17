@@ -147,7 +147,6 @@ export class CustomersMapComponent implements OnInit, AfterViewInit, OnDestroy {
         };
 
         const iconSize = sizes[size as keyof typeof sizes] || sizes.small;
-
         return L.icon({
             iconUrl: `data:image/svg+xml;base64,${btoa(this.#createMarkerSvg(color))}`,
             shadowUrl: 'assets/leaflet/marker-shadow.png',
@@ -169,7 +168,6 @@ export class CustomersMapComponent implements OnInit, AfterViewInit, OnDestroy {
         };
 
         const fillColor = colors[color as keyof typeof colors] || colors.grey;
-
         return `
             <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12.5 0C5.596 0 0 5.596 0 12.5c0 12.5 12.5 28.5 12.5 28.5s12.5-16 12.5-28.5C25 5.596 19.404 0 12.5 0z" 

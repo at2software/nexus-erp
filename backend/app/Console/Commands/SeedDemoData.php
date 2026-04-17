@@ -29,7 +29,6 @@ class SeedDemoData extends Command {
         $elapsed = now()->diffInSeconds($start);
         $this->info("Done in {$elapsed}s.");
         $this->info('Login: anna.mueller@digitech-demo.com / password');
-
         return self::SUCCESS;
     }
 }

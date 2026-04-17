@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Actions\CancelInvoiceAction;
+use App\Actions\CreateInvoiceAction;
+use App\Actions\UpdateInvoiceStatisticsAction;
 use App\Builders\InvoiceBuilder;
 use App\Casts\CurrencyFormatCast;
 use App\Casts\PrecomputedAuth;
@@ -12,8 +14,10 @@ use App\Jobs\SendInvoiceReminderJob;
 use App\Services\InvoiceItemEnhancementService;
 use App\Traits\HasInvoiceItemsTrait;
 use App\Traits\PrecomputedTrait;
+use horstoeko\zugferd\codelists\ZugferdInvoiceType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Artisan;
 
 class Invoice extends BaseModel {
     use HasFactory;
@@ -31,7 +35,7 @@ class Invoice extends BaseModel {
 
     protected $touches  = ['company'];
     protected $appends  = ['class', 'icon', 'path', 'net', 'gross', 'gross_remaining'];
-    protected $fillable = ['due_at', 'remind_at', 'company_id', 'default_interest', 'file_dir', 'name'];
+    protected $fillable = ['due_at', 'remind_at', 'company_id', 'default_interest', 'file_dir', 'name', 'stage'];
     protected $casts    = [
         'net'             => PrecomputedAuth::class,
         'gross'           => PrecomputedAuth::class,
@@ -83,18 +87,6 @@ class Invoice extends BaseModel {
     }
     public static function format($value): string {
         return CurrencyFormatCast::format($value);
-    }
-    public static function getInvoiceBlade($items, $footers = [], $discounts = [], string $lang = 'de') {
-        return view('InvoiceTable', ['items' => $items, 'footers' => $footers, 'discounts' => $discounts, 'lang' => $lang])->render();
-    }
-    public static function enhancedItemsForPdf($items, Company $company): array {
-        return app(InvoiceItemEnhancementService::class)->enhanceItemsForPdf($items, $company);
-    }
-    public static function circledNumber(int $n): ?string {
-        if ($n >= 1 && $n <= 20) {
-            return mb_convert_encoding('&#'.(9311 + $n).';', 'UTF-8', 'HTML-ENTITIES');
-        }
-        return null;
     }
     public function setCancelledAttributes() {
         $this->is_cancelled = true;
@@ -151,27 +143,101 @@ class Invoice extends BaseModel {
         $ss1->save();
         $ss2->save();
     }
-    public static function getSepaQr($amount, $title) {
+    public static function getInvoiceBlade($items, $footers = [], $discounts = [], string $lang = 'de'): string {
+        return view('InvoiceTable', ['items' => $items, 'footers' => $footers, 'discounts' => $discounts, 'lang' => $lang])->render();
+    }
+    public static function enhancedItemsForPdf($items, Company $company): array {
+        return app(InvoiceItemEnhancementService::class)->enhanceItemsForPdf($items, $company);
+    }
+    public static function circledNumber(int $n): ?string {
+        if ($n >= 1 && $n <= 20) {
+            return mb_convert_encoding('&#'.(9311 + $n).';', 'UTF-8', 'HTML-ENTITIES');
+        }
+        return null;
+    }
+    public static function getSepaQr($amount, $title): string {
         $amount      = number_format($amount, 2, '.', '');
         $bic         = Param::get('ME_BIC')->value ?? '';
         $companyName = Param::get('ME_NAME')->value ?? '';
         $iban        = Param::get('ME_IBAN')->value ?? '';
-        $qr          = '';
-        $qr .= 'BCD'.PHP_EOL;
-        $qr .= '002'.PHP_EOL;
-        $qr .= '2'.PHP_EOL;
-        $qr .= 'SCT'.PHP_EOL;
-        $qr .= $bic.PHP_EOL;
-        $qr .= $companyName.PHP_EOL;
-        $qr .= $iban.PHP_EOL;
-        $qr .= 'EUR'.$amount.PHP_EOL;
-        $qr .= ''.PHP_EOL;
-        $qr .= ''.PHP_EOL;
-        $qr .= $title.PHP_EOL;
-        $qr .= ''.PHP_EOL;
+        $qr          = 'BCD'.PHP_EOL.'002'.PHP_EOL.'2'.PHP_EOL.'SCT'.PHP_EOL
+                      .$bic.PHP_EOL.$companyName.PHP_EOL.$iban.PHP_EOL
+                      .'EUR'.$amount.PHP_EOL.PHP_EOL.PHP_EOL.$title.PHP_EOL.PHP_EOL;
         return Document::getBase64QrCode($qr);
     }
     public static function MakeFileName($invoiceNumber) {
         return date('Y').'-'.$invoiceNumber.'.pdf';
+    }
+    public static function makeInvoiceFor($entity) {
+        Invoice::disablePropagation();
+
+        [$company, $project, $items, $stage] = self::extractContext($entity);
+
+        if ($error = self::validateCompanyVat($company)) {
+            return $error;
+        }
+
+        $prefix = $company->param('INVOICE_PREFIX', true)->localizedValue($company->getLanguage(), $company->getFormality()) ?? '';
+        $suffix = $company->param('INVOICE_SUFFIX', true)->localizedValue($company->getLanguage(), $company->getFormality()) ?? '';
+
+        $documentType = match ($stage) {
+            2       => ZugferdInvoiceType::PREPAYMENTINVOICE,
+            default => ZugferdInvoiceType::INVOICE,
+        };
+
+        [$invoice, $zugferdPdf, $filename] = app(CreateInvoiceAction::class)->execute(
+            $items,
+            'Rechnung',
+            $prefix,
+            $suffix,
+            $company,
+            $documentType,
+            null,
+            $project
+        );
+
+        Invoice::batchAssign($items, $invoice->id, null);
+        $invoice->stage = $stage;
+        $invoice->save();
+
+        $company->invoice_correction = '';
+        $company->save();
+
+        app(UpdateInvoiceStatisticsAction::class)->execute($company);
+        app(UpdateInvoiceStatisticsAction::class)->execute();
+
+        self::activateRepeatingItems($company);
+
+        Invoice::enablePropagation();
+        $company->propagateDirty();
+        return response($zugferdPdf)->withHeaders(File::headers($filename, 'application/pdf'));
+    }
+    private static function extractContext($entity): array {
+        if ($entity instanceof Project) {
+            $project = $entity;
+            $company = $project->company;
+            $stage   = intval(request('type', 0));
+            $items   = self::collectProjectItems($project, $stage);
+            return [$company, $project, $items, $stage];
+        }
+        return [$entity, null, $entity->preparedInvoiceItems()->get(), 0];
+    }
+    private static function collectProjectItems(Project $project, int $stage) {
+        return match ($stage) {
+            1       => $project->supportInvoiceItems()->get(),
+            2       => $project->downpaymentInvoiceItems()->get(),
+            default => $project->preparedInvoiceItems()->get(),
+        };
+    }
+    private static function validateCompanyVat(Company $company) {
+        if (! $company->vat_id) {
+            return null;
+        }
+        Artisan::call('vat_id:check', ['company' => $company]);
+        $output = json_decode(Artisan::output());
+        return $output->is_valid ? null : response($output->error_description, 400);
+    }
+    private static function activateRepeatingItems(Company $company): void {
+        $company->repeatingItems->each(fn ($item) => $item->next_recurrence_at ?: $item->update(['next_recurrence_at' => now()]));
     }
 }

@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class MarketingWorkflow extends BaseModel {
     protected $table    = 'marketing_workflows';
@@ -28,6 +30,18 @@ class MarketingWorkflow extends BaseModel {
     public function marketingActivities(): HasMany {
         return $this->hasMany(MarketingActivity::class, 'marketing_workflow_id');
     }
+
+    // Prospect activities scheduled via this workflow's initiative activities
+    public function prospectActivities(): HasManyThrough {
+        return $this->hasManyThrough(
+            MarketingProspectActivity::class,
+            MarketingInitiativeActivity::class,
+            'marketing_workflow_id',          // FK on marketing_initiative_activities
+            'marketing_initiative_activity_id', // FK on marketing_prospect_activities
+            'id',                             // local key on marketing_workflows
+            'id'                              // local key on marketing_initiative_activities
+        );
+    }
     public function orderedActivities(): HasMany {
         return $this->marketingActivities()->orderBy('day_offset');
     }
@@ -41,12 +55,13 @@ class MarketingWorkflow extends BaseModel {
     public function getTotalDuration(): int {
         return $this->marketingActivities()->max('day_offset') ?: 0;
     }
-    public function getActivitiesForDay(int $day): \Illuminate\Database\Eloquent\Collection {
+    public function getActivitiesForDay(int $day): Collection {
         return $this->marketingActivities()
             ->where('day_offset', $day)
             ->orderBy('day_offset')
             ->get();
     }
+
     /**
      * @deprecated No longer used. Prospects now initialize activities from initiative activities via MarketingProspect::initializeWorkflowActivities()
      */

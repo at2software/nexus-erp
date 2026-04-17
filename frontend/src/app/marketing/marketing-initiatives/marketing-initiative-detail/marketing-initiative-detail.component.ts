@@ -18,7 +18,6 @@ import { AvatarComponent } from '@app/_shards/avatar/avatar.component';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { HotkeyDirective } from 'src/directives/hotkey.directive';
-import { MarketingInitiativeChartOptions } from '../MarketingInitiativeChartOptions';
 import { Color } from 'src/constants/Color';
 import { ActivityTableComponent } from '@app/marketing/shared/activity-table/activity-table.component';
 import { I18nTextareaComponent } from '@app/_shards/i18n-textarea/i18n-textarea.component';
@@ -116,6 +115,10 @@ export class MarketingInitiativeDetailComponent implements OnInit {
         this.#marketingService.showInitiativeStats(id)
             .subscribe((stats: any) => {
                 this.#buildChart(stats.timeline);
+                const actStats = stats.activities ?? stats.activity_stats ?? stats.initiative_activities ?? stats.per_activity;
+                if (actStats && this.initiative?.initiative_activities) {
+                    this.#applyActivityStats(actStats);
+                }
             });
     }
 
@@ -126,51 +129,60 @@ export class MarketingInitiativeDetailComponent implements OnInit {
             return;
         }
 
-        const newData           = timeline.map(t => [t.timestamp, t.new]);
-        const engagedData       = timeline.map(t => [t.timestamp, t.engaged]);
-        const unresponsiveData  = timeline.map(t => [t.timestamp, t.unresponsive]);
-        const convertedData     = timeline.map(t => [t.timestamp, t.converted]);
+        const primaryColor = '#00c9a7';
+        const totalData = timeline.map(t => [
+            t.timestamp,
+            (t.new || 0) + (t.engaged || 0) + (t.unresponsive || 0) + (t.converted || 0)
+        ]);
 
         this.chartOptions = {
-            ...MarketingInitiativeChartOptions,
-            series: [
-                {
-                    name: 'New',
-                    data: newData,
-                    color: Color.fromVar('info').toHexString()
-                },
-                {
-                    name: 'Engaged',
-                    data: engagedData,
-                    color: Color.fromVar('warning').toHexString()
-                },
-                {
-                    name: 'Unresponsive',
-                    data: unresponsiveData,
-                    color: Color.fromVar('danger').toHexString()
-                },
-                {
-                    name: 'Converted',
-                    data: convertedData,
-                    color: Color.fromVar('success').toHexString()
-                }
-            ]
+            series: [{ name: 'Prospects', data: totalData }],
+            chart: {
+                type: 'area',
+                height: 90,
+                background: 'transparent',
+                toolbar: { show: false },
+                zoom: { enabled: false },
+                animations: { enabled: false },
+            },
+            theme: { mode: 'dark' },
+            colors: [primaryColor],
+            stroke: { show: true, width: 2, curve: 'smooth', colors: [primaryColor] },
+            fill: {
+                type: 'gradient',
+                gradient: { shadeIntensity: 0.1, opacityFrom: 0.25, opacityTo: 0, stops: [0, 100] }
+            },
+            grid: {
+                borderColor: '#ffffff10',
+                padding: { left: 5, right: 5, top: 0, bottom: 0 }
+            },
+            xaxis: {
+                type: 'datetime',
+                labels: { show: false },
+                axisBorder: { show: false },
+                axisTicks: { show: false }
+            },
+            yaxis: { show: false, min: 0 },
+            legend: { show: false },
+            dataLabels: { enabled: false },
+            tooltip: {
+                enabled: true,
+                theme: 'dark',
+                shared: true,
+                intersect: false,
+                x: { show: true, format: 'yyyy.MM.dd' }
+            }
         };
 
-        // Use latest day's values for donut chart
-        const latestDay = timeline[timeline.length - 1];
-        const totalNew = latestDay.new || 0;
-        const totalEngaged = latestDay.engaged || 0;
-        const totalUnresponsive = latestDay.unresponsive || 0;
-        const totalConverted = latestDay.converted || 0;
+        const latest = timeline[timeline.length - 1];
+        const totalNew = latest.new || 0;
+        const totalEngaged = latest.engaged || 0;
+        const totalUnresponsive = latest.unresponsive || 0;
+        const totalConverted = latest.converted || 0;
 
         this.donutChartOptions = {
             series: [totalNew, totalEngaged, totalUnresponsive, totalConverted],
-            chart: {
-                type: 'donut',
-                height: 100,
-                width: 100,
-            },
+            chart: { type: 'donut', height: 100, width: 100 },
             labels: ['New', 'Engaged', 'Unresponsive', 'Converted'],
             colors: [
                 Color.fromVar('info').toHexString(),
@@ -178,34 +190,29 @@ export class MarketingInitiativeDetailComponent implements OnInit {
                 Color.fromVar('danger').toHexString(),
                 Color.fromVar('success').toHexString()
             ],
-            legend: {
-                show: false
-            },
-            dataLabels: {
-                enabled: false
-            },
-            stroke: {
-                show: true,
-                width: 2,
-                colors: '#111'
-            },
-            plotOptions: {
-                pie: {
-                    donut: {
-                        size: '70%'
-                    }
-                }
-            },
+            legend: { show: false },
+            dataLabels: { enabled: false },
+            stroke: { show: true, width: 2, colors: ['#111'] },
+            plotOptions: { pie: { donut: { size: '70%' } } },
             tooltip: {
                 y: {
                     formatter: (value: number) => {
                         const total = totalNew + totalEngaged + totalUnresponsive + totalConverted;
-                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
-                        return `${value} (${percentage}%)`;
+                        return `${value} (${total > 0 ? ((value / total) * 100).toFixed(1) : 0}%)`;
                     }
                 }
             }
         };
+    }
+
+    #applyActivityStats(activityStats: any) {
+        const isArray = Array.isArray(activityStats);
+        for (const activity of this.initiative!.initiative_activities!) {
+            const s = isArray
+                ? activityStats.find((a: any) => String(a.id) === String(activity.id))
+                : activityStats[activity.id];
+            if (s) activity.stats = s;
+        }
     }
 
     isCurrentUserSubscribed(): boolean {

@@ -1,5 +1,5 @@
 
-import { Component, inject, Input, OnInit } from '@angular/core';
+import { Component, effect, inject, input } from '@angular/core';
 import { SmartLinkDirective } from '@directives/smart-link.directive';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { CompanyContact } from 'src/models/company/company-contact.model';
@@ -16,9 +16,9 @@ import { User } from 'src/models/user/user.model';
     imports: [SmartLinkDirective, NgbTooltipModule],
     standalone: true
 })
-export class AvatarComponent implements OnInit {
-    @Input() size: string = 'sm'
-    @Input() object?: {id:string, name:string, icon:string, badge:undefined|[string, string]}|undefined
+export class AvatarComponent {
+    size = input<string>('sm')
+    object = input<{id:string, name:string, icon:string, badge:undefined|[string, string]}|undefined>(undefined)
 
     routerLink: string = ''
     tooltip: string = ''
@@ -27,48 +27,53 @@ export class AvatarComponent implements OnInit {
 
     global = inject(GlobalService)
 
-    ngOnInit() {
-        if (this.object instanceof User) {
-            this.routerLink = this.global.user?.hasAnyRole(['hr', 'project_manager']) ? '/hr/' + this.object.id : ''
-            this.tooltip = this.object.name
-            this.src = this.object.icon
-        }
-        if (this.object instanceof Company) {
-            this.routerLink = '/customers/' + this.object.id
-            this.tooltip = this.object.name
-            this.src = this.object.icon
-        }
-        if (this.object instanceof Project) {
-            this.routerLink = '/projects/' + this.object.id
-            this.tooltip = this.object.name
-            this.src = this.object.icon
-        }
-        if (this.object instanceof Invoice) {
-            this.routerLink = '/customers/' + this.object.company_id
-            this.tooltip = this.object.company?.name ?? 'Invoice'
-            this.src = this.object.icon
-        }
-        if (this.object instanceof CompanyContact) {
-            this.routerLink = '/customers/' + this.object.company_id + '/cards'
-            this.tooltip = this.object.name
-            this.src = this.object.icon
-        }
+    constructor() {
+        effect(() => {
+            const object = this.object()
+            this.routerLink = ''
+            this.tooltip = ''
+            this.src = ''
+            this.badgeTooltip = ''
 
-        // Set badge tooltip from object
-        if (this.object?.badge) {
-            this.badgeTooltip = this.object.badge[1] || ''
+            if (object instanceof User) {
+                this.routerLink = this.global.user?.hasAnyRole(['hr', 'project_manager']) ? '/hr/' + object.id : ''
+                this.tooltip = object.name
+                this.src = object.icon
+            }
+            if (object instanceof Company) {
+                this.routerLink = '/customers/' + object.id
+                this.tooltip = object.name
+                this.src = object.icon
+            }
+            if (object instanceof Project) {
+                this.routerLink = '/projects/' + object.id
+                this.tooltip = object.name
+                this.src = object.icon
+            }
+            if (object instanceof Invoice) {
+                this.routerLink = '/customers/' + object.company_id
+                this.tooltip = object.company?.name ?? 'Invoice'
+                this.src = object.icon
+            }
+            if (object instanceof CompanyContact) {
+                this.routerLink = '/customers/' + object.company_id + '/cards'
+                this.tooltip = object.name
+                this.src = object.icon
+            }
 
-            // Only provide fallback tooltip if tooltip is very short (1-2 chars) or empty
-            if (this.badgeTooltip.length <= 2) {
-                const badgeClass = this.object.badge[0]
-                if (badgeClass.includes('danger')) {
-                    this.badgeTooltip = $localize`:@@i18n.common.requiresAttention:requires attention`
-                } else if (badgeClass.includes('warning')) {
-                    this.badgeTooltip = $localize`:@@i18n.common.requiresReview:requires review`
-                } else {
-                    this.badgeTooltip = $localize`:@@i18n.common.markedForAttention:marked for attention`
+            if (object?.badge) {
+                this.badgeTooltip = object.badge[1] || ''
+                if (this.badgeTooltip.length <= 2) {
+                    const badgeClass = object.badge[0]
+                    if (badgeClass.includes('danger')) {
+                        this.badgeTooltip = $localize`:@@i18n.common.requiresAttention:requires attention`
+                    } else if (badgeClass.includes('warning')) {
+                        this.badgeTooltip = $localize`:@@i18n.common.requiresReview:requires review`
+                    } else {
+                        this.badgeTooltip = $localize`:@@i18n.common.markedForAttention:marked for attention`
+                    }
                 }
             }
-        }
+        })
     }
 }

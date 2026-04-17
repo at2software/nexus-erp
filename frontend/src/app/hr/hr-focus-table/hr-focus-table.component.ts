@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, Input, OnChanges } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, input, OnChanges } from '@angular/core';
 import moment from 'moment';
 import { Observable } from 'rxjs';
 import { Focus } from 'src/models/focus/focus.model';
@@ -41,7 +41,7 @@ export interface TFocusDay {
 })
 export class HrFocusTableComponent implements OnChanges {
 
-    @Input() user: User
+    user = input.required<User>()
 
     repeater        : string = ''
     days            : TFocusDay[] = []
@@ -66,9 +66,10 @@ export class HrFocusTableComponent implements OnChanges {
         this.parents  = {}
         this.current  = undefined
         this.vacations = []
-        if ('user' in changes && this.user) {
-            this.observer = this.focusService.indexFor(this.user)
-            this.vacationService.indexAbsences(this.user).subscribe(vacations => {
+        const user = this.user()
+        if ('user' in changes) {
+            this.observer = this.focusService.indexFor(user)
+            this.vacationService.indexAbsences(user).subscribe(vacations => {
                 this.vacations = vacations
                 this.days.forEach(day => { day.vacation = this.#vacationForDay(day.moment) })
                 this.cdr.markForCheck()
@@ -129,7 +130,7 @@ export class HrFocusTableComponent implements OnChanges {
         const e = {...this.addFocusDate, ...this.addFocusTime}
         e.month-- // null indexed months!
         const d = tz.tz(e, userTimezone)
-        this.focusService.storeFor(d.toLocaleString(), this.addFocusDuration, this.user).subscribe(_ => {
+        this.focusService.storeFor(d.toLocaleString(), this.addFocusDuration, this.user()).subscribe(_ => {
             this.addFocus(_)
             this.reorderDays()
         })
@@ -143,7 +144,7 @@ export class HrFocusTableComponent implements OnChanges {
             foci   : [],
             details: false,
             total  : 0,
-            moment : m.clone()
+            moment : m.clone().startOf('day')
         }
         this.days.push(node)
         return this.days.length - 1

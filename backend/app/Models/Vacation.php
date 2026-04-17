@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\VacationState;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -17,7 +18,7 @@ class Vacation extends BaseModel {
         'hpd'         => 'integer',
         'days'        => 'double',
     ];
-    protected $access   = ['admin' => '*', 'project_manager'=>'cru', 'user'=>'cru'];
+    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
     protected $fillable = ['amount', 'started_at', 'log', 'ended_at', 'vacation_grant_id', 'comment', 'state', 'approved_at', 'approved_by_id'];
 
     // Relationships
@@ -48,10 +49,10 @@ class Vacation extends BaseModel {
             ]);
     }
     public function scopeSickNotes($query) {
-        return $query->where('vacations.state', \App\Enums\VacationState::Sick)
+        return $query->where('vacations.state', VacationState::Sick)
             ->whereNull('vacations.approved_at');
     }
     public function scopePendingRequests($query) {
-        return $query->where('vacations.state', \App\Enums\VacationState::Open);
+        return $query->where('vacations.state', VacationState::Open);
     }
 }

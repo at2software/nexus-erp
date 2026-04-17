@@ -68,6 +68,29 @@
                         <div class="input-group-text input-group-text-plain">{{parent.current.due_at|date}}</div>
                     </div>
                 </li>
+                <!-- is_time_based toggle (prepared state only) -->
+                @if (parent.current.state.isPrepared()) {
+                <!-- parent project search -->
+                <!-- <li class="hstack gap-2 py-1 px-2" roles="project_manager">
+                    <div class="input-group">
+                        <div class="input-group-text input-group-text-darker">
+                            <i i18n-ngbTooltip="@@i18n.projects.parentProject" ngbTooltip="parent project">account_tree</i>
+                        </div>
+                        <search-input only="Project" [minSearch]="2"
+                            [(query)]="parentProjectQuery"
+                            (itemSelected)="onParentProjectSelected($event)">
+                        </search-input>
+                    </div>
+                </li> -->
+                <li class="hstack gap-2 py-1 px-2" roles="project_manager">
+                    <div class="input-group cursor-pointer" (click)="toggleTimeBased()" (keydown.enter)="toggleTimeBased()" tabindex="0">
+                        <div class="input-group-text input-group-text-darker">
+                            <i [class.text-success]="parent.current.is_time_based" [class.text-dark-grey]="!parent.current.is_time_based" i18n-ngbTooltip="@@i18n.projects.timeBased" ngbTooltip="time based">schedule</i>
+                        </div>
+                        <span class="input-group-text flex-fill" i18n="@@i18n.projects.timeBased">time based</span>
+                    </div>
+                </li>
+                }
             </ul>
         </div>
 
@@ -126,9 +149,11 @@
             <div class="card-header pe-0">
                 <span i18n="@@i18n.common.plugins">plugins</span>
                 <div class="card-header-actions hstack gap-2 align-items-center">
-                    <a [href]="p.url" target="_blank" *nxFor="let p of parent.current.plugin_links">
+                    @for (p of parent.current.plugin_links; track p.id) {
+                    <a [href]="p.url" target="_blank" [nx]="p" [tables]="parent.current.plugin_links">
                         <n [ngbTooltip]="p.url" class="text-{{factory.instanceFor(p)?.getStateCss()}}"> {{factory.instanceFor(p)?.icon()}}</n>
                     </a>
+                    }
                     <div ngbDropdown>
                         <button class="btn btn-plain dropdown-toggle-simple" ngbDropdownToggle>
                             <i class="text-primary">add</i>

@@ -39,7 +39,6 @@ trait VcardGenderTrait {
                 return self::findGenderInDatabase($parts[0]);
             }
         }
-
         return null;
     }
     public function getSalutationAttribute(): string {

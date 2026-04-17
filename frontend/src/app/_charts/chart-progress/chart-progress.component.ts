@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { ShortPipe } from 'src/pipes/short.pipe';
 
@@ -13,11 +13,11 @@ import { ShortPipe } from 'src/pipes/short.pipe';
 })
 export class ChartProgressComponent {
 
-  @Input() max:number = 1
-  @Input() value:number = 1
-  @Input() title:string = ''
-  @Input() suffix:string = ''
-  @Input() scss:string|undefined = undefined
-  @Input() color:string|undefined = undefined
+  max    = input<number>(1)
+  value  = input<number>(1)
+  title  = input<string>('')
+  suffix = input<string>('')
+  scss   = input<string|undefined>(undefined)
+  color  = input<string|undefined>(undefined)
 
 }

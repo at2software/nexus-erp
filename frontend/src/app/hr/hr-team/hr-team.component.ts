@@ -1,4 +1,5 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { GlobalService } from '@models/global.service';
 import { User } from '@models/user/user.model';
@@ -13,7 +14,6 @@ import { AuthenticationService } from 'src/models/auth.service';
 
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { ListGroupItemContactComponent } from '@app/customers/_shards/list-group-item-contact/list-group-item-contact.component';
-import { Subject, takeUntil } from 'rxjs';
 
 @Component({
     selector: 'hr-team',
@@ -22,9 +22,9 @@ import { Subject, takeUntil } from 'rxjs';
     templateUrl: './hr-team.component.html',
     styleUrl: './hr-team.component.scss'
 })
-export class HrTeamComponent implements OnDestroy, OnInit {
+export class HrTeamComponent implements OnInit {
 
-    #destroy$ = new Subject<void>()
+    #destroyRef = inject(DestroyRef)
 
     enabledOnly: boolean = true
     team: User[]
@@ -38,19 +38,14 @@ export class HrTeamComponent implements OnDestroy, OnInit {
     #modal  = inject(ModalBaseService)
 
     ngOnInit() {
-        this.#global.init.pipe(takeUntil(this.#destroy$)).subscribe(() => {
+        this.#global.init.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(() => {
             this.team = this.#global.teamAll.filter(_ => _.id != '1')
         })
-        this.#route.params.pipe(takeUntil(this.#destroy$)).subscribe(params => {
+        this.#route.params.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(params => {
             if ('id' in params) {
                 this.id = params.id
             } 
         })
-    }
-
-    ngOnDestroy() {
-        this.#destroy$.next()
-        this.#destroy$.complete()
     }
 
     enabledIcon = () => this.enabledOnly ? 'visibility_off' : 'visibility'

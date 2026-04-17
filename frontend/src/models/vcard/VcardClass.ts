@@ -15,16 +15,20 @@ export abstract class VcardClass extends Serializable {
     __vcardExchangeString: string
     gender: string = ''
 
-    card?: Vcard
-    get vcard(): string { return this.card?.toString() ?? '' }
+    card: Vcard = new Vcard('')
+    get vcard(): string { return this.card.toString() ?? '' }
     set vcard(val: string) { this.card = new Vcard(val) }
 
     #dummyName: string = ''
     set name(val) { this.#dummyName = val }
-    get name(): string { return this.card?.name ?? this.#dummyName }
+    get name(): string { return this.card.name || this.#dummyName }
 
-    #descAdr: string[] = ['post office box','apartment or suite number','street address', 'locality (e.g., city)', 'region (e.g., state or province)', 'postal code', 'country name']
-    #descN: string[] = ['Family Names', 'Given Names', 'Additional Names', 'Honorific Prefixes', 'Honorific Suffixes']
+    static readonly #descAdr = ['post office box','apartment or suite number','street address', 'locality (e.g., city)', 'region (e.g., state or province)', 'postal code', 'country name']
+    static readonly #descN = ['Family Names', 'Given Names', 'Additional Names', 'Honorific Prefixes', 'Honorific Suffixes']
+    static readonly #SALUTATIONS: Record<string, Record<string, string>> = {
+        en: { M: 'Mr.', F: 'Mrs.' },
+        de: { M: 'Herr', F: 'Frau' }
+    }
 
     honoraryPrefix:string = ''
     honorarySuffix:string = ''
@@ -37,66 +41,53 @@ export abstract class VcardClass extends Serializable {
     countryCode?:string
     
     #getSalutation() {
-        const lang = this.card?.first('X-LANG')?.vals[0] ?? 'de';
-        const salutations: Record<string, Record<string, string>> = {
-            en: { M: 'Mr.', F: 'Mrs.' },
-            de: { M: 'Herr', F: 'Frau' }
-        };
-        const fallback = salutations[lang]?.[this.gender ?? ''] ?? '???';
-        return this.card?.get('N')?.first()?.vals[2] ?? fallback
+        const lang = this.card.first('X-LANG')?.vals[0] ?? 'de'
+        const fallback = VcardClass.#SALUTATIONS[lang]?.[this.gender] ?? '???'
+        return this.card.get('N')?.first()?.vals[2] ?? fallback
     }
 
     // https://datatracker.ietf.org/doc/html/rfc6350#section-6.3.1
-    descAdr = (index: any): string => this.#descAdr[parseInt(index)]
+    descAdr = (index: any): string => VcardClass.#descAdr[parseInt(index)]
 
     // https://datatracker.ietf.org/doc/html/rfc6350#section-6.2.2
-    descN = (index: any): string => this.#descN[parseInt(index)]
+    descN = (index: any): string => VcardClass.#descN[parseInt(index)]
     
     serialize (_json: any) {
         const personal = this.getPersonal()
-        const N = personal?.card?.get('N')?.first()?.vals
+        const N = personal?.card.get('N')?.first()?.vals
         if (N) {
-            this.honoraryPrefix = N[3]
-            this.honorarySuffix = N[4]
-            this.familyName     = N[0]
-            this.firstName      = N[1]
+            this.familyName = N[0]
+            this.firstName  = N[1]
         }
-        this.gender = personal?.gender ?? ''
-        this.honoraryPrefix = personal?.honoraryPrefix ?? ''
-        this.honorarySuffix = personal?.honorarySuffix ?? ''
-        this.fullName       = this.card?.get('FN')?.first()?.vals.join('') ?? ''
+        this.gender         = personal?.gender ?? ''
+        this.honoraryPrefix = N?.[3] ?? personal?.honoraryPrefix ?? ''
+        this.honorarySuffix = N?.[4] ?? personal?.honorarySuffix ?? ''
+        this.fullName       = this.card.get('FN')?.first()?.vals.join('') ?? ''
         this.salutation     = this.#getSalutation()
         this.colorCss       = Color.posToHex(parseInt(this.id))
-        this.url            = this.card?.get('N')?.map(_ => _.vals[0])
-        this.role           = this.card?.get('ROLE')?.first()?.vals.join('') ?? ''
-        this.countryCode    = this.card?.get('ADR')?.map(_ => _.vals[6]).first()
+        this.url            = this.card.get('URL')?.map(_ => _.vals[0])
+        this.role           = this.card.get('ROLE')?.first()?.vals.join('') ?? ''
+        this.countryCode    = this.card.get('ADR')?.map(_ => _.vals[6]).first()
     }
 
     getPersonal = (): VcardClass|undefined => this
-    getFormality = (): string => this.getPersonal()?.card?.first('X-FORMALITY')?.vals[0] || 'formal'
-    getLang = (): string => this.getPersonal()?.card?.first('X-LANG')?.vals[0] || 'de'
-    setLang(value: string) {
+    getFormality = (): string => this.getPersonal()?.card.first('X-FORMALITY')?.vals[0] || 'formal'
+    getLang = (): string => this.getPersonal()?.card.first('X-LANG')?.vals[0] || 'de'
+    #setVcardRow(key: string, value: string) {
         const personal = this.getPersonal()
-        const existingRow = personal?.card?.rows.find(r => r.key === 'X-LANG');
-        if (existingRow) {
-            existingRow.vals[0] = value;
+        const existing = personal?.card.rows.find(r => r.key === key)
+        if (existing) {
+            existing.vals[0] = value
         } else {
-            personal?.card?.rows.push(VcardRow.fromString(`X-LANG:${value}`)!);
+            personal?.card.rows.push(VcardRow.fromString(`${key}:${value}`)!)
         }
     }
-    setFormality(value: string) {
-        const personal = this.getPersonal()
-        const existingRow = personal?.card?.rows.find(r => r.key === 'X-FORMALITY');
-        if (existingRow) {
-            existingRow.vals[0] = value;
-        } else {
-            personal?.card?.rows.push(VcardRow.fromString(`X-FORMALITY:${value}`)!);
-        }
-    }
+    setLang(value: string) { this.#setVcardRow('X-LANG', value) }
+    setFormality(value: string) { this.#setVcardRow('X-FORMALITY', value) }
     isEuropeanCountry = () => this.countryCode ? NxGlobal.global.euCountries?.contains(this.countryCode) : false
 
     // Generic plugin integration methods
-    getUserIdForPlugin = (attrName: string): string | undefined => this.card?.first(attrName)?.val()
+    getUserIdForPlugin = (attrName: string): string | undefined => this.card.first(attrName)?.val()
 
     hasLinkForPlugin = (attrName: string): boolean => !!this.getUserIdForPlugin(attrName)
 
@@ -249,7 +240,7 @@ export abstract class VcardClass extends Serializable {
     }
 
     getInstanceTooltip = (instance: any): string => {
-        if (!instance) return `${instance?.getName() || 'Plugin'} Profile`
+        if (!instance) return ''
         const userId = this.#getUserIdForInstance(instance)
         if (!userId) return ''
         if (instance.state !== 'connected') {
@@ -264,7 +255,7 @@ export abstract class VcardClass extends Serializable {
     #getUserIdForInstance = (instance: any): string | undefined => {
         if (!instance) return undefined
         const attrName = instance.getVcardAttributeName()
-        return this.card?.first(attrName)?.val()
+        return this.card.first(attrName)?.val()
     }
 
 }

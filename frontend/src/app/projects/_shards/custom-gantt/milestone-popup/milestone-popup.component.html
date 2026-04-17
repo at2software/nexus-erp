@@ -1,11 +1,11 @@
-@if (visible) {
-<div class="milestone-popup" [ngStyle]="getPopupStyle()">
+@if (visible()) {
+<div class="milestone-popup">
     <div class="popup-content">
         <div class="popup-header card-header">
-            <h6 class="mb-0">
+            <span>
                 <i class="me-2">schedule</i>
                 <span i18n="@@i18n.milestone.edit">edit milestone</span>
-            </h6>
+            </span>
             <button type="button" class="btn-close" (click)="onCancel()" aria-label="Close"></button>
         </div>
         <form [formGroup]="milestoneForm" (ngSubmit)="onSave()">
@@ -31,13 +31,13 @@
                         [locale]="{applyLabel: 'Apply', format: 'DD.MM.YYYY'}" readonly>
                 </div>
                 <!-- Progress -->
-                @if (milestone.invoice_items) {
+                @if (milestone().invoice_items) {
                 <div class="mb-3 hstack gap-2 align-items-center">
                     <div class="flex-fill text-truncate" i18n="@@i18n.milestone.progress">progress</div>
                     <div class="text-white">
                         {{ (milestoneForm.get('progress')?.value || 0) * 100 | number:'1.0-0' }}%
                         <span class="text-muted">
-                            ({{ getTotalInvoiceItemDuration() }}h total)
+                            ({{ totalInvoiceItemDuration() }}h total)
                         </span>
                     </div>
                 </div>
@@ -67,7 +67,7 @@
                     </div>
                 </div>
                 <!-- Workload Hours (only for milestones without invoice_items) -->
-                @if (!hasInvoiceItems) {
+                @if (!hasInvoiceItems()) {
                 <div class="mb-3 hstack gap-2 align-items-center">
                     <div class="flex-fill text-truncate" i18n="@@i18n.common.workload">workload</div>
                     <div style="width: 160px;">
@@ -96,10 +96,10 @@
                                 <i class="me-2">person_off</i>
                                 <span i18n="@@i18n.common.unassigned">unassigned</span>
                             </button>
-                            @if (projectUsers.length > 0) {
+                            @if (projectUsers().length > 0) {
                             <div class="dropdown-divider"></div>
                             }
-                            @for (user of projectUsers; track user.id || $index) {
+                            @for (user of projectUsers(); track user.id) {
                             <button type="button" class="dropdown-item"
                                 [class.active]="milestoneForm.get('user_id')?.value === user.id"
                                 (click)="selectUser(user)">
@@ -124,10 +124,10 @@
                             <i>add</i>
                         </button>
                     </div>
-                    @if (milestone.tasks && milestone.tasks.length > 0) {
+                    @if (milestone().tasks.length) {
                     <ul class="list-group mb-0">
-                        @for (task of milestone.tasks; track task.id || $index) {
-                        <li class="list-group-item d-flex align-items-center gap-2" [nx]="task" [tables]="milestone.tasks">
+                        @for (task of milestone().tasks; track task.id) {
+                        <li class="list-group-item d-flex align-items-center gap-2" [nx]="task" [tables]="milestone().tasks">
                             <i class="text-muted small">task</i>
                             <span class="flex-fill text-truncate small">{{ task.name }}</span>
                         </li>

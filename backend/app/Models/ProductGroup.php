@@ -14,9 +14,9 @@ class ProductGroup extends BaseModel {
     protected $fillable = ['name', 'color', 'product_group_id', 'created_at', 'updated_at'];
     protected $touches  = ['parent_group'];
     protected $appends  = ['class', 'icon', 'path'];
-    protected $access   = ['admin' => '*', 'project_manager'=>'r', 'user'=>'r'];
+    protected $access   = ['admin' => '*', 'project_manager' => 'r', 'user' => 'r'];
     protected $casts    = [
-        'net'     => PrecomputedAuth::class,
+        'net' => PrecomputedAuth::class,
     ];
 
     public function parent_group() {
@@ -79,8 +79,12 @@ class ProductGroup extends BaseModel {
     public function activate(bool $is_active) {
         $this->is_active = $is_active;
         $this->save();
-        $this->child_groups->each(function ($g) use ($is_active) { $g->activate($is_active); });
-        $this->products->each(function ($g) use ($is_active) { $g->activate($is_active); });
+        $this->child_groups->each(function ($g) use ($is_active) {
+            $g->activate($is_active);
+        });
+        $this->products->each(function ($g) use ($is_active) {
+            $g->activate($is_active);
+        });
         return $this;
     }
     public static function indexAll() {

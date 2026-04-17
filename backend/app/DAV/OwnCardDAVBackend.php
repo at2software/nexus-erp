@@ -2,6 +2,7 @@
 
 namespace App\DAV;
 
+use App\Models\User;
 use Sabre\CardDAV;
 use Sabre\CardDAV\Backend\PDO;
 
@@ -92,7 +93,7 @@ class OwnCardDAVBackend extends PDO {
         //     return [];
         // }
         // $user = $row->firstOrFail();
-        $user   = \App\Models\User::findOrFail($addressbookId);
+        $user   = User::findOrFail($addressbookId);
         $result = $user->getAddressBook();
         return $result;
     }

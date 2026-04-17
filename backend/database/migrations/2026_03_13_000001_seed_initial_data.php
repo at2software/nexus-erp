@@ -39,7 +39,7 @@ return new class extends Migration {
         Artisan::call('db:insert-basic-roles');
 
         // Frameworks (final consolidated state)
-        $now = now();
+        $now        = now();
         $frameworks = [
             ['name' => 'unknown',  'latest_version' => null,  'created_at' => $now, 'updated_at' => $now],
             ['name' => 'laravel',  'latest_version' => null,  'created_at' => $now, 'updated_at' => $now],
@@ -74,7 +74,6 @@ return new class extends Migration {
             $param->save();
         }
     }
-
     public function down(): void {
         DB::table('frameworks')->whereIn('name', ['unknown', 'laravel', 'angular', 'android', 'ios', 'macos'])->delete();
         DB::table('debrief_problem_categories')->delete();

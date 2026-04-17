@@ -19,6 +19,13 @@ import { IHasMarker } from 'src/enums/marker';
 export class Focus extends Serializable implements IHasMarker {
 
     static API_PATH = (): string => 'foci'
+
+    static filterByDateRange(foci: Focus[], startDate: moment.Moment, endDate: moment.Moment): Focus[] {
+        return foci.filter(f =>
+            startDate.diff(f.time_started(), 'seconds') < 0 &&
+            endDate.diff(f.time_started(), 'seconds') >= 0
+        )
+    }
     SERVICE = FocusService
 
     duration        : number = 0

@@ -87,7 +87,6 @@ export class ProjectsFrameworksComponent implements OnInit {
         const criticalBehind = frameworkVersions
             .filter(f => this.differenceFromLatestVersion(f) > 4)
             .reduce((sum, f) => sum + f.projects.length, 0)
-
         return {
             upToDate: (upToDate / totalProjects) * 100,
             minorBehind: (minorBehind / totalProjects) * 100,

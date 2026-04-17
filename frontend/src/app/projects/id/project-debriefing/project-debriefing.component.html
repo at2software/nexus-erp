@@ -112,15 +112,47 @@
                                     }
                                 </div>
                             </div>
-                            <div class="card-body">
-                                <textarea class="form-control border-0 bg-transparent h-100"
-                                          rows="6"
+                            <div class="card-body d-flex flex-column gap-2">
+                                <textarea class="form-control border-0 bg-transparent flex-grow-1"
+                                          rows="5"
                                           [(ngModel)]="debrief.summary_notes"
                                           [autosave]="debrief"
                                           autosaveKey="summary_notes"
                                           [readonly]="debrief.isCompleted()"
                                           placeholder="Add any additional notes about this debrief..."
                                           i18n-placeholder="@@i18n.debrief.summaryPlaceholder"></textarea>
+
+                                <!-- Local AI Section -->
+                                @if (debrief.isDraft() && localAiPlugin) {
+                                    <div class="d-flex align-items-start gap-2 flex-wrap">
+                                        <button class="btn btn-sm btn-outline-primary"
+                                                (click)="runLocalAI(debrief)"
+                                                [disabled]="aiLoadingMap[debrief.id]">
+                                            @if (aiLoadingMap[debrief.id]) {
+                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                            } @else {
+                                                <i class="me-1">smart_toy</i>
+                                            }
+                                            <span i18n="@@i18n.debrief.localAI">Local AI</span>
+                                        </button>
+                                        @if (aiSuggestionsMap[debrief.id]?.length) {
+                                            @for (suggestion of aiSuggestionsMap[debrief.id]; track suggestion.title) {
+                                                <span class="badge d-flex align-items-center gap-1 cursor-pointer"
+                                                      [ngClass]="suggestion.type === 'problem' ? getSeverityClass(suggestion.severity || 'medium') : 'bg-success'"
+                                                      tabindex="0" (click)="applySuggestion(debrief, suggestion)" (keyup.enter)="applySuggestion(debrief, suggestion)"
+                                                      ngbTooltip="{{ suggestion.category }}"
+                                                      [disableTooltip]="!suggestion.category">
+                                                    <i class="small">{{ suggestion.type === 'problem' ? 'warning' : 'thumb_up' }}</i>
+                                                    {{ suggestion.title }}
+                                                    <button class="btn-close btn-close-white ms-1"
+                                                            style="font-size:0.5rem"
+                                                            aria-label="remove"
+                                                            (click)="$event.stopPropagation(); removeSuggestion(debrief.id, suggestion)"></button>
+                                                </span>
+                                            }
+                                        }
+                                    </div>
+                                }
                             </div>
                         </div>
                     </div>
@@ -238,32 +270,10 @@
                             </div>
                             @if (debrief.isDraft()) {
                                 <div class="card-body pb-2">
-                                    <div class="input-group mb-3">
-                                        <div ngbDropdown>
-                                            <button ngbDropdownToggle class="btn btn-sm btn-outline-light">
-                                                @if (positiveCategoryMap[debrief.id]) {
-                                                    {{ getCategoryName(positiveCategoryMap[debrief.id]!) }}
-                                                } @else {
-                                                    <span i18n="@@i18n.debrief.noCategory">no category</span>
-                                                }
-                                            </button>
-                                            <div ngbDropdownMenu>
-                                                <button ngbDropdownItem (click)="positiveCategoryMap[debrief.id] = null" i18n="@@i18n.debrief.noCategory">no category</button>
-                                                @for (cat of categories; track cat.id) {
-                                                    <button ngbDropdownItem (click)="positiveCategoryMap[debrief.id] = cat.id">{{ cat.name }}</button>
-                                                }
-                                            </div>
-                                        </div>
-                                        <input type="text"
-                                               class="form-control form-control-sm"
-                                               [(ngModel)]="positiveTitleMap[debrief.id]"
-                                               (keyup.enter)="addPositive(debrief)"
-                                               placeholder="Add something that went well..."
-                                               i18n-placeholder="@@i18n.debrief.addPositivePlaceholder">
-                                        <button class="btn btn-sm btn-primary" (click)="addPositive(debrief)" [disabled]="!positiveTitleMap[debrief.id]?.trim()">
-                                            <i>add</i>
-                                        </button>
-                                    </div>
+                                    <debrief-positive-autocomplete
+                                        [categories]="categories"
+                                        (addPositive)="onAddPositive(debrief, $event)">
+                                    </debrief-positive-autocomplete>
                                 </div>
                             }
                             @if (debrief.positives.length === 0 && debrief.isCompleted()) {

@@ -49,238 +49,102 @@ export class WidgetLinearRegressionForecastComponent extends BaseWidgetComponent
     data: LinearRegressionData | null = null
     moneyPipe = inject(MoneyShortPipe)
 
-    ngOnInit() {
-        this.initChartOptions()
-        this.reload()
-    }
-
     defaultOptions = () => ({})
 
+    override ngOnInit() {
+        this.initChartOptions()
+        super.ngOnInit()
+    }
+
     initChartOptions() {
-        this.chartOptions = {
-            ...EChartsRangeAreaOptions,
-            series: []
-        }
+        this.chartOptions = { ...EChartsRangeAreaOptions, series: [] }
     }
 
     onChartInit(ec: any) {
         this.echartsInstance = ec
     }
 
-    #calculateConfidenceInterval(forecast: number, standardError: number, confidenceLevel: number): { lower: number; upper: number } {
-        // Z-scores for different confidence levels
-        const zScores: Record<number, number> = {
-            68: 1.0,    // ~68% (1 standard deviation)
-            95: 1.96,   // ~95%
-            99: 2.58    // ~99%
-        };
-        
-        const zScore = zScores[confidenceLevel] || 1.96;
-        const margin = zScore * standardError;
-        
-        return {
-            lower: forecast - margin,
-            upper: forecast + margin
-        };
+    #ci(forecast: number, se: number, level: number) {
+        const z: Record<number, number> = { 68: 1.0, 95: 1.96, 99: 2.58 }
+        const margin = (z[level] ?? 1.96) * se
+        return { lower: forecast - margin, upper: forecast + margin }
+    }
+
+    #confidenceBand(label: string, ci: { lower: number; upper: number }[], categories: number[], darken: number, opacity: number, z: number) {
+        return [
+            {
+                name: `${label} Lower`, type: 'line', symbol: 'none',
+                data: ci.map(({ lower }, i) => [categories[i], lower]),
+                lineStyle: { opacity: 0 }, stack: label, z
+            },
+            {
+                name: label, type: 'line', symbol: 'none',
+                data: ci.map(({ lower, upper }, i) => [categories[i], upper - lower]),
+                lineStyle: { opacity: 0 },
+                areaStyle: { color: Color.fromVar('primary').darken(darken).toHexString(), opacity, ...EChartsDualShadowAreaStyle },
+                stack: label, z: z + 1
+            }
+        ]
     }
 
     reload(): void {
         this.stats?.get('stats/linear-regression-forecast').subscribe((data: LinearRegressionData) => {
-            this.data = data;
-            
-            // Prepare data for chart
-            const sortedHistorical = data.historical_data.sort((a, b) => 
-                new Date(a.date).getTime() - new Date(b.date).getTime()
-            );
-            
-            const categories = sortedHistorical.map(item => moment(item.date).valueOf());
-            const forecasts = sortedHistorical.map(item => item.forecast);
-            
-            // Calculate confidence intervals for each data point
-            const confidence99Upper = sortedHistorical.map(item => this.#calculateConfidenceInterval(item.forecast, item.standard_error, 99).upper);
-            const confidence99Lower = sortedHistorical.map(item => this.#calculateConfidenceInterval(item.forecast, item.standard_error, 99).lower);
-            
-            const confidence95Upper = sortedHistorical.map(item => this.#calculateConfidenceInterval(item.forecast, item.standard_error, 95).upper);
-            const confidence95Lower = sortedHistorical.map(item => this.#calculateConfidenceInterval(item.forecast, item.standard_error, 95).lower);
-            
-            const confidence68Upper = sortedHistorical.map(item => this.#calculateConfidenceInterval(item.forecast, item.standard_error, 68).upper);
-            const confidence68Lower = sortedHistorical.map(item => this.#calculateConfidenceInterval(item.forecast, item.standard_error, 68).lower);
+            this.data = data
 
-            const expenses = sortedHistorical.map(item => item.annual_expenses ?? null);
-            const revenue_12 = sortedHistorical.map(item => item.revenue_12 ?? null);
+            const sorted = data.historical_data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+            const categories = sorted.map(item => moment(item.date).valueOf())
+            const forecasts = sorted.map(item => item.forecast)
+            const expenses = sorted.map(item => item.annual_expenses ?? null)
+            const revenue_12 = sorted.map(item => item.revenue_12 ?? null)
 
-            const yMax = (getMedian(confidence99Upper) ?? 0) * 1.2
+            const ci99 = sorted.map(item => this.#ci(item.forecast, item.standard_error, 99))
+            const ci95 = sorted.map(item => this.#ci(item.forecast, item.standard_error, 95))
+            const ci68 = sorted.map(item => this.#ci(item.forecast, item.standard_error, 68))
 
-            // Convert to ECharts format - using proper range areas
-            const echartsData = [
-                // 99% confidence interval (background area) - bottom layer
-                {
-                    name: '99% Confidence Lower',
-                    type: 'line',
-                    data: confidence99Lower.map((lower, i) => [categories[i], lower]),
-                    lineStyle: { opacity: 0 },
-                    symbol: 'none',
-                    stack: 'confidence99',
-                    z: 1
-                },
-                {
-                    name: '99% Confidence',
-                    type: 'line',
-                    data: confidence99Upper.map((upper, i) => [categories[i], upper - confidence99Lower[i]]),
-                    lineStyle: { opacity: 0 },
-                    symbol: 'none',
-                    areaStyle: {
-                        color: Color.fromVar('primary').darken(35).toHexString(),
-                        opacity: 0.3,
-                        ...EChartsDualShadowAreaStyle
-                    },
-                    stack: 'confidence99',
-                    z: 2
-                },
-                // 95% confidence interval 
-                {
-                    name: '95% Confidence Lower',
-                    type: 'line',
-                    data: confidence95Lower.map((lower, i) => [categories[i], lower]),
-                    lineStyle: { opacity: 0 },
-                    symbol: 'none',
-                    stack: 'confidence95',
-                    z: 3
-                },
-                {
-                    name: '95% Confidence',
-                    type: 'line',
-                    data: confidence95Upper.map((upper, i) => [categories[i], upper - confidence95Lower[i]]),
-                    lineStyle: { opacity: 0 },
-                    symbol: 'none',
-                    areaStyle: {
-                        color: Color.fromVar('primary').darken(30).toHexString(),
-                        opacity: 0.4,
-                        ...EChartsDualShadowAreaStyle
-                    },
-                    stack: 'confidence95',
-                    z: 4
-                },
-                // 68% confidence interval (top layer)
-                {
-                    name: '68% Confidence Lower',
-                    type: 'line',
-                    data: confidence68Lower.map((lower, i) => [categories[i], lower]),
-                    lineStyle: { opacity: 0 },
-                    symbol: 'none',
-                    stack: 'confidence68',
-                    z: 5
-                },
-                {
-                    name: '68% Confidence',
-                    type: 'line',
-                    data: confidence68Upper.map((upper, i) => [categories[i], upper - confidence68Lower[i]]),
-                    lineStyle: { opacity: 0 },
-                    symbol: 'none',
-                    areaStyle: {
-                        color: Color.fromVar('primary').darken(25).toHexString(),
-                        opacity: 0.5,
-                        ...EChartsDualShadowAreaStyle
-                    },
-                    stack: 'confidence68',
-                    z: 6
-                },
-                // Expenses line (dashed) - above confidence areas
-                {
-                    name: 'Expenses',
-                    type: 'line',
-                    symbol: 'none',
-                    lineStyle: {
-                        color: Color.fromVar('yellow').toHexString(),
-                        width: 2,
-                        type: 'dashed'
-                    },
-                    data: expenses.map((value, i) => [categories[i], value]),
-                    z: 10
-                },
-                // Forecast line (white) - above confidence areas
-                {
-                    name: 'Forecast',
-                    type: 'line',
-                    symbol: 'none',
-                    lineStyle: {
-                        color: '#ffffff',
-                        width: 2
-                    },
-                    data: forecasts.map((forecast, i) => [categories[i], forecast]),
-                    z: 11
-                },
-                // Actual Revenue line - above confidence areas
-                {
-                    name: 'real Revenue',
-                    type: 'line',
-                    symbol: 'none',
-                    lineStyle: {
-                        color: Color.fromVar('primary').toHexString(),
-                        width: 2,
-                        type: 'dashed'
-                    },
-                    data: revenue_12.map((value, i) => [categories[i], value]),
-                    z: 12
-                }
-            ];
+            const yMax = (getMedian(ci99.map(c => c.upper)) ?? 0) * 1.2
+
+            const row = (label: string, cls: string, value: string) =>
+                `<div class="hstack gap-2"><span class="font-monospace ${cls}">${label}:</span><span class="ms-auto font-monospace">${value}</span></div>`
 
             this.chartOptions = {
                 ...this.chartOptions,
-                yAxis: {
-                    ...this.chartOptions.yAxis,
-                    min: 0,
-                    max: yMax
-                },
+                yAxis: { ...this.chartOptions.yAxis, min: 0, max: yMax },
                 tooltip: {
                     ...this.chartOptions.tooltip,
                     formatter: (params: any) => {
-                        if (!params || params.length === 0) return '';
-                        
-                        const dataIndex = params[0].dataIndex;
-                        const forecast = forecasts[dataIndex];
-                        const standardError = sortedHistorical[dataIndex].standard_error;
-                        const _expenses = expenses[dataIndex];
-                        const revenue = revenue_12[dataIndex];
-                        const r2 = sortedHistorical[dataIndex].r2;
-                        const date = moment(categories[dataIndex]).format('YYYY-MM');
-                        const deviation = revenue ? Math.abs(revenue / forecast - 1) * 100 : 0;
-                        
-                        let tooltip = `
-                            <div class="p-2">
-                                <div class="fw-bold mb-1">${date}</div>
-                                <div class="hstack gap-2">
-                                    <span class="font-monospace text-white fw-bold">Forecast:</span>
-                                    <span class="ms-auto font-monospace">${this.moneyPipe.transform(forecast)}</span>
-                                </div>
-                                <div class="hstack gap-2">
-                                    <span class="font-monospace text-muted">R²:</span>
-                                    <span class="ms-auto font-monospace">${(r2 * 100).toFixed(1)}%</span>
-                                </div>
-                                <div class="hstack gap-2">
-                                    <span class="font-monospace text-muted">Std. Error:</span>
-                                    <span class="ms-auto font-monospace">${this.moneyPipe.transform(standardError)}</span>
-                                </div>
-                                <div class="hstack gap-2">
-                                    <span class="font-monospace text-yellow">Expenses:</span>
-                                    <span class="ms-auto font-monospace">${this.moneyPipe.transform(_expenses)}</span>
-                                </div>`;
-                        if (revenue) {
-                            tooltip += `<div class="hstack gap-2">
-                                <span class="font-monospace text-primary">reality (Δ ${deviation.toFixed(1)}%):</span>
-                                <span class="ms-auto font-monospace">${this.moneyPipe.transform(revenue)}</span>
-                            </div>`;
-                        }
-                        tooltip += `</div>`;
-                        return tooltip;
+                        if (!params?.length) return ''
+                        const i = params[0].dataIndex
+                        const forecast = forecasts[i]
+                        const { standard_error: se, r2 } = sorted[i]
+                        const revenue = revenue_12[i]
+                        const deviation = revenue ? Math.abs(revenue / forecast - 1) * 100 : 0
+                        return `<div class="p-2">
+                            <div class="fw-bold mb-1">${moment(categories[i]).format('YYYY-MM')}</div>
+                            ${row('Forecast', 'text-white fw-bold', this.moneyPipe.transform(forecast))}
+                            ${row('R²', 'text-muted', `${(r2 * 100).toFixed(1)}%`)}
+                            ${row('Std. Error', 'text-muted', this.moneyPipe.transform(se))}
+                            ${row('Expenses', 'text-yellow', this.moneyPipe.transform(expenses[i]))}
+                            ${revenue ? row(`reality (Δ ${deviation.toFixed(1)}%)`, 'text-primary', this.moneyPipe.transform(revenue)) : ''}
+                        </div>`
                     }
                 },
-                series: echartsData
-            };
-            
-            if (this.echartsInstance) {
-                this.echartsInstance.setOption(this.chartOptions, true);
+                series: [
+                    ...this.#confidenceBand('confidence99', ci99, categories, 35, 0.3, 1),
+                    ...this.#confidenceBand('confidence95', ci95, categories, 30, 0.4, 3),
+                    ...this.#confidenceBand('confidence68', ci68, categories, 25, 0.5, 5),
+                    { name: 'Expenses', type: 'line', symbol: 'none', z: 10,
+                      lineStyle: { color: Color.fromVar('yellow').toHexString(), width: 2, type: 'dashed' },
+                      data: expenses.map((v, i) => [categories[i], v]) },
+                    { name: 'Forecast', type: 'line', symbol: 'none', z: 11,
+                      lineStyle: { color: '#ffffff', width: 2 },
+                      data: forecasts.map((f, i) => [categories[i], f]) },
+                    { name: 'real Revenue', type: 'line', symbol: 'none', z: 12,
+                      lineStyle: { color: Color.fromVar('primary').toHexString(), width: 2, type: 'dashed' },
+                      data: revenue_12.map((v, i) => [categories[i], v]) }
+                ]
             }
-        });
+
+            this.echartsInstance?.setOption(this.chartOptions, true)
+        })
     }
 }

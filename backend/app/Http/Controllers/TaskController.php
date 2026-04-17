@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Assignment;
 use App\Models\Project;
 use App\Models\Task;
 use Illuminate\Http\Request;
@@ -28,7 +29,7 @@ class TaskController extends Controller {
         }
 
         // Auto-assign to current user
-        \App\Models\Assignment::create([
+        Assignment::create([
             'parent_type'   => 'App\\Models\\Task',
             'parent_id'     => $task->id,
             'assignee_type' => 'App\\Models\\User',

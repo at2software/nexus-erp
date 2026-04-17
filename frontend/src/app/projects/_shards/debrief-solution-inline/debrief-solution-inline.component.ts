@@ -1,8 +1,9 @@
-import { Component, EventEmitter, Input, OnInit, Output, inject } from '@angular/core'
-import { CommonModule } from '@angular/common'
+import { Component, computed, inject, input, output, signal } from '@angular/core'
+import { DecimalPipe } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap'
-import { Subject, debounceTime, distinctUntilChanged, switchMap, of } from 'rxjs'
+import { Subject, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { DebriefService } from '@models/project/debrief.service'
 import { DebriefSolution } from '@models/project/debrief-solution.model'
 import { DebriefProblem } from '@models/project/debrief-problem.model'
@@ -11,97 +12,95 @@ import { NexusModule } from '@app/nx/nexus.module'
 @Component({
     selector: 'debrief-solution-inline',
     standalone: true,
-    imports: [CommonModule, FormsModule, NgbTooltipModule, NexusModule],
+    imports: [FormsModule, NgbTooltipModule, NexusModule, DecimalPipe],
     templateUrl: './debrief-solution-inline.component.html',
     styleUrls: ['./debrief-solution-inline.component.scss']
 })
-export class DebriefSolutionInlineComponent implements OnInit {
-    @Input() problem!: DebriefProblem
-    @Input() debriefId?: string
-    @Input() readonly = false
-    @Output() solutionLinked = new EventEmitter<void>()
-    @Output() solutionRated = new EventEmitter<void>()
+export class DebriefSolutionInlineComponent {
+    problem = input.required<DebriefProblem>()
+    debriefId = input<string>()
+    readonly = input(false)
+    solutionLinked = output<void>()
+    solutionRated = output<void>()
 
-    searchTerm = ''
-    searchResults: DebriefSolution[] = []
-    isSearching = false
-    showDropdown = false
-    showCreateForm = false
-    newSolutionTitle = ''
+    searchTerm = signal('')
+    searchResults = signal<DebriefSolution[]>([])
+    isSearching = signal(false)
+    showDropdown = signal(false)
+    showCreateForm = signal(false)
+    newSolutionTitle = signal('')
 
     #service = inject(DebriefService)
     #searchSubject = new Subject<string>()
 
-    ngOnInit() {
+    #linkedIds = computed(() => this.problem().solutions.map(s => s.id))
+
+    constructor() {
         this.#searchSubject.pipe(
             debounceTime(300),
             distinctUntilChanged(),
             switchMap(term => {
-                if (!term || term.length < 2) {
-                    return of([])
-                }
-                this.isSearching = true
+                if (!term || term.length < 2) return of([])
+                this.isSearching.set(true)
                 return this.#service.searchSolutions(term)
-            })
+            }),
+            takeUntilDestroyed()
         ).subscribe(results => {
-            const linkedIds = this.problem.solutions.map(s => s.id)
-            this.searchResults = results.filter(s => !linkedIds.includes(s.id))
-            this.isSearching = false
-            this.showDropdown = true
+            this.searchResults.set(results.filter(s => !this.#linkedIds().includes(s.id)))
+            this.isSearching.set(false)
+            this.showDropdown.set(true)
         })
     }
 
-    onSearchChange() {
-        this.#searchSubject.next(this.searchTerm)
+    onSearchChange(term: string) {
+        this.searchTerm.set(term)
+        this.#searchSubject.next(term)
     }
 
     onFocus() {
-        if (this.searchTerm.length >= 2) {
-            this.showDropdown = true
-        }
+        if (this.searchTerm().length >= 2) this.showDropdown.set(true)
     }
 
     onBlur() {
-        setTimeout(() => this.showDropdown = false, 200)
+        setTimeout(() => this.showDropdown.set(false), 200)
     }
 
     linkSolution(solution: DebriefSolution) {
-        this.#service.linkSolution(this.problem.id, solution.id, this.debriefId).subscribe(() => {
-            this.searchTerm = ''
-            this.searchResults = []
-            this.showDropdown = false
+        this.#service.linkSolution(this.problem().id, solution.id, this.debriefId()).subscribe(() => {
+            this.searchTerm.set('')
+            this.searchResults.set([])
+            this.showDropdown.set(false)
             this.solutionLinked.emit()
         })
     }
 
     createAndLinkSolution() {
-        if (!this.newSolutionTitle.trim()) return
-
-        this.#service.storeSolution({ title: this.newSolutionTitle.trim() }).subscribe(solution => {
-            this.#service.linkSolution(this.problem.id, solution.id, this.debriefId).subscribe(() => {
-                this.newSolutionTitle = ''
-                this.showCreateForm = false
+        const title = this.newSolutionTitle().trim()
+        if (!title) return
+        this.#service.storeSolution({ title }).subscribe(solution => {
+            this.#service.linkSolution(this.problem().id, solution.id, this.debriefId()).subscribe(() => {
+                this.newSolutionTitle.set('')
+                this.showCreateForm.set(false)
                 this.solutionLinked.emit()
             })
         })
     }
 
     rateSolution(solution: DebriefSolution, rating: number) {
-        this.#service.rateSolution(this.problem.id, solution.id, rating).subscribe(() => {
+        this.#service.rateSolution(this.problem().id, solution.id, rating).subscribe(() => {
             this.solutionRated.emit()
         })
     }
 
     unlinkSolution(solution: DebriefSolution) {
-        this.#service.unlinkSolution(this.problem.id, solution.id).subscribe(() => {
+        this.#service.unlinkSolution(this.problem().id, solution.id).subscribe(() => {
             this.solutionLinked.emit()
         })
     }
 
     toggleCreateForm() {
-        this.showCreateForm = !this.showCreateForm
-        if (this.showCreateForm) {
-            this.newSolutionTitle = this.searchTerm
-        }
+        const show = !this.showCreateForm()
+        this.showCreateForm.set(show)
+        if (show) this.newSolutionTitle.set(this.searchTerm())
     }
 }

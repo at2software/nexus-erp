@@ -1,4 +1,4 @@
-import { Component, inject, Input, Optional, TemplateRef } from '@angular/core';
+import { Component, computed, inject, input, TemplateRef } from '@angular/core';
 import { CustomerDetailGuard } from '../../customers.details.guard';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
 import { forkJoin } from 'rxjs';
@@ -17,79 +17,73 @@ import { CompanyLocaleSelectorComponent } from '../company-locale-selector/compa
     imports: [NgbTooltipModule, CommonModule, FormsModule, CompanyLocaleSelectorComponent]
 })
 export class CustomerPaymentDetailsComponent {
-    @Input() company: Company
-    @Input() additionalItems?: TemplateRef<any>
-    @Input() projectPaymentDuration?: string
-    @Input() onChangeProjectPaymentDuration?: () => void
-    @Input() onRemoveProjectPaymentDuration?: () => void
+    company                        = input<Company>()
+    additionalItems                = input<TemplateRef<any>>()
+    projectPaymentDuration         = input<string>()
+    onChangeProjectPaymentDuration = input<() => void>()
+    onRemoveProjectPaymentDuration = input<() => void>()
+    
+    current                   = computed(() => this.company() ?? this.parent?.current)
+    hasProjectPaymentDuration = computed(() => !!this.projectPaymentDuration())
+    effectivePaymentDuration  = computed(() => this.projectPaymentDuration() || this.current()?.getParam('INVOICE_PAYMENT_DURATION') || '14')
+    hasDiscount               = computed(() => parseFloat(this.current()?.getParam('INVOICE_DISCOUNT') ?? '0') > 0)
 
-    @Optional() parent = inject(CustomerDetailGuard, { optional: true })
-    input = inject(InputModalService)
+    parent = inject(CustomerDetailGuard, { optional: true })
+    inputModal = inject(InputModalService)
 
-    get current(): Company | undefined {
-        return this.company || this.parent?.current
-    }
-
-    get hasProjectPaymentDuration(): boolean {
-        return !!this.projectPaymentDuration
-    }
-
-    get effectivePaymentDuration(): string {
-        return this.projectPaymentDuration || this.current?.getParam('INVOICE_PAYMENT_DURATION') || '14'
-    }
-
-    hasDiscount = () => parseFloat(this.current?.getParam('INVOICE_DISCOUNT') ?? '0') > 0
 
     onLocaleChanged() {
         this.parent?.reload();
     }
 
     handlePaymentDurationClick() {
-        if (this.onChangeProjectPaymentDuration) {
-            this.onChangeProjectPaymentDuration()
+        const onChange = this.onChangeProjectPaymentDuration()
+        if (onChange) {
+            onChange()
         } else {
             this.onChangeParam('INVOICE_PAYMENT_DURATION')
         }
     }
-    
-    onChangeParam(param:string) {
-        this.input.open($localize`:@@i18n.customers.set_new_value:set new value`).then((r) => {
+
+    onChangeParam(param: string) {
+        this.inputModal.open($localize`:@@i18n.customers.set_new_value:set new value`).then((r) => {
             if (r?.text) {
-                this.current!.updateParam(param, { value: r.text }).subscribe(() => this.parent?.reload())
+                this.current()!.updateParam(param, { value: r.text }).subscribe(() => this.parent?.reload())
             }
         })
     }
+
     async onChangeSepa() {
-        const mandate = (await this.input.open($localize`:@@i18n.customers.set_mandate_reference:set mandate reference`))?.text ?? undefined
-        const iban = (await this.input.open($localize`:@@i18n.customers.set_iban:set IBAN`))?.text ?? undefined
+        const mandate = (await this.inputModal.open($localize`:@@i18n.customers.set_mandate_reference:set mandate reference`))?.text ?? undefined
+        const iban = (await this.inputModal.open($localize`:@@i18n.customers.set_iban:set IBAN`))?.text ?? undefined
         forkJoin([
-            this.current!.updateParam('INVOICE_DD_MANDATE', { value: mandate }),
-            this.current!.updateParam('INVOICE_DD_IBAN', { value: iban }),
+            this.current()!.updateParam('INVOICE_DD_MANDATE', { value: mandate }),
+            this.current()!.updateParam('INVOICE_DD_IBAN', { value: iban }),
         ]).subscribe(() => this.parent?.reload())
     }
+
     removeDiscount() {
-        this.current!.updateParam('INVOICE_DISCOUNT', { value: null }).subscribe(() => this.parent?.reload())
+        this.current()!.updateParam('INVOICE_DISCOUNT', { value: null }).subscribe(() => this.parent?.reload())
     }
+
     removeSepa() {
         forkJoin([
-            this.current!.updateParam('INVOICE_DD_MANDATE', { value: null }),
-            this.current!.updateParam('INVOICE_DD_IBAN', { value: null }),
+            this.current()!.updateParam('INVOICE_DD_MANDATE', { value: null }),
+            this.current()!.updateParam('INVOICE_DD_IBAN', { value: null }),
         ]).subscribe(() => this.parent?.reload())
     }
+
     onChangeEmail() {
-        this.input.open($localize`:@@i18n.customers.set_new_email:set new email`).then((r) => {
+        this.inputModal.open($localize`:@@i18n.customers.set_new_email:set new email`).then((r) => {
             if (r?.text) {
-                this.current!.update({ invoice_email: r.text }).subscribe(() => this.parent?.reload())
+                this.current()!.update({ invoice_email: r.text }).subscribe(() => this.parent?.reload())
             }
         })
     }
+
     onChangeVat() {
-        this.input.open($localize`:@@i18n.customers.set_new_vat_id:set new VAT ID`).then((r) => {
-            if (r?.text) {
-                this.current!.update({ vat_id: r.text }).subscribe(() => this.parent?.reload())
-            } else {
-                this.current!.update({ vat_id: null }).subscribe(() => this.parent?.reload())
-            }
+        this.inputModal.open($localize`:@@i18n.customers.set_new_vat_id:set new VAT ID`).then((r) => {
+            this.current()!.update({ vat_id: r?.text ?? null }).subscribe(() => this.parent?.reload())
         })
     }
 }

@@ -24,8 +24,7 @@
             } @else {
             <ul class="list-group list-group-flush">
                 @for (monitor of monitors; track monitor.id) {
-                <li class="list-group-item list-group-item-action hstack gap-2" [nx]="monitor" context="dashboard"
-                    (mouseenter)="loadChecksForMonitor(monitor)">
+                <li class="list-group-item list-group-item-action hstack gap-2" [nx]="monitor" context="dashboard">
                     <div [ngbTooltip]="'Status: ' + monitor.last_status">
                         <i class="text-{{ monitor.statusColor }}">{{ monitor.statusIcon }}</i>
                     </div>
