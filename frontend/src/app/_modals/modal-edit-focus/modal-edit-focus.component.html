@@ -1,25 +1,28 @@
 <div class="modal d-block" tabindex="-1">
+    @let _title = title();
+    @let _focus = focus();
+    @let _initialParent = initialParent();
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <span class="modal-title">{{title}}</span>
+                <span class="modal-title">{{ _title }}</span>
             </div>
             <div class="modal-body">
                 <div class="input-group mb-3 d-flex">
                     <span class="input-group-text" i18n="@@i18n.common.project">project</span>
-                    <search-input class="flex-fill" only="Project,Company" [query]="focus.getParentName()" [selected]="initialParentSerializable" [has_icon]="true"></search-input>
+                    <search-input class="flex-fill" only="Project,Company" [query]="_focus.getParentName()" [selected]="_initialParent" [has_icon]="true"></search-input>
                 </div>
                 <div class="input-group mb-3 d-flex">
                     <span class="input-group-text" i18n="@@i18n.common.dateTime">date & time</span>
-                    <input class="form-control" [(ngModel)]="dateTimeText">
+                    <input class="form-control" [ngModel]="dateTimeText()" (ngModelChange)="dateTimeText.set($event)" />
                 </div>
                 <div class="input-group mb-3 d-flex">
                     <span class="input-group-text" i18n="@@i18n.common.duration">duration</span>
-                    <input class="form-control" [(ngModel)]="durationText" suffix="h">
+                    <input class="form-control" [ngModel]="durationText()" (ngModelChange)="durationText.set($event)" suffix="h" />
                 </div>
                 <div class="input-group mb-3 d-flex">
                     <span class="input-group-text" i18n="@@i18n.common.comment">comment</span>
-                    <input class="form-control" [(ngModel)]="commentText">
+                    <input class="form-control" [ngModel]="commentText()" (ngModelChange)="commentText.set($event)" />
                 </div>
             </div>
             <div class="modal-footer">

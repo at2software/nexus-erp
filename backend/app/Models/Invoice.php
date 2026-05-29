@@ -36,17 +36,21 @@ class Invoice extends BaseModel {
     protected $touches  = ['company'];
     protected $appends  = ['class', 'icon', 'path', 'net', 'gross', 'gross_remaining'];
     protected $fillable = ['due_at', 'remind_at', 'company_id', 'default_interest', 'file_dir', 'name', 'stage'];
-    protected $casts    = [
-        'net'             => PrecomputedAuth::class,
-        'gross'           => PrecomputedAuth::class,
-        'gross_remaining' => PrecomputedAuth::class,
-        'created_at'      => 'date',
-        'updated_at'      => 'date',
-        'paid_at'         => 'date',
-        'due_at'          => 'date',
-        'is_booked'       => 'boolean',
-        'is_cancelled'    => 'boolean',
-    ];
+
+    protected function casts(): array {
+        return [
+            'net'             => PrecomputedAuth::class,
+            'gross'           => PrecomputedAuth::class,
+            'gross_remaining' => PrecomputedAuth::class,
+            'created_at'      => 'date',
+            'updated_at'      => 'date',
+            'paid_at'         => 'date',
+            'due_at'          => 'date',
+            'is_booked'       => 'boolean',
+            'is_cancelled'    => 'boolean',
+        ];
+    }
+
     protected $access = ['admin' => '*', 'project_manager' => '', 'developer' => ''];
 
     public function precomputeNetAttribute() {

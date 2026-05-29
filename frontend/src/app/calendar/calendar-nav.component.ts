@@ -1,5 +1,5 @@
-import { GlobalService } from 'src/models/global.service';
-import { Component, inject } from '@angular/core';
+import { GlobalService } from '@models/global.service';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 @Component({
@@ -7,14 +7,13 @@ import { RouterModule } from '@angular/router';
     templateUrl: './calendar-nav.component.html',
     styleUrls: ['./calendar-nav.component.scss'],
     standalone: true,
-    imports: [RouterModule]
+    imports: [RouterModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CalendarNavComponent {
+    settingKeys: string[] = [];
 
-    settingKeys: string[]
+    #global = inject(GlobalService);
 
-    #global = inject(GlobalService)
-
-    reloadEnvironment = () => this.#global.reload()
-
+    reloadEnvironment = () => this.#global.reload();
 }

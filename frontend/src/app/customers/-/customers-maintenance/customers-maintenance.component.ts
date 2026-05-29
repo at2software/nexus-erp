@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 @Component({
@@ -6,8 +6,7 @@ import { RouterModule } from '@angular/router';
     templateUrl: './customers-maintenance.component.html',
     styleUrls: ['./customers-maintenance.component.scss'],
     standalone: true,
-    imports: [RouterModule]
+    imports: [RouterModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CustomersMaintenanceComponent {
-
-}
+export class CustomersMaintenanceComponent {}

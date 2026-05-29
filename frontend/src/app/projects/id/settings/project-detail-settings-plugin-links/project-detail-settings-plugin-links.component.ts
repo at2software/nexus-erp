@@ -1,10 +1,11 @@
-import { Component, inject } from '@angular/core';
-
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { tracked } from '@constants/tracked';
 import { ProjectDetailGuard } from '@app/projects/project-details.guard';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { PluginLink } from '@models/pluginLink/plugin-link.model';
 import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
-import { NexusModule } from '@app/nx/nexus.module';
+import { Nx } from '@app/nx/nx.directive';
+import { NComponent } from '@shards/n/n.component';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 
 @Component({
@@ -12,13 +13,16 @@ import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
     templateUrl: './project-detail-settings-plugin-links.component.html',
     styleUrls: ['./project-detail-settings-plugin-links.component.scss'],
     standalone: true,
-    imports: [NgbTooltipModule, NexusModule, EmptyStateComponent]
+    imports: [NgbTooltipModule, Nx, NComponent, EmptyStateComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectDetailSettingsPluginLinksComponent {
     parent = inject(ProjectDetailGuard);
+
+    readonly object = tracked(this.parent.object);
     factory = inject(PluginInstanceFactory);
 
     get pluginLinks(): PluginLink[] {
-        return this.parent.current?.plugin_links || [];
+        return this.parent.object()?.plugin_links || [];
     }
 }

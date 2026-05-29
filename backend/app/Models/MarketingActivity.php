@@ -22,12 +22,15 @@ class MarketingActivity extends BaseModel {
         'parent_activity_id',
         'quick_action',
     ];
-    protected $casts = [
-        'day_offset'              => 'integer',
-        'is_required'             => 'boolean',
-        'has_external_dependency' => 'boolean',
-        'description'             => I18n::class,
-    ];
+
+    protected function casts(): array {
+        return [
+            'day_offset'              => 'integer',
+            'is_required'             => 'boolean',
+            'has_external_dependency' => 'boolean',
+            'description'             => I18n::class,
+        ];
+    }
 
     // Relationships
     public function marketingWorkflow(): BelongsTo {

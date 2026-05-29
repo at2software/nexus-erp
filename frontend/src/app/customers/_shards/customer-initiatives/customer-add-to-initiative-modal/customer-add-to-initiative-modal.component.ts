@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
@@ -8,44 +8,45 @@ import { MarketingInitiative } from '@models/marketing/marketing-initiative.mode
 import { MarketingService } from '@models/marketing/marketing.service';
 import { AvatarComponent } from '@app/_shards/avatar/avatar.component';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
+import { SpinnerComponent } from '@shards/spinner/spinner.component';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'customer-add-to-initiative-modal',
     standalone: true,
     templateUrl: './customer-add-to-initiative-modal.component.html',
-    imports: [FormsModule, NgbTooltipModule, AvatarComponent, ScrollbarComponent]
+    imports: [FormsModule, NgbTooltipModule, AvatarComponent, ScrollbarComponent, SpinnerComponent],
 })
-export class CustomerAddToInitiativeModalComponent extends ModalBaseComponent<{ initiative_id: string, contact_ids: string[] } | null> {
+export class CustomerAddToInitiativeModalComponent extends ModalBaseComponent<{ initiative_id: string; contact_ids: string[] } | null> {
+    company!: Company;
+    contacts: CompanyContact[] = [];
+    initiatives: MarketingInitiative[] = [];
+    selectedInitiativeId: string = '';
+    selectedContactIds = new Set<string>();
+    isLoading = signal(true);
 
-    company!: Company
-    contacts: CompanyContact[] = []
-    initiatives: MarketingInitiative[] = []
-    selectedInitiativeId: string = ''
-    selectedContactIds = new Set<string>()
-    isLoading = true
-
-    #marketingService = inject(MarketingService)
+    #marketingService = inject(MarketingService);
 
     init(...args: any): void {
-        this.company = args[0].company
-        this.contacts = this.company.employees?.filter(c => !c.is_retired) ?? []
+        this.company = args[0].company;
+        this.contacts = this.company.employees?.filter((c) => !c.is_retired) ?? [];
         this.#marketingService.indexInitiatives({ status: 'active', per_page: 100 }).subscribe((r: any) => {
-            this.initiatives = r.data
-            this.isLoading = false
-        })
+            this.initiatives = r.data;
+            this.isLoading.set(false);
+        });
     }
 
     toggleContact(id: string) {
-        if (this.selectedContactIds.has(id)) this.selectedContactIds.delete(id)
-        else this.selectedContactIds.add(id)
+        if (this.selectedContactIds.has(id)) this.selectedContactIds.delete(id);
+        else this.selectedContactIds.add(id);
     }
 
     get isValid() {
-        return !!this.selectedInitiativeId && this.selectedContactIds.size > 0
+        return !!this.selectedInitiativeId && this.selectedContactIds.size > 0;
     }
 
     onSuccess() {
-        if (!this.isValid) return null
-        return { initiative_id: this.selectedInitiativeId, contact_ids: [...this.selectedContactIds] }
+        if (!this.isValid) return null;
+        return { initiative_id: this.selectedInitiativeId, contact_ids: [...this.selectedContactIds] };
     }
 }

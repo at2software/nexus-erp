@@ -1,55 +1,34 @@
 <div class="btn-group dropdown form-control bg-transparent">
-  <input #searchbox
-    [ngModel]="query()"
-    class="form-control show"
-    type="search"
-    placeholder="search"
-    i18n-placeholder="@@i18n.common.search"
-    (keydown)="onKeydown($event)"
-    (input)="onInput($event)"
-    (focus)="onFocus()"
-    (blur)="onBlur()"
-    role="combobox"
-    aria-autocomplete="list"
-    [attr.aria-expanded]="hasResults()"
-    aria-controls="search-dropdown"
-    autocomplete="off">
-    <scrollbar #dropdown id="search-dropdown" class="dropdown-menu fade start-0 overflow-auto" [class.show]="shouldShowDropdown()"
-      [class.d-none]="!shouldShowDropdown()">
-      @for (res of results(); track res.id; let i = $index) {
-        <div class="dropdown-item hstack gap-2 pointer"
-          (click)="selectItem(res, $event)" tabindex="0" (keydown.enter)="selectItem(res, $event)"
-          (mousedown)="preventBlur($event)"
-          (mouseenter)="setCurrentIndex(i)"
-          [class.active]="i === currentIndex()"
-          role="option"
-          [attr.aria-selected]="i === currentIndex()">
-          <div>
-            @switch (res.class) {
-              @case ('CompanyContact') {
-                <img class="list-group-icon avatar avatar-img avatar-xs" src="{{res.icon}}" [ngbTooltip]="res.company.name" alt="" />
-              }
-              @default {
-                <img class="list-group-icon avatar avatar-img avatar-xs" src="{{res.icon}}" alt="" />
-              }
-            }
-          </div>
-          <div class="text-truncate flex-fill"><span [innerHTML]="res.name | safe:'html'"></span></div>
-          @if (res.is('Project')) {
-            <div>
-              <span class="badge" [style.backgroundColor]="res.state.color">{{res.state.name}}</span>
+    <input #searchbox [ngModel]="query()" class="form-control show" type="search" placeholder="search" i18n-placeholder="@@i18n.common.search" (keydown)="onKeydown($event)" (input)="onInput($event)" (focus)="onFocus()" (blur)="onBlur()" role="combobox" aria-autocomplete="list" [attr.aria-expanded]="hasResults()" aria-controls="search-dropdown" autocomplete="off" />
+    <scrollbar #dropdown id="search-dropdown" class="dropdown-menu fade start-0 overflow-auto" [class.show]="shouldShowDropdown()" [class.d-none]="!shouldShowDropdown()">
+        @for (res of results(); track res.id; let i = $index) {
+            <div class="dropdown-item hstack gap-2 pointer" (click)="selectItem(res, $event)" tabindex="0" (keydown.enter)="selectItem(res, $event)" (mousedown)="preventBlur($event)" (mouseenter)="setCurrentIndex(i)" [class.active]="i === currentIndex()" role="option" [attr.aria-selected]="i === currentIndex()">
+                <div>
+                    @switch (res.class) {
+                        @case ('CompanyContact') {
+                            <img class="list-group-icon avatar avatar-img avatar-xs" src="{{ res.icon }}" [ngbTooltip]="res.company.name" alt="" />
+                        }
+                        @default {
+                            <img class="list-group-icon avatar avatar-img avatar-xs" src="{{ res.icon }}" alt="" />
+                        }
+                    }
+                </div>
+                <div class="text-truncate flex-fill"><span [innerHTML]="res.name | safe: 'html'"></span></div>
+                @if (res.class === 'Project') {
+                    <div>
+                        <span class="badge" [style.backgroundColor]="res.state.color">{{ res.state.name }}</span>
+                    </div>
+                }
             </div>
-          }
-        </div>
-      }
-      <ng-content></ng-content>
+        }
+        <ng-content></ng-content>
     </scrollbar>
-  </div>
+</div>
 
-    @if (has_icon()) {
-        <div class="avatar avatar-sm icon-avatar">
-          @if (selected()) {
-            <img src="{{selected()?.icon}}" class="avatar-img" alt="">
-          }
-        </div>
-    }
+@if (has_icon()) {
+    <div class="avatar avatar-sm icon-avatar">
+        @if (selected()) {
+            <img src="{{ selected()?.icon }}" class="avatar-img" alt="" />
+        }
+    </div>
+}

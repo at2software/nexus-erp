@@ -83,6 +83,7 @@ n {
 
 input[type='number'] {
     -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 input[type='number']::-webkit-inner-spin-button,
@@ -228,9 +229,10 @@ ngb-tooltip-window {
     position: absolute !important;
     right: 0;
     background-color: colors.$bg-body !important;
-    box-shadow: inset 0 0.25rem 0.25rem #fff1, dark-bottom()  !important;
-    padding: .4rem 1rem !important;
+    box-shadow: liquid-glass() !important;  
+    padding: 6px 10px 0px !important;
     color: colors.$primary !important;
+    text-shadow: 0 -2px 4px #000, 0 2px 4px #fff3;
     &:hover {
         background-color: color.adjust(colors.$bg-body, $lightness: 2%) !important;
     }
@@ -245,22 +247,17 @@ ngb-tooltip-window {
 }
 
 .btn-table-export-flap {
+    box-shadow: liquid-glass() !important;
     position: absolute !important;
     right: 0;
     top: 12px;
     transform: translateX(100%);
-    background-color: colors.$bg-body !important;
-    box-shadow: shadow-down(.125rem, .5rem), inset light-bottom() !important;
-    padding: 2px 5px !important;
+    background-color: colors.$bg-darker !important;
+    padding: 6px 8px !important;
     color: colors.$primary !important;
     border-radius: 0 0.5rem 0.5rem 0 !important;
     font-size: 1rem;
     transition: transform 0.2s ease, background-color 0.2s ease;
-    z-index: 10;
-    &:hover {
-        background-color: color.adjust(colors.$bg-body, $lightness: 5%) !important;
-        box-shadow: shadow-down(.25rem, .75rem), inset light-bottom() !important;
-    }
 }
 
 .action-buttons {
@@ -394,16 +391,16 @@ ngb-tooltip-window {
 $status-bevel: inset 2px 2px 2px #ffffff66, inset -2px -2px 2px #00000066;
 .status {
     display: inline-block;
+    box-shadow: liquid-glass();
     width: 10px;
     height: 10px;
     border-radius: 100%;
     background-color: #999999;
-    box-shadow: $status-bevel;
     border: 1px #00000099 solid;
     @each $prefix, $val in colors.$custom-colors {
         #{'&.status-' + $prefix} {
             background-color: var(#{'--color-' + $prefix});
-            box-shadow: $status-bevel, 0 0 5px var(#{'--color-' + $prefix});
+            box-shadow: liquid-glass(), 0 0 5px var(#{'--color-' + $prefix});
         }
     }
 }
@@ -673,10 +670,4 @@ angular-editor {
 
 .cdk-drag-preview {
     display: none;
-}
-
-/**** APEXCHARTS ****/
-
-.apexcharts-pie-area {
-    filter: drop-shadow(0 -5px 5px $shadow-dark) drop-shadow(0 5px 5px $shadow-light);
 }

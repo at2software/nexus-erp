@@ -24,7 +24,11 @@ class GenerateProjectQuoteAction {
 
         $content  = $this->buildContent($project, $items, $footer, $discounts, $lang);
         $template = str_replace('[content]', $content, $template);
-        $template = Document::personalized($template, $project->addressee, withContactInfo: false, project: $project);
+        $projectHeader = '<table style="width:100%;border-collapse:collapse;margin:0;padding:0;"><tr>'
+            .'<td style="font-weight:bold;white-space:nowrap;vertical-align:top;padding:0 4px 0 0;">'.__('pdf.project', [], $lang).': </td>'
+            .'<td style="vertical-align:top;padding:0;">'.$project->name.'</td>'
+            .'</tr></table>';
+        $template      = Document::personalized($template, $project->addressee, [$projectHeader], project: $project);
 
         $data     = Document::renderPdf($template);
         $filename = $this->makeFileName($project, $lang);

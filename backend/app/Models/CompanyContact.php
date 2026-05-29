@@ -23,7 +23,11 @@ class CompanyContact extends BaseModel {
     protected $fillable = ['vcard', 'created_at', 'updated_at', 'company_id', 'contact_id', 'flags'];
     protected $touches  = ['company', 'contact'];
     protected $appends  = ['gender', 'class', 'path'];
-    protected $casts    = ['is_retired' => 'boolean', 'is_favorite' => 'boolean', 'is_invoicing_address' => 'boolean'];
+
+    protected function casts(): array {
+        return ['is_retired' => 'boolean', 'is_favorite' => 'boolean', 'is_invoicing_address' => 'boolean'];
+    }
+
     protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
     public function getIconAttribute() {

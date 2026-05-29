@@ -1,11 +1,8 @@
-import { ChartOptionsMinimal, ChartOptionsSparkline } from "@charts/ChartOptions";
-import { deepMerge } from "src/constants/deepMerge";
-
-export const MarketingInitiativeChartOptions = deepMerge({}, ChartOptionsMinimal, ChartOptionsSparkline, {
+export const MarketingInitiativeChartOptions = {
     series: [],
     chart: {
         height: 100,
-        type: "area",
+        type: 'area',
         stacked: true,
         toolbar: { show: false },
         zoom: { enabled: false },
@@ -20,12 +17,12 @@ export const MarketingInitiativeChartOptions = deepMerge({}, ChartOptionsMinimal
             position: 'topRight',
             enabled: true,
             offsetX: 150,
-            offsetY: -30
+            offsetY: -30,
         },
     },
     fill: {
         opacity: 1,
-        type: 'solid'
+        type: 'solid',
     },
     yaxis: {
         show: true,
@@ -45,11 +42,11 @@ export const MarketingInitiativeChartOptions = deepMerge({}, ChartOptionsMinimal
         type: 'datetime',
         show: false,
         labels: { show: false },
-        axisBorder: { show: false }
+        axisBorder: { show: false },
     },
     legend: {
         show: false,
         position: 'bottom',
         horizontalAlign: 'center',
-    }
-})
+    },
+};

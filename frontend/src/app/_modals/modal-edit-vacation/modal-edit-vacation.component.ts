@@ -1,5 +1,4 @@
-
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgbDateAdapter, NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
@@ -14,19 +13,19 @@ import { HotkeyDirective } from '@directives/hotkey.directive';
     styleUrls: ['./modal-edit-vacation.component.scss'],
     providers: [{ provide: NgbDateAdapter, useClass: NgbDateCarbonAdapter }],
     standalone: true,
-    imports: [FormsModule, NgbDatepickerModule, HotkeyDirective]
+    imports: [FormsModule, NgbDatepickerModule, HotkeyDirective],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ModalEditVacationComponent extends ModalBaseComponent<Vacation> {
-    vacation:Vacation
-    user:User
+    vacation!: Vacation;
+    user!: User;
     init(...args: any): void {
-        this.vacation = args[0]
-        this.user = args[1]
-        this.vacation.var.amount = 0
+        this.vacation = args[0];
+        this.user = args[1];
+        this.vacation.var.amount = 0;
     }
     onSuccess() {
-        this.vacation.amount = this.vacation.var.amount * this.user.getAverageHpd()
-        return this.vacation
+        this.vacation.amount = this.vacation.var.amount * this.user.getAverageHpd();
+        return this.vacation;
     }
-
 }

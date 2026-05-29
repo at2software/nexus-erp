@@ -1,13 +1,16 @@
-import { Component, inject } from "@angular/core";
-import { ProjectDetailGuard } from "@app/projects/project-details.guard";
-import { ProjectBillingComponent } from "@app/projects/id/project-detail-billing/project-detail-billing.component";
-
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { tracked } from '@constants/tracked';
+import { ProjectDetailGuard } from '@app/projects/project-details.guard';
+import { ProjectBillingComponent } from '@app/projects/id/project-billing/project-billing.component';
 
 @Component({
-    template: '@if (parent.current) {<project-detail-billing [parent]="parent.current"></project-detail-billing>}',
+    template: '@if (parent.object()) {<project-billing [parent]="parent.object()"></project-billing>}',
     standalone: true,
-    imports: [ProjectBillingComponent]
+    imports: [ProjectBillingComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectDetailFocusInvoicingContainerComponent {
-    parent = inject(ProjectDetailGuard)
+    parent = inject(ProjectDetailGuard);
+
+    readonly object = tracked(this.parent.object);
 }

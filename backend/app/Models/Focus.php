@@ -12,13 +12,17 @@ class Focus extends BaseModel {
 
     // protected $hidden = ['project', 'company'];
     protected $appends = ['class', 'icon', 'path'];
-    protected $casts   = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'started_at' => 'datetime',
-        'ended_at'   => 'datetime',
-        'is_unpaid'  => 'boolean',
-    ];
+
+    protected function casts(): array {
+        return [
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+            'started_at' => 'datetime',
+            'ended_at'   => 'datetime',
+            'is_unpaid'  => 'boolean',
+        ];
+    }
+
     protected $touches = ['user', 'parent'];
     protected $access  = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 

@@ -1,26 +1,28 @@
-import { AutoWrapArray } from "@constants/autowrap";
-import { Serializable } from "../serializable";
-import { Project } from "./project.model";
-import { ProjectService } from "./project.service";
-import { getFrameworkActions } from "./framework.actions";
+import { Type } from 'class-transformer';
+import { Serializable } from '../serializable';
+import { Project } from './project.model';
+import { ProjectService } from './project.service';
+import { getFrameworkActions } from './framework.actions';
+import { Model } from '@constants/type-discriminators';
 
-export class Framework extends Serializable {
-    url: string
-    name: string
-    framework: string
-    framework_version: string
-    
-    @AutoWrapArray('Project') projects: Project[]
+@Model('Framework')
+export class Framework extends Serializable {    
+    static override API_PATH = (): string => 'projects_frameworks';
+    static override DB_TABLE_NAME = (): string => 'frameworks';
+    override SERVICE = ProjectService;
 
-    static API_PATH = (): string => 'projects/frameworks'
-    SERVICE = ProjectService
+    url: string = '';
+    name: string = '';
+    framework: string = '';
+    framework_version: string = '';
 
-    actions = getFrameworkActions(this)
-    
+    @Type(()=>Project) projects!: Project[];
+
+    actions = getFrameworkActions(this);
+
     serialize = (json?: any) => {
-        this.url               = json.url || ''
-        this.framework         = json.framework || ''
-        this.framework_version = json.framework_version || ''
-        this.projects          = (json.projects || []).map((p: any) => Project.fromJson(p))
-    }
+        this.url = json.url || '';
+        this.framework = json.framework || '';
+        this.framework_version = json.framework_version || '';
+    };
 }

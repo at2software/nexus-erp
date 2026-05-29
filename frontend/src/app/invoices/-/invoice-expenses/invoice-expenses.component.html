@@ -1,136 +1,167 @@
+<toolbar>
+    @if (!lopsHeaders()) {
+        <span class="text-muted small me-1" i18n="@@i18n.invoices.uploadDatevLops">upload DATEV LOPS</span>
+        <div class="border rounded px-2 py-1 text-muted small d-flex align-items-center gap-1" style="cursor:pointer" dnd="invoices" [collect]="true" (dndDrop)="onDnd($event)">
+            <n>upload_file</n> drop CSV
+        </div>
+    }
+    @if (lopsHeaders()) {
+        <span class="badge text-bg-primary me-2">{{ lopsHeaders()!.length }} columns</span>
+        <button class="btn btn-sm btn-primary me-1" (click)="onLopsUpdate()" i18n="@@i18n.invoices.updateLops">update LOPS</button>
+        <button class="btn btn-sm text-muted" (click)="lopsHeaders.set(undefined); lopsItems.set(undefined)" i18n="@@i18n.common.cancel">cancel</button>
+    }
+</toolbar>
+
 <div class="row">
-  <div class="col-3">
-    <div class="card sticky-side">
-      <div class="card-header" i18n="@@i18n.common.categories">categories</div>
-      <ul class="list-group">
-        @for (_ of categories; track _.id) {
-        <li class="list-group-item py-1 d-flex px-3" [nx]="_" [tables]="categories">
-          <div class="pe-3">
-            <i class="cursor-pointer" (click)="toggleCategoryVisibility(_)" (keyup.enter)="toggleCategoryVisibility(_)" tabindex="0" [style.color]="_.var.visible ? _.colorCss : '#666666'">
-              {{_.var.visible ? 'visibility' : 'visibility_off' }}
-            </i>
-          </div>
-          <div class="flex-fill text-truncate pe-3">{{_.name}}</div>
-          <div class="small text-muted text-nowrap text-monospace">{{sumFor(_) | money}}</div>
-        </li>
-        }
-      </ul>
-    </div>
-  </div>
-  <div class="col-6">
-    @if (isLoaded && expenses.length === 0) {
-      <div class="card">
-        <empty-state [card]="false" class="invoices" i18n-title="@@i18n.invoices.noExpensesYet" title="No expenses yet">
-          <p i18n="@@i18n.invoices.expensesEmptyDescription">Track every cost, master every margin. Add your first expense and gain complete visibility into your operational spending.</p>
-        </empty-state>
-      </div>
-    }
-    @if (!isLoaded || expenses.length > 0) {
-    <div class="card">
-      <div class="card-header">
-        <div i18n="@@i18n.common.expenses">expenses</div>
-        <div class="card-header-actions">
-          <button class="btn btn-plain text-primary p-0" ngbTooltip="new expense" (click)="onNewExpense()" i18n-ngbTooltip="@@i18n.invoices.newExpense"><i>add</i></button>
-        </div>
-      </div>
-      <div class="card-body p-0">
-        <table class="table">
-          <colgroup>
-          <col style="width:4px;">
-          <col>
-            <col style="width:80px;">
-            <col style="width:80px;">
-            <col style="min-width:100px;">
-            <col style="width:24px;">
-          </colgroup>
-          <tbody>
-            @for (_ of getItems(); track _.id) {
-            <tr [nx]="_" [tables]="getItems()" [class.d-none]="!(categoryFor(_)?.var.visible ?? true)">
-              <td class="ps-3 pe-2">
-                <div style="width: 4px; height: 24px;" [style.backgroundColor]="categoryFor(_)?.colorCss ?? '#666666'"></div>
-              </td>
-              <td class="pe-2">{{_.name}}</td>
-
-              @if (_.price !== -1) {
-                <td class="pe-3 small text-muted text-end">{{_.price | money}}</td>
-              }
-              @if (_.price === -1) {
-                <td class="pe-3 small text-success text-center" i18n="@@i18n.common.new">new</td>
-              }
-
-              @if (!lopsHeaders) {
-                <td class="pe-3 small text-end">
-                  <span [class]="_.repeatColor()">{{_.repeatString()}}</span>
-                </td>
-              }
-              @if (lopsHeaders) {
-                <td class="pe-3 small text-end">
-                  @if (_.var.lops !== -1) {
-                    <span>{{_.var.lops | money}}</span>
-                  }
-                  @if (_.var.lops === -1) {
-                    <span class="text-warning" i18n="@@i18n.common.deprecated">deprecated</span>
-                  }
-                </td>
-              }
-              <td class="pe-3 text-end text-monospace">{{_.yearlyPrice | money}}</td>
-              <td class="pe-3">
-                @if (_.invoice_item_id) {
-                  <a routerLink="/invoices/standing" class="text-muted">
-                    <n>invoice</n>
-                  </a>
+    <div class="col-3">
+        <div class="card mb-3">
+            <div class="card-body p-0" style="height: 180px">
+                @if (isLoaded()) {
+                    <div echarts [options]="donutChart()" style="width:100%;height:180px;"></div>
                 }
-              </td>
-            </tr>
-            }
-          </tbody>
-          <tfoot>
-            @if (selectionExpenses.length) {
-              <tr class="sticky-footer selection-row">
-                <td></td>
-                <td i18n="@@i18n.common.selection">selection</td>
-                <td></td>
-                <td></td>
-                <td class="text-end">{{selectionSum | money}}</td>
-                <td></td>
-              </tr>
-            }
-            @if (!selectionExpenses.length) {
-              <tr class="sticky-footer">
-                <td></td>
-                <td><strong i18n="@@i18n.common.sum">sum</strong></td>
-                <td></td>
-                <td></td>
-                <td class="text-end"><strong>{{sum | money}}</strong></td>
-                <td></td>
-              </tr>
-            }
-          </tfoot>
-        </table>
-      </div>
+            </div>
+        </div>
+        <div class="card sticky-side">
+            <div class="card-header hstack gap-2">
+                <div class="flex-fill text-truncate" i18n="@@i18n.common.categories">categories</div>
+                <div>
+                    <i class="cursor-pointer text-primary" (click)="onNewExpenseCategory()">add</i>
+                </div>
+            </div>
+            <ul class="list-group">
+                @for (_ of categories(); track _.id) {
+                    <li class="list-group-item py-1 d-flex px-3" [nx]="_" [tables]="categories()">
+                        <div class="pe-3">
+                            <i class="cursor-pointer" (click)="toggleCategoryVisibility(_)" (keyup.enter)="toggleCategoryVisibility(_)" tabindex="0" [style.color]="_.var.visible ? _.css() : '#666666'">
+                                {{ _.var.visible ? 'visibility' : 'visibility_off' }}
+                            </i>
+                        </div>
+                        <div class="flex-fill text-truncate pe-3">{{ _.name }}</div>
+                        <div class="small text-muted text-nowrap text-monospace">{{ sumFor(_) | money }}</div>
+                    </li>
+                }
+            </ul>
+        </div>
     </div>
-    }
-  </div>
-  <div class="col-3">
-    @if (!lopsHeaders) {
-      <div class="card mb-3">
-        <div class="card-header" i18n="@@i18n.invoices.uploadDatevLops">upload datev LOPS</div>
-        <div class="card-body" style="height: 75px;" dnd="invoices" [collect]="true" (dndDrop)="onDnd($event)">
-        </div>
-      </div>
-    }
-    @if (lopsHeaders) {
-      <div class="card mb-3">
-        <div class="card-header" i18n="@@i18n.invoices.lopsHeaders">LOPS headers</div>
-        <ul class="list-group">
-          @for (h of lopsHeaders; track h; let i = $index) {
-            <li class="list-group-item list-group-item-action">{{h}}</li>
-          }
-        </ul>
-        <div class="card-footer text-end">
-          <button class="btn btn-primary" (click)="onLopsUpdate()" i18n="@@i18n.invoices.updateLops">update LOPS</button>
-        </div>
-      </div>
-    }
-  </div>
+    <div class="col-9">
+        @if (!isLoaded()) {
+            <spinner></spinner>
+        }
+        @if (isLoaded() && expenses().length === 0) {
+            <div class="card">
+                <empty-state [card]="false" class="invoices" i18n-title="@@i18n.invoices.noExpensesYet" title="No expenses yet">
+                    <p i18n="@@i18n.invoices.expensesEmptyDescription">Track every cost, master every margin. Add your first expense and gain complete visibility into your operational spending.</p>
+                </empty-state>
+            </div>
+        }
+        @if (isLoaded() && expenses().length > 0) {
+            <div class="card">
+                <div class="card-header">
+                    <div i18n="@@i18n.common.expenses">expenses</div>
+                    <div class="card-header-actions">
+                        <button class="btn btn-plain text-primary p-0" ngbTooltip="new expense" (click)="onNewExpense()" i18n-ngbTooltip="@@i18n.invoices.newExpense">
+                            <i class="text-primary">add</i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table">
+                        <colgroup>
+                            <col style="width: 4px" />
+                            <col style="width: 56px" />
+                            <col />
+                            <col style="width: 90px" />
+                            <col style="width: 80px" />
+                            <col style="width: 80px" />
+                            <col style="min-width: 100px" />
+                            <col style="width: 24px" />
+                        </colgroup>
+                        <tbody>
+                            @for (_ of getItems(); track _.id) {
+                                @let category = categoryFor(_);
+                                <tr [nx]="_" [tables]="getItems()" [class.d-none]="!(categoryFor(_)?.var.visible ?? true)">
+                                    <td class="ps-3 pe-2">
+                                        <i [style.color]="category?.css() ?? '#666666'" ngbTooltip="{{ category?.name ?? '' }}">repeat</i>
+                                    </td>
+                                    <td class="pe-2 text-end text-truncate">
+                                        @if (_.daysUntilNext() !== null) {
+                                            @let d = _.daysUntilNext()!;
+                                            <span class="small text-monospace"
+                                                [class.text-success]="d === 0"
+                                                [class.text-warning]="d > 0 && d <= 7"
+                                                [class.text-muted]="d > 7">{{ d }}d</span>
+                                        }
+                                    </td>
+                                    <td class="pe-2 text-truncate">{{ _.name }}</td>
+                                    <td class="pe-2 small text-muted text-nowrap">{{ _.starts_at | date:'dd.MM.yy' }}</td>
+
+                                    @if (_.price !== -1) {
+                                        <td class="pe-3 small text-muted text-end">{{ _.price | money }}</td>
+                                    }
+                                    @if (_.price === -1) {
+                                        <td class="pe-3 small text-success text-center" i18n="@@i18n.common.new">new</td>
+                                    }
+
+                                    @if (!lopsHeaders()) {
+                                        <td class="pe-3 small text-end">
+                                            <span [class]="_.repeatColor()">{{ _.repeatString() }}</span>
+                                        </td>
+                                    }
+                                    @if (lopsHeaders()) {
+                                        <td class="pe-3 small text-end text-nowrap">
+                                            @if (_.var.lops !== -1) {
+                                                <span>{{ _.var.lops | money }}</span>
+                                            }
+                                            @if (_.var.lops === -1) {
+                                                <span class="text-warning" i18n="@@i18n.common.deprecated">deprecated</span>
+                                            }
+                                        </td>
+                                    }
+                                    <td class="pe-3 text-end text-monospace">{{ _.yearlyPrice | money }}</td>
+                                    <td class="pe-3 float-end text-nowrap hstack gap-2">
+                                        @if (_.invoice_item_id) {
+                                            <div class="cursor-pointer" ngbTooltip="linked to recurring invoice" i18n-ngbTooltip="@@i18n.invoicing.linkedToRecurringInvoice">
+                                                <n class="text-success">invoice</n>
+                                            </div>
+                                        }
+                                        <div>
+                                            <i [class.text-success]="_.matching_string" [class.text-dark]="!_.matching_string">{{ _.matching_string ? 'link' : 'link_off' }}</i>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            @if (selectionExpenses().length) {
+                                <tr class="sticky-footer selection-row">
+                                    <td></td>
+                                    <td></td>
+                                    <td i18n="@@i18n.common.selection">selection</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="text-end">{{ selectionSum() | money }}</td>
+                                    <td></td>
+                                </tr>
+                            }
+                            @if (!selectionExpenses().length) {
+                                <tr class="sticky-footer">
+                                    <td></td>
+                                    <td></td>
+                                    <td><strong i18n="@@i18n.common.sum">sum</strong></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="text-end">
+                                        <strong>{{ sum() | money }}</strong>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            }
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
 </div>

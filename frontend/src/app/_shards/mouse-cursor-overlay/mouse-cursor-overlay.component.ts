@@ -1,4 +1,4 @@
-import { Component, DestroyRef, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { LiveSharingService } from '@models/live-sharing.service';
@@ -8,113 +8,111 @@ import { Router } from '@angular/router';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'mouse-cursor-overlay',
     standalone: true,
     imports: [],
     template: `
         @for (cursor of cursors; track cursor.userId) {
-            <div class="remote-cursor"
-                 [class.off-tab]="cursor.visible === false"
-                 [style.left.px]="getViewportX(cursor.x)"
-                 [style.top.px]="getViewportY(cursor.y)">
+            <div class="remote-cursor" [class.off-tab]="cursor.visible === false" [style.left.px]="getViewportX(cursor.x)" [style.top.px]="getViewportY(cursor.y)">
                 <svg width="24" height="24" viewBox="0 0 24 24" [attr.fill]="cursor.userColor">
-                    <path d="M3 3L10.07 19.97L12.58 12.58L19.97 10.07L3 3Z"/>
+                    <path d="M3 3L10.07 19.97L12.58 12.58L19.97 10.07L3 3Z" />
                 </svg>
-                <span class="username-label"
-                      [class.message-mode]="cursor.message"
-                      [style.background-color]="cursor.userColor">
+                <span class="username-label" [class.message-mode]="cursor.message" [style.background-color]="cursor.userColor">
                     {{ cursor.message || cursor.userName }}
                 </span>
             </div>
         }
 
         @for (click of clicks; track $index) {
-            <div class="click-animation"
-                 [style.left.px]="getViewportX(click.x)"
-                 [style.top.px]="getViewportY(click.y)">
+            <div class="click-animation" [style.left.px]="getViewportX(click.x)" [style.top.px]="getViewportY(click.y)">
                 <div class="click-circle" [style.border-color]="click.userColor"></div>
             </div>
         }
     `,
-    styles: [`
-        :host {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 9999;
-        }
+    styles: [
+        `
+            :host {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                z-index: 9999;
+            }
 
-        .remote-cursor {
-            position: absolute;
-            pointer-events: none;
-            transition: left 0.1s ease-out, top 0.1s ease-out, opacity 0.3s ease-out;
-            transform: translate(-2px, -2px);
-            opacity: 1;
-        }
-
-        .remote-cursor.off-tab {
-            opacity: 0.3;
-        }
-
-        .remote-cursor svg {
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-        }
-
-        .username-label {
-            position: absolute;
-            left: 24px;
-            top: 0;
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: white;
-            font-size: 11px;
-            font-weight: 500;
-            white-space: nowrap;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transition: font-size 0.2s ease-out;
-        }
-
-        .username-label.message-mode {
-            font-size: 16.5px;
-        }
-
-        .click-animation {
-            position: absolute;
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-        }
-
-        .click-circle {
-            width: 40px;
-            height: 40px;
-            border: 3px solid;
-            border-radius: 50%;
-            animation: clickPulse 1s ease-out forwards;
-        }
-
-        @keyframes clickPulse {
-            0% {
-                transform: scale(0.5);
+            .remote-cursor {
+                position: absolute;
+                pointer-events: none;
+                transition:
+                    left 0.1s ease-out,
+                    top 0.1s ease-out,
+                    opacity 0.3s ease-out;
+                transform: translate(-2px, -2px);
                 opacity: 1;
             }
-            100% {
-                transform: scale(1.5);
-                opacity: 0;
+
+            .remote-cursor.off-tab {
+                opacity: 0.3;
             }
-        }
-    `]
+
+            .remote-cursor svg {
+                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+            }
+
+            .username-label {
+                position: absolute;
+                left: 24px;
+                top: 0;
+                padding: 2px 6px;
+                border-radius: 4px;
+                color: white;
+                font-size: 11px;
+                font-weight: 500;
+                white-space: nowrap;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                transition: font-size 0.2s ease-out;
+            }
+
+            .username-label.message-mode {
+                font-size: 16.5px;
+            }
+
+            .click-animation {
+                position: absolute;
+                pointer-events: none;
+                transform: translate(-50%, -50%);
+            }
+
+            .click-circle {
+                width: 40px;
+                height: 40px;
+                border: 3px solid;
+                border-radius: 50%;
+                animation: clickPulse 1s ease-out forwards;
+            }
+
+            @keyframes clickPulse {
+                0% {
+                    transform: scale(0.5);
+                    opacity: 1;
+                }
+                100% {
+                    transform: scale(1.5);
+                    opacity: 0;
+                }
+            }
+        `,
+    ],
 })
 export class MouseCursorOverlayComponent implements OnInit, OnDestroy {
-
     #liveSharingService = inject(LiveSharingService);
     #wsService = inject(WebSocketService);
     #router = inject(Router);
     #inputModal = inject(InputModalService);
     #destroyRef = inject(DestroyRef);
-    #mouseMove$ = new Subject<{x: number, y: number, event: MouseEvent}>();
+    #mouseMove$ = new Subject<{ x: number; y: number; event: MouseEvent }>();
 
     cursors: MousePosition[] = [];
     clicks: MouseClick[] = [];
@@ -123,15 +121,15 @@ export class MouseCursorOverlayComponent implements OnInit, OnDestroy {
     #scrollHandler = () => this.#updateCursorPositions();
 
     ngOnInit() {
-        this.#liveSharingService.mousePositionsOnCurrentUrl$.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(positionsMap => {
+        this.#liveSharingService.mousePositionsOnCurrentUrl$.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe((positionsMap) => {
             this.cursors = Array.from(positionsMap.values());
         });
 
-        this.#liveSharingService.mouseClicks$.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(clicks => {
+        this.#liveSharingService.mouseClicks$.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe((clicks) => {
             this.clicks = clicks;
         });
 
-        this.#mouseMove$.pipe(throttleTime(100), takeUntilDestroyed(this.#destroyRef)).subscribe(({x, y, event}: {x: number, y: number, event: MouseEvent}) => {
+        this.#mouseMove$.pipe(throttleTime(100), takeUntilDestroyed(this.#destroyRef)).subscribe(({ x, y, event }: { x: number; y: number; event: MouseEvent }) => {
             const scrollOffsets = this.#getScrollOffsets(event);
             this.#liveSharingService.sendMousePosition(x + scrollOffsets.x, y + scrollOffsets.y);
         });
@@ -153,10 +151,7 @@ export class MouseCursorOverlayComponent implements OnInit, OnDestroy {
     onClick(event: MouseEvent) {
         if (this.#liveSharingService.sharingEnabled$.value) {
             const scrollOffsets = this.#getScrollOffsets(event);
-            this.#liveSharingService.sendMouseClick(
-                event.clientX + scrollOffsets.x,
-                event.clientY + scrollOffsets.y
-            );
+            this.#liveSharingService.sendMouseClick(event.clientX + scrollOffsets.x, event.clientY + scrollOffsets.y);
         }
     }
 
@@ -216,7 +211,7 @@ export class MouseCursorOverlayComponent implements OnInit, OnDestroy {
     #getCurrentScrollX(): number {
         let totalScrollX = window.scrollX;
         const allElements = document.querySelectorAll('*');
-        allElements.forEach(element => {
+        allElements.forEach((element) => {
             const el = element as HTMLElement;
             if (el.scrollLeft) {
                 totalScrollX += el.scrollLeft;
@@ -228,7 +223,7 @@ export class MouseCursorOverlayComponent implements OnInit, OnDestroy {
     #getCurrentScrollY(): number {
         let totalScrollY = window.scrollY;
         const allElements = document.querySelectorAll('*');
-        allElements.forEach(element => {
+        allElements.forEach((element) => {
             const el = element as HTMLElement;
             if (el.scrollTop) {
                 totalScrollY += el.scrollTop;

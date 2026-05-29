@@ -1,24 +1,25 @@
 <toolbar>
-    <toolbar-locale-selector [(locale)]="previewLocale"></toolbar-locale-selector>
+    <toolbar-locale-selector [locale]="previewLocale()" (localeChange)="previewLocale.set($event)"></toolbar-locale-selector>
 </toolbar>
 <scrollbar #scroll>
+    @let _tab = tab();
     <div class="row main" #top>
         <div class="col-md-3">
             <div class="card sticky-side">
                 <div class="card-header" i18n="@@i18n.common.index">index</div>
                 <ul class="list-group">
-                    <li class="list-group-item pointer" [class.active]="tab===0" (click)="show(0)" (keyup.enter)="show(0)" tabindex="0" i18n="@@i18n.common.general">general</li>
-                    <li class="list-group-item pointer" [class.active]="tab===1" (click)="show(1)" (keyup.enter)="show(1)" tabindex="0" i18n="@@i18n.invoice.invoiceText">invoicetext</li>
-                    <li class="list-group-item pointer" [class.active]="tab===2" (click)="show(2)" (keyup.enter)="show(2)" tabindex="0" i18n="@@i18n.invoice.dueReminder1Text">duereminder1text</li>
-                    <li class="list-group-item pointer" [class.active]="tab===3" (click)="show(3)" (keyup.enter)="show(3)" tabindex="0" i18n="@@i18n.invoice.dueReminder2Text">duereminder2text</li>
-                    <li class="list-group-item pointer" [class.active]="tab===4" (click)="show(4)" (keyup.enter)="show(4)" tabindex="0" i18n="@@i18n.invoice.emailText">email text</li>
-                    <li class="list-group-item pointer" [class.active]="tab===5" (click)="show(5)" (keyup.enter)="show(5)" tabindex="0" i18n="@@i18n.invoice.datev">DATEV</li>
-                    <li class="list-group-item pointer" [class.active]="tab===6" (click)="show(6)" (keyup.enter)="show(6)" tabindex="0" i18n="@@i18n.invoice.invoiceCancellation">invoice cancellation</li>
+                    <li class="list-group-item pointer" [class.active]="_tab === 0" (click)="tab.set(0)" (keyup.enter)="tab.set(0)" tabindex="0" i18n="@@i18n.common.general">general</li>
+                    <li class="list-group-item pointer" [class.active]="_tab === 1" (click)="tab.set(1)" (keyup.enter)="tab.set(1)" tabindex="0" i18n="@@i18n.invoice.invoiceText">invoicetext</li>
+                    <li class="list-group-item pointer" [class.active]="_tab === 2" (click)="tab.set(2)" (keyup.enter)="tab.set(2)" tabindex="0" i18n="@@i18n.invoice.dueReminder1Text">duereminder1text</li>
+                    <li class="list-group-item pointer" [class.active]="_tab === 3" (click)="tab.set(3)" (keyup.enter)="tab.set(3)" tabindex="0" i18n="@@i18n.invoice.dueReminder2Text">duereminder2text</li>
+                    <li class="list-group-item pointer" [class.active]="_tab === 4" (click)="tab.set(4)" (keyup.enter)="tab.set(4)" tabindex="0" i18n="@@i18n.invoice.emailText">email text</li>
+                    <li class="list-group-item pointer" [class.active]="_tab === 5" (click)="tab.set(5)" (keyup.enter)="tab.set(5)" tabindex="0" i18n="@@i18n.invoice.datev">DATEV</li>
+                    <li class="list-group-item pointer" [class.active]="_tab === 6" (click)="tab.set(6)" (keyup.enter)="tab.set(6)" tabindex="0" i18n="@@i18n.invoice.invoiceCancellation">invoice cancellation</li>
                 </ul>
             </div>
         </div>
         <div class="col-md-9">
-            <div [class.d-none]="tab!==0">
+            <div [class.d-none]="_tab !== 0">
                 <div class="card mb-3">
                     <div class="card-header" i18n="@@i18n.common.units">units</div>
                     <div class="card-body">
@@ -52,62 +53,53 @@
                     </div>
                 </div>
             </div>
-            <div [class.d-none]="tab!==1">
+            <div [class.d-none]="_tab !== 1">
                 <div class="card mb-3 p-3">
-                    <text-param-editor key="params/INVOICE_PREFIX" [previewLocale]="previewLocale"></text-param-editor>
-                </div>
-                <div class="card mb-3">
-                    <!-- <invoice-ext-prepare [items]="demoInvoices"></invoice-ext-prepare> -->
+                    <text-param-editor key="params/INVOICE_PREFIX" [previewLocale]="previewLocale()"></text-param-editor>
                 </div>
                 <div class="card mb-3 p-3">
-                    <text-param-editor key="params/INVOICE_SUFFIX" [previewLocale]="previewLocale"></text-param-editor>
+                    <text-param-editor key="params/INVOICE_SUFFIX" [previewLocale]="previewLocale()"></text-param-editor>
                 </div>
             </div>
-            <div [class.d-none]="tab!==2">
+            <div [class.d-none]="_tab !== 2">
                 <div class="card mb-3 p-3">
-                    <text-param-editor key="params/INVOICE_M1_PREFIX" [previewLocale]="previewLocale"></text-param-editor>
-                </div>
-                <div class="card mb-3">
-                    <!-- <invoice-ext-prepare [items]="demoInvoices"></invoice-ext-prepare> -->
+                    <text-param-editor key="params/INVOICE_M1_PREFIX" [previewLocale]="previewLocale()"></text-param-editor>
                 </div>
                 <div class="card mb-3 p-3">
-                    <text-param-editor key="params/INVOICE_M1_SUFFIX" [previewLocale]="previewLocale"></text-param-editor>
+                    <text-param-editor key="params/INVOICE_M1_SUFFIX" [previewLocale]="previewLocale()"></text-param-editor>
                 </div>
             </div>
-            <div [class.d-none]="tab!==3">
+            <div [class.d-none]="_tab !== 3">
                 <div class="card mb-3 p-3">
-                    <text-param-editor key="params/INVOICE_M2_PREFIX" [previewLocale]="previewLocale"></text-param-editor>
-                </div>
-                <div class="card mb-3">
-                    <!-- <invoice-ext-prepare [items]="demoInvoices"></invoice-ext-prepare> -->
+                    <text-param-editor key="params/INVOICE_M2_PREFIX" [previewLocale]="previewLocale()"></text-param-editor>
                 </div>
                 <div class="card mb-3 p-3">
-                    <text-param-editor key="params/INVOICE_M2_SUFFIX" [previewLocale]="previewLocale"></text-param-editor>
+                    <text-param-editor key="params/INVOICE_M2_SUFFIX" [previewLocale]="previewLocale()"></text-param-editor>
                 </div>
             </div>
-            <div [class.d-none]="tab!==4">
+            <div [class.d-none]="_tab !== 4">
                 <div class="card mb-3">
                     <div class="card-header mb-3" i18n="@@i18n.invoice.emailText">email text</div>
                     <div class="card-body">
                         <input-settings-group class="mb-3" id="INVOICE_EMAIL_SUBJECT" i18n="@@i18n.common.subject">subject</input-settings-group>
-                        <text-param-editor key="params/INVOICE_EMAIL_TEXT" [previewLocale]="previewLocale"></text-param-editor>
+                        <text-param-editor key="params/INVOICE_EMAIL_TEXT" [previewLocale]="previewLocale()"></text-param-editor>
                     </div>
                 </div>
                 <div class="card mb-3">
                     <div class="card-header mb-3" i18n="@@i18n.invoice.emailTextSepa">email text (SEPA debit)</div>
                     <div class="card-body">
-                        <text-param-editor key="params/INVOICE_EMAIL_TEXT_SEPA" [previewLocale]="previewLocale"></text-param-editor>
+                        <text-param-editor key="params/INVOICE_EMAIL_TEXT_SEPA" [previewLocale]="previewLocale()"></text-param-editor>
                     </div>
                 </div>
                 <div class="card mb-3">
                     <div class="card-header mb-3" i18n="@@i18n.invoice.invoiceReminderMailText">reminder text</div>
                     <div class="card-body">
                         <input-settings-group class="mb-3" id="INVOICE_REMINDER_EMAIL_SUBJECT" i18n="@@i18n.common.subject">subject</input-settings-group>
-                        <text-param-editor key="params/INVOICE_REMINDER_EMAIL_TEXT" [previewLocale]="previewLocale"></text-param-editor>
+                        <text-param-editor key="params/INVOICE_REMINDER_EMAIL_TEXT" [previewLocale]="previewLocale()"></text-param-editor>
                     </div>
                 </div>
             </div>
-            <div [class.d-none]="tab!==5">
+            <div [class.d-none]="_tab !== 5">
                 <div class="card mb-3">
                     <div class="card-header mb-3" i18n="@@i18n.invoice.mailAddresses">mail addresses</div>
                     <div class="card-body">
@@ -115,18 +107,15 @@
                     </div>
                 </div>
             </div>
-            <div [class.d-none]="tab!==6">
+            <div [class.d-none]="_tab !== 6">
                 <div class="card mb-3">
                     <input-settings-group id="INVOICE_CANCEL_TITLE" i18n="@@i18n.invoice.cancellationTitle">cancellation title</input-settings-group>
                 </div>
                 <div class="card mb-3 p-3">
-                    <text-param-editor key="params/INVOICE_CANCEL_PREFIX" [previewLocale]="previewLocale"></text-param-editor>
-                </div>
-                <div class="card mb-3">
-                    <!-- <invoice-ext-prepare [items]="demoInvoices"></invoice-ext-prepare> -->
+                    <text-param-editor key="params/INVOICE_CANCEL_PREFIX" [previewLocale]="previewLocale()"></text-param-editor>
                 </div>
                 <div class="card mb-3 p-3">
-                    <text-param-editor key="params/INVOICE_CANCEL_SUFFIX" [previewLocale]="previewLocale"></text-param-editor>
+                    <text-param-editor key="params/INVOICE_CANCEL_SUFFIX" [previewLocale]="previewLocale()"></text-param-editor>
                 </div>
             </div>
         </div>

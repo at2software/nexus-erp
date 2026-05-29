@@ -1,5 +1,4 @@
-
 export interface SearchData {
-  key:string,
-  searchString:string|undefined
+    key: string;
+    searchString: string | undefined;
 }

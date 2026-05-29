@@ -1,5 +1,5 @@
-import { Observable } from "rxjs";
-import { IPlugin } from "../http/plugin.instance";
+import { Observable } from 'rxjs';
+import { IPlugin } from '../http/plugin.instance';
 
 export interface IAIModel {
     id: string;
@@ -28,16 +28,15 @@ export interface IAICompletion {
 }
 
 export abstract class IAIPlugin extends IPlugin {
-    
-    IAIPluginProperty: boolean;
+    IAIPluginProperty!: boolean;
     models: IAIModel[] = [];
-    
+
     // Core AI functionality that all AI plugins must implement
     abstract listModels(): Observable<IAIModel[]>;
     abstract createCompletion(prompt: string, model?: string): Observable<IAICompletion>;
     abstract healthCheck(): Observable<any>;
     abstract getDefaultModel(): IAIModel | undefined;
-    
+
     // Optional AI features (can be implemented by specific plugins)
     createEmbedding?: (text: string, model?: string) => Observable<any>;
     createImage?: (prompt: string, model?: string) => Observable<any>;

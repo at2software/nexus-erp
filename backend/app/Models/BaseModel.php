@@ -40,7 +40,11 @@ class BaseModel extends Model {
     }
     public function withRequest() {
         if (($w = request('with'))) {
-            $with = explode(',', $w);
+            $with    = explode(',', $w);
+            $allowed = $this->allowedWith ?? [];
+            if (count($allowed)) {
+                $with = array_intersect($with, $allowed);
+            }
             foreach ($with as $_) {
                 $this->load($_);
             }
@@ -81,6 +85,17 @@ class BaseCollection extends Collection {
             return $this;
         }
         $appends = explode(',', $a);
+        if (! count($appends)) {
+            return $this;
+        }
+        // If first model defines an allowlist, enforce it
+        $first = $this->first();
+        if ($first) {
+            $allowed = $first->allowedAppends ?? [];
+            if (count($allowed)) {
+                $appends = array_intersect($appends, $allowed);
+            }
+        }
         if (! count($appends)) {
             return $this;
         }

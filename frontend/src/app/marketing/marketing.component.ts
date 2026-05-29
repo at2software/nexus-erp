@@ -1,14 +1,14 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { HeaderModule } from '@app/app/header/header.module';
+import { HeaderComponent } from '@app/app/header/header.component';
+import { HeaderLinkItemComponent } from '@app/app/header/header-link-item/header-link-item.component';
 
 @Component({
     selector: 'marketing',
     templateUrl: './marketing.component.html',
     styleUrls: ['./marketing.component.scss'],
     standalone: true,
-    imports: [RouterModule, HeaderModule]
+    imports: [RouterModule, HeaderComponent, HeaderLinkItemComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MarketingComponent {
-
-}
+export class MarketingComponent {}

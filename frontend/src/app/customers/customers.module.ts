@@ -26,7 +26,6 @@ import { CustomerVcards } from './details/customer-vcards/customer-vcards';
 import { EditVcardTsComponent } from './_shards/edit-vcard.ts/edit-vcard.ts.component';
 import { EmptyComponentComponent } from '@shards/empty-component/empty-component.component';
 
-
 @NgModule({
     imports: [
         RouterModule.forChild([
@@ -39,9 +38,9 @@ import { EmptyComponentComponent } from '@shards/empty-component/empty-component
                         component: CustomersDashboardComponent,
                         data: {
                             nav: {
-                                title: $localize`:@@i18n.common.dashboard:dashboard`
-                            }
-                        }
+                                title: $localize`:@@i18n.common.dashboard:dashboard`,
+                            },
+                        },
                     },
                     {
                         path: 'knownseq',
@@ -49,13 +48,13 @@ import { EmptyComponentComponent } from '@shards/empty-component/empty-component
                         data: {
                             nav: {
                                 title: 'KnownSeq',
-                                roles: 'user'
-                            }
-                        }
+                                roles: 'user',
+                            },
+                        },
                     },
                     {
                         path: 'knownseq/:id',
-                        component: CustomersKnownSequiturSearchComponent
+                        component: CustomersKnownSequiturSearchComponent,
                     },
                     {
                         path: 'map',
@@ -63,9 +62,9 @@ import { EmptyComponentComponent } from '@shards/empty-component/empty-component
                         data: {
                             nav: {
                                 title: 'Map',
-                                roles: 'user'
-                            }
-                        }
+                                roles: 'user',
+                            },
+                        },
                     },
                     {
                         path: 'network',
@@ -73,9 +72,9 @@ import { EmptyComponentComponent } from '@shards/empty-component/empty-component
                         data: {
                             nav: {
                                 title: 'Network',
-                                roles: 'user'
-                            }
-                        }
+                                roles: 'user',
+                            },
+                        },
                     },
                     {
                         path: 'stats',
@@ -83,9 +82,9 @@ import { EmptyComponentComponent } from '@shards/empty-component/empty-component
                         data: {
                             nav: {
                                 title: $localize`:@@i18n.common.statistics:statistics`,
-                                roles: 'financial'
-                            }
-                        }
+                                roles: 'financial',
+                            },
+                        },
                     },
                     {
                         path: 'maintenance',
@@ -94,22 +93,22 @@ import { EmptyComponentComponent } from '@shards/empty-component/empty-component
                             nav: {
                                 title: 'maintenance',
                                 roles: 'admin',
-                                exact: false
-                            }
+                                exact: false,
+                            },
                         },
                         children: [
                             {
                                 path: 'commercial_register',
-                                component: CustomersMaintenanceCommercialRegisterComponent
+                                component: CustomersMaintenanceCommercialRegisterComponent,
                             },
                             {
                                 path: 'birthdays',
-                                component: CustomersMaintenanceBirthdaysComponent
+                                component: CustomersMaintenanceBirthdaysComponent,
                             },
                             { path: '**', redirectTo: 'commercial_register' },
-                        ]
+                        ],
                     },
-                ]
+                ],
             },
             {
                 path: ':id',
@@ -121,9 +120,9 @@ import { EmptyComponentComponent } from '@shards/empty-component/empty-component
                         component: CustomerDashboard,
                         data: {
                             nav: {
-                                title: $localize`:@@i18n.common.dashboard:dashboard`
-                            }
-                        }
+                                title: $localize`:@@i18n.common.dashboard:dashboard`,
+                            },
+                        },
                     },
                     {
                         path: 'billing',
@@ -131,9 +130,9 @@ import { EmptyComponentComponent } from '@shards/empty-component/empty-component
                         data: {
                             nav: {
                                 title: $localize`:@@i18n.common.billing:billing`,
-                                roles: 'invoicing'
-                            }
-                        }
+                                roles: 'invoicing',
+                            },
+                        },
                     },
                     {
                         path: 'support',
@@ -141,18 +140,18 @@ import { EmptyComponentComponent } from '@shards/empty-component/empty-component
                         data: {
                             nav: {
                                 title: $localize`:@@i18n.common.support:support`,
-                                roles: 'invoicing|project_manager'
-                            }
-                        }
+                                roles: 'invoicing|project_manager',
+                            },
+                        },
                     },
                     {
                         path: 'time-tracking',
                         component: TimetrackingCompanyComponent,
                         data: {
                             nav: {
-                                title: $localize`:@@i18n.common.timeTracking:time tracking`
-                            }
-                        }
+                                title: $localize`:@@i18n.common.timeTracking:time tracking`,
+                            },
+                        },
                     },
                     {
                         path: 'projects',
@@ -160,9 +159,9 @@ import { EmptyComponentComponent } from '@shards/empty-component/empty-component
                         data: {
                             nav: {
                                 title: $localize`:@@i18n.common.projects:projects`,
-                                roles: 'user'
-                            }
-                        }
+                                roles: 'user',
+                            },
+                        },
                     },
                     {
                         path: 'invoices',
@@ -170,19 +169,19 @@ import { EmptyComponentComponent } from '@shards/empty-component/empty-component
                         data: {
                             nav: {
                                 title: $localize`:@@i18n.common.invoices:invoices`,
-                                roles: 'invoicing'
-                            }
+                                roles: 'invoicing',
+                            },
                         },
-                        children: [      
-                            { path: '', pathMatch: 'full', redirectTo: 'prepare' },                                         
+                        children: [
+                            { path: '', pathMatch: 'full', redirectTo: 'prepare' },
                             {
                                 path: 'prepare',
                                 component: CustomerInvoicesComponent,
                                 data: {
                                     nav: {
                                         title: $localize`:@@i18n.common.invoices:invoices`,
-                                        roles: 'invoicing'
-                                    }
+                                        roles: 'invoicing',
+                                    },
                                 },
                             },
                             {
@@ -191,11 +190,11 @@ import { EmptyComponentComponent } from '@shards/empty-component/empty-component
                                 data: {
                                     nav: {
                                         title: $localize`:@@i18n.common.standingOrders:standing orders`,
-                                        roles: 'invoicing'
-                                    }
-                                }
+                                        roles: 'invoicing',
+                                    },
+                                },
                             },
-                        ]
+                        ],
                     },
                     {
                         path: 'connections',
@@ -203,9 +202,9 @@ import { EmptyComponentComponent } from '@shards/empty-component/empty-component
                         data: {
                             nav: {
                                 title: $localize`:@@i18n.common.connections:connections`,
-                                roles: 'user'
-                            }
-                        }
+                                roles: 'user',
+                            },
+                        },
                     },
                     {
                         path: 'contacts',
@@ -213,30 +212,27 @@ import { EmptyComponentComponent } from '@shards/empty-component/empty-component
                         data: {
                             nav: {
                                 title: $localize`:@@i18n.common.contacts:contacts`,
-                                roles: 'user'
-                            }
+                                roles: 'user',
+                            },
                         },
-                        children: [
-                            { path: ':cid', component: EditVcardTsComponent }
-                        ]
+                        children: [{ path: ':cid', component: EditVcardTsComponent }],
                     },
                     {
                         path: 'knownseq',
                         component: CustomersKnownSequiturComponent,
                         data: {
                             nav: {
-                                title: 'KnownSeq'
-                            }
-                        }
+                                title: 'KnownSeq',
+                            },
+                        },
                     },
                     { path: 'subscriptions', component: CustomerSubscriptions },
                     { path: 'clauses', component: CustomerClauses },
                     { path: '**', redirectTo: '' },
-                ]
+                ],
             },
             { path: '**', redirectTo: '' },
         ]),
     ],
 })
-
-export class CustomersModule { }
+export class CustomersModule {}

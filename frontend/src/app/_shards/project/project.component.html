@@ -2,50 +2,61 @@
 @let state = p.state;
 @let color = state.color;
 
-<div class="background" [style.backgroundColor]="color || '#000'"></div>
+<div class="background"></div>
+
+@if (!p.is_time_based && p.state.isRunning()) {
+    @if (p.progress() <= 1) {
+        <div class="outline" [style.borderColor]="color">
+            <div class="outline-limit">
+                <div class="outline-limit-height" [style.height.%]="p.progress() * 100">
+                    <div class="outline" [style.backgroundColor]="darker(color)" [style.borderColor]="color"></div>
+                </div>
+            </div>
+        </div>
+    }
+    @if (p.progress() > 1) {
+        <div class="outline" [style.borderColor]="color" [style.backgroundColor]="darker(color)">
+            <div class="outline-limit">
+                <div class="outline-limit-height" [style.height.%]="(p.progress() - 1) * 100">
+                    <div class="outline" style="background-color: var(--color-danger); border-color: var(--color-danger)"></div>
+                </div>
+            </div>
+        </div>
+    }
+} @else {
+    <div class="outline" [style.borderColor]="color">
+    </div>
+}
+
 <div class="icon">
-  @if (state.isPrepared()) {
-    <i [style.color]="color">search</i>
-  }
-  @if (state.isRunning()) {
-    <i [style.color]="color">{{ p.is_time_based ? 'schedule' : 'attach_money' }}</i>
-  }
-  @if (state.isFinishedSuccessful()) {
-    <i [style.color]="color">check_circle</i>
-  }
-  @if (state.isFinishedFailed()) {
-    <i [style.color]="color">cancel</i>
-  }
-  @if (state.isFinishedIgnored()) {
-    <i [style.color]="color">swap_horiz</i>
-  }
+    @if (state.isPrepared()) {
+        <i [style.color]="color">search</i>
+    }
+    @if (state.isRunning()) {
+        @if (p.is_time_based) {
+             <i class="text-cyan">schedule</i>
+        } @else {
+             <i class="text-white">attach_money</i>
+        }
+    }
+    @if (state.isFinishedSuccessful()) {
+        <i [style.color]="color">check_circle</i>
+    }
+    @if (state.isFinishedFailed()) {
+        <i [style.color]="color">cancel</i>
+    }
+    @if (state.isFinishedIgnored()) {
+        <i [style.color]="color">swap_horiz</i>
+    }
 </div>
 
-@if (p.progress <= 1) {
-  <div class="outline" style="border-color: #000;">
-    <div class="outline-limit">
-      <div class="outline-limit-height" [style.height.%]="p.progress * 100">
-        <div class="outline" [style.borderColor]="color"></div>
-      </div>
-    </div>
-  </div>
-}
-@if (p.progress > 1) {
-  <div class="outline" [style.borderColor]="color">
-    <div class="outline-limit">
-      <div class="outline-limit-height" [style.height.%]="(p.progress - 1) * 100">
-        <div class="outline" style="border-color: var(--color-danger);"></div>
-      </div>
-    </div>
-  </div>
-}
 
 @if (!click() && !noRouting()) {
-  <div class="link cursor-pointer" [ngbTooltip]="tooltip()" smartLink="/projects/{{p.id}}"></div>
+    <div class="link cursor-pointer" [ngbTooltip]="tooltip()" smartLink="/projects/{{ p.id }}"></div>
 }
 @if (!click() && noRouting()) {
-  <div class="link cursor-pointer" [ngbTooltip]="tooltip()"></div>
+    <div class="link cursor-pointer" [ngbTooltip]="tooltip()"></div>
 }
 @if (click()) {
-  <div class="link cursor-pointer" [ngbTooltip]="tooltip()" (click)="click()" tabindex="0" (keydown.enter)="click()"></div>
+    <div class="link cursor-pointer" [ngbTooltip]="tooltip()" (click)="click()" tabindex="0" (keydown.enter)="click()"></div>
 }

@@ -1,30 +1,33 @@
-@for (instance of instances; track instance.id) {
-<div class="header hstack gap-2">
-    <n>{{instance.icon()}}</n>
-    <span class="flex-fill">{{instance.getName()}}</span>
-    @if (instance.canCreateTasks()) {
-    <i class="text-primary pointer" (click)="onNewTask(instance)" (keyup.enter)="onNewTask(instance)"
-        tabindex="0">add</i>
+@for (entry of instances(); track entry.instance.id) {
+    @let _tasks = entry.tasks();
+    <div class="header hstack gap-2">
+        <n>{{ entry.instance.icon() }}</n>
+        <span class="flex-fill">{{ entry.instance.getName() }}</span>
+        @if (entry.instance.canCreateTasks()) {
+            <i class="text-primary pointer" (click)="onNewTask(entry)" (keyup.enter)="onNewTask(entry)" tabindex="0">add</i>
+        }
+        <i class="pointer" (click)="toggle(entry.key)">{{ isCollapsed(entry.key) ? 'expand_less' : 'expand_more' }}</i>
+    </div>
+    @if (!isCollapsed(entry.key)) {
+        <ul class="list-group">
+            @for (task of _tasks; track task.id) {
+                <li class="list-group-item hstack gap-2" [nx]="task" [tables]="_tasks">
+                    @if (task.parent) {
+                        <avatar [object]="task.parent"></avatar>
+                    } @else {
+                        <n [style.color]="colorFor(task)" [ngbTooltip]="task.project_name">{{ entry.instance.icon() }}</n>
+                    }
+                    <span class="flex-fill text-truncate" [ngbTooltip]="task.name">{{ task.name }}</span>
+                    @for (label of task.labels; track label) {
+                        <span class="badge" [style.backgroundColor]="colorFor(label)">{{ label }}</span>
+                    }
+                    @if (task.link) {
+                        <a [href]="task.link" rel="noopener noreferrer">
+                            <i class="text-primary">launch</i>
+                        </a>
+                    }
+                </li>
+            }
+        </ul>
     }
-</div>
-<ul class="list-group">
-    @for (task of instance.tasks; track task.id) {
-    <li class="list-group-item hstack gap-2" [nx]="task" [tables]="instance.tasks">
-        @if (task.parent) {
-        <avatar [object]="task.parent"></avatar>
-        } @else {
-        <n [style.color]="colorFor(task)" [ngbTooltip]="task.project_name">{{instance.icon()}}</n>
-        }
-        <span class="flex-fill text-truncate" [ngbTooltip]="task.name">{{task.name}}</span>
-        @for (label of task.labels; track label) {
-        <span class="badge" [style.backgroundColor]="colorFor(label)">{{label}}</span>
-        }
-        @if (task.link) {
-        <a [href]="task.link" rel="noopener noreferrer">
-            <i class="text-primary">launch</i>
-        </a>
-        }
-    </li>
-    }
-</ul>
 }

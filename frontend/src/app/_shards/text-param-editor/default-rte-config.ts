@@ -1,6 +1,6 @@
-import { AngularEditorConfig } from "@kolkov/angular-editor";
+import { AngularEditorConfig } from '@kolkov/angular-editor';
 
-export const DEFAULT_RTE_CONFIG:AngularEditorConfig = {
+export const DEFAULT_RTE_CONFIG: AngularEditorConfig = {
     editable: true,
     spellcheck: true,
     height: '20rem',
@@ -22,6 +22,6 @@ export const DEFAULT_RTE_CONFIG:AngularEditorConfig = {
         {
             name: 'Title Heading',
             class: 'heading',
-        }
-    ]
-}
+        },
+    ],
+};

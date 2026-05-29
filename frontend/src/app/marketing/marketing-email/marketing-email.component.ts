@@ -1,11 +1,10 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 @Component({
     selector: 'marketing-email',
     templateUrl: './marketing-email.component.html',
     styleUrls: ['./marketing-email.component.scss'],
-    standalone: true
+    standalone: true,
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MarketingEmailComponent {
-
-}
+export class MarketingEmailComponent {}

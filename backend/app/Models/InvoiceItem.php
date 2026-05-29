@@ -41,20 +41,24 @@ class InvoiceItem extends BaseModel {
         'vat_reason',
     ];
     protected $hides = ['deleted_at'];
-    protected $casts = [
-        'net'                => 'double',
-        'gross'              => 'double',
-        'qty'                => 'double',
-        'discount'           => 'double',
-        'price'              => 'double',
-        'price_discounted'   => 'double',
-        'vat_rate'           => 'double',
-        'vat_rate_dec'       => 'double',
-        'unit_factor'        => 'double',
-        'total'              => 'double',
-        'is_discountable'    => 'boolean',
-        'next_recurrence_at' => 'date',
-    ];
+
+    protected function casts(): array {
+        return [
+            'net'                => 'double',
+            'gross'              => 'double',
+            'qty'                => 'double',
+            'discount'           => 'double',
+            'price'              => 'double',
+            'price_discounted'   => 'double',
+            'vat_rate'           => 'double',
+            'vat_rate_dec'       => 'double',
+            'unit_factor'        => 'double',
+            'total'              => 'double',
+            'is_discountable'    => 'boolean',
+            'next_recurrence_at' => 'date',
+        ];
+    }
+
     protected $access = ['admin' => '*', 'project_manager' => 'cru', 'developer' => 'cru'];
 
     public function getDirty() { // Exclude virtual attributes from dirty tracking
@@ -117,7 +121,6 @@ class InvoiceItem extends BaseModel {
         return Attribute::make(
             get: fn () => InvoiceItemPrediction::find(Auth::user()->id, $this->id)->value('qty'),
             set: function ($val) {
-                NLog::info('setting my_prediction');
                 $pred      = InvoiceItemPrediction::findOrCreate(Auth::user()->id, $this->id);
                 $pred->qty = $val;
                 $pred->save();
@@ -164,6 +167,9 @@ class InvoiceItem extends BaseModel {
     }
     public function getBilledFociCountAttribute() {
         return $this->billedFoci()->count();
+    }
+    public function getRootGroupAttribute() {
+        return $this->productSource?->rootGroup;
     }
     public function getProgressAttribute() {
         $assumedWorkload = $this->assumedWorkload();

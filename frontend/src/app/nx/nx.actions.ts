@@ -1,36 +1,38 @@
-import { INxContextMenu } from "./nx.contextmenu.interface";
+import { INxContextMenu } from './nx.contextmenu.interface';
 
-export type NxActionResolve = (success?: (v: any) => void, nxContext?: any) => void
+export type NxActionResolve = (success?: (v: any) => void, nxContext?: any, interruptResult?: any) => void;
 export enum NxActionType {
     Destructive = 1,
     Creative = 2,
+    Update = 3,
+    Default = 4,
 }
 
 export interface NxAction {
     /** Title to be displayed. */
-    title            : string,
+    title: string;
     /**
      * What happens after this action has been triggered.
      * Will be automatically subscribed if the return type is observable.
      */
-    action          ?: NxActionResolve,
+    action?: NxActionResolve;
     /** Whether this command can also be applied to multiple selected items of the same type. */
-    group           ?: boolean,
+    group?: boolean;
     /** Right-side label of the context menu. */
-    label           ?: string,
+    label?: string;
     /** Global hotkey. */
-    hotkey          ?: string,
+    hotkey?: string;
     /** Condition to determine when to show this in the context menu. */
-    on              ?: () => boolean,
-    children        ?: NxAction[] | (() => NxAction[]),
-    interrupt       ?: { service: any, args: any },
-    type            ?: NxActionType
+    on?: () => boolean;
+    children?: NxAction[] | (() => NxAction[]);
+    interrupt?: { service: any; args: any };
+    type?: NxActionType | ((context?: string) => NxActionType | undefined);
     /** Multiple roles can be pipe separated. */
-    roles           ?: string | null
-    unselectsingleActionResolved?: boolean
-    context         ?: string
+    roles?: string | null;
+    unselectsingleActionResolved?: boolean;
+    context?: string;
 
-        // handling
-    id    ?: string,
-    object?: INxContextMenu
+    // handling
+    id?: string;
+    object?: INxContextMenu;
 }

@@ -1,5 +1,5 @@
-import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+﻿import { DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ProjectDetailGuard } from '@app/projects/project-details.guard';
 import { AutosaveDirective } from '@directives/autosave.directive';
@@ -12,45 +12,44 @@ import { AffixInputDirective } from '@directives/affix-input.directive';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
 
 @Component({
-  standalone: true,
-  imports: [SmartLinkDirective, FormsModule, PermissionsDirective, AutosaveDirective, CommonModule, ProjectDefaultProductComponent, AffixInputDirective, NgbDatepickerModule, NgbDropdownModule, NgbTooltipModule],
-  selector: 'project-detail-settings-general',
-  templateUrl: './project-detail-settings-general.component.html',
-  styleUrl: './project-detail-settings-general.component.scss'
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    standalone: true,
+    imports: [SmartLinkDirective, FormsModule, PermissionsDirective, AutosaveDirective, DatePipe, ProjectDefaultProductComponent, AffixInputDirective, NgbDatepickerModule, NgbDropdownModule, NgbTooltipModule],
+    selector: 'project-detail-settings-general',
+    templateUrl: './project-detail-settings-general.component.html',
+    styleUrl: './project-detail-settings-general.component.scss',
 })
 export class ProjectDetailSettingsGeneralComponent {
-    parent = inject(ProjectDetailGuard)
-    global = inject(GlobalService)
-    #inputModalService = inject(InputModalService)
+    parent = inject(ProjectDetailGuard);
+    global = inject(GlobalService);
+    #inputModalService = inject(InputModalService);
 
     onIndividualWageToggle($event: any) {
+        const object = this.parent.object();
         if ($event.target.checked) {
-            this.parent.current.individual_wage = parseFloat(this.global.setting('INVOICE_HOURLY_WAGE'));
+            object.individual_wage = parseFloat(this.global.setting('INVOICE_HOURLY_WAGE'));
         } else {
-            this.parent.current.individual_wage = undefined;
+            object.individual_wage = undefined;
         }
-        this.parent.current.update({ individual_wage: this.parent.current.individual_wage ?? null }).subscribe()
+        object.update({ individual_wage: object.individual_wage ?? null }).subscribe();
     }
-    onProjectUpdate = () => this.parent.current.update().subscribe()
-    
-    updateDate = (field:string, date:NgbDate) => {
-        const d = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`
-        this.parent.current.update({ [field]: d }).subscribe()
-    }
+    onProjectUpdate = () => this.parent.object().update().subscribe();
+
+    updateDate = (field: string, date: NgbDate) => {
+        const d = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
+        this.parent.object().update({ [field]: d }).subscribe();
+    };
 
     onChangePaymentDuration() {
-        this.#inputModalService.open($localize`:@@i18n.projects.setPaymentDuration:Set payment duration in days`)
-            .then((result) => {
-                if (result?.text) {
-                    this.parent.current.updateParam('INVOICE_PAYMENT_DURATION', { value: result.text })
-                        .subscribe(() => this.parent.reload())
-                }
-            })
+        this.#inputModalService.open($localize`:@@i18n.projects.setPaymentDuration:Set payment duration in days`).then((result) => {
+            if (result?.text) {
+                this.parent.object().updateParam('INVOICE_PAYMENT_DURATION', { value: result.text }).subscribe(() => this.parent.reload());
+            }
+        });
     }
 
     removePaymentDuration() {
         // Use HTTP DELETE instead of updating with null value
-        this.parent.current.httpService.delete(this.parent.current.getParamPath('INVOICE_PAYMENT_DURATION'))
-            .subscribe(() => this.parent.reload())
+        this.parent.object().httpService.delete(this.parent.object().getParamPath('INVOICE_PAYMENT_DURATION')).subscribe(() => this.parent.reload());
     }
 }

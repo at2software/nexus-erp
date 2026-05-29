@@ -1,13 +1,15 @@
 import { Serializable } from '../serializable';
 import { MarketingService } from './marketing.service';
-import { NxActionType } from 'src/app/nx/nx.actions';
+import { NxActionType } from '@app/nx/nx.actions';
 import { TActivityStats } from './marketing-activity.model';
+import { Model } from '@constants/type-discriminators';
 
 export type TPivot<K1 extends string, K2 extends string> = {
     created_at?: string;
     updated_at?: string;
 } & Partial<Record<`${K1}_id` | `${K2}_id`, string>>;
 
+@Model('MarketingPerformanceMetric')
 export class MarketingPerformanceMetric extends Serializable {
     static API_PATH = (): string => 'marketing_performance_metrics';
     SERVICE = MarketingService;
@@ -19,29 +21,39 @@ export class MarketingPerformanceMetric extends Serializable {
     current_value?: number;
     progress_percentage?: number;
     activity_stats?: TActivityStats;
-    pivot?: TPivot<'marketing_initiative', 'marketing_performance_metric'> & { target_value?: number; };
+    pivot?: TPivot<'marketing_initiative', 'marketing_performance_metric'> & { target_value?: number };
+    kpi_icon?: string;
+    kpi_color?: string;
+
+    doubleClickAction = 0;
 
     actions = [
+        {
+            title: $localize`:@@i18n.common.edit:edit`,
+            action: (_: any, nxContext: any) => { nxContext?.openEdit?.(this); },
+            roles: 'marketing',
+        },
         {
             title: $localize`:@@i18n.marketing.unlink_from_initiative:unlink from initiative`,
             group: true,
             type: NxActionType.Destructive,
             context: 'initiative_details',
             action: () => this.httpService.delete(`marketing/initiatives/${this.pivot?.marketing_initiative_id}/metrics/${this.id}`).subscribe(),
-            roles: 'marketing'
+            roles: 'marketing',
         },
         {
             title: $localize`:@@i18n.common.delete:delete`,
             group: true,
             type: NxActionType.Destructive,
             context: '!initiative_details',
-            action: () => this.confirm().then(() => this.httpService.delete(`marketing/performance-metrics/${this.id}`).subscribe()),
+            action: () => this.modalConfirm().then(() => this.httpService.delete(`marketing/metrics/${this.id}`).subscribe()),
             hotkey: 'DEL',
-            roles: 'marketing'
-        }
+            roles: 'marketing',
+        },
     ];
 
     getIcon(): string {
+        if (this.kpi_icon) return this.kpi_icon;
         switch (this.metric_type) {
             case 'counter': return 'tag';
             case 'percentage': return 'percent';
@@ -53,13 +65,14 @@ export class MarketingPerformanceMetric extends Serializable {
     }
 
     getIconColor(): string {
+        if (this.kpi_color) return this.kpi_color;
         switch (this.metric_type) {
-            case 'counter': return '#6366f1'; // Indigo
-            case 'percentage': return '#10b981'; // Green
-            case 'conversion': return '#f59e0b'; // Amber
-            case 'currency': return '#06b6d4'; // Cyan
-            case 'duration': return '#8b5cf6'; // Purple
-            default: return '#6b7280'; // Gray
+            case 'counter': return '#6366f1';
+            case 'percentage': return '#10b981';
+            case 'conversion': return '#f59e0b';
+            case 'currency': return '#06b6d4';
+            case 'duration': return '#8b5cf6';
+            default: return '#6b7280';
         }
     }
 
@@ -75,7 +88,7 @@ export class MarketingPerformanceMetric extends Serializable {
             case 'duration':
                 return `${stats.completed}h`;
             default:
-                return stats.completed.toString();
+                return (this.current_value ?? stats.completed).toString();
         }
     }
 

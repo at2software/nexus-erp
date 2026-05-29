@@ -1,6 +1,6 @@
-import { Assignee } from "@models/assignee/assignee.model";
+import { Assignee } from '@models/assignee/assignee.model';
 
 export interface IHasAssignees {
     assignees: Assignee[];
-    getAssignedUsers(): Assignee[];
+    assignedUsers(): Assignee[];
 }

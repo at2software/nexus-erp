@@ -1,45 +1,33 @@
-<div class="tree-row"
-     [class.active]="isCurrentGroup()"
-     [class.deprecated]="!group().is_active"
-     [class.d-none]="!showDeprecated() && !group().is_active"
-     [style.padding-left.px]="depth() * 16"
-     [nx]="group()"
-     [routerLink]="['/products/group', group().id]"
-     routerLinkActive="active">
-  <i class="tree-chevron"
-     [class.expanded]="expanded()"
-     [class.invisible]="group().child_groups.length + group().products.length === 0"
-     (click)="expand($event)" (keyup.enter)="expand($event)" tabindex="0">chevron_right</i>
-  <i class="tree-icon" [style.color]="group().color">{{expanded() ? 'folder_open' : 'folder'}}</i>
-  <span class="tree-label text-truncate">{{group().name}}</span>
-  @if (group().symbol.length) {
-    <code class="tree-symbol ms-auto ps-2">[{{group().symbol}}]</code>
-  }
+@let _group = group();
+@let _showDeprecated = showDeprecated();
+@let _depth = depth();
+@let _expanded = expanded();
+
+<div class="tree-row" [class.active]="isCurrentGroup()" [class.deprecated]="!_group.is_active" [class.d-none]="!_showDeprecated && !_group.is_active" [style.padding-left.px]="_depth * 16" [nx]="_group" [routerLink]="['/products/group', _group.id]" routerLinkActive="active">
+    <i class="tree-chevron" [class.expanded]="_expanded" [class.invisible]="_group.child_groups.length + _group.products.length === 0" (click)="expand($event)" (keyup.enter)="expand($event)" tabindex="0">chevron_right</i>
+    <i class="tree-icon" [style.color]="_group.color">{{ _expanded ? 'folder_open' : 'folder' }}</i>
+    <span class="tree-label text-truncate">{{ _group.name }}</span>
+    @if (_group.symbol.length) {
+        <code class="tree-symbol ms-auto ps-2">[{{ _group.symbol }}]</code>
+    }
 </div>
 
-@if (expanded()) {
-  @for (x of group().child_groups; track x.id) {
-    <product-tree-list [group]="x" [showDeprecated]="showDeprecated()" [depth]="depth() + 1"></product-tree-list>
-  }
-  @for (p of group().products; track p.id) {
-    <div class="tree-row"
-         [class.deprecated]="!p.is_active"
-         [class.d-none]="!showDeprecated() && (!p.is_active || !group().is_active)"
-         [class.active]="isCurrentProduct(p.id)"
-         [style.padding-left.px]="(depth() + 1) * 16 + 20"
-         [nx]="p"
-         [routerLink]="['/products', p.id]"
-         routerLinkActive="active">
-      @if (hasRecurrence(p)) {
-        <i class="tree-icon text-cyan" ngbTooltip="recurring product" i18n-ngbTooltip="@@i18n.products.recurringProduct">repeat</i>
-      } @else if (p.time_based === 1) {
-        <i class="tree-icon text-teal" ngbTooltip="time based (hour)" i18n-ngbTooltip="@@i18n.products.timeBasedHour">schedule</i>
-      } @else if (p.time_based === 8) {
-        <i class="tree-icon text-cyan" ngbTooltip="time based (day)" i18n-ngbTooltip="@@i18n.products.timeBasedDay">schedule</i>
-      } @else {
-        <i class="tree-icon" [style.color]="p.is_active ? group().color : '#666'" ngbTooltip="budget based" i18n-ngbTooltip="@@i18n.products.budgetBased">attach_money</i>
-      }
-      <span class="tree-label text-truncate">{{p.name}}</span>
-    </div>
-  }
+@if (_expanded) {
+    @for (x of _group.child_groups; track x.id) {
+        <product-tree-list [group]="x" [showDeprecated]="_showDeprecated" [depth]="_depth + 1"></product-tree-list>
+    }
+    @for (p of _group.products; track p.id) {
+        <div class="tree-row" [class.deprecated]="!p.is_active" [class.d-none]="!_showDeprecated && (!p.is_active || !_group.is_active)" [class.active]="isCurrentProduct(p.id)" [style.padding-left.px]="(_depth + 1) * 16 + 20" [nx]="p" [routerLink]="['/products', p.id]" routerLinkActive="active">
+            @if (hasRecurrence(p)) {
+                <i class="tree-icon text-cyan" ngbTooltip="recurring product" i18n-ngbTooltip="@@i18n.products.recurringProduct">repeat</i>
+            } @else if (p.time_based === 1) {
+                <i class="tree-icon text-teal" ngbTooltip="time based (hour)" i18n-ngbTooltip="@@i18n.products.timeBasedHour">schedule</i>
+            } @else if (p.time_based === 8) {
+                <i class="tree-icon text-cyan" ngbTooltip="time based (day)" i18n-ngbTooltip="@@i18n.products.timeBasedDay">schedule</i>
+            } @else {
+                <i class="tree-icon" [style.color]="p.is_active ? _group.color : '#666'" ngbTooltip="budget based" i18n-ngbTooltip="@@i18n.products.budgetBased">attach_money</i>
+            }
+            <span class="tree-label text-truncate">{{ p.name }}</span>
+        </div>
+    }
 }

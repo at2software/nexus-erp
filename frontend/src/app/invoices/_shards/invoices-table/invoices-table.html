@@ -7,35 +7,24 @@
             <th></th>
             <th class="text-end" i18n="@@i18n.common.nextReminder">next reminder</th>
             <th style="width: 128px" class="text-end" i18n="@@i18n.common.net">net</th>
-            <th
-                style="width: 128px"
-                class="text-end"
-                i18n="@@i18n.common.gross"
-            >gross</th>
-            <th></th>
+            <th style="width: 128px" class="text-end" i18n="@@i18n.common.gross">gross</th>
+            <th style="width: 32px;"></th>
+            <th style="width: 32px;"></th>
         </tr>
     </thead>
     <tbody>
         @for (x of _invoices(); track x.id) {
         <tr class="align-middle {{x.markerClass()}}" [nx]="x" [tables]="_invoices()" context="invoice.module.table">
-            <td class="text-start" [class.text-muted]="x.is_cancelled">
-                {{ x.created_at | date }}
-            </td>
+            <td class="text-start" [class.text-muted]="x.is_cancelled">{{ x.created_at | date }}</td>
             <td class="text-start">
                 <avatar [object]="x"></avatar>
             </td>
             <td class="text-start">
-                <span
-                    [class.text-decoration-line-through]="x.is_cancelled"
-                    [class.text-muted]="x.is_cancelled"
-                    >{{ x.name }}</span
-                >
+                <span [class.text-decoration-line-through]="x.is_cancelled" [class.text-muted]="x.is_cancelled">{{ x.name }}</span>
             </td>
             <td class="text-start">
                 <div class="d-flex gap-2">
-                    <n class="text-primary" role="button" (click)="openFile(x)"
-                        >invoice</n
-                    >
+                    <n class="text-primary" role="button" (click)="openFile(x)">invoice</n>
                     @for (r of x.reminders; track r) {
                     <n
                         class="text-warning"
@@ -53,76 +42,42 @@
             <td style="width: 10rem" [class.text-muted]="x.is_cancelled">
                 <div class="d-flex">
                     @if (!x.paid_at) {
-                    <div
-                        class="small text-dark-grey {{x.needs_reminder ? 'text-' + x.getOverdueColor() : ''}}"                    >
-                        {{ x.remind_at | date }}
-                    </div>
+                    <div class="small text-dark-grey {{x.needs_reminder() ? 'text-' + x.getOverdueColor() : ''}}">{{ x.remind_at | date }}</div>
                     } @if (x.paid_at) {
                     <div class="small text-success">
                         <i>check</i>
                     </div>
                     }
-                    <div
-                        class="flex-fill text-end {{x.is_overdue ? 'text-' + x.getOverdueColor() : ''}}"
-                        i18n-ngbTooltip="@@i18n.common.daysUntilReminder"
-                        ngbTooltip="days until reminder"
-                    >
-                        {{ x.d_left() }}
-                    </div>
+                    <div class="flex-fill text-end {{x.is_overdue() ? 'text-' + x.getOverdueColor() : ''}}" i18n-ngbTooltip="@@i18n.common.daysUntilReminder" ngbTooltip="days until reminder">{{ x.d_left() }}</div>
                 </div>
-                <progress-bar
-                    style="primary"
-                    [class.d-none]="x.paid_at"
-                    [progress]="x.progress"
-                    [overStyle]="x.getOverdueColor()"
-                ></progress-bar>
+                <progress-bar style="primary" [class.d-none]="x.paid_at" [progress]="x.progress()" [overStyle]="x.getOverdueColor()"></progress-bar>
             </td>
             } @if (!x.cancelled_by && !x.cancelles) {
             <td class="text-end" [class.text-muted]="x.is_cancelled">
-                <div class="text-emphasis">
-                    {{ x.net | money }}
-                </div>
+                <div class="text-emphasis">{{ x.net | money }}</div>
             </td>
             } @if (!x.cancelled_by && !x.cancelles) {
             <td class="text-end" [class.text-muted]="x.is_cancelled">
                 <div class="text-emphasis">{{ x.gross | money }}</div>
                 @if (x.gross_remaining !== x.gross) {
-                <span class="text-muted small" ngbTooltip="after instalments" i18n-ngbTooltip="@@i18n.invoices.afterInstalments">{{
-                    x.gross_remaining | money
-                }}</span>
+                <span class="text-muted small" ngbTooltip="after instalments" i18n-ngbTooltip="@@i18n.invoices.afterInstalments">{{ x.gross_remaining | money }}</span>
                 }
             </td>
             } @if (x.cancelles) {
-            <td colspan="3" class="text-primary">
-                {{ getCancellationName(x) }}
-            </td>
+            <td colspan="3" class="text-primary">{{ getCancellationName(x) }}</td>
             } @if (x.cancelled_by) {
-            <td colspan="3" class="text-warning">
-                {{ getCancelledByName(x) }}
-            </td>
+            <td colspan="3" class="text-warning">{{ getCancelledByName(x) }}</td>
             }
-            <td class="text-end">
+            <td>                
                 @if (x.hasFlag(1)) {
-                <img alt=""
-                    src="./assets/images/icon.datev.png"
-                    i18n-ngbTooltip="@@i18n.invoice.uploadedToDatev"
-                    ngbTooltip="uploaded to DATEV"
-                    class="me-1"
-                />
-                } @if (x.sent===1) {
-                <i
-                    class="text-muted"
-                    i18n-ngbTooltip="@@i18n.invoice.sentViaEmail"
-                    ngbTooltip="sent via email"
-                    >mark_email_read</i
-                >
+                <img alt="" src="./assets/images/icon.datev.png" i18n-ngbTooltip="@@i18n.invoice.uploadedToDatev" ngbTooltip="uploaded to DATEV" class="me-1" />
+                } 
+            </td>
+            <td class="text-end">
+                @if (x.sent===1) {
+                <i class="text-muted" i18n-ngbTooltip="@@i18n.invoice.sentViaEmail" ngbTooltip="sent via email">mark_email_read</i>
                 } @if (x.sent===2) {
-                <i
-                    class="text-muted"
-                    i18n-ngbTooltip="@@i18n.invoice.sentViaPostal"
-                    ngbTooltip="sent via postal service"
-                    >mark_email_read</i
-                >
+                <i class="text-muted" i18n-ngbTooltip="@@i18n.invoice.sentViaPostal" ngbTooltip="sent via postal service">mark_email_read</i>
                 }
             </td>
         </tr>
@@ -139,6 +94,7 @@
             <td class="text-end">{{ selectionNet() | money }}</td>
             <td class="text-end">{{ selectionGross() | money }}</td>
             <td></td>
+            <td></td>
         </tr>
         } @else {
         <tr class="sticky-footer">
@@ -153,19 +109,15 @@
             <td class="text-end">
                 <strong>{{ gross() | money }}</strong>
                 @if (gross_remaining() !== gross()) {
-                <span ngbTooltip="remaining after instalments" i18n-ngbTooltip="@@i18n.invoices.remainingAfterInstalments">{{
-                    gross_remaining() | money
-                }}</span>
+                <span ngbTooltip="remaining after instalments" i18n-ngbTooltip="@@i18n.invoices.remainingAfterInstalments">{{ gross_remaining() | money }}</span>
                 }
             </td>
+            <td></td>
             <td></td>
         </tr>
         }
     </tfoot>
     @if (observer()) {
-    <continuous-marker
-        [observer]="observer()!"
-        (dataReceived)="onResult($event)"
-    ></continuous-marker>
+    <continuous-marker [observer]="observer()!" (dataReceived)="onResult($event)"></continuous-marker>
     }
 </table>

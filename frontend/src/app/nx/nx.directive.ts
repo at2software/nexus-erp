@@ -1,34 +1,42 @@
 import { NxService } from './nx.service';
-import { Directive, Input, HostListener, ElementRef, Renderer2, AfterViewInit, inject, HostBinding, output } from '@angular/core';
+import { Directive, ElementRef, inject, input, output, signal } from '@angular/core';
 import { NxAction } from './nx.actions';
 import { INxContextMenu } from './nx.contextmenu.interface';
 
 export interface ActionEmitterType {
-    action: NxAction,
-    object: Nx,
-    remaining: number
+    action: NxAction;
+    object: Nx;
+    remaining: number;
 }
 
 @Directive({
     selector: '[nx]',
-    standalone: true
+    standalone: true,
+    host: {
+        class: 'nx',
+        '[class.active]': 'selected()',
+        '(click)': 'onClick($event)',
+        '(contextmenu)': 'onContext($event)',
+    },
 })
-export class Nx implements AfterViewInit {
+export class Nx {
+    readonly el = inject(ElementRef);
+    readonly #srv = inject(NxService);
 
-    selected = false;
+    readonly selected = signal(false);
+    readonly nx = input.required<INxContextMenu>();
+    readonly tables = input<INxContextMenu | INxContextMenu[]>();
+    readonly context = input<string>();
+    readonly nxContext = input<any>();
+    readonly singleActionResolved = output<ActionEmitterType>();
+    readonly actionsResolved = output<ActionEmitterType>();
 
-    @Input({ required: true }) nx!: INxContextMenu;
-    @Input() tables?: INxContextMenu | INxContextMenu[];
-    @Input() context?: string;
-    @Input() nxContext?: any;
+    constructor() {
+        // Expose directive instance on the DOM element for NxService.getSiblings() traversal
+        this.el.nativeElement.nx = this;
+    }
 
-    singleActionResolved = output<ActionEmitterType>();
-    actionsResolved      = output<ActionEmitterType>();
-
-    @HostBinding('nx') get nxAttribute(): Nx { return this; }
-    @HostBinding('class.active') get classActive(): boolean { return this.selected; }
-
-    @HostListener('click', ['$event']) onClick = (event: MouseEvent) => {
+    onClick(event: MouseEvent) {
         this.el.nativeElement.blur();
         if (event.ctrlKey && event.shiftKey) {
             event.preventDefault();
@@ -47,20 +55,12 @@ export class Nx implements AfterViewInit {
         }
     }
 
-    @HostListener('contextmenu', ['$event']) onContext = (event: MouseEvent) => {
+    onContext(event: MouseEvent) {
         this.#srv.onRightClick(this, event);
         event.stopPropagation();
         event.preventDefault();
     }
 
-    el   = inject(ElementRef);
-    #re  = inject(Renderer2);
-    #srv = inject(NxService);
-
-    ngAfterViewInit() {
-        this.#re.addClass(this.el.nativeElement, 'nx');
-    }
-
-    setSelected    = (_: boolean): Nx => { this.selected = _; return this; }
-    toggleSelected = (): Nx => { this.selected = !this.selected; return this; }
+    setSelected = (_: boolean): Nx => { this.selected.set(_); return this; };
+    toggleSelected = (): Nx => { this.selected.update(v => !v); return this; };
 }

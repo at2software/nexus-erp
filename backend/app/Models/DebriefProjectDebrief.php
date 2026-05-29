@@ -10,9 +10,13 @@ class DebriefProjectDebrief extends BaseModel {
     protected $table    = 'debrief_project_debriefs';
     protected $fillable = ['project_id', 'conducted_by_user_id', 'debriefed_user_id', 'conducted_at', 'summary_notes', 'rating', 'status'];
     protected $appends  = ['class', 'icon'];
-    protected $casts    = [
-        'conducted_at' => 'datetime',
-    ];
+
+    protected function casts(): array {
+        return [
+            'conducted_at' => 'datetime',
+        ];
+    }
+
     protected $access = ['admin' => '*', 'project_manager' => 'cru'];
 
     public function project() {

@@ -1,25 +1,25 @@
 export enum MilestoneState {
     TODO = 0,
     IN_PROGRESS = 1,
-    DONE = 2
+    DONE = 2,
 }
 
 export const MILESTONE_STATES: Record<number, { name: string; color: string; bgClass: string }> = {
     [MilestoneState.TODO]: {
         name: $localize`:@@i18n.milestone.toDo:To Do`,
         color: '#6c757d', // grey
-        bgClass: 'bg-secondary'
+        bgClass: 'bg-secondary',
     },
     [MilestoneState.IN_PROGRESS]: {
         name: $localize`:@@i18n.milestone.inProgress:In Progress`,
         color: 'var(--color-primary-4)', // primary-4
-        bgClass: 'bg-primary'
+        bgClass: 'bg-primary',
     },
     [MilestoneState.DONE]: {
         name: $localize`:@@i18n.milestone.done:Done`,
         color: 'var(--color-primary-1)', // primary-1
-        bgClass: 'bg-success'
-    }
+        bgClass: 'bg-success',
+    },
 };
 
 export function getMilestoneStateInfo(state: MilestoneState | number | null | undefined) {

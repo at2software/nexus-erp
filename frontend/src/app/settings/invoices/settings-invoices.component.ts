@@ -1,9 +1,8 @@
-import { GlobalService } from 'src/models/global.service';
-import { Component, inject } from '@angular/core';
-import { InvoiceItem } from 'src/models/invoice/invoice-item.model';
-import { TabPlaceholderInfoComponent } from '../_shards/tab-placeholder-info/tab-placeholder-info.component';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { GlobalService } from '@models/global.service';
+import { TabPlaceholderInfoComponent } from '@app/settings/_shards/tab-placeholder-info/tab-placeholder-info.component';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
-import { InputSettingsGroupComponent } from '@shards/input-group/input-group.component';
+import { InputSettingsGroupComponent } from '@shards/input-group/input-settings-group.component';
 import { TextParamEditorComponent } from '@shards/text-param-editor/text-param-editor.component';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { ToolbarLocaleSelectorComponent, LocaleKey } from '@shards/toolbar-locale-selector/toolbar-locale-selector.component';
@@ -13,24 +12,17 @@ import { ToolbarLocaleSelectorComponent, LocaleKey } from '@shards/toolbar-local
     templateUrl: './settings-invoices.component.html',
     styleUrls: ['./settings-invoices.component.scss'],
     standalone: true,
-    imports: [TabPlaceholderInfoComponent, ScrollbarComponent, InputSettingsGroupComponent, TextParamEditorComponent, ToolbarComponent, ToolbarLocaleSelectorComponent]
+    imports: [TabPlaceholderInfoComponent, ScrollbarComponent, InputSettingsGroupComponent, TextParamEditorComponent, ToolbarComponent, ToolbarLocaleSelectorComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SettingsInvoicesComponent {
+    tab = signal(0);
+    previewLocale = signal<LocaleKey>('de-formal');
 
-    global = inject(GlobalService)
+    #global = inject(GlobalService);
 
-	tab: number = 0
-	previewLocale: LocaleKey = 'de-formal'
-	demoInvoices = [
-	  InvoiceItem.fromJson({text: 'Testposition 1'}),
-	  InvoiceItem.fromJson({text: 'Testposition 2'}),
-	]
-
-	currency = () => this.global.setting('invoiceCurrencySymbol')
-	hours = () => this.global.setting('invoiceDefaultHourUnit')
-	days = () => this.global.setting('invoiceDefaultDayUnit')
-	percent = () => this.global.setting('invoiceDefaultPercentUnit')
-
-	show = (_:number) => { this.tab = _ }
-
+    readonly currency = computed(() => this.#global.setting('invoiceCurrencySymbol'));
+    readonly hours = computed(() => this.#global.setting('invoiceDefaultHourUnit'));
+    readonly days = computed(() => this.#global.setting('invoiceDefaultDayUnit'));
+    readonly percent = computed(() => this.#global.setting('invoiceDefaultPercentUnit'));
 }

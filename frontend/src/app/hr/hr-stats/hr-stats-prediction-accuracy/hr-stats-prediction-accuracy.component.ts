@@ -1,10 +1,10 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 
 import { StatsService } from '@models/stats-service';
 import { GlobalService } from '@models/global.service';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { Color } from '@constants/Color';
-import { EChartsSimpleOptions } from '@charts/ChartOptions';
+import { EChartsSimpleOptions, ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 
 interface PredictionAccuracyData {
@@ -29,51 +29,56 @@ interface PredictionAccuracyData {
 }
 
 @Component({
-  selector: 'hr-stats-prediction-accuracy',
-  standalone: true,
-  imports: [NgxEchartsModule, EmptyStateComponent],
-  templateUrl: './hr-stats-prediction-accuracy.component.html',
-  styleUrl: './hr-stats-prediction-accuracy.component.scss'
+    selector: 'hr-stats-prediction-accuracy',
+    standalone: true,
+    imports: [NgxEchartsModule, EmptyStateComponent],
+    templateUrl: './hr-stats-prediction-accuracy.component.html',
+    styleUrl: './hr-stats-prediction-accuracy.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HrStatsPredictionAccuracyComponent implements OnInit {
-    #statsService = inject(StatsService)
-    #global = inject(GlobalService)
+export class HrStatsPredictionAccuracyComponent {
+    #statsService = inject(StatsService);
+    #global = inject(GlobalService);
 
-    users: PredictionAccuracyData[] = [];
-    chartOptions: Record<number, any> = {};
-    donutChartOptions: Record<number, any> = {};
+    users = signal<PredictionAccuracyData[]>([]);
+    chartOptions = signal<Record<number, any>>({});
+    donutChartOptions = signal<Record<number, any>>({});
 
-    ngOnInit() {
+    constructor() {
         this.#statsService.showPredictionAccuracy().subscribe((response: PredictionAccuracyData[]) => {
-            // Sort users to match team order
-            this.users = response.sort((a, b) => {
-                const teamA = this.#global.team.findIndex(t => t.id === a.id.toString());
-                const teamB = this.#global.team.findIndex(t => t.id === b.id.toString());
+            const sorted = response.sort((a, b) => {
+                const teamA = this.#global.team.findIndex((t) => t.id === a.id.toString());
+                const teamB = this.#global.team.findIndex((t) => t.id === b.id.toString());
                 return teamA - teamB;
             });
 
-            // Create chart options for each user
-            this.users.forEach(user => {
-                this.chartOptions[user.id] = this.#createChartOptions(user);
-                this.donutChartOptions[user.id] = this.#createDonutChartOptions(user);
+            const charts: Record<number, any> = {};
+            const donuts: Record<number, any> = {};
+            sorted.forEach((user) => {
+                charts[user.id] = this.#createChartOptions(user);
+                donuts[user.id] = this.#createDonutChartOptions(user);
             });
-        })
+
+            this.users.set(sorted);
+            this.chartOptions.set(charts);
+            this.donutChartOptions.set(donuts);
+        });
     }
 
     #createChartOptions(user: PredictionAccuracyData): any {
-        const months = user.monthly_accuracy.map(item => item.month).sort();
+        const months = user.monthly_accuracy.map((item) => item.month).sort();
         const series = this.#createSeries(user, months);
         return {
             ...EChartsSimpleOptions,
             xAxis: {
                 type: 'category',
                 data: months,
-                show: false
+                show: false,
             },
             yAxis: {
                 type: 'log',
                 show: false,
-                min: 0.1
+                min: 0.1,
             },
             tooltip: {
                 ...EChartsSimpleOptions.tooltip,
@@ -81,7 +86,7 @@ export class HrStatsPredictionAccuracyComponent implements OnInit {
                 borderWidth: 0,
                 formatter: (params: any) => {
                     const month = params[0].axisValue;
-                    const monthData = user.monthly_accuracy.find(item => item.month === month);
+                    const monthData = user.monthly_accuracy.find((item) => item.month === month);
 
                     if (!monthData) return '';
 
@@ -99,25 +104,25 @@ export class HrStatsPredictionAccuracyComponent implements OnInit {
                     tooltipContent += `<div class="d-flex justify-content-between"><span>Average:</span><span class="ms-2">${monthData.focused.average_bias_factor.toFixed(2)}x</span></div>`;
                     tooltipContent += `<div class="d-flex justify-content-between"><span>Range:</span><span class="ms-2">${monthData.focused.min_bias_factor.toFixed(2)}x to ${monthData.focused.max_bias_factor.toFixed(2)}x</span></div>`;
                     return `<div class="card">${tooltipContent}</div>`;
-                }
+                },
             },
-            series: series
+            series: series,
         };
     }
 
     #createSeries(user: PredictionAccuracyData, months: string[]): any[] {
-        const monthDataMap = new Map(user.monthly_accuracy.map(item => [item.month, item]));
+        const monthDataMap = new Map(user.monthly_accuracy.map((item) => [item.month, item]));
 
-        const focusedAverage = months.map(month => monthDataMap.get(month)?.focused.average_bias_factor ?? null);
-        const unfocusedAverage = months.map(month => monthDataMap.get(month)?.unfocused.average_bias_factor ?? null);
-        const rangeBase = months.map(month => monthDataMap.get(month)?.focused.min_bias_factor ?? null);
-        const rangeArea = months.map(month => {
+        const focusedAverage = months.map((month) => monthDataMap.get(month)?.focused.average_bias_factor ?? null);
+        const unfocusedAverage = months.map((month) => monthDataMap.get(month)?.unfocused.average_bias_factor ?? null);
+        const rangeBase = months.map((month) => monthDataMap.get(month)?.focused.min_bias_factor ?? null);
+        const rangeArea = months.map((month) => {
             const data = monthDataMap.get(month);
             return data ? data.focused.max_bias_factor - data.focused.min_bias_factor : null;
         });
         return [
             {
-                name: 'Range Base',
+                name: $localize`:@@i18n.hr.rangeBase:Range Base`,
                 type: 'line',
                 data: rangeBase,
                 lineStyle: { opacity: 0 },
@@ -125,10 +130,10 @@ export class HrStatsPredictionAccuracyComponent implements OnInit {
                 areaStyle: { color: 'transparent', opacity: 0 },
                 stack: 'range',
                 z: 1,
-                tooltip: { show: false }
+                tooltip: { show: false },
             },
             {
-                name: 'Range Area',
+                name: $localize`:@@i18n.hr.rangeArea:Range Area`,
                 type: 'line',
                 data: rangeArea,
                 lineStyle: { opacity: 0 },
@@ -136,44 +141,43 @@ export class HrStatsPredictionAccuracyComponent implements OnInit {
                 areaStyle: { color: Color.fromVar('teal').toHexString(), opacity: 0.3 },
                 stack: 'range',
                 z: 2,
-                tooltip: { show: false }
+                tooltip: { show: false },
             },
             {
-                name: 'Focused Average',
+                name: $localize`:@@i18n.hr.focusedAverage:Focused Average`,
                 type: 'line',
                 data: focusedAverage,
                 lineStyle: { color: Color.fromVar('cyan').toHexString(), width: 2 },
                 itemStyle: { color: Color.fromVar('cyan').toHexString() },
                 symbol: 'circle',
                 symbolSize: 4,
-                z: 10
+                z: 10,
             },
             {
-                name: 'Unfocused Average',
+                name: $localize`:@@i18n.hr.unfocusedAverage:Unfocused Average`,
                 type: 'line',
                 data: unfocusedAverage,
                 lineStyle: { color: Color.fromVar('teal').toHexString(), width: 2 },
                 itemStyle: { color: Color.fromVar('teal').toHexString() },
                 symbol: 'circle',
                 symbolSize: 4,
-                z: 10
+                z: 10,
             },
             {
-                name: 'Perfect Prediction',
+                name: $localize`:@@i18n.hr.perfectPrediction:Perfect Prediction`,
                 type: 'line',
                 data: months.map(() => 1),
                 lineStyle: { color: Color.fromVar('warning').toHexString(), width: 1, type: 'dashed' },
                 itemStyle: { color: 'transparent' },
                 symbol: 'none',
                 z: 5,
-                tooltip: { show: false }
-            }
+                tooltip: { show: false },
+            },
         ];
     }
 
     getUserForAvatar = (user: PredictionAccuracyData) => {
-        return this.#global.team.find(t => t.id === user.id.toString())
-            || { id: user.id.toString(), name: user.name, icon: '', badge: undefined };
+        return this.#global.team.find((t) => t.id === user.id.toString()) || { id: user.id.toString(), name: user.name, icon: '', badge: undefined };
     };
 
     #createDonutChartOptions(user: PredictionAccuracyData): any {
@@ -181,7 +185,7 @@ export class HrStatsPredictionAccuracyComponent implements OnInit {
         let totalWeight = 0;
         let weightedSum = 0;
 
-        user.monthly_accuracy.forEach(month => {
+        user.monthly_accuracy.forEach((month) => {
             const weight = month.items_count;
             weightedSum += month.unfocused.weighted_average_bias_factor * weight;
             totalWeight += weight;
@@ -196,44 +200,45 @@ export class HrStatsPredictionAccuracyComponent implements OnInit {
         return {
             ...EChartsSimpleOptions,
             backgroundColor: 'transparent',
-            series: [{
-                type: 'pie',
-                radius: ['75%', '90%'],
-                center: ['50%', '50%'],
-                startAngle: 90,
-                endAngle: 450,
-                data: [
-                    {
-                        value: deviation,
-                        name: isOverEstimated ? 'Over-estimated' : 'Under-estimated',
-                        itemStyle: {
-                            color: isOverEstimated
-                                ? Color.fromVar('warning').toHexString()
-                                : Color.fromVar('danger').toHexString()
-                        }
-                    },
-                    {
-                        value: maxDeviation - deviation,
-                        name: 'Perfect Range',
-                        itemStyle: {
-                            color: 'transparent'
+            series: [
+                {
+                    type: 'pie',
+                    radius: ['75%', '90%'],
+                    center: ['50%', '50%'],
+                    startAngle: 90,
+                    endAngle: 450,
+                    data: [
+                        {
+                            value: deviation,
+                            name: isOverEstimated ? $localize`:@@i18n.hr.overEstimated:Over-estimated` : $localize`:@@i18n.hr.underEstimated:Under-estimated`,
+                            itemStyle: {
+                                color: isOverEstimated ? Color.fromVar('warning').toHexString() : Color.fromVar('danger').toHexString(),
+                                ...ECHARTS_DONUT_ITEM_STYLE,
+                            },
                         },
-                        label: { show: false },
-                        labelLine: { show: false }
-                    }
-                ],
-                label: {
-                    show: true,
-                    position: 'center',
-                    formatter: `${overallAverage.toFixed(2)}x`,
-                    fontSize: 18,
-                    fontWeight: 'bold',
-                    color: '#ccc'
+                        {
+                            value: maxDeviation - deviation,
+                            name: $localize`:@@i18n.hr.perfectRange:Perfect Range`,
+                            itemStyle: {
+                                color: 'transparent',
+                            },
+                            label: { show: false },
+                            labelLine: { show: false },
+                        },
+                    ],
+                    label: {
+                        show: true,
+                        position: 'center',
+                        formatter: `${overallAverage.toFixed(2)}x`,
+                        fontSize: 18,
+                        fontWeight: 'bold',
+                        color: '#ccc',
+                    },
+                    labelLine: {
+                        show: false,
+                    },
                 },
-                labelLine: {
-                    show: false
-                }
-            }],
+            ],
             tooltip: {
                 backgroundColor: 'transparent',
                 borderWidth: 0,
@@ -257,8 +262,8 @@ export class HrStatsPredictionAccuracyComponent implements OnInit {
                             </div>
                         </div>
                     </div>`;
-                }
-            }
+                },
+            },
         };
     }
 }

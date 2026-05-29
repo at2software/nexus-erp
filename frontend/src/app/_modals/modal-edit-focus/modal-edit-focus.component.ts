@@ -1,13 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild } from '@angular/core';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { Focus } from '@models/focus/focus.model';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
 import moment from 'moment';
 import { FormsModule } from '@angular/forms';
 import { Serializable } from '@models/serializable';
-import { IHasFoci } from '@models/focus/hasFoci.interface';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
-
 
 @Component({
     selector: 'modal-edit-focus',
@@ -15,47 +13,39 @@ import { ModalBaseComponent } from '@app/_modals/modal-base.component';
     styleUrls: ['./modal-edit-focus.component.scss'],
     standalone: true,
     imports: [SearchInputComponent, FormsModule],
-    changeDetection: ChangeDetectionStrategy.OnPush
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ModalEditFocusComponent extends ModalBaseComponent<Focus> {
+    private readonly project = viewChild.required(SearchInputComponent);
 
-    @ViewChild(SearchInputComponent) project:SearchInputComponent
+    readonly title = signal('Focus');
+    readonly focus = signal<Focus>(null!);
+    readonly commentText = signal('');
+    readonly dateTimeText = signal('');
+    readonly durationText = signal('');
+    readonly initialParent = computed(() => this.focus()?.parent as unknown as Serializable | undefined);
 
-    title         : string = ''
-    result        : string = ''
-    focus         : Focus
-    commentText   : string = ''
-    dateTimeText  : string = ''
-    durationText  : string = ''
-    initialParent?: IHasFoci
-    get initialParentSerializable(): Serializable | undefined {
-        return this.initialParent as any
+    #activeModal = inject(NgbActiveModal);
+
+    init(focus: Focus): void {
+        this.focus.set(focus);
+        this.commentText.set(focus.comment || '');
+        this.dateTimeText.set(focus.momentStarted().format('DD.MM.YYYY HH:mm'));
+        this.durationText.set(focus.duration.toString());
     }
 
-    #activeModal = inject(NgbActiveModal)
-
-    init(focus:Focus): void {
-        this.title = "Focus"
-        this.focus = focus
-        this.commentText = this.focus.comment || ''
-        this.dateTimeText = this.focus.time_started().format('DD.MM.YYYY HH:mm')
-        this.durationText = this.focus.duration.toString()
-        this.initialParent = this.focus.parent
-    }
     onSuccess() {
-        const payload:any = {
-            'started_at': moment(this.dateTimeText, 'DD.MM.YYYY hh:mm').toISOString(true),
-            'duration'  : parseFloat(this.durationText),
-            'comment'   : this.commentText
-        }
-        if (this.project.selected()) {
-            payload['parent_path'] = this.project.selected()?.getApiPathWithId()
-        }
-        this.focus.update(payload).subscribe()
-        return this.focus
+        const focus = this.focus();
+        const payload: any = {
+            started_at: moment(this.dateTimeText(), 'DD.MM.YYYY HH:mm').toISOString(true),
+            duration: parseFloat(this.durationText()),
+            comment: this.commentText(),
+        };
+        const selected = this.project().selected();
+        if (selected) payload['parent_path'] = selected.apiPathWithId();
+        focus.update(payload).subscribe();
+        return focus;
     }
 
-    decline = () => this.#activeModal.close(undefined)
-    dismiss = () => this.#activeModal.dismiss()
-
+    override decline = () => this.#activeModal.close(undefined);
 }

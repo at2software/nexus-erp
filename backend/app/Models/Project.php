@@ -8,7 +8,14 @@ use App\Casts\Permission;
 use App\Casts\Precomputed;
 use App\Casts\PrecomputedAuth;
 use App\Collections\ProjectCollection;
+use App\Enums\CommentType;
 use App\Enums\InvoiceItemType;
+use App\Http\Controllers\PluginMattermostController;
+use App\Jobs\ChatAddUsersJob;
+use App\Jobs\ChatGetOrCreateChannelJob;
+use App\Jobs\ChatRemoveUsersJob;
+use App\Jobs\ChatSendMessageJob;
+use App\Queries\ProjectSuccessQuoteQuery;
 use App\Queries\ProjectTimelineQuery;
 use App\Traits\CanMakeInvoiceTrait;
 use App\Traits\HasAssignmentsTrait;
@@ -25,6 +32,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Bus;
 
 class Project extends BaseModel {
     public static function withParentHierarchy($collection): ProjectCollection {
@@ -62,19 +70,24 @@ class Project extends BaseModel {
 
     protected $touches  = ['company'];
     protected $appends  = ['class', 'icon', 'path', 'params', 'net', 'state', 'has_time_budget'];
-    protected $fillable = ['company_id', 'name', 'intro', 'outro', 'description', 'project_id', 'product_id', 'remind_at', 'deadline_at', 'lead_probability', 'project_manager_id'];
-    protected $casts    = [
-        'net'                      => PrecomputedAuth::class,
-        'gross'                    => PrecomputedAuth::class,
-        'net_remaining'            => PrecomputedAuth::class,
-        'work_estimated'           => Precomputed::class,
-        'target_wage'              => Permission::class.':financial',
-        'support_net'              => 'float',
-        'created_at'               => 'date',
-        'updated_at'               => 'date',
-        'decision_at'              => 'date',
-        'is_ignored_from_prepared' => 'boolean',
-    ];
+    protected $fillable = ['company_id', 'name', 'intro', 'outro', 'description', 'project_id', 'product_id', 'remind_at', 'deadline_at', 'lead_probability', 'project_manager_id', 'no_git_required'];
+
+    protected function casts(): array {
+        return [
+            'net'                      => PrecomputedAuth::class,
+            'gross'                    => PrecomputedAuth::class,
+            'net_remaining'            => PrecomputedAuth::class,
+            'work_estimated'           => Precomputed::class,
+            'target_wage'              => Permission::class.':financial',
+            'support_net'              => 'float',
+            'created_at'               => 'date',
+            'updated_at'               => 'date',
+            'decision_at'              => 'date',
+            'is_ignored_from_prepared' => 'boolean',
+            'no_git_required'          => 'boolean',
+        ];
+    }
+
     protected $access = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
     protected static function boot(): void {
@@ -170,7 +183,7 @@ class Project extends BaseModel {
         return $this->state ? $this->state->color : null;
     }
     public function getPersonalizedAttribute() {
-        return Document::personalizationArray($this->addressee);
+        return Document::personalizationArray($this->addressee, $this);
     }
     public function getQuoteAccuracyAttribute() {
         $w = $this->work_estimated;
@@ -215,7 +228,7 @@ class Project extends BaseModel {
         return $this->invoiceItems()->whereNull('invoice_id')->whereNull('company_id')->whereIn('type', InvoiceItemType::ProjectTotalRemaining);
     }
     public function supportItems() {
-        return $this->invoiceItems()->whereStage(1)->whereIn('type', InvoiceItemType::TotalRemaining)->where('net', '>', 0)->whereInvoiceId(null)->whereCompanyId(null);
+        return $this->invoiceItems()->whereStage(1)->whereIn('type', InvoiceItemType::TotalRemaining)->whereInvoiceId(null)->whereCompanyId(null);
     }
     public function milestones() {
         return $this->hasMany(Milestone::class);
@@ -380,6 +393,103 @@ class Project extends BaseModel {
 
         Invoice::enablePropagation();
         $this->propagateDirty();
+    }
+    public function handleStateTransition(ProjectState $previousState, int $userId): void {
+        $name = $this->company->name.' - '.$this->name;
+        $icon = env('API_URL').'companies/'.$this->company->id.'/icon?'.time();
+
+        $stateChangeMessage = $this->getStateChangeMessage($previousState);
+
+        if ($this->hasStateChangedTo(ProjectState::Prepared, $previousState)) {
+            $this->repeatingItems->each(fn ($item) => $item->update(['next_recurrence_at' => null]));
+        }
+
+        if ($this->hasStateChangedTo(ProjectState::Running, $previousState)) {
+            $this->repeatingItems->each(function ($item) {
+                if (! $item->next_recurrence_at) {
+                    $item->update(['next_recurrence_at' => now()]);
+                }
+            });
+
+            Comment::create([...$this->toPoly(), 'text' => $stateChangeMessage, 'user_id' => $userId, 'is_mini' => true, 'type' => CommentType::Info]);
+
+            if (! env('APP_DEBUG', true)) {
+                $props        = PluginMattermostController::buildWebhookProps($name, $icon);
+                $userIds      = $this->assigned_users->pluck('id')->toArray();
+                $featuresText = PHP_EOL.'#### Bestellte Features:'.PHP_EOL;
+                $featuresText .= $this->invoiceItems->map(fn ($item) => "* [ ] $item->text ($item->qty $item->unit_name)")->implode(PHP_EOL);
+
+                Bus::chain([
+                    new ChatGetOrCreateChannelJob($this),
+                    new ChatAddUsersJob($this, $userIds),
+                    new ChatSendMessageJob($stateChangeMessage, $props, channelEnvKey: 'TOWN_SQUARE', appendProjectIcon: true),
+                    new ChatSendMessageJob($featuresText, $props, $this, imagePath: 'images/projekt_gestartet.png'),
+                ])->dispatch();
+            }
+        }
+
+        if ($this->hasStateChangedTo(ProjectState::Finished, $previousState)) {
+            Comment::create([...$this->toPoly(), 'text' => $stateChangeMessage, 'user_id' => $userId, 'is_mini' => true, 'type' => CommentType::Info]);
+
+            if (! env('APP_DEBUG', true)) {
+                $props = PluginMattermostController::buildWebhookProps($name, $icon);
+                ChatSendMessageJob::dispatch('', $props, $this, imagePath: 'images/projekt_abgeschlossen.png');
+                ChatRemoveUsersJob::dispatch($this, $this->assigned_users->pluck('id')->toArray());
+                ChatSendMessageJob::dispatch($stateChangeMessage, $props, channelEnvKey: 'TOWN_SQUARE');
+            }
+        }
+
+        if ($this->state->is_in_stats) {
+            $successRateParam        = $this->company->param('PROJECT_SUCCESS_RATE');
+            $successRateParam->value = (new ProjectSuccessQuoteQuery($this->company))->getCurrentPercentage();
+            $successRateParam->save();
+        }
+    }
+    public function convertItemsToMilestones(): array {
+        $allInvoiceItems      = $this->invoiceItems;
+        $unlinkedInvoiceItems = $this->invoiceItems()->whereType(InvoiceItemType::Default)->whereDoesntHave('milestones')->get();
+
+        if ($unlinkedInvoiceItems->isEmpty()) {
+            return [
+                'message'            => 'No unlinked invoice items found to convert',
+                'milestones_created' => 0,
+                'debug_info'         => [
+                    'project_id'           => $this->id,
+                    'total_invoice_items'  => $allInvoiceItems->count(),
+                    'already_linked_items' => $allInvoiceItems->count() - $unlinkedInvoiceItems->count(),
+                ],
+            ];
+        }
+
+        $conversionFactor  = Param::get('MILESTONE_CONVERSION_FACTOR')->value;
+        $hoursPerDay       = Param::get('INVOICE_HPD')->value;
+        $createdMilestones = [];
+        $maxPosition       = $this->milestones()->max('position') ?? -1;
+
+        foreach ($unlinkedInvoiceItems as $index => $invoiceItem) {
+            $estimatedDays = $invoiceItem->assumedWorkload() / $hoursPerDay ?? 1;
+            $dueDelta      = max(1, ceil($estimatedDays * $conversionFactor));
+            $dueAt         = now()->addDays($dueDelta);
+
+            $milestone = $this->milestones()->create([
+                'name'       => $invoiceItem->text,
+                'started_at' => now()->toDateString(),
+                'due_at'     => $dueAt,
+                'duration'   => $estimatedDays,
+                'progress'   => $invoiceItem->progress * 100 ?? 0,
+                'state'      => 0,
+                'position'   => $maxPosition + $index + 1,
+            ]);
+
+            $milestone->invoiceItems()->attach($invoiceItem->id);
+            $createdMilestones[] = $milestone->load('invoiceItems');
+        }
+
+        return [
+            'message'            => 'Successfully converted invoice items to milestones',
+            'milestones_created' => count($createdMilestones),
+            'milestones'         => $createdMilestones,
+        ];
     }
     public function newEloquentBuilder($query) {
         return new ProjectBuilder($query);

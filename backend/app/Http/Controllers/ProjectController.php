@@ -2,29 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\CommentType;
-use App\Enums\InvoiceItemType;
 use App\Http\Controllers\Traits\HasFociController;
-use App\Jobs\ChatAddUsersJob;
-use App\Jobs\ChatGetOrCreateChannelJob;
-use App\Jobs\ChatRemoveUsersJob;
-use App\Jobs\ChatSendMessageJob;
 use App\Models\Assignment;
-use App\Models\Comment;
 use App\Models\Company;
 use App\Models\Connection;
 use App\Models\ConnectionProject;
 use App\Models\Framework;
 use App\Models\InvoiceItem;
-use App\Models\Param;
 use App\Models\PluginLink;
 use App\Models\Project;
 use App\Models\ProjectState;
 use App\Models\Task;
-use App\Queries\ProjectSuccessQuoteQuery;
 use App\Traits\ControllerHasPermissionsTrait;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 
 class ProjectController extends Controller {
@@ -165,9 +155,6 @@ class ProjectController extends Controller {
             'state' => 'nullable|exists:project_states,id',
         ]);
 
-        $name = $project->company->name.' - '.$project->name;
-        $icon = env('API_URL').'companies/'.$project->company->id.'/icon?'.time();
-
         $previousState = $project->state;
 
         $project->applyAndSave($request);
@@ -176,59 +163,21 @@ class ProjectController extends Controller {
             $project        = $project->fresh('states');
         }
 
-        $stateChangeMessage = $project->getStateChangeMessage($previousState);
-
         if ($project->hasStateChangedTo(ProjectState::Prepared, $previousState)) {
-            if (request()->user()->hasAnyRole(['admin', 'invoicing'])) {     // do not allow roll back to prepared, if no GF
+            if (request()->user()->hasAnyRole(['admin', 'invoicing'])) {
                 return;
             }
-            $project->repeatingItems->each(fn ($item) => $item->update(['next_recurrence_at' => null]));
         }
 
-        if ($project->hasStateChangedTo(ProjectState::Running, $previousState)) {
-            $project->repeatingItems->each(function ($item) {
-                if (! $item->next_recurrence_at) {
-                    $item->update(['next_recurrence_at' => now()]);
-                }
-            });
-
-            Comment::create([...$project->toPoly(), 'text' => $stateChangeMessage, 'user_id' => request()->user()->id, 'is_mini' => true, 'type' => CommentType::Info]);
-
-            if (! env('APP_DEBUG', true)) {
-                $props        = PluginMattermostController::buildWebhookProps($name, $icon);
-                $userIds      = $project->assigned_users->pluck('id')->toArray();
-                $featuresText = PHP_EOL.'#### Bestellte Features:'.PHP_EOL;
-                $featuresText .= $project->invoiceItems->map(fn ($_) => "* [ ] $_->text ($_->qty $_->unit_name)")->implode(PHP_EOL);
-
-                Bus::chain([
-                    new ChatGetOrCreateChannelJob($project),
-                    new ChatAddUsersJob($project, $userIds),
-                    new ChatSendMessageJob($stateChangeMessage, $props, channelEnvKey: 'TOWN_SQUARE', appendProjectIcon: true),
-                    new ChatSendMessageJob($featuresText, $props, $project, imagePath: 'images/projekt_gestartet.png'),
-                ])->dispatch();
-            }
-        }
-        if ($project->hasStateChangedTo(ProjectState::Finished, $previousState)) {
-            Comment::create([...$project->toPoly(), 'text' => $stateChangeMessage, 'user_id' => request()->user()->id, 'is_mini' => true, 'type' => CommentType::Info]);
-
-            if (! env('APP_DEBUG', true)) {
-                $props = PluginMattermostController::buildWebhookProps($name, $icon);
-                ChatSendMessageJob::dispatch('', $props, $project, imagePath: 'images/projekt_abgeschlossen.png');
-                ChatRemoveUsersJob::dispatch($project, $project->assigned_users->pluck('id')->toArray());
-                ChatSendMessageJob::dispatch($stateChangeMessage, $props, channelEnvKey: 'TOWN_SQUARE');
-            }
+        if ($request->has('state') && $project->state->progress !== $previousState->progress) {
+            $project->handleStateTransition($previousState, $request->user()->id);
         }
 
-        if ($request->has('project_id')) {    // parent project, also allowing null
+        if ($request->has('project_id')) {
             $project->setParent($request->project_id);
             $project->save();
         }
 
-        if ($request->filled('state') && $project->state->is_in_stats) {
-            $successRateParam        = $project->company->param('PROJECT_SUCCESS_RATE');
-            $successRateParam->value = (new ProjectSuccessQuoteQuery($project->company))->getCurrentPercentage();
-            $successRateParam->save();
-        }
         return $project;
     }
     public function destroy(Request $request, Project $project) {
@@ -359,8 +308,8 @@ class ProjectController extends Controller {
         }
         return $project;
     }
-    public function storeAssignee(Project $_) {
-        return $_->addAssigneeFromRequest();
+    public function storeAssignee(Request $request, Project $_) {
+        return $_->addAssigneeFromRequest($request);
     }
     public function updateSetMainContact(Request $request, Project $_) {
         $request->validate([
@@ -467,58 +416,7 @@ class ProjectController extends Controller {
         ];
     }
     public function convertInvoiceItemsToMilestones(Request $request, Project $_) {
-        $allInvoiceItems = $_->invoiceItems;
-        // Only get invoice items that are not already linked to any milestones
-        $unlinkedInvoiceItems = $_->invoiceItems()->whereType(InvoiceItemType::Default)->whereDoesntHave('milestones')->get();
-
-        if ($unlinkedInvoiceItems->isEmpty()) {
-            return response()->json([
-                'message'            => 'No unlinked invoice items found to convert',
-                'milestones_created' => 0,
-                'debug_info'         => [
-                    'project_id'           => $_->id,
-                    'total_invoice_items'  => $allInvoiceItems->count(),
-                    'already_linked_items' => $allInvoiceItems->count() - $unlinkedInvoiceItems->count(),
-                ],
-            ]);
-        }
-
-        // Get parameters
-        $conversionFactor  = Param::get('MILESTONE_CONVERSION_FACTOR')->value;
-        $hoursPerDay       = Param::get('INVOICE_HPD')->value;
-        $createdMilestones = [];
-
-        // Get the next available position
-        $maxPosition = $_->milestones()->max('position') ?? -1;
-
-        foreach ($unlinkedInvoiceItems as $index => $invoiceItem) {
-            // Calculate duration from person days (pt field) with conversion factor
-            $estimatedDays = $invoiceItem->assumedWorkload() / $hoursPerDay ?? 1;
-
-            $dueDelta = max(1, ceil($estimatedDays * $conversionFactor));
-            $dueAt    = now()->addDays($dueDelta);
-
-            // Create milestone from invoice item
-            $milestone = $_->milestones()->create([
-                'name'       => $invoiceItem->text,
-                'started_at' => now()->toDateString(),
-                'due_at'     => $dueAt,
-                'duration'   => $estimatedDays,
-                'progress'   => $invoiceItem->progress * 100 ?? 0,
-                'state'      => 0,
-                'position'   => $maxPosition + $index + 1,
-            ]);
-
-            // Link the milestone to the invoice item
-            $milestone->invoiceItems()->attach($invoiceItem->id);
-
-            $createdMilestones[] = $milestone->load('invoiceItems');
-        }
-        return response()->json([
-            'message'            => 'Successfully converted invoice items to milestones',
-            'milestones_created' => count($createdMilestones),
-            'milestones'         => $createdMilestones,
-        ]);
+        return response()->json($_->convertItemsToMilestones());
     }
     public function makeQuote(Project $_) {
         return $_->makeQuote();
@@ -537,10 +435,11 @@ class ProjectController extends Controller {
             'name'              => $links->first()->name,
             'framework_version' => $links->first()->framework_version,
             'projects'          => $links->map(fn ($link) => [
-                'id'      => $link->parent?->id,
-                'name'    => $link->parent?->name,
-                'state'   => $link->parent?->state,
-                'company' => $link->parent?->company,
+                'id'         => $link->parent?->id,
+                'name'       => $link->parent?->name,
+                'state'      => $link->parent?->state,
+                'company'    => $link->parent?->company,
+                'project_id' => $link->parent?->project_id,
             ])->filter(fn ($p) => $p['id'] !== null)->values(),
         ])->values();
         return $grouped;
@@ -568,6 +467,7 @@ class ProjectController extends Controller {
     public function indexMissingGit(Request $request) {
         return Project::whereRunning()
             ->whereNot('is_internal', true)
+            ->where('no_git_required', false)
             ->whereDoesntHave('pluginLinks', fn ($q) => $q->where('type', 'git'))
             ->with(['company', 'latestState'])
             ->latest()

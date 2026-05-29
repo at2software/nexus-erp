@@ -25,22 +25,19 @@ import { ProfileMilestonesComponent } from './profile-milestones/profile-milesto
                     { path: 'dashboard', component: ProfileDashboardComponent },
                     { path: 'focus', component: ProfileFocusComponent },
                     { path: 'milestones', component: ProfileMilestonesComponent },
-                    { path: 'vacation', component: ProfileVacationComponent},
+                    { path: 'vacation', component: ProfileVacationComponent },
                     { path: 'vacation-request', component: ProfileVacationRequestComponent },
                     { path: 'travel-expenses', component: ProfileTravelExpensesComponent },
-                    { path: 'connectors', component: ProfilePluginsComponent},
+                    { path: 'connectors', component: ProfilePluginsComponent },
                     { path: 'plugins', redirectTo: 'connectors' },
                     { path: 'sick-note', component: ProfileSickNoteComponent },
                     { path: 'vcard', component: ProfileVcardComponent },
                     { path: 'settings', component: ProfileSettingsComponent },
-                    { path: 'sentinels', component: ProfileSentinelsComponent, children: [
-                        { path: ':id', component: ProfileSentinelDetailComponent }
-                    ]},
+                    { path: 'sentinels', component: ProfileSentinelsComponent, children: [{ path: ':id', component: ProfileSentinelDetailComponent }] },
                     { path: '**', redirectTo: 'dashboard' },
-                ]
-            }
+                ],
+            },
         ]),
-    ]
+    ],
 })
-export class ProfileModule { }
-
+export class ProfileModule {}

@@ -1,9 +1,12 @@
 import { Serializable } from '../serializable';
 import { MarketingService } from './marketing.service';
-import { AutoWrap } from '@constants/autowrap';
+import { Type } from 'class-transformer';
+import { tap } from 'rxjs';
 import { MarketingProspect } from './marketing.prospect.model';
 import { MarketingInitiativeActivity } from './marketing-initiative-activity.model';
+import { Model } from '@constants/type-discriminators';
 
+@Model('MarketingProspectActivity')
 export class MarketingProspectActivity extends Serializable {
     static API_PATH = (): string => 'marketing/prospects/activity';
     static DB_TABLE_NAME = (): string => 'marketing_prospect_activities';
@@ -16,24 +19,28 @@ export class MarketingProspectActivity extends Serializable {
     status!: 'pending' | 'completed' | 'skipped' | 'overdue' | 'failed';
     notes?: string;
     performance_value?: number;
+    bumps: number = 0;
 
-    // Relationships
-    @AutoWrap('MarketingProspect') marketing_prospect?: MarketingProspect;
-    @AutoWrap('MarketingInitiativeActivity') marketing_initiative_activity?: MarketingInitiativeActivity;
-    
+    @Type(()=>MarketingProspect) marketing_prospect?: MarketingProspect;
+    @Type(()=>MarketingInitiativeActivity) marketing_initiative_activity?: MarketingInitiativeActivity;
+
     // Legacy support - for backwards compatibility
     get marketing_activity(): MarketingInitiativeActivity | undefined {
         return this.marketing_initiative_activity;
     }
 
-    isOverdue = () => new Date(this.scheduled_at) < new Date()
-    override getName = () => this.marketing_initiative_activity?.name || $localize`:@@i18n.marketing.prospectActivity:prospect activity`
+    isOverdue = () => new Date(this.scheduled_at) < new Date();
+    override getName = () => this.marketing_initiative_activity?.name || $localize`:@@i18n.marketing.prospectActivity:prospect activity`;
 
     #postpone(days: number) {
-        this.httpService.post(`marketing/prospects/${this.marketing_prospect_id}/postpone-activities`, { days }).subscribe()
+        this.httpService.post(`marketing/prospects/${this.marketing_prospect_id}/postpone-activities`, { days }).subscribe();
     }
-    #postponeDays(days: number) { this.#postpone(days) }
-    #postponeMonths(months: number) { this.#postpone(months * 30) }
+    #postponeDays(days: number) {
+        this.#postpone(days);
+    }
+    #postponeMonths(months: number) {
+        this.#postpone(months * 30);
+    }
 
     doubleClickAction = 0;
     actions = [
@@ -46,19 +53,25 @@ export class MarketingProspectActivity extends Serializable {
                 } else if (typeof window !== 'undefined') {
                     window.location.href = `/marketing/prospects/${this.marketing_prospect_id}`;
                 }
-            }
+            },
         },
         {
             title: $localize`:@@i18n.common.reopen:reopen`,
             on: () => this.status !== 'pending',
             group: true,
-            action: () => this.update({ status: 'pending' }).subscribe()
+            action: () => this.update({ status: 'pending' }).pipe(tap((r: any) => this.status = r.status ?? 'pending')),
         },
         {
             title: $localize`:@@i18n.marketing.mark_as_completed:mark as completed`,
             on: () => this.status === 'pending',
             group: true,
-            action: () => this.update({ status: 'completed' }).subscribe()
+            action: () => this.update({ status: 'completed' }).pipe(tap((r: any) => this.status = r.status ?? 'completed')),
+        },
+        {
+            title: $localize`:@@i18n.marketing.bump:bump`,
+            on: () => this.status === 'pending' || this.status === 'overdue',
+            group: true,
+            action: () => this.httpService.post(`${MarketingProspectActivity.API_PATH()}/${this.id}/bump`, {}).pipe(tap((r: any) => this.bumps = r.bumps ?? this.bumps + 1)),
         },
         // {
         //     title: $localize`:@@i18n.common.edit:edit`,
@@ -73,14 +86,14 @@ export class MarketingProspectActivity extends Serializable {
             title: $localize`:@@i18n.marketing.postpone:postpone`,
             group: true,
             children: [
-                { group:true, title: $localize`:@@i18n.marketing.postpone_1w:1 week`, action: () => this.#postponeDays(7) },
-                { group:true, title: $localize`:@@i18n.marketing.postpone_2w:2 weeks`, action: () => this.#postponeDays(14) },
-                { group:true, title: $localize`:@@i18n.marketing.postpone_1m:1 month`, action: () => this.#postponeMonths(1) },
-                { group:true, title: $localize`:@@i18n.marketing.postpone_2m:2 months`, action: () => this.#postponeMonths(2) },
-                { group:true, title: $localize`:@@i18n.marketing.postpone_3m:3 months`, action: () => this.#postponeMonths(3) },
-                { group:true, title: $localize`:@@i18n.marketing.postpone_6m:6 months`, action: () => this.#postponeMonths(6) },
-                { group:true, title: $localize`:@@i18n.marketing.postpone_12m:12 months`, action: () => this.#postponeMonths(12) },
-            ]
+                { group: true, title: $localize`:@@i18n.marketing.postpone_1w:1 week`, action: () => this.#postponeDays(7) },
+                { group: true, title: $localize`:@@i18n.marketing.postpone_2w:2 weeks`, action: () => this.#postponeDays(14) },
+                { group: true, title: $localize`:@@i18n.marketing.postpone_1m:1 month`, action: () => this.#postponeMonths(1) },
+                { group: true, title: $localize`:@@i18n.marketing.postpone_2m:2 months`, action: () => this.#postponeMonths(2) },
+                { group: true, title: $localize`:@@i18n.marketing.postpone_3m:3 months`, action: () => this.#postponeMonths(3) },
+                { group: true, title: $localize`:@@i18n.marketing.postpone_6m:6 months`, action: () => this.#postponeMonths(6) },
+                { group: true, title: $localize`:@@i18n.marketing.postpone_12m:12 months`, action: () => this.#postponeMonths(12) },
+            ],
         },
         {
             title: $localize`:@@i18n.common.change_state:change state`,
@@ -89,29 +102,29 @@ export class MarketingProspectActivity extends Serializable {
                 {
                     title: $localize`:@@i18n.marketing.mark_as_completed:mark as completed`,
                     group: true,
-                    action: () => this.update({ status: 'completed' }).subscribe()
+                    action: () => this.update({ status: 'completed' }).pipe(tap((r: any) => this.status = r.status ?? 'completed')),
                 },
                 {
                     title: $localize`:@@i18n.tasks.reopen:reopen`,
                     group: true,
-                    action: () => this.update({ status: 'pending' }).subscribe()
+                    action: () => this.update({ status: 'pending' }).pipe(tap((r: any) => this.status = r.status ?? 'pending')),
                 },
                 {
                     title: $localize`:@@i18n.marketing.skip_activity:skip activity`,
                     group: true,
-                    action: () => this.update({ status: 'skipped' }).subscribe()
+                    action: () => this.update({ status: 'skipped' }).pipe(tap((r: any) => this.status = r.status ?? 'skipped')),
                 },
                 {
                     title: $localize`:@@i18n.common.overdue:overdue`,
                     group: true,
-                    action: () => this.update({ status: 'overdue' }).subscribe()
+                    action: () => this.update({ status: 'overdue' }).pipe(tap((r: any) => this.status = r.status ?? 'overdue')),
                 },
                 {
                     title: $localize`:@@i18n.marketing.failed:failed`,
                     group: true,
-                    action: () => this.update({ status: 'failed' }).subscribe()
+                    action: () => this.update({ status: 'failed' }).pipe(tap((r: any) => this.status = r.status ?? 'failed')),
                 },
-            ]
+            ],
         },
     ];
 }

@@ -2,9 +2,6 @@
 
 // Ensure card and list don't clip dropdowns
 :host ::ng-deep {
-    .card {
-        overflow: visible !important;
-    }
     ul-compact, .list-group {
         overflow: visible !important;
     }

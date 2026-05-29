@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { BaseHttpService } from './http.service';
+import { NexusHttpService } from './http/http.nexus';
 import { BehaviorSubject } from 'rxjs';
 import { Router, NavigationEnd } from '@angular/router';
 import { WebSocketService, MousePosition, SharingStatus, MouseClick, QuickMessage } from 'src/services/websocket.service';
@@ -16,8 +16,8 @@ export interface ActiveSharing {
 }
 
 @Injectable({ providedIn: 'root' })
-export class LiveSharingService extends BaseHttpService {
-
+export class LiveSharingService extends NexusHttpService<any> {
+    apiPath = 'live-sharing';
     #ws = inject(WebSocketService);
     #router = inject(Router);
     #global = inject(GlobalService);
@@ -35,7 +35,7 @@ export class LiveSharingService extends BaseHttpService {
     constructor() {
         super();
 
-        this.#router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe((event: NavigationEnd) => {
+        this.#router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe((event: NavigationEnd) => {
             const normalizedUrl = this.#normalizeUrl(event.urlAfterRedirects);
             this.currentUrl$.next(normalizedUrl);
             this.#filterMousePositionsForCurrentUrl(normalizedUrl);
@@ -43,14 +43,14 @@ export class LiveSharingService extends BaseHttpService {
             if (this.sharingEnabled$.value) this.toggleSharing(true);
         });
 
-        this.#ws.mousePositions$.subscribe(pos => this.#handleMousePosition(pos));
-        this.#ws.sharingToggled$.subscribe(status => this.#handleSharingToggled(status));
-        this.#ws.visibilityChanged$.subscribe(change => this.#handleVisibilityChanged(change));
-        this.#ws.mouseClicks$.subscribe(click => this.#handleMouseClick(click));
-        this.#ws.quickMessages$.subscribe(msg => this.#handleQuickMessage(msg));
+        this.#ws.mousePositions$.subscribe((pos) => this.#handleMousePosition(pos));
+        this.#ws.sharingToggled$.subscribe((status) => this.#handleSharingToggled(status));
+        this.#ws.visibilityChanged$.subscribe((change) => this.#handleVisibilityChanged(change));
+        this.#ws.mouseClicks$.subscribe((click) => this.#handleMouseClick(click));
+        this.#ws.quickMessages$.subscribe((msg) => this.#handleQuickMessage(msg));
 
         this.#global.init.subscribe(() => {
-            this.loadActiveSharings()
+            this.loadActiveSharings();
             const cookieSharing = getCookie('live_sharing') === '1';
             if (cookieSharing) {
                 this.toggleSharing(true);
@@ -82,12 +82,12 @@ export class LiveSharingService extends BaseHttpService {
         if (enabled) {
             this.#upsertSharing(currentSharings, {
                 userId: user.id,
-                userName: user.name,
+                userName: user.getName(),
                 userColor: user.color || '#3B82F6',
-                url
+                url,
             });
         } else {
-            this.activeSharings$.next(currentSharings.filter(s => s.userId !== user.id));
+            this.activeSharings$.next(currentSharings.filter((s) => s.userId !== user.id));
         }
 
         this.post('live-sharing/toggle', { enabled, url }).subscribe();
@@ -101,7 +101,7 @@ export class LiveSharingService extends BaseHttpService {
     }
 
     loadActiveSharings() {
-        this.get<ActiveSharing[]>('live-sharing/active').subscribe(sharings => {
+        this.get<ActiveSharing[]>('live-sharing/active').subscribe((sharings) => {
             this.activeSharings$.next(sharings);
         });
     }
@@ -117,7 +117,7 @@ export class LiveSharingService extends BaseHttpService {
         const currentSharings = this.activeSharings$.value;
 
         if (!status.enabled) {
-            this.activeSharings$.next(currentSharings.filter(s => s.userId !== status.userId));
+            this.activeSharings$.next(currentSharings.filter((s) => s.userId !== status.userId));
             this.#mousePositionMap.delete(status.userId);
             this.#filterMousePositionsForCurrentUrl(this.currentUrl$.value);
             return;
@@ -128,12 +128,12 @@ export class LiveSharingService extends BaseHttpService {
             userName: status.userName,
             userColor: status.userColor,
             url: status.url,
-            visible: status.visible ?? true
+            visible: status.visible ?? true,
         });
     }
 
     #upsertSharing(sharings: ActiveSharing[], sharing: ActiveSharing) {
-        const existingIndex = sharings.findIndex(s => s.userId === sharing.userId);
+        const existingIndex = sharings.findIndex((s) => s.userId === sharing.userId);
         if (existingIndex >= 0) {
             sharings[existingIndex] = sharing;
         } else {
@@ -144,7 +144,7 @@ export class LiveSharingService extends BaseHttpService {
 
     #handleVisibilityChanged(change: { userId: string; visible: boolean; url: string }) {
         const currentSharings = this.activeSharings$.value;
-        const existingIndex = currentSharings.findIndex(s => s.userId === change.userId);
+        const existingIndex = currentSharings.findIndex((s) => s.userId === change.userId);
 
         if (existingIndex >= 0) {
             currentSharings[existingIndex].visible = change.visible;
@@ -201,7 +201,7 @@ export class LiveSharingService extends BaseHttpService {
         this.mouseClicks$.next([...this.mouseClicks$.value, click]);
 
         setTimeout(() => {
-            this.mouseClicks$.next(this.mouseClicks$.value.filter(c => c !== click));
+            this.mouseClicks$.next(this.mouseClicks$.value.filter((c) => c !== click));
         }, 1000);
     }
 

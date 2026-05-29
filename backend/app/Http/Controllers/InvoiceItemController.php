@@ -15,11 +15,11 @@ class InvoiceItemController extends Controller {
         return 'permission_invoiceItem';
     }
     public function indexStandingOrders() {
-        $q = InvoiceItem::whereIn('type', InvoiceItemType::Repeating)->whereNot('next_recurrence_at', null)->with('company')->oldest('next_recurrence_at');
+        $q = InvoiceItem::whereIn('type', InvoiceItemType::Repeating)->whereNot('next_recurrence_at', null)->with('company', 'productSource')->oldest('next_recurrence_at');
         if (request()->has('company_id')) {
             $q->whereCompanyId(request('company_id'));
         }
-        return $q->get();
+        return $q->get()->each->append('rootGroup');
     }
     public function destroy(InvoiceItem $invoiceItem) {
         return $invoiceItem->delete();
@@ -29,7 +29,7 @@ class InvoiceItemController extends Controller {
     }
     public function update(Request $request, int $id) {
         $item = InvoiceItem::findOrFail($id);
-        $item->applyAndSaveRequest();
+        $item->applyAndSave($request);
         return $item->fresh();
     }
     public function show(int $id) {

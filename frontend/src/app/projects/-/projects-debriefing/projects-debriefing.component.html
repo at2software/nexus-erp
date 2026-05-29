@@ -1,20 +1,27 @@
+@let _loading = loading();
+@let _selectedCategory = selectedCategory();
+@let _selectedSeverity = selectedSeverity();
+@let _stats = stats();
+@let _worstCustomers = worstCustomers();
+@let _topCustomers = topCustomers();
+@let _displayProblems = displayProblems();
+@let _displayPositives = displayPositives();
+@let _expandedProblems = expandedProblems();
+@let _expandedPositives = expandedPositives();
+
 <toolbar>
     <div class="hstack gap-2">
         <span class="badge text-muted daterange-badge">
-            <input type="text" ngxDaterangepickerMd [(ngModel)]="period"
-                [alwaysShowCalendars]="true" (datesUpdated)="onDateRangeChanged()" [showCustomRangeLabel]="true"
-                [ranges]="ranges" [showClearButton]="true" [locale]="{applyLabel: 'ok', format: 'DD.MM.YYYY'}"
-                placeholder="select date range" i18n-placeholder="@@i18n.common.selectDateRange"/>
+            <input type="text" ngxDaterangepickerMd [(ngModel)]="period" [alwaysShowCalendars]="true" (datesUpdated)="onDateRangeChanged()" [showCustomRangeLabel]="true" [ranges]="ranges" [showClearButton]="true" [locale]="{ applyLabel: 'ok', format: 'DD.MM.YYYY' }" placeholder="select date range" i18n-placeholder="@@i18n.common.selectDateRange" />
         </span>
 
         <div ngbDropdown>
-            <span class="badge cursor-pointer dropdown-toggle dropdown-toggle-simple" ngbDropdownToggle
-                  [style.background-color]="selectedCategory?.color" [class.text-muted]="!selectedCategoryId">
-                {{ selectedCategory?.name || 'all categories' }}
+            <span class="badge cursor-pointer dropdown-toggle dropdown-toggle-simple" ngbDropdownToggle [style.background-color]="_selectedCategory?.color" [class.text-muted]="!selectedCategoryId()">
+                {{ _selectedCategory?.name || 'all categories' }}
             </span>
             <div ngbDropdownMenu>
                 <button ngbDropdownItem (click)="toggleCategory(null)" i18n="@@i18n.debrief.allCategories">all categories</button>
-                @for (cat of categories; track cat.id) {
+                @for (cat of categories(); track cat.id) {
                     <button ngbDropdownItem (click)="toggleCategory(cat.id)">
                         <span class="category-dot d-inline-block me-1" [style.background-color]="cat.color"></span>
                         {{ cat.name }}
@@ -24,9 +31,8 @@
         </div>
 
         <div ngbDropdown>
-            <span class="badge cursor-pointer dropdown-toggle dropdown-toggle-simple" ngbDropdownToggle
-                  [class]="selectedSeverity ? getSeverityClass(selectedSeverity) : 'text-muted'">
-                {{ selectedSeverity || 'all severities' }}
+            <span class="badge cursor-pointer dropdown-toggle dropdown-toggle-simple" ngbDropdownToggle [class]="_selectedSeverity ? getSeverityClass(_selectedSeverity) : 'text-muted'">
+                {{ _selectedSeverity || 'all severities' }}
             </span>
             <div ngbDropdownMenu>
                 <button ngbDropdownItem (click)="toggleSeverity(null)" i18n="@@i18n.debrief.allSeverities">all severities</button>
@@ -37,171 +43,161 @@
             </div>
         </div>
 
-        <button class="btn btn-sm btn-link text-muted p-0" (click)="clearFilters()"
-                ngbTooltip="Clear Filters" i18n-ngbTooltip="@@i18n.common.clearFilters">
+        <button class="btn btn-sm btn-link text-muted p-0" (click)="clearFilters()" ngbTooltip="Clear Filters" i18n-ngbTooltip="@@i18n.common.clearFilters">
             <i>filter_alt_off</i>
         </button>
     </div>
 </toolbar>
 
-@if (loading) {
-    <div class="d-flex align-items-center justify-content-center p-5">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">
-                <span i18n="@@i18n.common.loading">loading</span>
-                <span class="notranslate">...</span>
-            </span>
-        </div>
-    </div>
+@if (_loading) {
+    <spinner class="p-5"></spinner>
 }
 
-@if (!loading) {
-    <div class="container-fluid p-3">
-        <!-- Row 1: Radar charts + Top 5 lists -->
-        <div class="row">
-            <div class="col-3 mb-3">
-                <div class="card h-100">
-                    <div class="card-header" i18n="@@i18n.debrief.problemDistribution">problem distribution</div>
-                    <div class="card-body">
-                        <debrief-radar-chart [categories]="categoryBreakdown" height="220px" [hideLegend]="true"></debrief-radar-chart>
-                    </div>
+@if (!_loading) {
+    <!-- Row 1: Radar charts + Top 5 lists -->
+    <div class="row">
+        <div class="col-3 mb-3">
+            <div class="card h-100">
+                <div class="card-header" i18n="@@i18n.debrief.problemDistribution">problem distribution</div>
+                <div class="card-body">
+                    <debrief-radar-chart [categories]="categoryBreakdown()" height="220px" [hideLegend]="true"></debrief-radar-chart>
                 </div>
-            </div>
-
-            <div class="col-3 mb-3">
-                <div class="card h-100">
-                    <div class="card-header" i18n="@@i18n.debrief.worstCustomers">worst customers</div>
-                    <ul class="list-group list-group-flush">
-                        @for (customer of worstCustomers; track customer.id) {
-                            <li class="list-group-item d-flex align-items-center gap-2">
-                                <avatar [object]="customer"></avatar>
-                                <span class="flex-grow-1 text-truncate">{{ customer.name }}</span>
-                                <span class="badge bg-dark">{{ customer.var.count }}</span>
-                            </li>
-                        }
-                        @if (worstCustomers.length === 0) {
-                            <li class="list-group-item text-muted small" i18n="@@i18n.debrief.noData">no data</li>
-                        }
-                    </ul>
-                </div>
-            </div>
-
-            <div class="col-3 mb-3">
-                <div class="card h-100">
-                    <div class="card-header" i18n="@@i18n.debrief.topCustomers">top customers</div>
-                    <ul class="list-group list-group-flush">
-                        @for (customer of topCustomers; track customer.id) {
-                            <li class="list-group-item d-flex align-items-center gap-2">
-                                <avatar [object]="customer"></avatar>
-                                <span class="flex-grow-1 text-truncate">{{ customer.name }}</span>
-                                <span class="badge bg-dark">{{ customer.var.count }}</span>
-                            </li>
-                        }
-                        @if (topCustomers.length === 0) {
-                            <li class="list-group-item text-muted small" i18n="@@i18n.debrief.noData">no data</li>
-                        }
-                    </ul>
-                </div>
-            </div>
-
-            <div class="col-3 mb-3">
-                @if (stats) {
-                    <div class="card h-100">
-                        <div class="card-header" i18n="@@i18n.common.summary">summary</div>
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span i18n="@@i18n.debrief.totalDebriefs">total debriefs</span>
-                                <strong>{{ stats.total_debriefs }}</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span i18n="@@i18n.common.completed">completed</span>
-                                <strong>{{ stats.completed_debriefs }}</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span i18n="@@i18n.debrief.avgProblems">avg problems/debrief</span>
-                                <strong>{{ stats.avg_problems_per_debrief }}</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span i18n="@@i18n.debrief.avgEffectiveness">avg solution rating</span>
-                                <strong>{{ stats.avg_solution_effectiveness }}/5</strong>
-                            </li>
-                        </ul>
-                    </div>
-                }
             </div>
         </div>
 
-        <!-- Row 2: All problems / All positives for current category -->
-        <div class="row">
-            <div class="col-6 mb-3">
-                <div class="card">
-                    <div class="card-header" i18n="@@i18n.debrief.problems">problems</div>
-                    <ul class="list-group list-group-flush">
-                        @for (problem of displayProblems; track problem.id) {
-                            <li [nx]="problem" [tables]="displayProblems" class="list-group-item">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="text-muted small">{{ problem.usage_count }}x</span>
-                                    <span class="flex-grow-1 text-truncate">{{ problem.title }}</span>
-                                    @if (problem.severity) {
-                                        <span class="small" [class]="'text-' + (problem.severity === 'critical' ? 'red' : problem.severity === 'high' ? 'orange' : problem.severity === 'medium' ? 'cyan' : 'grey')">{{ problem.severity }}</span>
-                                    }
-                                    <span class="small" [style.color]="problem.var.category_color">{{problem.var.category_name}}</span>
-                                    @if (problem.var.projects?.length) {
-                                        <i class="text-muted cursor-pointer" tabindex="0" (click)="$event.stopPropagation(); toggleExpanded(problem.id, expandedProblems)" (keyup.enter)="toggleExpanded(problem.id, expandedProblems)">{{ expandedProblems.has(problem.id) ? 'expand_less' : 'expand_more' }}</i>
-                                    }
-                                </div>
-                                @if (expandedProblems.has(problem.id)) {
-                                    <div class="d-flex flex-wrap gap-1 pt-1">
-                                        @for (proj of problem.var.projects; track proj.id) {
-                                            <div class="hstack gap-2">
-                                                <avatar [object]="proj" size="xs"></avatar>
-                                                <div class="flex-fill text-truncate">{{proj.name}}</div>
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                            </li>
-                        }
-                        @if (displayProblems.length === 0) {
-                            <li class="list-group-item text-muted small" i18n="@@i18n.debrief.noProblems">no problems recorded yet</li>
-                        }
-                    </ul>
-                </div>
+        <div class="col-3 mb-3">
+            <div class="card h-100">
+                <div class="card-header" i18n="@@i18n.debrief.worstCustomers">worst customers</div>
+                <ul class="list-group list-group-flush">
+                    @for (customer of _worstCustomers; track customer.id) {
+                        <li class="list-group-item d-flex align-items-center gap-2">
+                            <avatar [object]="customer"></avatar>
+                            <span class="flex-grow-1 text-truncate">{{ customer.getName() }}</span>
+                            <span class="badge bg-dark">{{ customer.var.count }}</span>
+                        </li>
+                    }
+                    @if (_worstCustomers.length === 0) {
+                        <li class="list-group-item text-muted small" i18n="@@i18n.debrief.noData">no data</li>
+                    }
+                </ul>
             </div>
+        </div>
 
-            <div class="col-6 mb-3">
-                <div class="card">
-                    <div class="card-header" i18n="@@i18n.debrief.positives">positives</div>
+        <div class="col-3 mb-3">
+            <div class="card h-100">
+                <div class="card-header" i18n="@@i18n.debrief.topCustomers">top customers</div>
+                <ul class="list-group list-group-flush">
+                    @for (customer of _topCustomers; track customer.id) {
+                        <li class="list-group-item d-flex align-items-center gap-2">
+                            <avatar [object]="customer"></avatar>
+                            <span class="flex-grow-1 text-truncate">{{ customer.getName() }}</span>
+                            <span class="badge bg-dark">{{ customer.var.count }}</span>
+                        </li>
+                    }
+                    @if (_topCustomers.length === 0) {
+                        <li class="list-group-item text-muted small" i18n="@@i18n.debrief.noData">no data</li>
+                    }
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-3 mb-3">
+            @if (_stats) {
+                <div class="card h-100">
+                    <div class="card-header" i18n="@@i18n.common.summary">summary</div>
                     <ul class="list-group list-group-flush">
-                        @for (positive of displayPositives; track positive.id) {
-                            <li [nx]="positive" [tables]="displayPositives" class="list-group-item">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="text-muted small">{{ positive.var.count }}x</span>
-                                    <span class="flex-grow-1 text-truncate">{{ positive.title }}</span>
-                                    @if (positive.var.category_color) {
-                                        <span class="small" [style.color]="positive.var.category_color">{{ positive.var.category_name }}</span>
-                                    }
-                                    @if (positive.var.projects?.length) {
-                                        <i class="text-muted cursor-pointer" tabindex="0" (click)="$event.stopPropagation(); toggleExpanded(positive.id, expandedPositives)" (keyup.enter)="toggleExpanded(positive.id, expandedPositives)">{{ expandedPositives.has(positive.id) ? 'expand_less' : 'expand_more' }}</i>
-                                    }
-                                </div>
-                                @if (expandedPositives.has(positive.id)) {
-                                    <div class="d-flex flex-wrap gap-1 pt-1">
-                                        @for (proj of positive.var.projects; track proj.id) {
-                                            <div class="hstack gap-2">
-                                                <avatar [object]="proj" size="xs"></avatar>
-                                                <div>{{proj.name}}</div>
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                            </li>
-                        }
-                        @if (displayPositives.length === 0) {
-                            <li class="list-group-item text-muted small" i18n="@@i18n.debrief.noPositives">no positives recorded yet</li>
-                        }
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span i18n="@@i18n.debrief.totalDebriefs">total debriefs</span>
+                            <div class="badge bg-dark">{{ _stats.total_debriefs }}</div>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span i18n="@@i18n.common.completed">completed</span>
+                            <div class="badge bg-dark">{{ _stats.completed_debriefs }}</div>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span i18n="@@i18n.debrief.avgProblems">avg problems/debrief</span>
+                            <div class="badge bg-dark">{{ _stats.avg_problems_per_debrief }}</div>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span i18n="@@i18n.debrief.avgEffectiveness">avg solution rating</span>
+                            <div class="badge bg-dark">{{ _stats.avg_solution_effectiveness }}/5</div>
+                        </li>
                     </ul>
                 </div>
+            }
+        </div>
+    </div>
+
+    <!-- Row 2: All problems / All positives for current category -->
+    <div class="row">
+        <div class="col-6 mb-3">
+            <div class="card">
+                <div class="card-header" i18n="@@i18n.debrief.problems">problems</div>
+                <ul class="list-group list-group-flush">
+                    @for (problem of _displayProblems; track problem.id) {
+                        <li [nx]="problem" [tables]="_displayProblems" class="list-group-item">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-muted small">{{ problem.usage_count }}x</span>
+                                <span class="flex-grow-1 text-truncate">{{ problem.title }}</span>
+                                @if (problem.severity) {
+                                    <span class="small" [class]="'text-' + (problem.severity === 'critical' ? 'red' : problem.severity === 'high' ? 'orange' : problem.severity === 'medium' ? 'cyan' : 'grey')">{{ problem.severity }}</span>
+                                }
+                                <span class="small" [style.color]="problem.var.category_color">{{ problem.var.category_name }}</span>
+                                @if (problem.var.projects?.length) {
+                                    <i class="text-muted cursor-pointer" tabindex="0" (click)="$event.stopPropagation(); toggleExpanded(problem.id, 'problems')" (keyup.enter)="toggleExpanded(problem.id, 'problems')">{{ _expandedProblems.has(problem.id) ? 'expand_less' : 'expand_more' }}</i>
+                                }
+                            </div>
+                            @if (_expandedProblems.has(problem.id)) {
+                                <div class="vstack flex-wrap gap-1 pt-1">
+                                    @for (proj of problem.var.projects; track proj.id) {
+                                        <div class="hstack gap-2">
+                                            <avatar [object]="proj" size="xs"></avatar>
+                                            <div class="flex-fill text-truncate">{{ proj.name }}</div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </li>
+                    }
+                    @if (_displayProblems.length === 0) {
+                        <li class="list-group-item text-muted small" i18n="@@i18n.debrief.noProblems">no problems recorded yet</li>
+                    }
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-6 mb-3">
+            <div class="card">
+                <div class="card-header" i18n="@@i18n.debrief.positives">positives</div>
+                <ul class="list-group list-group-flush">
+                    @for (positive of _displayPositives; track positive.id) {
+                        <li [nx]="positive" [tables]="_displayPositives" class="list-group-item">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-muted small">{{ positive.var.count }}x</span>
+                                <span class="flex-grow-1 text-truncate">{{ positive.title }}</span>
+                                @if (positive.var.category_color) {
+                                    <span class="small" [style.color]="positive.var.category_color">{{ positive.var.category_name }}</span>
+                                }
+                                @if (positive.var.projects?.length) {
+                                    <i class="text-muted cursor-pointer" tabindex="0" (click)="$event.stopPropagation(); toggleExpanded(positive.id, 'positives')" (keyup.enter)="toggleExpanded(positive.id, 'positives')">{{ _expandedPositives.has(positive.id) ? 'expand_less' : 'expand_more' }}</i>
+                                }
+                            </div>
+                            @if (_expandedPositives.has(positive.id)) {
+                                <div class="d-flex flex-wrap gap-1 pt-1">
+                                    @for (proj of positive.var.projects; track proj.id) {
+                                        <div class="hstack gap-2">
+                                            <avatar [object]="proj" size="xs"></avatar>
+                                            <div>{{ proj.name }}</div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </li>
+                    }
+                    @if (_displayPositives.length === 0) {
+                        <li class="list-group-item text-muted small" i18n="@@i18n.debrief.noPositives">no positives recorded yet</li>
+                    }
+                </ul>
             </div>
         </div>
     </div>

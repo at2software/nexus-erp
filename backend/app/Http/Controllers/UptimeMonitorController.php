@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UptimeMonitorRequest;
 use App\Models\UptimeMonitor;
 use App\Models\User;
 use App\Services\UptimeCheckService;
@@ -22,23 +23,8 @@ class UptimeMonitorController extends Controller {
         $_->load(['projects', 'createdBy', 'recipients', 'latestCheck']);
         return $_;
     }
-    public function store(Request $request) {
-        $validated = $request->validate([
-            'name'                    => 'required|string|max:255',
-            'url'                     => 'required|url|max:512',
-            'method'                  => 'sometimes|in:GET,POST,HEAD',
-            'expected_status_code'    => 'sometimes|integer|min:100|max:599',
-            'timeout'                 => 'sometimes|integer|min:5|max:120',
-            'response_time_threshold' => 'sometimes|integer|min:100',
-            'check_interval'          => 'sometimes|integer|min:60',
-            'is_active'               => 'sometimes|boolean',
-            'request_headers'         => 'sometimes|array',
-            'request_body'            => 'sometimes|string|nullable',
-            'project_ids'             => 'sometimes|array',
-            'project_ids.*'           => 'exists:projects,id',
-            'recipient_ids'           => 'sometimes|array',
-            'recipient_ids.*'         => 'exists:users,id',
-        ]);
+    public function store(UptimeMonitorRequest $request) {
+        $validated = $request->validated();
 
         $validated['created_by_user_id'] = $request->user()->id;
 
@@ -53,23 +39,8 @@ class UptimeMonitorController extends Controller {
         }
         return $monitor->load(['projects', 'createdBy', 'recipients']);
     }
-    public function update(Request $request, UptimeMonitor $_) {
-        $validated = $request->validate([
-            'name'                    => 'sometimes|string|max:255',
-            'url'                     => 'sometimes|url|max:512',
-            'method'                  => 'sometimes|in:GET,POST,HEAD',
-            'expected_status_code'    => 'sometimes|integer|min:100|max:599',
-            'timeout'                 => 'sometimes|integer|min:5|max:120',
-            'response_time_threshold' => 'sometimes|integer|min:100',
-            'check_interval'          => 'sometimes|integer|min:60',
-            'is_active'               => 'sometimes|boolean',
-            'request_headers'         => 'sometimes|array|nullable',
-            'request_body'            => 'sometimes|string|nullable',
-            'project_ids'             => 'sometimes|array',
-            'project_ids.*'           => 'exists:projects,id',
-            'recipient_ids'           => 'sometimes|array',
-            'recipient_ids.*'         => 'exists:users,id',
-        ]);
+    public function update(UptimeMonitorRequest $request, UptimeMonitor $_) {
+        $validated = $request->validated();
 
         $_->update($validated);
 

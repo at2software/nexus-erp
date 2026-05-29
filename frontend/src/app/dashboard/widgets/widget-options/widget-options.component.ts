@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { TOptions } from '../base.widget.component';
 import { ModalEditWidgetOptionsComponent } from '@app/_modals/modal-edit-widget-options/modal-edit-widget-options.component';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
@@ -9,20 +9,20 @@ export enum OptionType {
     Boolean,
 }
 @Component({
-    selector   : 'widget-options',
+    selector: 'widget-options',
     templateUrl: './widget-options.component.html',
-    styleUrls  : ['./widget-options.component.scss'],
-    host       : { 'class': 'edit mb-0' },
-    standalone : true
+    styleUrls: ['./widget-options.component.scss'],
+    host: { class: 'edit mb-0' },
+    standalone: true,
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class WidgetOptionsComponent {
-    
-    options = input<TOptions>()
+    options = input<TOptions>();
 
-    @Output() updated = new EventEmitter<any>()
-    @Output() deleted = new EventEmitter<any>()
-    
-    #modal = inject(ModalBaseService)
+    updated = output<any>();
+    deleted = output<any>();
 
-    onOptionsClicked = () => this.#modal.open(ModalEditWidgetOptionsComponent, this.options(), this.updated)
+    #modal = inject(ModalBaseService);
+
+    onOptionsClicked = () => this.#modal.open(ModalEditWidgetOptionsComponent, this.options(), this.updated);
 }

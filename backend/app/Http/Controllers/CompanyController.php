@@ -317,11 +317,19 @@ class CompanyController extends Controller {
         return $new;
     }
 
+    public function storeProject(Request $request, Company $_) {
+        return $_->createProject(
+            $request->input('name', 'New project'),
+            $request->input('project_id'),
+            $request->user()->id
+        );
+    }
+
     /**
      * Store a newly created assignee for a company.
      */
-    public function storeAssignee(Company $_) {
-        return $_->addAssigneeFromRequest();
+    public function storeAssignee(Request $request, Company $_) {
+        return $_->addAssigneeFromRequest($request);
     }
 
     /**

@@ -1,5 +1,5 @@
 export enum ProjectIssueSource {
     Internal,
     GitLab,
-    Mantis
+    Mantis,
 }

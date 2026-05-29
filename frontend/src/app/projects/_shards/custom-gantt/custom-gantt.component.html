@@ -1,28 +1,49 @@
+@let _hideCompleted = hideCompleted();
+@let _visibleRows = visibleRows();
+@let _showProjectHeaders = showProjectHeaders();
+@let _viewMode = viewMode();
+@let _svgWidth = svgWidth();
+@let _svgHeight = svgHeight();
+@let _scrollY = scrollY();
+@let _viewportLeft = viewportLeft();
+@let _viewportRight = viewportRight();
+@let _timelineUnits = timelineUnits();
+@let _timelineGroups = timelineGroups();
+@let _renderedMilestones = renderedMilestones();
+@let _dependencies = dependencies();
+@let _drawingDependency = drawingDependency();
+@let _dependencyFromMilestone = dependencyFromMilestone();
+@let _dependencyToMilestone = dependencyToMilestone();
+@let _dependencyDrawingPath = dependencyDrawingPath();
+@let _areaSelecting = areaSelecting();
+@let _areaSelectStart = areaSelectStart();
+@let _areaSelectEnd = areaSelectEnd();
+
 <toolbar>
     <button
         type="button"
         class="btn"
-        [class.btn-outline-primary]="!hideCompleted()"
-        [class.btn-primary]="hideCompleted()"
+        [class.btn-outline-primary]="!_hideCompleted"
+        [class.btn-primary]="_hideCompleted"
         (click)="toggleHideCompleted()"
-        [title]="hideCompleted() ? 'Show completed milestones' : 'Hide completed milestones'"
+        [title]="_hideCompleted ? 'Show completed milestones' : 'Hide completed milestones'"
     >
-        <i>{{ hideCompleted() ? 'visibility_off' : 'visibility' }}</i>
-        {{ hideCompleted() ? 'Show completed' : 'Hide completed' }}
+        <i>{{ _hideCompleted ? 'visibility_off' : 'visibility' }}</i>
+        {{ _hideCompleted ? 'Show completed' : 'Hide completed' }}
     </button>
 </toolbar>
 
 <div class="gantt-wrapper" (mousemove)="onMouseMove($event)" (mouseup)="onMouseUp()">
-    <svg #svgContainer [attr.width]="svgWidth" [attr.height]="svgHeight" class="gantt-svg" (mousedown)="onBackgroundMouseDown($event)">
+    <svg #svgContainer [attr.width]="_svgWidth" [attr.height]="_svgHeight" class="gantt-svg" (mousedown)="onBackgroundMouseDown($event)">
         <!-- Row backgrounds and headers -->
         <g class="row-backgrounds">
-            @for (row of visibleRows(); track $index; let rowIndex = $index) {
-                @if (row.type === 'header' && showProjectHeaders()) {
+            @for (row of _visibleRows; track $index; let rowIndex = $index) {
+                @if (row.type === 'header' && _showProjectHeaders) {
                     <g class="header-row">
                         <rect
                             x="0"
                             [attr.y]="getRowY(rowIndex)"
-                            [attr.width]="svgWidth"
+                            [attr.width]="_svgWidth"
                             [attr.height]="HEADER_ROW_HEIGHT"
                             fill="rgb(16, 24, 24)"
                         />
@@ -32,7 +53,7 @@
                     <rect
                         x="0"
                         [attr.y]="getRowY(rowIndex)"
-                        [attr.width]="svgWidth"
+                        [attr.width]="_svgWidth"
                         [attr.height]="MILESTONE_ROW_HEIGHT"
                         fill="var(--bs-body-bg)"
                     />
@@ -41,7 +62,7 @@
                     <rect
                         x="0"
                         [attr.y]="getRowY(rowIndex)"
-                        [attr.width]="svgWidth"
+                        [attr.width]="_svgWidth"
                         [attr.height]="TASK_HEIGHT"
                         fill="var(--bs-body-bg)"
                         opacity="0.5"
@@ -51,15 +72,15 @@
         </g>
 
         <!-- Weekend backgrounds - Render after row backgrounds (Day mode only) -->
-        @if (viewMode() === 'Day') {
+        @if (_viewMode === 'Day') {
             <g class="weekend-backgrounds">
-                @for (unit of timelineUnits; track unit.date) {
+                @for (unit of _timelineUnits; track unit.date) {
                     @if (unit.isWeekend) {
                         <rect
                             [attr.x]="unit.x"
                             [attr.y]="TIMELINE_HEADER_HEIGHT"
                             [attr.width]="UNIT_WIDTH()"
-                            [attr.height]="svgHeight - TIMELINE_HEADER_HEIGHT"
+                            [attr.height]="_svgHeight - TIMELINE_HEADER_HEIGHT"
                             fill="#0009"
                             opacity="0.5"
                         />
@@ -70,12 +91,12 @@
 
         <!-- Grid lines - Render after backgrounds -->
         <g class="grid-lines">
-            @for (unit of timelineUnits; track unit.date) {
+            @for (unit of _timelineUnits; track unit.date) {
                 <line
                     [attr.x1]="unit.x"
                     [attr.y1]="TIMELINE_HEADER_HEIGHT"
                     [attr.x2]="unit.x"
-                    [attr.y2]="svgHeight"
+                    [attr.y2]="_svgHeight"
                     [attr.stroke]="GRID_COLOR"
                     stroke-width="1"
                 />
@@ -83,8 +104,8 @@
         </g>
 
         <!-- Header row duration bars -->
-        @for (row of visibleRows(); track $index; let rowIndex = $index) {
-            @if (row.type === 'header' && showProjectHeaders()) {
+        @for (row of _visibleRows; track $index; let rowIndex = $index) {
+            @if (row.type === 'header' && _showProjectHeaders) {
                 @if (getProjectDurationBar(row.project!); as durationBar) {
                     <g class="duration-bar">
                         <rect
@@ -101,8 +122,8 @@
         }
 
         <!-- Header row content (sticky labels and buttons) -->
-        @for (row of visibleRows(); track $index; let rowIndex = $index) {
-            @if (row.type === 'header' && showProjectHeaders()) {
+        @for (row of _visibleRows; track $index; let rowIndex = $index) {
+            @if (row.type === 'header' && _showProjectHeaders) {
                 <foreignObject
                     x="0"
                     [attr.y]="getRowY(rowIndex)"
@@ -111,10 +132,10 @@
                     style="overflow: visible;"
                 >
                     <div xmlns="http://www.w3.org/1999/xhtml" class="header-content-wrapper">
-                        <div class="project-label" [style.left.px]="viewportLeft + 16" style="text-shadow: 0 0 3px #000" (click)="navigateToProject(row.project!)" (keydown.enter)="navigateToProject(row.project!)" (keydown.space)="navigateToProject(row.project!)" tabindex="0" role="button">
+                        <div class="project-label" [style.left.px]="_viewportLeft + 16" style="text-shadow: 0 0 3px #000" (click)="navigateToProject(row.project!)" (keydown.enter)="navigateToProject(row.project!)" (keydown.space)="navigateToProject(row.project!)" tabindex="0" role="button">
                             {{ row.project?.name }}
                         </div>
-                        <div class="header-add-button" [style.left.px]="viewportRight - 50" ngbDropdown #dropdown="ngbDropdown" placement="bottom-end" container="body" (openChange)="onDropdownOpenChange()">
+                        <div class="header-add-button" [style.left.px]="_viewportRight - 50" ngbDropdown #dropdown="ngbDropdown" placement="bottom-end" container="body" (openChange)="onDropdownOpenChange()">
                             <button class="btn-add" ngbDropdownToggle type="button">
                                 <i>add</i>
                             </button>
@@ -136,7 +157,7 @@
 
         <!-- Dependencies -->
         <g class="dependencies">
-            @for (dep of dependencies; track dep) {
+            @for (dep of _dependencies; track dep) {
                 <path
                     [attr.d]="getDependencyPath(dep)"
                     stroke="#666"
@@ -148,10 +169,10 @@
         </g>
 
         <!-- Dependency drawing feedback -->
-        @if (drawingDependency && dependencyFromMilestone && dependencyDrawingPath) {
+        @if (_drawingDependency && _dependencyFromMilestone && _dependencyDrawingPath) {
             <path
-                [attr.d]="dependencyDrawingPath"
-                [attr.stroke]="dependencyToMilestone && dependencyToMilestone.project_id === dependencyFromMilestone.project_id ? '#0d6efd' : '#dc3545'"
+                [attr.d]="_dependencyDrawingPath"
+                [attr.stroke]="_dependencyToMilestone && _dependencyToMilestone.project_id === _dependencyFromMilestone.project_id ? '#0d6efd' : '#dc3545'"
                 stroke-width="2"
                 fill="none"
                 stroke-dasharray="5,5"
@@ -161,10 +182,10 @@
 
         <!-- Milestones -->
         <g class="milestones">
-            @for (rendered of renderedMilestones; track rendered.milestone.id) {
+            @for (rendered of _renderedMilestones; track rendered.milestone.id) {
                 <g class="milestone-bar"
-                   [class.dependency-target]="drawingDependency && dependencyToMilestone?.id === rendered.milestone.id && dependencyToMilestone?.project_id === dependencyFromMilestone?.project_id"
-                   [class.dependency-invalid]="drawingDependency && dependencyToMilestone?.id === rendered.milestone.id && dependencyToMilestone?.project_id !== dependencyFromMilestone?.project_id"
+                   [class.dependency-target]="_drawingDependency && _dependencyToMilestone?.id === rendered.milestone.id && _dependencyToMilestone?.project_id === _dependencyFromMilestone?.project_id"
+                   [class.dependency-invalid]="_drawingDependency && _dependencyToMilestone?.id === rendered.milestone.id && _dependencyToMilestone?.project_id !== _dependencyFromMilestone?.project_id"
                    [nx]="rendered.milestone"
                    context="milestone"
                    (mousedown)="onMilestoneMouseDown($event, rendered)">
@@ -294,7 +315,7 @@
 
         <!-- Tasks -->
         <g class="tasks">
-            @for (row of visibleRows(); track $index; let rowIndex = $index) {
+            @for (row of _visibleRows; track $index; let rowIndex = $index) {
                 @if (row.type === 'task' && !isTaskDisappearing(row.data.id)) {
                     <foreignObject
                         [attr.x]="getTaskX(row)"
@@ -325,7 +346,7 @@
             [attr.x1]="getTodayX()"
             [attr.y1]="TIMELINE_HEADER_HEIGHT"
             [attr.x2]="getTodayX()"
-            [attr.y2]="svgHeight"
+            [attr.y2]="_svgHeight"
             stroke="var(--bs-teal)"
             stroke-width="2"
             opacity="0.7"
@@ -348,20 +369,20 @@
         }
 
         <!-- Timeline header (rendered last for proper z-order) -->
-        <g class="timeline-header" [attr.transform]="'translate(0, ' + scrollY + ')'">
+        <g class="timeline-header" [attr.transform]="'translate(0, ' + _scrollY + ')'">
             <!-- Background for sticky header -->
             <rect
                 x="0"
                 y="0"
-                [attr.width]="svgWidth"
+                [attr.width]="_svgWidth"
                 [attr.height]="TIMELINE_HEADER_HEIGHT"
                 fill="var(--bs-body-bg)"
             />
 
             <!-- Group labels (top row) -->
-            @if (timelineGroups.length > 0) {
+            @if (_timelineGroups.length > 0) {
                 <g class="group-labels">
-                    @for (group of timelineGroups; track group.x) {
+                    @for (group of _timelineGroups; track group.x) {
                         <rect
                             [attr.x]="group.x"
                             y="0"
@@ -383,19 +404,19 @@
 
             <!-- Unit labels (bottom row) -->
             <g class="unit-labels">
-                @for (unit of timelineUnits; track unit.date) {
+                @for (unit of _timelineUnits; track unit.date) {
                     <rect
                         [attr.x]="unit.x"
-                        [attr.y]="timelineGroups.length > 0 ? 30 : 0"
+                        [attr.y]="_timelineGroups.length > 0 ? 30 : 0"
                         [attr.width]="UNIT_WIDTH()"
-                        [attr.height]="timelineGroups.length > 0 ? 30 : 60"
+                        [attr.height]="_timelineGroups.length > 0 ? 30 : 60"
                         fill="var(--bs-body-bg)"
                     />
                     <!-- Workload indicator bar for unit -->
                     @if (workloadUser() && unit.workloadPercent !== undefined && unit.workloadPercent >= 0) {
                         <rect
                             [attr.x]="unit.x + 2"
-                            [attr.y]="timelineGroups.length > 0 ? 56 : 56"
+                            [attr.y]="_timelineGroups.length > 0 ? 56 : 56"
                             [attr.width]="UNIT_WIDTH() - 4"
                             height="3"
                             [attr.fill]="getWorkloadColor(unit.workloadPercent)"
@@ -405,11 +426,11 @@
                     }
                     <text
                         [attr.x]="unit.x + UNIT_WIDTH() / 2"
-                        [attr.y]="timelineGroups.length > 0 ? 50 : 35"
+                        [attr.y]="_timelineGroups.length > 0 ? 50 : 35"
                         text-anchor="middle"
-                        [attr.fill]="viewMode() === 'Year' ? '#ccc' : '#999'"
-                        [attr.font-size]="viewMode() === 'Year' ? 20 : 11"
-                        [attr.font-family]="viewMode() === 'Year' ? 'Michroma' : ''"
+                        [attr.fill]="_viewMode === 'Year' ? '#ccc' : '#999'"
+                        [attr.font-size]="_viewMode === 'Year' ? 20 : 11"
+                        [attr.font-family]="_viewMode === 'Year' ? 'Michroma' : ''"
                     >{{ unit.label }}</text>
                 }
             </g>
@@ -430,12 +451,12 @@
         </defs>
 
         <!-- Area selection rectangle -->
-        @if (areaSelecting) {
+        @if (_areaSelecting) {
             <rect
-                [attr.x]="Math.min(areaSelectStart.x, areaSelectEnd.x)"
-                [attr.y]="Math.min(areaSelectStart.y, areaSelectEnd.y)"
-                [attr.width]="Math.abs(areaSelectEnd.x - areaSelectStart.x)"
-                [attr.height]="Math.abs(areaSelectEnd.y - areaSelectStart.y)"
+                [attr.x]="Math.min(_areaSelectStart.x, _areaSelectEnd.x)"
+                [attr.y]="Math.min(_areaSelectStart.y, _areaSelectEnd.y)"
+                [attr.width]="Math.abs(_areaSelectEnd.x - _areaSelectStart.x)"
+                [attr.height]="Math.abs(_areaSelectEnd.y - _areaSelectStart.y)"
                 fill="rgba(var(--bs-primary-rgb), 0.2)"
                 stroke="var(--bs-primary)"
                 stroke-width="2"
@@ -445,12 +466,12 @@
         }
 
         <!-- Off-screen indicators (chevrons) -->
-        <g class="off-screen-indicators" [attr.transform]="'translate(0, ' + scrollY + ')'">
+        <g class="off-screen-indicators" [attr.transform]="'translate(0, ' + _scrollY + ')'">
             @for (indicator of getOffScreenIndicators(); track indicator.rowIndex) {
                 <!-- Left chevron -->
                 @if (indicator.hasLeft) {
                     <text
-                        [attr.x]="viewportLeft + 20"
+                        [attr.x]="_viewportLeft + 20"
                         [attr.y]="indicator.y"
                         text-anchor="middle"
                         dominant-baseline="middle"
@@ -464,7 +485,7 @@
                 <!-- Right chevron -->
                 @if (indicator.hasRight) {
                     <text
-                        [attr.x]="viewportRight - 20"
+                        [attr.x]="_viewportRight - 20"
                         [attr.y]="indicator.y"
                         text-anchor="middle"
                         dominant-baseline="middle"

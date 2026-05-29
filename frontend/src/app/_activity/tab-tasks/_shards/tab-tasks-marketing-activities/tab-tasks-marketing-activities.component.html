@@ -1,0 +1,30 @@
+@let _activities = activities();
+
+@if (_activities.length) {
+    <div class="header hstack gap-2">
+        <n>marketing</n>
+        <span class="flex-fill" i18n="@@i18n.common.marketingActivities">marketing activities</span>
+        <i class="pointer" (click)="toggle('marketingActivities')">{{ isCollapsed('marketingActivities') ? 'expand_less' : 'expand_more' }}</i>
+    </div>
+    @if (!isCollapsed('marketingActivities')) {
+        <ul class="list-group">
+            @for (a of _activities; track a.id) {
+                <li class="list-group-item hstack gap-2 pointer" [nx]="a" [tables]="_activities" [routerLink]="['/marketing', 'prospects', a.marketing_prospect_id]">
+                    @if (a.marketing_prospect?.company_contact) {
+                        @let contact = a.marketing_prospect!.company_contact!;
+                        <img class="avatar avatar-sm" [ngbTooltip]="contact.getName()" [src]="contact.icon || ''" alt="" />
+                    } @else {
+                        <div class="avatar avatar-sm d-flex align-items-center justify-content-center">
+                            <n>customer</n>
+                        </div>
+                    }
+                    <div class="flex-fill text-truncate">
+                        <div class="text-truncate">{{ a.getName() }}</div>
+                        <div class="small text-muted text-truncate">{{ a.marketing_initiative_activity?.marketing_initiative?.name }}</div>
+                    </div>
+                    <div class="small text-muted text-nowrap">{{ a.scheduled_at | date: 'mediumDate' }}</div>
+                </li>
+            }
+        </ul>
+    }
+}

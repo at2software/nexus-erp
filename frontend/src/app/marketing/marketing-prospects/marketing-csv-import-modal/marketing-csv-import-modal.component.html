@@ -1,0 +1,92 @@
+<div class="modal d-block" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Import CSV</span>
+            </div>
+            <div class="modal-body">
+
+                <div class="row g-3 mb-4">
+                    <div class="col-6">
+                        <label class="form-label">Initiative</label>
+                        <select class="form-select" [ngModel]="selectedInitiativeId()" (ngModelChange)="setInitiative($event)">
+                            <option value="">— select initiative —</option>
+                            @for (ini of initiatives; track ini.id) {
+                                <option [value]="'' + ini.id">{{ ini.name }}</option>
+                            }
+                        </select>
+                    </div>
+                    @if (selectedInitiative() && (selectedInitiative()!.channels?.length ?? 0) > 0) {
+                        <div class="col-6">
+                            <label class="form-label">Lead Source</label>
+                            <select class="form-select" [ngModel]="selectedLeadSourceId()" (ngModelChange)="selectedLeadSourceId.set(+$event)">
+                                @for (channel of selectedInitiative()!.channels!; track channel.id) {
+                                    <option [value]="channel.id">{{ channel.name }}</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                    @if (selectedInitiative() && !(selectedInitiative()!.channels?.length)) {
+                        <div class="col-6 d-flex align-items-end">
+                            <div class="alert alert-warning mb-0 py-2 px-3 small w-100">
+                                <i>warning</i> This initiative has no lead sources configured.
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Column Mapping</label>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead>
+                                <tr>
+                                    <th>CSV Column</th>
+                                    <th style="min-width: 200px">Maps to</th>
+                                    @for (row of previewRows(); track $index) {
+                                        <th class="text-muted fw-normal small">row {{ $index + 1 }}</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (mapping of mappings(); track mapping.header; let mi = $index) {
+                                    <tr [class.opacity-50]="mapping.field === 'skip'">
+                                        <td class="fw-semibold text-nowrap align-middle">{{ mapping.header }}</td>
+                                        <td class="align-middle">
+                                            <select class="form-select form-select-sm" [ngModel]="mapping.field" (ngModelChange)="updateMapping(mi, $event)">
+                                                @for (f of targetFields; track f.key) {
+                                                    <option [value]="f.key">{{ f.label }}</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        @for (previewRow of previewRows(); track $index) {
+                                            <td class="small text-muted align-middle" style="max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ previewRow[mi] }}</td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="badge bg-secondary rounded-pill">{{ allRows.length }} rows total</span>
+                    <span class="badge bg-success rounded-pill">{{ newCount() }} to import</span>
+                    @if (duplicates().length > 0) {
+                        <span class="badge bg-warning text-dark rounded-pill">{{ duplicates().length }} duplicates skipped</span>
+                    }
+                    @if (!selectedInitiativeId()) {
+                        <span class="text-warning small"><i class="align-middle" style="font-size: 0.9rem">warning</i> Select an initiative to continue</span>
+                    }
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" (click)="decline()">Cancel</button>
+                <button type="button" class="btn btn-primary" (click)="accept()" [disabled]="!canAccept()">
+                    Import {{ newCount() }} prospects
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,11 +1,13 @@
-import { Injectable } from "@angular/core"
-import { NexusHttpService } from "./http/http.nexus"
-import { Dictionary } from "@constants/constants"
+import { Injectable } from '@angular/core';
+import { NexusHttpService } from './http/http.nexus';
+import { Dictionary } from '@constants/constants';
 
 @Injectable({ providedIn: 'root' })
 export class VaultService extends NexusHttpService<any> {
-    apiPath = 'vault'
-    TYPE = () => Object
-    index = (filters?: Dictionary) => this.aget('vaults', filters)
-    update = (credentials:Dictionary) => this.post('vaults', credentials)
+    apiPath = 'vault';
+    TYPE = () => Object;
+    index = (filters?: Dictionary) => this.aget('vaults', filters);
+    update = (credentials: Dictionary) => this.post('vaults', credentials);
+    submitTan = (data: { prefix: string; challenge_id: string; tan?: string }) => this.post('vaults/tan', data);
+    bankLookup = (blz: string) => this.aget('vaults/bank-lookup', { blz });
 }

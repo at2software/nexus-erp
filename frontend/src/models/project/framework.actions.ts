@@ -1,5 +1,5 @@
-import { NxAction, NxActionType } from "src/app/nx/nx.actions"
-import { Framework } from "./framework.model"
+import { NxAction, NxActionType } from '@app/nx/nx.actions';
+import { Framework } from './framework.model';
 
 export function getFrameworkActions(self: Framework): NxAction[] {
     return [
@@ -8,7 +8,7 @@ export function getFrameworkActions(self: Framework): NxAction[] {
             group: true,
             action: () => self.httpService.put('projects/frameworks', { url: self.url, is_deprecated: true }).subscribe(),
             type: NxActionType.Destructive,
-            roles: 'admin'
+            roles: 'admin',
         },
-    ]
+    ];
 }

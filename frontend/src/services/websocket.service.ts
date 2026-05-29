@@ -48,7 +48,6 @@ export interface SharingStatus {
 
 @Injectable({ providedIn: 'root' })
 export class WebSocketService {
-
     #auth = inject(AuthenticationService);
     #global = inject(GlobalService);
 
@@ -71,13 +70,9 @@ export class WebSocketService {
         const token = this.#auth.apiToken || this.#getCookie('api_token') || localStorage.getItem('token') || (await this.#getKeycloakToken());
         const reverbKey = AuthenticationService.sysinfo?.reverb_key || environment.reverbKey;
 
-        const useTLS = environment.production
-            ? window.location.protocol === 'https:'
-            : environment.reverbScheme === 'https';
+        const useTLS = environment.production ? window.location.protocol === 'https:' : environment.reverbScheme === 'https';
         const host = environment.production ? window.location.hostname : environment.reverbHost;
-        const port = environment.production
-            ? (parseInt(window.location.port) || (useTLS ? 443 : 80))
-            : environment.reverbPort;
+        const port = environment.production ? parseInt(window.location.port) || (useTLS ? 443 : 80) : environment.reverbPort;
 
         this.echo = new Echo({
             broadcaster: 'reverb',
@@ -90,8 +85,8 @@ export class WebSocketService {
             enabledTransports: useTLS ? ['wss'] : ['ws'],
             authEndpoint: environment.envApi + 'broadcasting/auth',
             auth: {
-                headers: { 'Authorization': `Bearer ${token}` }
-            }
+                headers: { Authorization: `Bearer ${token}` },
+            },
         });
 
         this.echo.connector.pusher.connection.bind('connected', () => {
@@ -138,12 +133,12 @@ export class WebSocketService {
 
         this.echo.join('live-sharing').whisper('mouse-position', {
             userId: user.id,
-            userName: user.name,
+            userName: user.getName(),
             userColor: user.color || '#3B82F6',
             x,
             y,
             url,
-            visible
+            visible,
         });
     }
 
@@ -156,7 +151,7 @@ export class WebSocketService {
         this.echo.join('live-sharing').whisper('visibility-changed', {
             userId: user.id,
             visible,
-            url
+            url,
         });
     }
 
@@ -171,7 +166,7 @@ export class WebSocketService {
             userColor: user.color || '#3B82F6',
             x,
             y,
-            url
+            url,
         });
     }
 
@@ -180,7 +175,7 @@ export class WebSocketService {
 
         this.echo.join('live-sharing').whisper('quick-message', {
             userId: this.#global.user.id,
-            message
+            message,
         });
     }
 

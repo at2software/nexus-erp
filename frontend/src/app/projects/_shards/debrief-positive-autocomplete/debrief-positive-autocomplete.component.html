@@ -16,15 +16,7 @@
             </div>
         </div>
         <div class="flex-grow-1 position-relative">
-            <input type="text"
-                   class="form-control form-control-sm"
-                   [ngModel]="searchTerm()"
-                   (ngModelChange)="onInput($event)"
-                   (focus)="onFocus()"
-                   (blur)="onBlur()"
-                   (keyup.enter)="onAdd()"
-                   placeholder="Add something that went well..."
-                   i18n-placeholder="@@i18n.debrief.addPositivePlaceholder">
+            <input type="text" class="form-control form-control-sm" [ngModel]="searchTerm()" (ngModelChange)="onInput($event)" (focus)="onFocus()" (blur)="onBlur()" (keyup.enter)="onAdd()" placeholder="Add something that went well..." i18n-placeholder="@@i18n.debrief.addPositivePlaceholder" />
             @if (showDropdown() && searchResults().length > 0) {
                 <div class="dropdown-menu show w-100">
                     @for (positive of searchResults(); track positive.id) {
@@ -40,7 +32,7 @@
         </div>
         @if (isSearching()) {
             <span class="input-group-text">
-                <span class="spinner-border spinner-border-sm"></span>
+                <spinner [size]="20"></spinner>
             </span>
         }
         <button class="btn btn-sm btn-primary" (click)="onAdd()" [disabled]="!searchTerm().trim()">

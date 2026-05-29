@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, input, OnInit } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, ElementRef, inject, input, OnInit } from '@angular/core';
 import { GuidedTourService } from './guided-tour.service';
 
 /**
@@ -23,17 +23,17 @@ import { GuidedTourService } from './guided-tour.service';
  * (siblings share the same DOM depth so stable sort preserves their sequence).
  */
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'guided-tour',
     template: '',
-    standalone: true
+    standalone: true,
 })
 export class GuidedTourComponent implements OnInit {
-
-    id            = input.required<string>();
-    content       = input.required<string>();
-    title         = input<string|undefined>();
-    focusSelector = input<string|undefined>();
-    focusElement  = input<HTMLElement | ElementRef | undefined>();
+    id = input.required<string>();
+    content = input.required<string>();
+    title = input<string | undefined>();
+    focusSelector = input<string | undefined>();
+    focusElement = input<HTMLElement | ElementRef | undefined>();
 
     #service = inject(GuidedTourService);
     #el = inject(ElementRef);
@@ -41,20 +41,28 @@ export class GuidedTourComponent implements OnInit {
     ngOnInit(): void {
         setTimeout(() => {
             if (this.#service.isDisabled) return;
-            this.#service.register([{
-                id: this.id(),
-                title: this.title(),
-                content: this.content(),
-                focusSelector: this.focusSelector(),
-                focusElement: this.focusElement()
-            }], this.#getDomDepth());
+            this.#service.register(
+                [
+                    {
+                        id: this.id(),
+                        title: this.title(),
+                        content: this.content(),
+                        focusSelector: this.focusSelector(),
+                        focusElement: this.focusElement(),
+                    },
+                ],
+                this.#getDomDepth(),
+            );
         });
     }
 
     #getDomDepth(): number {
         let depth = 0;
         let el: HTMLElement | null = this.#el.nativeElement.parentElement;
-        while (el && el !== document.body) { depth++; el = el.parentElement; }
+        while (el && el !== document.body) {
+            depth++;
+            el = el.parentElement;
+        }
         return depth;
     }
 }

@@ -1,16 +1,28 @@
-import { NexusHttpService } from "src/models/http/http.nexus"
-import { Serializable } from "./../serializable"
-import { Color } from "src/constants/Color"
+import { NexusHttpService } from '@models/http/http.nexus';
+import { Serializable } from './../serializable';
+import { Color } from '@constants/Color';
+import { Model } from '@constants/type-discriminators';
+import { computed } from '@angular/core';
+import { NxGlobal } from '@app/nx/nx.global';
+import { nxInput } from '@constants/constants';
 
+@Model('ExpenseCategory')
 export class ExpenseCategory extends Serializable {
+    static API_PATH = (): string => 'expense-categories';
+    static DB_TABLE_NAME = () => 'expense_categories';
+    SERVICE = NexusHttpService<any>;
 
-    static API_PATH = (): string => 'encryptions'
-    SERVICE = NexusHttpService<any>
+    name: string = '';
+    color: string | null = null;
 
-    name :string      = ''
-    color:string|null = null
+    actions = [
+        {
+            title: 'change name',
+            interrupt: nxInput('New name'),
+            action: (_s:any, _ctx:any, interruptResult:{ text: string}) => this.update({ name: interruptResult.text })
+        },
+        NxGlobal.deleteAction(this, $localize`:@@i18n.common.reallyDeleteThisExpenseCategory:really delete this expense category?`, { roles: 'admin' }),
+    ]
 
-    serialize = () => {
-        this.colorCss = Color.posToHex(parseInt(this.id))
-    }
+    css = computed(() => Color.posToHex(parseInt(this.snapshot().id)));
 }

@@ -1,34 +1,33 @@
-@if (parent.current) {
-  <app-header>
-    @if (parent.current.company) {
-      <div class="logo" [style.background-image]="'url(' + parent.current.company.icon + ')'" [smartLink]="`/customers/${parent.current.company_id}`"></div>
+@let _invoice = object();
+<app-header>
+    @if (_invoice.company) {
+        <div class="logo" [style.background-image]="'url(' + _invoice.company.icon + ')'" [smartLink]="`/customers/${_invoice.company_id}`"></div>
     }
     <div class="h1 d-flex align-items-center">
-      <div class="me-3">
-        {{parent.current.name}}
-      </div>
-      <div class="h1-small badge bg-{{parent.current.colorCss}} text-black align-bottom" ngbDropdown>
-        <div ngbDropdownToggle style="font-weight: normal; cursor: pointer;">
-          {{ parent.current.state() }}
+        <div class="me-3">
+            {{ _invoice.name }}
         </div>
-        <div ngbDropdownMenu>
-          @if (!parent.current.paid_at) {
-            <button ngbDropdownItem (click)="parent.current.setPaid().subscribe()">
-              <span i18n="@@i18n.invoice.markPaid">mark paid</span>
-            </button>
-          }
-          @if (parent.current.paid_at) {
-            <button ngbDropdownItem (click)="parent.current.setUnpaid().subscribe()">
-              <span i18n="@@i18n.invoice.markUnpaid">mark unpaid</span>
-            </button>
-          }
+        <div class="h1-small badge bg-{{ _invoice.css() }} text-black align-bottom" ngbDropdown>
+            <div ngbDropdownToggle style="font-weight: normal; cursor: pointer">
+                {{ _invoice.state() }}
+            </div>
+            <div ngbDropdownMenu>
+                @if (!_invoice.paid_at) {
+                    <button ngbDropdownItem (click)="_invoice.setPaid().subscribe()">
+                        <span i18n="@@i18n.invoice.markPaid">mark paid</span>
+                    </button>
+                }
+                @if (_invoice.paid_at) {
+                    <button ngbDropdownItem (click)="_invoice.setUnpaid().subscribe()">
+                        <span i18n="@@i18n.invoice.markUnpaid">mark unpaid</span>
+                    </button>
+                }
+            </div>
         </div>
-      </div>
     </div>
-        <ul class="nav">
-          <header-link-item hotkey="CTRL+ALT+1" routerLink="." title="Invoice"></header-link-item>
-        </ul>
-      </app-header>
-    }
+    <ul class="nav">
+        <header-link-item hotkey="CTRL+ALT+1" routerLink="." title="Invoice"></header-link-item>
+    </ul>
+</app-header>
 
-    <router-outlet></router-outlet>
+<router-outlet></router-outlet>

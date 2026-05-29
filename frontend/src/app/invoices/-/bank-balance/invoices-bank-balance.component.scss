@@ -1,0 +1,31 @@
+.expense-row {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    &:hover { background: rgba(255, 255, 255, 0.03); }
+}
+
+.tx-sub-row {
+    background: rgba(0, 0, 0, 0.15);
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.tx-row {
+    cursor: pointer;
+    user-select: none;
+    &.active {
+        background: rgba(var(--bs-primary-rgb), 0.15) !important;
+        border-left: 3px solid var(--bs-primary);
+    }
+
+    mark {
+        background: rgba(var(--bs-primary-rgb), 0.35);
+        color: inherit;
+        border-radius: 2px;
+        padding: 0 1px;
+    }
+}
+
+.tx-context-menu {
+    position: fixed;
+    z-index: 9999;
+    min-width: 220px;
+}

@@ -1,5 +1,5 @@
 import { Serializable } from '../serializable';
-import { AutoWrap, AutoWrapArray } from '@constants/autowrap';
+import { Type } from 'class-transformer';
 import { User } from '../user/user.model';
 import { Project } from '../project/project.model';
 import { UptimeCheck } from './uptime-check.model';
@@ -8,7 +8,9 @@ import { NxAction } from '@app/nx/nx.actions';
 import { getUptimeMonitorActions } from './uptime-monitor.actions';
 import { Observable, tap } from 'rxjs';
 import { NxGlobal } from '@app/nx/nx.global';
+import { Model } from '@constants/type-discriminators';
 
+@Model('UptimeMonitor')
 export class UptimeMonitor extends Serializable {
     static API_PATH = (): string => 'uptime_monitors';
 
@@ -30,26 +32,34 @@ export class UptimeMonitor extends Serializable {
     last_notified_at?: string;
     created_by_user_id!: string;
 
-    @AutoWrap('User') createdBy?: User;
-    @AutoWrapArray('Project') projects: Project[] = [];
-    @AutoWrapArray('User') recipients: User[] = [];
-    @AutoWrap('UptimeCheck') latestCheck?: UptimeCheck;
+    @Type(()=>User) createdBy?: User;
+    @Type(()=>Project) projects: Project[] = [];
+    @Type(()=>User) recipients: User[] = [];
+    @Type(()=>UptimeCheck) latestCheck?: UptimeCheck;
 
     get statusIcon(): string {
         switch (this.last_status) {
-            case 'up': return 'check_circle';
-            case 'down': return 'cancel';
-            case 'degraded': return 'warning';
-            default: return 'radio_button_unchecked';
+            case 'up':
+                return 'check_circle';
+            case 'down':
+                return 'cancel';
+            case 'degraded':
+                return 'warning';
+            default:
+                return 'radio_button_unchecked';
         }
     }
 
     get statusColor(): string {
         switch (this.last_status) {
-            case 'up': return 'success';
-            case 'down': return 'danger';
-            case 'degraded': return 'warning';
-            default: return 'secondary';
+            case 'up':
+                return 'success';
+            case 'down':
+                return 'danger';
+            case 'degraded':
+                return 'warning';
+            default:
+                return 'secondary';
         }
     }
 
@@ -63,23 +73,21 @@ export class UptimeMonitor extends Serializable {
 
     isSubscribed(): boolean {
         const currentUserId = NxGlobal.global.user?.id;
-        return this.recipients?.some(u => u.id === currentUserId) ?? false;
+        return this.recipients?.some((u) => u.id === currentUserId) ?? false;
     }
 
     subscribe() {
         const currentUserId = NxGlobal.global.user?.id;
         if (!currentUserId) return;
-        const recipientIds = [...(this.recipients?.map(u => u.id) || []), currentUserId];
-        this.httpService.put(this.getApiPathWithId(), { recipient_ids: recipientIds })
-            .subscribe(() => this.var.onSubscribeSuccess?.(this));
+        const recipientIds = [...(this.recipients?.map((u) => u.id) || []), currentUserId];
+        this.httpService.put(this.apiPathWithId(), { recipient_ids: recipientIds }).subscribe(() => this.var.onSubscribeSuccess?.(this));
     }
 
     unsubscribe() {
         const currentUserId = NxGlobal.global.user?.id;
         if (!currentUserId) return;
-        const recipientIds = (this.recipients?.map(u => u.id) || []).filter(id => id !== currentUserId);
-        this.httpService.put(this.getApiPathWithId(), { recipient_ids: recipientIds })
-            .subscribe(() => this.var.onUnsubscribeSuccess?.(this));
+        const recipientIds = (this.recipients?.map((u) => u.id) || []).filter((id) => id !== currentUserId);
+        this.httpService.put(this.apiPathWithId(), { recipient_ids: recipientIds }).subscribe(() => this.var.onUnsubscribeSuccess?.(this));
     }
 
     unlinkFromProject() {
@@ -87,7 +95,6 @@ export class UptimeMonitor extends Serializable {
     }
 
     override delete(): Observable<any> {
-        return this.httpService.delete(this.getApiPathWithId())
-            .pipe(tap(() => this.var.onDeleteSuccess?.(this)));
+        return this.httpService.delete(this.apiPathWithId()).pipe(tap(() => this.var.onDeleteSuccess?.(this)));
     }
 }

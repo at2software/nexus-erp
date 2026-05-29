@@ -1,4 +1,4 @@
-import { Component, model } from '@angular/core';
+import { ChangeDetectionStrategy, Component, model } from '@angular/core';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { ConfirmationArguments } from './confirmation.service';
 
@@ -6,13 +6,13 @@ import { ConfirmationArguments } from './confirmation.service';
     selector: 'app-modal-confirm',
     templateUrl: './modal-confirm.component.html',
     styleUrls: ['./modal-confirm.component.scss'],
-    standalone: true
+    standalone: true,
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ModalConfirmComponent extends ModalBaseComponent<boolean> {
-    
-    title         = model<string>('');
-    message       = model<string>('');
-    btnOkText     = model<string>($localize`:@@i18n.common.ok:ok`);
+    title = model<string>('');
+    message = model<string>('');
+    btnOkText = model<string>($localize`:@@i18n.common.ok:ok`);
     btnCancelText = model<string>($localize`:@@i18n.common.cancel:cancel`);
 
     init(args: ConfirmationArguments): void {
@@ -22,8 +22,6 @@ export class ModalConfirmComponent extends ModalBaseComponent<boolean> {
         if (args.btnCancelText) this.btnCancelText.set(args.btnCancelText);
     }
     onSuccess() {
-        return true
+        return true;
     }
-
-
 }

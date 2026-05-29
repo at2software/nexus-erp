@@ -1,0 +1,147 @@
+<div class="card card-info mb-3" i18n="@@i18n.settings.connectorsDescription">Connectors link NEXUS to external services via encrypted credentials. Values are stored securely and never exposed again after saving — leave fields blank to keep existing values unchanged.</div>
+
+<div class="row row-cols-2 row-cols-md-4 row-cols-xl-6 g-3">
+    @for (vault of vaults(); track vault.prefix) {
+        <div class="col">
+            <div class="card h-100 cursor-pointer" (click)="openVaultModal(vault, vaultModal)" (keyup.enter)="openVaultModal(vault, vaultModal)" tabindex="0">
+                <div class="card-body text-center">
+                    <n class="display-6 mb-3">{{ vaultIcon(vault) }}</n>
+                    <div class="card-title">{{ vault.name }}</div>
+                    <div class="d-flex justify-content-center mt-2">
+                        <span class="badge" [class.bg-success]="vault.active" [class.bg-secondary]="!vault.active">
+                            {{ vault.active ? 'active' : 'inactive' }}
+                        </span>
+                        @if (vault.missing?.length) {
+                            <span class="badge bg-danger ms-1">{{ vault.missing!.length }} missing</span>
+                        }
+                    </div>
+                    @if (vault.prefix === 'GITLAB' && pipelineJobs().length) {
+                        <div class="mt-2 text-start">
+                            <small class="text-muted d-block mb-1" i18n="@@i18n.settings.pipelineJobs">pipeline jobs</small>
+                            @for (job of pipelineJobs(); track $index) {
+                                <div class="small text-truncate">{{ job.job }}</div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<ng-template #vaultModal let-modal>
+    @let _cv = currentVault();
+    @if (_cv) {
+        <div class="modal-header">
+            <span class="modal-title">{{ _cv.name }}</span>
+            <button type="button" class="btn-close" (click)="modal.dismiss()"></button>
+        </div>
+        <div class="modal-body">
+
+            <!-- ── Credential fields (hidden while TAN challenge is active) ── -->
+            @if (!tanChallenge()) {
+                <ul class="list-group">
+                    @for (key of keysFor(_cv); track key; let i = $index) {
+                        <li class="list-group-item" [class.text-danger]="isKeyMissing(key)">
+                            <div class="hstack gap-2">
+                                <div class="col-3">{{ _cv.keys[key] }}</div>
+                                <div class="flex-grow-1">
+                                    <input
+                                        class="form-control"
+                                        [ngModel]="_cv.map[mapKey(key)]"
+                                        (ngModelChange)="onVaultFieldChange(mapKey(key), $event)"
+                                        [class.border-danger]="isKeyMissing(key)"
+                                    />
+                                </div>
+                            </div>
+                            @if (infoFor(_cv)[i]?.description) {
+                                <div class="text-muted small mt-1">{{ infoFor(_cv)[i].description }}</div>
+                            }
+                            @if (key === 'IBAN' && _cv.prefix === 'FINTS' && bankName()) {
+                                <div class="text-primary small mt-1">
+                                    <n>bank</n> {{ bankName() }}
+                                </div>
+                            }
+                        </li>
+                    }
+                </ul>
+
+                @if (_cv.prefix === 'GITLAB') {
+                    <div class="hstack gap-2 mt-4 mb-2">
+                        <span class="fw-bold" i18n="@@i18n.settings.pipelineJobs">pipeline jobs</span>
+                        <div class="ms-auto" ngbDropdown placement="bottom-end">
+                            <button class="btn btn-sm text-primary dropdown-toggle-simple" ngbDropdownToggle>+</button>
+                            <div ngbDropdownMenu>
+                                @for (preset of jobPresets; track preset.type) {
+                                    <button ngbDropdownItem (click)="addPipelineJob(preset)">{{ preset.job }}</button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <ul class="list-group">
+                        @for (job of pipelineJobs(); track $index; let i = $index) {
+                            <li class="list-group-item hstack gap-2 py-2">
+                                <small class="text-muted" style="width:5rem;flex-shrink:0">{{ job.type || 'new job' }}</small>
+                                <input class="form-control form-control-sm" [ngModel]="job.job" (ngModelChange)="updatePipelineJob(i, 'job', $event)" [name]="'job_' + i" i18n-placeholder="@@i18n.settings.jobName" placeholder="job name" i18n-ngbTooltip="@@i18n.settings.jobNameTooltip" ngbTooltip="The CI pipeline job name as defined in .gitlab-ci.yml" placement="left" />
+                                <input class="form-control form-control-sm" [ngModel]="job.artifact" (ngModelChange)="updatePipelineJob(i, 'artifact', $event)" [name]="'artifact_' + i" i18n-placeholder="@@i18n.settings.artifactFile" placeholder="artifact file" i18n-ngbTooltip="@@i18n.settings.artifactFileTooltip" ngbTooltip="Path to the artifact file produced by the job (e.g. gl-sast-report.json)" placement="left" />
+                                <button class="btn btn-sm text-danger" (click)="removePipelineJob(i)">×</button>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+
+            <!-- ── TAN challenge ── -->
+            @if (tanChallenge(); as tan) {
+                <div class="d-flex flex-column align-items-center gap-3 py-2">
+
+                    @if (tan.type === 'decoupled') {
+                        <n class="display-4 text-primary">phone</n>
+                        <div class="text-center">
+                            <div class="fw-semibold mb-1" i18n="@@i18n.settings.confirmInBankingApp">Confirm in your banking app</div>
+                            @if (tan.text) { <div class="text-muted small">{{ tan.text }}</div> }
+                            @if (tan.medium) { <div class="text-muted small"><ng-container i18n="@@i18n.settings.device">Device</ng-container>: {{ tan.medium }}</div> }
+                        </div>
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden" i18n="@@i18n.common.waiting">Waiting…</span>
+                        </div>
+                        <div class="text-muted small" i18n="@@i18n.settings.checkingEvery3s">Checking automatically every 3 seconds…</div>
+                    }
+
+                    @if (tan.type === 'phototan' && tan.image) {
+                        <img [src]="tan.image" alt="PhotoTAN" class="img-fluid" style="max-width:220px" />
+                        @if (tan.text) { <div class="text-muted small text-center">{{ tan.text }}</div> }
+                        <input class="form-control" style="max-width:260px" i18n-placeholder="@@i18n.settings.enterTan" placeholder="Enter TAN" [ngModel]="tanInput()" (ngModelChange)="tanInput.set($event)" autofocus />
+                    }
+
+                    @if (tan.type === 'flickertan' && tan.svg) {
+                        <div [innerHTML]="tan.svg" style="max-width:300px"></div>
+                        @if (tan.text) { <div class="text-muted small text-center">{{ tan.text }}</div> }
+                        <input class="form-control" style="max-width:260px" i18n-placeholder="@@i18n.settings.enterTan" placeholder="Enter TAN" [ngModel]="tanInput()" (ngModelChange)="tanInput.set($event)" autofocus />
+                    }
+
+                    @if (tan.type === 'tan') {
+                        <n class="display-4 text-primary">security</n>
+                        @if (tan.text) { <div class="text-muted small text-center">{{ tan.text }}</div> }
+                        @if (tan.medium) { <div class="text-muted small">Device: {{ tan.medium }}</div> }
+                        <input class="form-control" style="max-width:260px" i18n-placeholder="@@i18n.settings.enterTan" placeholder="Enter TAN" [ngModel]="tanInput()" (ngModelChange)="tanInput.set($event)" autofocus />
+                    }
+
+                </div>
+            }
+
+        </div>
+        <div class="modal-footer">
+            @if (_cv.prefix === 'GITLAB' && !tanChallenge()) {
+                <button class="btn btn-outline-primary me-auto" (click)="savePipelineJobs()" i18n="@@i18n.common.save">save jobs</button>
+            }
+            @if (!tanChallenge()) {
+                <button class="btn btn-success" (click)="checkCredentials()" i18n="@@i18n.settings.checkSave">check & save</button>
+            }
+            @if (tanChallenge() && tanChallenge()!.type !== 'decoupled') {
+                <button class="btn btn-success" (click)="submitTan()" [disabled]="!tanInput()">confirm TAN</button>
+            }
+            <button class="btn btn-secondary" (click)="tanChallenge() ? cancelTan() : modal.dismiss()" i18n="@@i18n.common.cancel">cancel</button>
+        </div>
+    }
+</ng-template>

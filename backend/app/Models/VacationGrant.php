@@ -7,10 +7,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class VacationGrant extends BaseModel {
     use HasFactory;
 
-    protected $casts = [
-        'expires_at' => 'date',
-        'amount'     => 'double',
-    ];
+    protected function casts(): array {
+        return [
+            'expires_at' => 'date',
+            'amount'     => 'double',
+        ];
+    }
+
     protected $access   = ['admin' => '*', 'project_manager' => 'r', 'user' => 'r'];
     protected $fillable = ['user_id', 'amount', 'name', 'expires_at'];
 

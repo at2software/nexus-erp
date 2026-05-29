@@ -1,50 +1,53 @@
+@let _connections = connections();
+@let _selectedCompany = selectedCompany();
+@let _myCompany = myCompany();
 <scrollbar>
-  <div class="row">
-    <div class="col-md-3">
-      <div class="card sticky-side info-box-card">
-        <div class="card-header">
-          connections
-          <div class="card-header-actions">
-            <i class="text-primary cursor-pointer"
-              [ngbPopover]="popContent"
-              placement="end"
-              container="body"
-              [autoClose]="'outside'"
-              (shown)="onPopoverShown()"
-            popoverTitle="Add connection">add</i>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card sticky-side info-box-card">
+                <div class="card-header">
+                    connections
+                    <div class="card-header-actions">
+                        <i class="text-primary cursor-pointer" [ngbPopover]="popContent" placement="end" container="body" [autoClose]="'outside'" (shown)="onPopoverShown()" popoverTitle="Add connection">add</i>
 
-            <ng-template #popContent>
-              <search-input #popSearch only="Company" (itemSelected)="onCompanySelect($event)">
-                <div class="dropdown-divider"></div>
-                <div class="dropdown-item hstack gap-2 pointer text-primary" (click)="createNewCompany(popSearch)" (keyup.enter)="createNewCompany(popSearch)" tabindex="0">
-                  <div><i>add</i></div>
-                  <div class="flex-fill">
-                    <span i18n="@@i18n.common.createNew">create new</span>
-                    @if (popSearch.query()) {
-                      <span class="fw-bold">"{{popSearch.query()}}"</span>
-                    }
-                  </div>
+                        <ng-template #popContent>
+                            <search-input #popSearch only="Company" (itemSelected)="onCompanySelect($event)">
+                                <div class="dropdown-divider"></div>
+                                <div class="dropdown-item hstack gap-2 pointer text-primary" (click)="createNewCompany(popSearch)" (keyup.enter)="createNewCompany(popSearch)" tabindex="0">
+                                    <div><i>add</i></div>
+                                    <div class="flex-fill">
+                                        <span i18n="@@i18n.common.createNew">create new</span>
+                                        @if (popSearch.query()) {
+                                        <span class="fw-bold">"{{popSearch.query()}}"</span>
+                                        }
+                                    </div>
+                                </div>
+                            </search-input>
+                        </ng-template>
+                    </div>
                 </div>
-              </search-input>
-            </ng-template>
-          </div>
+                <ul class="list-group">
+                    @for (con of _connections; track con.id) {
+                    <li class="list-group-item d-flex text-nowrap" [nx]="con" [tables]="_connections" (singleActionResolved)="singleActionResolved()">
+                        <div class="me-3"><avatar [object]="con.otherCompany(_myCompany)"></avatar></div>
+                        <div class="text-truncate">{{con.otherCompany(_myCompany)?.getName()}}</div>
+                    </li>
+                    }
+                </ul>
+            </div>
         </div>
-        @if (parent.current) {
-          <ul class="list-group">
-            @for (con of connections; track con.id) {
-              <li class="list-group-item d-flex text-nowrap" [nx]="con" [tables]="connections" (singleActionResolved)="singleActionResolved()">
-                <div class="me-3"><avatar [object]="con.otherCompany(parent.current)"></avatar></div>
-                <div class="text-truncate">{{con.otherCompany(parent.current)?.name}}</div>
-              </li>
+        <div class="col-md-9">
+            @if (_connections.length) {
+            <network-chart class="card chart" [root]="_myCompany" [data]="_connections" [focus]="_myCompany" (nodeSelected)="onNodeSelected($event)"></network-chart>
+            } @if (_selectedCompany) {
+            <div class="card mt-3" (click)="navigateToCompany()" tabindex="0" (keydown.enter)="navigateToCompany()" style="cursor: pointer">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <img [src]="_selectedCompany.icon" [alt]="_selectedCompany.getName()" style="width: 48px; height: 48px; object-fit: contain" />
+                    <div class="flex-fill text-truncate">{{_selectedCompany.getName()}}</div>
+                    <i class="text-primary">chevron_right</i>
+                </div>
+            </div>
             }
-          </ul>
-        }
-      </div>
+        </div>
     </div>
-    <div class="col-md-9">
-      @if (parent.current && connections.length) {
-        <network-chart class="card chart" [root]="parent.current" [data]="connections" [focus]="parent.current"></network-chart>
-      }
-    </div>
-  </div>
 </scrollbar>

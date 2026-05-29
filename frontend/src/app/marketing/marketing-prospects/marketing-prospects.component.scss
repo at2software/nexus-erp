@@ -4,9 +4,10 @@ scrollbar {
     height: calc(100vh - var.$header-height);
     display: block;
 }
+
 .list-group-item {
     cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: background-color 0.2s ease;
 
     &:hover {
         background-color: rgba(var(--bs-primary-rgb), 0.06);
@@ -16,8 +17,8 @@ scrollbar {
         background-color: var(--bs-primary);
         color: white;
 
-        .text-muted {
-            color: rgba(255, 255, 255, 0.7) !important;
+        .text-muted, .nav-icon {
+            color: rgba(255, 255, 255, 0.65) !important;
         }
 
         .badge.bg-primary {
@@ -27,33 +28,34 @@ scrollbar {
     }
 }
 
-.stat-card-sm {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 0.35rem 0.75rem;
-    border-radius: 0.25rem;
-    background-color: rgba(0, 0, 0, 0.2);
-    min-width: 60px;
+.nav-icon {
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    color: var(--bs-secondary-color);
+}
 
-    .stat-value {
-        font-size: 1.25rem;
+.status-filter-btn {
+    user-select: none;
+    transition: opacity 0.15s ease;
+
+    .status-filter-icon {
+        font-size: 0.8rem;
+    }
+
+    .status-filter-count {
+        font-size: 0.7rem;
         font-weight: 600;
         line-height: 1;
-        color: white;
-        
-        &.text-muted {
-            color: rgba(255, 255, 255, 0.3) !important;
-        }
     }
+}
 
-    .stat-label {
-        font-size: 0.65rem;
-        color: rgba(255, 255, 255, 0.7);
-        margin-top: 0.15rem;
-        text-align: center;
-        white-space: nowrap;
-    }
+.prospect-info {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.status-icon {
+    font-size: 0.85rem;
 }
 
 .bg-cyan {
@@ -63,54 +65,4 @@ scrollbar {
 .badge {
     font-size: 0.75rem;
     text-shadow: none;
-}
-
-.status-dot {
-    width: 7px;
-    height: 7px;
-    display: inline-block;
-    flex-shrink: 0;
-}
-
-.card {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    border: 1px solid rgba(0, 0, 0, 0.125);
-}
-
-.activity-timeline {
-    .activity-item {
-        border-left: 2px solid var(--bs-success);
-        padding-left: 0.75rem;
-        margin-left: 0.5rem;
-        margin-bottom: 0.75rem;
-        position: relative;
-
-        &::before {
-            content: '';
-            position: absolute;
-            left: -0.25rem;
-            top: 0.25rem;
-            width: 0.5rem;
-            height: 0.5rem;
-            background-color: var(--bs-success);
-            border-radius: 50%;
-        }
-
-        &:last-child {
-            border-left-color: transparent;
-        }
-    }
-}
-
-.fas, .fab {
-    width: 16px;
-    text-align: center;
-}
-
-.fa-users {
-    color: var(--bs-secondary);
-}
-
-.spinner-border {
-    color: var(--bs-primary);
 }

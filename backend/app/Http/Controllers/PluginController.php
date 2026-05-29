@@ -61,9 +61,9 @@ abstract class PluginController extends Controller {
             $data     = json_decode($response->getBody(), true);
             return $data;
         } catch (ClientException $e) {
-            NLog::error($e->getMessage());
+            //NLog::error($e->getMessage());
         } catch (\Exception $e) {
-            NLog::error($e->getMessage());
+            //NLog::error($e->getMessage());
         }
         return null;
     }

@@ -1,0 +1,126 @@
+<div class="row">
+    <!-- Timeline candlestick chart -->
+    <div class="col-12 mb-3">
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i>waterfall_chart</i>
+                <span i18n="@@i18n.financial.liquidityTimeline">12-month liquidity projection</span>
+                @if (!isLoading()) {
+                    @if (zeroDate(); as z) {
+                        <span class="ms-auto text-muted small" i18n="@@i18n.financial.cashOutDate">cash-out date</span>
+                        <strong class="ms-2 text-danger">{{ z.date | date:'dd.MM.yyyy' }}</strong>
+                        <span class="text-muted small ms-1" i18n="@@i18n.financial.cashOutDaysUntil">(in {{ z.daysUntil }} days)</span>
+                    } @else {
+                        <span class="ms-auto text-muted small" i18n="@@i18n.financial.noCashOut">no cash-out in forecast</span>
+                    }
+                }
+            </div>
+            <div class="card-body p-0" style="height: 320px">
+                @if (isLoading()) {
+                    <div class="d-flex align-items-center justify-content-center h-100">
+                        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+                    </div>
+                }
+                @if (!isLoading()) {
+                    <div echarts [options]="chartOptions()" style="width:100%;height:320px"></div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Liquidity events table -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i>format_list_bulleted</i>
+                <span i18n="@@i18n.financial.liquidityEvents">liquidity events</span>
+                @if (!isLoading()) {
+                    <span class="badge text-bg-primary ms-auto">{{ groupedEvents().length }}</span>
+                    <span class="text-muted small">days</span>
+                    <span class="badge text-bg-primary">{{ events().length }}</span>
+                    <span class="text-muted small">events</span>
+                }
+            </div>
+            @if (isLoading()) {
+                <div class="d-flex align-items-center justify-content-center" style="height:120px">
+                    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+                </div>
+            }
+            @if (!isLoading() && !groupedEvents().length) {
+                <div class="card-body text-center text-muted py-5" i18n="@@i18n.financial.noLiquidityEvents">
+                    No liquidity events in the next 12 months.
+                </div>
+            }
+            @if (!isLoading() && groupedEvents().length) {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="sticky-top">
+                            <tr>
+                                <th style="width:32px"></th>
+                                <th i18n="@@i18n.common.date">date</th>
+                                <th i18n="@@i18n.common.description">description</th>
+                                <th class="text-end" i18n="@@i18n.common.amount">amount</th>
+                                <th class="text-end" i18n="@@i18n.financial.balanceAfter">balance after</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (day of groupedEvents(); track day.date) {
+                                <!-- Day summary row -->
+                                <tr class="day-row" [class.cursor-pointer]="day.events.length > 1" (click)="day.events.length > 1 && toggleDay(day.date)">
+                                    <td class="text-muted ps-2">
+                                        @if (day.events.length > 1) {
+                                            <i>{{ isExpanded(day.date) ? 'expand_less' : 'expand_more' }}</i>
+                                        }
+                                    </td>
+                                    <td class="text-nowrap text-muted small fw-semibold">{{ day.date | date:'dd.MM.yy' }}</td>
+                                    <td [ngbTooltip]="day.events.length === 1 ? eventTooltip(day.events[0]) : null"
+                                        [disableTooltip]="day.events.length !== 1 || !eventTooltip(day.events[0])">
+                                        @if (day.events.length === 1) {
+                                            <span class="badge me-1" [ngClass]="typeBadge(day.events[0].type)">{{ typeLabel(day.events[0].type) }}</span>
+                                            {{ day.events[0].label }}
+                                        } @else {
+                                            @for (g of typeGroups(day.events); track g.type) {
+                                                <span class="badge me-1" [ngClass]="typeBadge(g.type)">{{ g.count }} | {{ typeLabel(g.type) }}</span>
+                                            }
+                                        }
+                                    </td>
+                                    <td class="text-end text-nowrap text-monospace fw-semibold"
+                                        [class.text-success]="isInflow(day.totalAmount)"
+                                        [class.text-danger]="!isInflow(day.totalAmount)">
+                                        {{ day.totalAmount | money }}
+                                    </td>
+                                    <td class="text-end text-nowrap text-monospace"
+                                        [class.text-danger]="day.balanceAfter < 0">
+                                        {{ day.balanceAfter | money }}
+                                    </td>
+                                </tr>
+                                <!-- Expanded event rows -->
+                                @if (day.events.length > 1 && isExpanded(day.date)) {
+                                    @for (event of day.events; track $index) {
+                                        <tr class="event-detail-row">
+                                            <td></td>
+                                            <td></td>
+                                            <td [ngbTooltip]="eventTooltip(event)" [disableTooltip]="!eventTooltip(event)">
+                                                <span class="badge me-1" [ngClass]="typeBadge(event.type)">{{ typeLabel(event.type) }}</span>
+                                                <span>{{ event.label }}</span>
+                                            </td>
+                                            <td class="text-end text-nowrap text-monospace small"
+                                                [class.text-success]="isInflow(event.amount)"
+                                                [class.text-danger]="!isInflow(event.amount)">
+                                                {{ event.amount | money }}
+                                            </td>
+                                            <td class="text-end text-nowrap text-monospace small"
+                                                [class.text-danger]="event.balance_after < 0">
+                                                {{ event.balance_after | money }}
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

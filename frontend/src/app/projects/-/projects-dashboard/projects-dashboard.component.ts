@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, ViewChild, AfterViewInit } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, afterNextRender, inject, signal, viewChild } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Dictionary, filtered, span, StartEnd } from '@constants/constants';
 import { DATESPAN_RANGE } from '@constants/dateSpanRange';
@@ -16,147 +16,139 @@ import { ProjectsTableComponent } from '@app/projects/_shards/projects-table/pro
 import { FormsModule } from '@angular/forms';
 import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
+import { WidgetProjectManagerComponent } from '@dashboard/widgets/widget-project-manager/widget-project-manager.component';
 
-const COOKIE_ID = 'project/dashboard'
+const COOKIE_ID = 'project/dashboard';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'projects-dashboard',
     templateUrl: './projects-dashboard.component.html',
     styleUrls: ['./projects-dashboard.component.scss'],
     standalone: true,
-    imports: [ProjectStateFilterComponent, ContinuousMarkerComponent, ProjectsTableComponent, FormsModule, NgxDaterangepickerMd, EmptyStateComponent]
+    imports: [ProjectStateFilterComponent, ContinuousMarkerComponent, ProjectsTableComponent, FormsModule, NgxDaterangepickerMd, EmptyStateComponent, WidgetProjectManagerComponent],
 })
-export class ProjectsDashboardComponent implements OnInit, AfterViewInit {
+export class ProjectsDashboardComponent {
+    private readonly stateFilter = viewChild.required(ProjectStateFilterComponent);
 
-    @ViewChild(ContinuousMarkerComponent) continuous:ContinuousMarkerComponent
+    observer!: Observable<Project[]>;
+    projects: Project[] = [];
+    hasLoaded = signal(false);
 
-    observer: Observable<Project[]>
-    projects: Project[] = []
-    hasLoaded: boolean = false
+    selCreated?: StartEnd = undefined;
+    selStarted?: StartEnd = undefined;
+    selFinished?: StartEnd = undefined;
+    selUpdated?: StartEnd = undefined;
 
-    selCreated?: StartEnd = undefined
-    selStarted?: StartEnd = undefined
-    selFinished?: StartEnd = undefined
-    selUpdated?: StartEnd = undefined
+    budgetFilterActive = signal(false);
 
-    // New filter toggles
-    budgetFilterActive: boolean = false
+    budget_min?: number;
+    selectedAssigneeId?: number = undefined;
+    selectedProjectManagerId?: number = undefined;
 
-    // Filter values
-    budget_min?: number
-    selectedAssigneeId?: number = undefined
-    selectedProjectManagerId?: number = undefined
-
-    ranges: any = DATESPAN_RANGE
-    global = inject(GlobalService)
-    #projectService = inject(ProjectService)
-    #originalCookieData:string
-    #isInitialReload = false
+    ranges: any = DATESPAN_RANGE;
+    global = inject(GlobalService);
+    #projectService = inject(ProjectService);
+    #originalCookieData: string = '';
+    #isInitialReload = false;
     sortData: SortData = {
         key: '',
-        sortMode: SortMode.NONE
-    }
+        sortMode: SortMode.NONE,
+    };
 
-    @ViewChild(ProjectStateFilterComponent) stateFilter:ProjectStateFilterComponent
+    constructor() {
+        this.#originalCookieData = this.#cookieData();
+        const cookie = getCookie(COOKIE_ID);
+        if (cookie) {
+            const parsed: any = JSON.parse(cookie);
+            if (parsed) {
+                const [, , , selCreated, selStarted, selFinished] = parsed;
+                this.selCreated = StartEnd.forceObject(selCreated);
+                this.selStarted = StartEnd.forceObject(selStarted);
+                this.selFinished = StartEnd.forceObject(selFinished);
+            }
+        }
+        afterNextRender(() => this.reload());
+    }
 
     filters = (): Dictionary => {
         const filters: any = filtered({
-            ...this.stateFilter.getFilters(),
-            created_at   : span(StartEnd.forceObject(this.selCreated)),
-            started_at   : span(StartEnd.forceObject(this.selStarted)),
-            finished_at  : span(StartEnd.forceObject(this.selFinished)),
-            append       : ['net'],
-            paginate     : true,
-            with         : 'assigned_users',
+            ...this.stateFilter().getFilters(),
+            created_at: span(StartEnd.forceObject(this.selCreated)),
+            started_at: span(StartEnd.forceObject(this.selStarted)),
+            finished_at: span(StartEnd.forceObject(this.selFinished)),
+            append: ['net'],
+            paginate: true,
+            with: 'assigned_users',
         });
 
-        if (this.budgetFilterActive && this.budget_min !== undefined) filters.budget_min = this.budget_min;
+        if (this.budgetFilterActive() && this.budget_min !== undefined) filters.budget_min = this.budget_min;
         if (this.selectedAssigneeId !== undefined) filters.assignee_id = this.selectedAssigneeId;
         if (this.selectedProjectManagerId !== undefined) filters.project_manager_id = this.selectedProjectManagerId;
 
         if (this.sortData.sortMode !== SortMode.NONE) {
-            filters.sort_by        = this.sortData.key;
+            filters.sort_by = this.sortData.key;
             filters.sort_direction = this.sortData.sortMode === SortMode.ASCENDING ? 'asc' : 'desc';
         }
         return filters;
     };
 
-    ngOnInit(): void {
-        this.#originalCookieData = this.#cookieData()
-        const cookie = getCookie(COOKIE_ID)
-        if (cookie) {
-            const parsed:any = JSON.parse(cookie)
-            if (parsed) {
-                const [,,, selCreated, selStarted, selFinished] = parsed
-                this.selCreated    = StartEnd.forceObject(selCreated)
-                this.selStarted    = StartEnd.forceObject(selStarted)
-                this.selFinished   = StartEnd.forceObject(selFinished)
-            }
-        }
-    }
-    ngAfterViewInit() {
-        this.reload()
-    }
+    #cookieData = () =>
+        JSON.stringify([
+            [],
+            [],
+            [], // deprecated... now handled by stateFilter. But I want to keep the cookie compatible
+            StartEnd.forceObject(this.selCreated)?.toString() ?? undefined,
+            StartEnd.forceObject(this.selStarted)?.toString() ?? undefined,
+            StartEnd.forceObject(this.selFinished)?.toString() ?? undefined,
+        ]);
 
-    #cookieData = () => JSON.stringify([
-        [],[],[],   // deprecated... now handled by stateFilter. But I want to keep the cookie compatible
-        StartEnd.forceObject(this.selCreated)?.toString() ?? undefined, 
-        StartEnd.forceObject(this.selStarted)?.toString() ?? undefined, 
-        StartEnd.forceObject(this.selFinished)?.toString() ?? undefined
-    ])
-
-    #filters:any = undefined
-    needsFilterUpdate = ():boolean => {
-        const original = JSON.stringify(this.#filters)
-        this.#filters = Object.assign({}, this.filters())
+    #filters: any = undefined;
+    needsFilterUpdate = (): boolean => {
+        const original = JSON.stringify(this.#filters);
+        this.#filters = Object.assign({}, this.filters());
         if (!original) {
-            return true
+            return true;
         }
-        return original.localeCompare(JSON.stringify(this.#filters)) !== 0
-    }
+        return original.localeCompare(JSON.stringify(this.#filters)) !== 0;
+    };
     reloadWithCalendar(_e?: any) {
-        this.updateCookie()
+        this.updateCookie();
         if (this.#isInitialReload) {
-            this.reload()
+            this.reload();
         }
     }
     reload() {
-        const filters: any = this.filters()
-        this.projects = []
-        this.hasLoaded = false
-        this.continuous.observer.set(this.#projectService.index(filters))
+        const filters: any = this.filters();
+        this.projects = [];
+        this.hasLoaded.set(false);
+        this.observer = this.#projectService.index(filters);
     }
     updateCookie() {
-        const cookieData = this.#cookieData()
+        const cookieData = this.#cookieData();
         if (this.#originalCookieData.localeCompare(cookieData)) {
-            setCookie(COOKIE_ID, cookieData, 7)
-            this.#originalCookieData = cookieData
+            setCookie(COOKIE_ID, cookieData, 7);
+            this.#originalCookieData = cookieData;
         }
     }
 
     onResult = (x: Project[]) => {
-        this.hasLoaded = true
-        this.projects = this.projects.concat(x)
-        this.#isInitialReload = true
-    }
-    onIconClicked = () => this.reload
+        this.hasLoaded.set(true);
+        this.projects = this.projects.concat(x);
+        this.#isInitialReload = true;
+    };
+    onIconClicked = () => this.reload;
 
     onSortChange = (sortData: SortData) => {
-        this.sortData = sortData
-        this.reload()
-    }
+        this.sortData = sortData;
+        this.reload();
+    };
 
-    filtersUpdated = () => this.reload()
+    filtersUpdated = () => this.reload();
 
-    showStartedAtFilter = (): boolean =>
-        this.stateFilter?.filters.inProgress.var.enabled ||
-        this.stateFilter?.filters.finished.var.enabled || false
+    showStartedAtFilter = (): boolean => this.stateFilter().filters().inProgress.var.enabled || this.stateFilter().filters().finished.var.enabled || false;
 
-    showFinishedAtFilter = (): boolean =>
-        this.stateFilter?.filters.finished.var.enabled || false
+    showFinishedAtFilter = (): boolean => this.stateFilter().filters().finished.var.enabled || false;
 
-    getProjectManagers = (): User[] =>
-        this.global.team?.filter(user =>
-            user.hasRole('admin') || user.hasRole('project_manager')
-        ) || []
+    getProjectManagers = (): User[] => this.global.team?.filter((user) => user.hasRole('admin') || user.hasRole('project_manager')) || [];
 }

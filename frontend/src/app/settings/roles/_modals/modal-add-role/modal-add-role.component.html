@@ -7,7 +7,7 @@
             <div class="modal-body">
                 <div class="input-group mb-3">
                     <span class="input-group-text" i18n="@@i18n.common.name">name</span>
-                    <input type="text" class="form-control" #title [(ngModel)]="roleName">
+                    <input type="text" class="form-control" [ngModel]="roleName()" (ngModelChange)="roleName.set($event)" />
                 </div>
             </div>
             <div class="modal-footer">

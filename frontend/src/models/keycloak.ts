@@ -1,4 +1,3 @@
-
 import { createInterceptorCondition, INCLUDE_BEARER_TOKEN_INTERCEPTOR_CONFIG, IncludeBearerTokenCondition, KeycloakService, provideKeycloak } from 'keycloak-angular';
 import { environment } from 'src/environments/environment';
 
@@ -42,30 +41,28 @@ export class KeycloakHandler {
                 return {
                     url: config['auth-server-url'] || environment.authenticationUrl,
                     realm: config.realm || environment.keycloakRealm || 'at2',
-                    clientId: config.resource || environment.keycloakClientId || 'neuron'
+                    clientId: config.resource || environment.keycloakClientId || 'neuron',
                 };
             } catch (error) {
                 console.error('Failed to load keycloak.json, using environment defaults:', error);
                 return {
                     url: environment.authenticationUrl,
                     realm: environment.keycloakRealm || 'at2',
-                    clientId: environment.keycloakClientId || 'neuron'
+                    clientId: environment.keycloakClientId || 'neuron',
                 };
             }
         }
         return {
             url: environment.authenticationUrl,
             realm: environment.keycloakRealm || 'at2',
-            clientId: environment.keycloakClientId || 'neuron'
+            clientId: environment.keycloakClientId || 'neuron',
         };
     }
 
     static provideKeycloak() {
         // Resolve relative envApi to absolute so the bearer token interceptor can match it.
         // environment.envApi is '/backend/api/' in production (relative path).
-        const apiUrl = environment.envApi.startsWith('/')
-            ? window.location.origin + environment.envApi
-            : environment.envApi;
+        const apiUrl = environment.envApi.startsWith('/') ? window.location.origin + environment.envApi : environment.envApi;
 
         // Also create a pattern for the relative API path since HttpClient may use relative URLs
         const apiUrlRelative = environment.envApi;
@@ -88,18 +85,18 @@ export class KeycloakHandler {
         return [
             KeycloakService,
             provideKeycloak({
-                config: { 
-                    url: keycloakUrl, 
-                    realm: environment.keycloakRealm || 'at2', 
-                    clientId: environment.keycloakClientId || 'neuron' 
+                config: {
+                    url: keycloakUrl,
+                    realm: environment.keycloakRealm || 'at2',
+                    clientId: environment.keycloakClientId || 'neuron',
                 },
                 initOptions: {
                     checkLoginIframe: false,
                     onLoad: 'check-sso',
-                    silentCheckSsoRedirectUri: window.location.origin + '/assets/silent-check-sso.html'
+                    silentCheckSsoRedirectUri: window.location.origin + '/assets/silent-check-sso.html',
                 },
             }),
             { provide: INCLUDE_BEARER_TOKEN_INTERCEPTOR_CONFIG, useValue: [apiConditionAbsolute, apiConditionRelative, keycloakCondition] as IncludeBearerTokenCondition[] },
-        ]
+        ];
     }
 }

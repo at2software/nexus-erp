@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Enums\VacationState;
+use App\Http\Requests\Vacation\StoreGrantRequest;
+use App\Http\Requests\Vacation\StoreManualRequest;
+use App\Http\Requests\Vacation\StoreSickNoteRequest;
+use App\Http\Requests\Vacation\StoreVacationRequest;
 use App\Mail\VacationMail;
 use App\Models\Holiday;
 use App\Models\User;
@@ -10,7 +14,6 @@ use App\Models\Vacation;
 use App\Models\VacationGrant;
 use App\Traits\ControllerHasPermissionsTrait;
 use Carbon\Carbon;
-use Closure;
 use Mail;
 use Storage;
 
@@ -136,25 +139,8 @@ class VacationController extends Controller {
         $_->save();
         return $_;
     }
-    public function store() {
-        request()->validate([
-            'amount'            => 'required|numeric|lt:0',
-            'state'             => 'required|numeric|in:0',
-            'started_at'        => 'required|date',
-            'ended_at'          => 'required|date',
-            'vacation_grant_id' => [
-                'required',
-                function (string $att, mixed $val, Closure $fail) {
-                    if (! ($v = VacationGrant::find($val))) {
-                        $fail('no valid grant pool');
-                    }
-                    if ($v->user_id != request()->user()->id) {
-                        $fail('not your grant pool');
-                    }
-                },
-            ],
-        ]);
-        if (! $this->validateAccessPool(VacationGrant::find(request('vacation_grant_id')))) {
+    public function store(StoreVacationRequest $request) {
+        if (! $this->validateAccessPool(VacationGrant::find($request->validated('vacation_grant_id')))) {
             response('not permitted', 400);
         }
         $payload                                          = request()->all();
@@ -162,15 +148,8 @@ class VacationController extends Controller {
         $v                                                = Vacation::create($payload);
         return $v;
     }
-    public function storeSickNote() {
-        request()->validate([
-            'started_at' => 'required|date',
-            'ended_at'   => 'required|date',
-            'comment'    => 'string',
-            'user_id'    => 'nullable|exists:App\Models\User,id',
-        ]);
-
-        $userId = request('user_id') ?? request()->user()->id;
+    public function storeSickNote(StoreSickNoteRequest $request) {
+        $userId = $request->validated('user_id') ?? $request->user()->id;
 
         if ($userId != request()->user()->id && ! request()->user()->hasAnyRole(['admin', 'hr'])) {
             return response('not permitted', 403);
@@ -191,29 +170,11 @@ class VacationController extends Controller {
             return response('no grant found', 404);
         }
     }
-    public function storeGrant() {
-        request()->validate([
-            'user_id'    => 'required|exists:App\Models\User,id',
-            'name'       => 'required|string',
-            'expires_at' => 'required|date',
-            'amount'     => 'required|numeric|gt:0',
-        ]);
-        $validated = request()->only(['amount', 'user_id', 'expires_at', 'name']);
-        return VacationGrant::create($validated);
+    public function storeGrant(StoreGrantRequest $request) {
+        return VacationGrant::create($request->validated());
     }
-    public function storeManual() {
-        request()->validate([
-            'started_at'        => 'required|date',
-            'vacation_grant_id' => [
-                'required',
-                function (string $att, mixed $val, Closure $fail) {
-                    if (! ($v = VacationGrant::find($val))) {
-                        $fail('no valid grant pool');
-                    }
-                },
-            ],
-        ]);
-        if (! $this->validateAccessPool(VacationGrant::find(request('vacation_grant_id')))) {
+    public function storeManual(StoreManualRequest $request) {
+        if (! $this->validateAccessPool(VacationGrant::find($request->validated('vacation_grant_id')))) {
             response('not permitted', 400);
         }
         $payload          = (new Vacation)->getValidFields(request()->all());

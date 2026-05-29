@@ -1,34 +1,28 @@
-import { Component, ElementRef, QueryList, Renderer2, ViewChild, ViewChildren, inject, OnInit } from '@angular/core';
-import { ActivityTabComponent } from './activity-tab.component';
+import { ChangeDetectionStrategy, Component, ElementRef, Renderer2, viewChild, viewChildren, inject } from '@angular/core';
 import { ActivityService } from './activity.service';
 import { ActivitySidebarStateService } from './activity-sidebar-state.service';
-import { NexusModule } from '@app/nx/nexus.module';
-
+import { NComponent } from '@shards/n/n.component';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'app-activity',
     templateUrl: './activity.component.html',
     styleUrls: ['./activity.component.scss'],
     standalone: true,
-    imports: [NexusModule]
+    imports: [NComponent],
 })
-export class ActivityComponent implements OnInit {
+export class ActivityComponent {
+    readonly content = viewChild.required<ElementRef>('content');
+    readonly buttons = viewChildren<ElementRef>('buttonRef');
+    readonly srv = inject(ActivityService);
+    readonly re = inject(Renderer2);
+    readonly #sidebarStateService = inject(ActivitySidebarStateService);
 
-    @ViewChild('content') content: ElementRef
-    @ViewChildren('buttonRef') buttons:QueryList<any>
-
-    srv = inject(ActivityService)
-    re  = inject(Renderer2)
-    el  = inject(ElementRef)
-    sidebarStateService = inject(ActivitySidebarStateService)
-
-    ngOnInit() {
-        this.srv.setContainer(this)
+    constructor() {
+        this.srv.setContainer(this);
     }
 
-    isHidden = (_:ActivityTabComponent) => _.hidden()
-
-    onActivityTabClicked = () => {
-        this.sidebarStateService.toggleSidebar();
+    onActivityTabClicked() {
+        this.#sidebarStateService.toggleSidebar();
     }
 }

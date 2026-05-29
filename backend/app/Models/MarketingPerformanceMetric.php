@@ -11,10 +11,15 @@ class MarketingPerformanceMetric extends BaseModel {
         'description',
         'metric_type',
         'target_value',
+        'kpi_icon',
+        'kpi_color',
     ];
-    protected $casts = [
-        'target_value' => 'decimal:2',
-    ];
+
+    protected function casts(): array {
+        return [
+            'target_value' => 'decimal:2',
+        ];
+    }
 
     // Relationships
     public function marketingInitiatives(): BelongsToMany {
@@ -28,8 +33,13 @@ class MarketingPerformanceMetric extends BaseModel {
             ->withTimestamps();
     }
     public function prospectActivities() {
-        // Find initiative activities that were created from workflow activities linked to this metric
-        $initiativeActivityIds = MarketingInitiativeActivity::whereIn('marketing_workflow_id', function ($query) {
+        // Direct links: initiative activities assigned to this metric via the activity detail panel
+        $directIds = \DB::table('marketing_initiative_activity_metric')
+            ->where('marketing_performance_metric_id', $this->id)
+            ->pluck('marketing_initiative_activity_id');
+
+        // Indirect links: initiative activities created from workflow activities linked to this metric
+        $workflowIds = MarketingInitiativeActivity::whereIn('marketing_workflow_id', function ($query) {
             $query->select('marketing_workflow_id')
                 ->from('marketing_activities')
                 ->whereIn('id', function ($subQuery) {
@@ -38,7 +48,9 @@ class MarketingPerformanceMetric extends BaseModel {
                         ->where('marketing_performance_metric_id', $this->id);
                 });
         })->pluck('id');
-        return MarketingProspectActivity::whereIn('marketing_initiative_activity_id', $initiativeActivityIds);
+
+        $allIds = $directIds->merge($workflowIds)->unique()->values();
+        return MarketingProspectActivity::whereIn('marketing_initiative_activity_id', $allIds);
     }
 
     // Scopes
@@ -46,9 +58,12 @@ class MarketingPerformanceMetric extends BaseModel {
         return $query->where('metric_type', $type);
     }
 
-    // Calculate current value based on completed prospect activities
+    // KPI = total bumps across all related activities + count of completed activities
     public function getCurrentValue(): float {
-        return $this->prospectActivities()->count();
+        $query     = $this->prospectActivities();
+        $bumps     = (clone $query)->sum('bumps');
+        $completed = (clone $query)->where('status', 'completed')->count();
+        return (float) ($bumps + $completed);
     }
     public function getProgressPercentage(): float {
         if (! $this->target_value || $this->target_value == 0) {

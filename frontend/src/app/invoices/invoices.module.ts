@@ -10,33 +10,39 @@ import { InvoicesCashFlowComponent } from './-/invoices-cash-flow/invoices-cash-
 import { InvoicesCashRegisterComponent } from './-/invoices-cash-register/invoices-cash-register.component';
 import { InvoicesCashRegisterDetailComponent } from './-/invoices-cash-register/invoices-cash-register-detail.component';
 import { InvoicesStatsComponent } from './-/invoices-stats/invoices-stats.component';
+import { FinancialLiquidityComponent } from './-/financial-liquidity/financial-liquidity.component';
+import { InvoicesBankBalanceComponent } from './-/bank-balance/invoices-bank-balance.component';
 import { InvoiceDetailGuard } from './invoice-detail.guard';
 
 @NgModule({
     imports: [
         RouterModule.forChild([
             {
-                path: '', component: InvoicesNavComponent, children: [
-                    { path: '', component: InvoicesDashboard, title: $localize`:@@i18n.common.invoices:invoices` },
+                path: '',
+                component: InvoicesNavComponent,
+                children: [
+                    { path: 'invoices', component: InvoicesDashboard, title: $localize`:@@i18n.common.invoices:invoices` },
                     { path: 'expenses', component: InvoiceExpensesComponent, title: $localize`:@@i18n.common.expenses:expenses` },
                     { path: 'standing', component: InvoicesStandingComponent, title: $localize`:@@i18n.common.standingOrders:standing orders` },
                     { path: 'stats', component: InvoicesStatsComponent, title: $localize`:@@i18n.invoices.invoiceStats:invoice stats` },
                     { path: 'cashflow', component: InvoicesCashFlowComponent, title: $localize`:@@i18n.common.cashFlow:cash flow` },
-                    { path: 'cashregisters', component: InvoicesCashRegisterComponent, title: $localize`:@@i18n.common.cashRegisters:cash registers`, children: [
-                        { path: ':id', component: InvoicesCashRegisterDetailComponent },
-                    ]},
-                ]
+                    { path: 'cashregisters', component: InvoicesCashRegisterComponent, title: $localize`:@@i18n.common.cashRegisters:cash registers`, children: [{ path: ':id', component: InvoicesCashRegisterDetailComponent }] },
+                    { path: 'liquidity', component: FinancialLiquidityComponent, title: $localize`:@@i18n.financial.liquidity:liquidity` },
+                    { path: 'bank', component: InvoicesBankBalanceComponent, title: $localize`:@@i18n.invoices.bankBalance:bank balance` },
+                    { path: '', redirectTo: 'invoices', pathMatch: 'full' },
+                ],
             },
             {
-                path: ':id', 
-                component: InvoiceComponent, 
+                path: ':id',
+                component: InvoiceComponent,
                 ...InvoiceDetailGuard.routeActivators(),
                 children: [
                     { path: '', component: InvoiceDashboardComponent },
                     { path: '**', redirectTo: '' },
-                ]
+                ],
             },
             { path: '**', redirectTo: '' },
         ]),
     ],
-}) export class InvoicesModule { }
+})
+export class FinancialModule {}

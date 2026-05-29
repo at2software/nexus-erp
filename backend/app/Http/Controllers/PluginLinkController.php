@@ -42,7 +42,7 @@ class PluginLinkController extends Controller {
         $plugin_link->delete();
         return $plugin_link;
     }
-    public function update(PluginLink $plugin_link) {
-        return $plugin_link->applyAndSaveRequest();
+    public function update(Request $request, PluginLink $plugin_link) {
+        return $plugin_link->applyAndSave($request);
     }
 }

@@ -1,5 +1,4 @@
 export const deepMerge = (...objects: any[]) => {
-    
     if (objects.length < 2) throw new Error('deepMerge: this function expects at least 2 objects to be provided');
 
     const isObject = (_: any) => _ && typeof _ === 'object';
@@ -16,11 +15,11 @@ export const deepMerge = (...objects: any[]) => {
             } else {
                 target[key] = sourceValue;
             }
-        })
+        });
         return target;
     }
 
-    if (objects.some(object => !isObject(object))) throw new Error('deepMerge: all values should be of type "object"');
+    if (objects.some((object) => !isObject(object))) throw new Error('deepMerge: all values should be of type "object"');
 
     const target = objects.shift();
 
@@ -29,4 +28,4 @@ export const deepMerge = (...objects: any[]) => {
         deepMergeInner(target, source);
     }
     return target;
-}
+};

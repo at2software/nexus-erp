@@ -31,13 +31,7 @@ class BaseBuilder extends Builder {
         return $this->where($column, '>', $date);
     }
     public function whereBetweenString(?string $twoDates = null, string $column = 'created_at') {
-        if (! $twoDates) {
-            return $this;
-        }
-        if ($twoDates == null) {
-            return $this;
-        }
-        if ($twoDates == 'null') {
+        if (! $twoDates || $twoDates === 'null') {
             return $this;
         }
         $d = explode(',', $twoDates);
@@ -57,8 +51,8 @@ class BaseBuilder extends Builder {
         $this->where($column, '<', $date);
         return $this;
     }
-    public function whereLike($column, $like) {
-        return $this->whereRaw("UPPER($column) LIKE '%".strtoupper($like)."%'");
+    public function whereLike(string $column, string $like): static {
+        return $this->whereRaw("UPPER(`$column`) LIKE CONCAT('%', UPPER(?), '%')", [$like]);
     }
     public function whereFlag(int $flag, string $column = 'flags', $cmp = '='): BaseBuilder {
         return $this->whereRaw("`$column` & $flag $cmp $flag");
@@ -105,25 +99,34 @@ class BaseBuilder extends Builder {
         if (! ($w = request('with'))) {
             return $this;
         }
-        $with = explode(',', $w);
+        $with    = explode(',', $w);
+        $allowed = $this->getModel()->allowedWith ?? [];
+        if (count($allowed)) {
+            $with = array_intersect($with, $allowed);
+        }
         if (count($with)) {
             $this->with($with);
         }
         return $this;
     }
     public function applyRequest(): Builder {
+        $allowed = $this->getModel()->allowedScopes ?? [];
         foreach (request()->all() as $name => $value) {
-            if (method_exists($this, $name)) {
+            if (in_array($name, $allowed, true) && method_exists($this, $name)) {
                 call_user_func_array([$this, $name], array_filter([$value]));
             }
         }
         return $this;
     }
-    public function appendRequest() {
+    public function appendRequest(): static {
         if (! ($a = request('append'))) {
             return $this;
         }
         $appends = explode(',', $a);
+        $allowed = $this->getModel()->allowedAppends ?? [];
+        if (count($allowed)) {
+            $appends = array_intersect($appends, $allowed);
+        }
         if (! count($appends)) {
             return $this;
         }

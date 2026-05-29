@@ -1,18 +1,53 @@
 import { VcardClass } from '@models/vcard/VcardClass';
-import { Serializable } from '../serializable';
+import { Vcard } from '@models/vcard/Vcard';
 import { MarketingService } from './marketing.service';
-import { NxActionType } from 'src/app/nx/nx.actions';
-import { AutoWrap, AutoWrapArray } from '@constants/autowrap';
+import { Type } from 'class-transformer';
 import { CompanyContact } from '@models/company/company-contact.model';
 import { User } from '@models/user/user.model';
 import { LeadSource } from '@models/project/lead_source.model';
 import { MarketingProspectActivity } from './marketing-prospect-activity.model';
 import { MarketingInitiative } from './marketing-initiative.model';
-import { IHasMarker, Marker } from 'src/enums/marker';
+import { IHasMarker, Marker } from '@enums/marker';
+import { Model } from '@constants/type-discriminators';
+import { computed } from '@angular/core';
+import { tap } from 'rxjs';
+import { MarketingProspectActions } from './marketing.prospect.actions';
 
+@Model('MarketingProspect')
 export class MarketingProspect extends VcardClass implements IHasMarker {
-
     SERVICE = MarketingService;
+    static API_PATH = (): string => 'marketing/prospects';
+    static DB_TABLE_NAME = (): string => 'marketing_prospects';
+
+    static readonly STATUS_ICONS: Record<string, string> = {
+        new: 'add_circle',
+        engaged: 'chat_bubble',
+        converted: 'check_circle',
+        unresponsive: 'sms_failed',
+        disqualified: 'block',
+        on_hold: 'pause_circle',
+    }
+
+    static readonly STATUS_BG_CLASSES: Record<string, string> = {
+        new: 'bg-cyan',
+        engaged: 'bg-teal',
+        converted: 'bg-success',
+        unresponsive: 'bg-warning',
+        disqualified: 'bg-danger',
+        on_hold: 'bg-secondary',
+    }
+
+    static readonly STATUS_TEXT_CLASSES: Record<string, string> = {
+        new: 'text-cyan',
+        engaged: 'text-teal',
+        converted: 'text-success',
+        unresponsive: 'text-warning',
+        disqualified: 'text-danger',
+        on_hold: 'text-muted',
+    }
+
+    doubleClickAction = 0;
+    actions = MarketingProspectActions(this);
 
     email!: string;
     user_id!: number;
@@ -23,160 +58,72 @@ export class MarketingProspect extends VcardClass implements IHasMarker {
     company_id?: string;
     company_contact_id?: string;
     companyModel?: any;
-    company?: string;
+    company = computed((): string => {
+        const src: VcardClass = this.company_contact?.company?.card() ? this.company_contact.company : this;
+        return src.card()?.get('ORG')?.map((_: any) => _.vals.join(' '))?.join(', ') ?? '';
+    });
     status!: 'new' | 'engaged' | 'converted' | 'unresponsive' | 'disqualified' | 'on_hold';
     added_via!: 'addon' | 'manual' | 'import';
     has_overdue_activities?: boolean;
     marker: number | null = null;
 
+    statusIcon      = () => MarketingProspect.STATUS_ICONS[this.status]      ?? 'help_outline'
+    statusBgClass   = () => MarketingProspect.STATUS_BG_CLASSES[this.status]  ?? 'bg-secondary'
+    statusTextClass = () => MarketingProspect.STATUS_TEXT_CLASSES[this.status] ?? 'text-muted'
+
     readonly #inactiveStatuses = ['unresponsive', 'disqualified', 'on_hold'];
 
-    override markerClass = (): string => {
-        if (this.#inactiveStatuses.includes(this.status)) return ''
-        return this.marker !== null && Marker[this.marker as number] ? `marker marker-${Marker[this.marker as number]}` : ''
+    override markerClass = computed((): string => {
+        if (this.#inactiveStatuses.includes(this.status)) return '';
+        return this.marker !== null && Marker.COLORS[this.marker as number] ? `marker marker-${Marker.COLORS[this.marker as number]}` : '';
+    });
+
+    @Type(()=>CompanyContact) company_contact?: CompanyContact;
+    @Type(()=>User) user?: User;
+    @Type(()=>LeadSource) lead_source?: LeadSource;
+    @Type(()=>MarketingInitiative) marketing_initiative?: MarketingInitiative;
+    @Type(()=>MarketingProspectActivity) activities?: MarketingProspectActivity[];
+
+    mark = (state: string) =>
+        this.httpService.put(`marketing/prospects/${this.id}`, { status: state })
+            .pipe(tap((response: any) => this.status = response.status ?? state));
+
+    name = computed(() => this.company_contact?.getName() || this.getName() || this.email);
+
+    getPersonal = (): VcardClass | undefined => this.company_contact?.contact ?? this;
+
+    override afterDeserialize(json: any): void {
+        this.#ensureVcardNameFields();
+        super.afterDeserialize(json);
     }
 
-    @AutoWrap('CompanyContact') company_contact?: CompanyContact;
-    @AutoWrap('User') user?: User;
-    @AutoWrap('LeadSource') lead_source?: LeadSource;
-    @AutoWrap('MarketingInitiative') marketing_initiative?: MarketingInitiative;
-    @AutoWrapArray('MarketingProspectActivity') activities?: MarketingProspectActivity[];
-
-    doubleClickAction = 0;
-    actions = [
-        {
-            title: $localize`:@@i18n.common.open:open`,
-            action: () => this.navigate(`/marketing/prospects`)
-        },
-        {
-            title: $localize`:@@i18n.marketing.open_linkedin:Open LinkedIn`,
-            on: () => !!this.linkedin_url,
-            action: () => {
-                if (this.linkedin_url) window.open(this.linkedin_url, '_blank');
-            }
-        },
-        {
-            title: $localize`:@@i18n.marketing.mark_status:Mark...`,
-            group: true,
-            children: [
-                {
-                    title: $localize`:@@i18n.marketing.mark_new:Mark New`,
-                    group: true,
-                    on: () => this.status !== 'new',
-                    action: () => this.mark('new')
-                },
-                {
-                    title: $localize`:@@i18n.marketing.mark_engaged:Mark Engaged`,
-                    group: true,
-                    on: () => this.status !== 'engaged',
-                    action: () => this.mark('engaged')
-                },
-                {
-                    title: $localize`:@@i18n.marketing.mark_converted:Mark Converted`,
-                    group: true,
-                    on: () => this.status !== 'converted',
-                    action: () => this.mark('converted')
-                },
-                {
-                    title: $localize`:@@i18n.marketing.mark_unresponsive:Mark Unresponsive`,
-                    group: true,
-                    on: () => this.status !== 'unresponsive',
-                    action: () => this.mark('unresponsive')
-                },
-                {
-                    title: $localize`:@@i18n.marketing.mark_disqualified:Mark Disqualified`,
-                    group: true,
-                    on: () => this.status !== 'disqualified',
-                    action: () => this.mark('disqualified')
-                },
-                {
-                    title: $localize`:@@i18n.marketing.mark_on_hold:Mark On Hold`,
-                    group: true,
-                    on: () => this.status !== 'on_hold',
-                    action: () => this.mark('on_hold')
-                },
-
-            ]
-        },
-        {
-            title: $localize`:@@i18n.common.delete:delete`,
-            group: true,
-            type: NxActionType.Destructive,
-            action: () => this.confirm().then(() => this.httpService.delete(`marketing/prospects/${this.id}`).subscribe()),
-            hotkey: 'DEL',
-            roles: 'marketing'
+    #ensureVcardNameFields() {
+        const emailFallback = this.email || '';
+        if (!this.card()) {
+            this.card.set(new Vcard(`BEGIN:VCARD\nVERSION:3.0\nFN:${emailFallback}\nN:${emailFallback};;;;\nEND:VCARD`));
+            return;
         }
-    ];
-
-    static API_PATH = (): string => 'marketing/prospects';
-    static DB_TABLE_NAME = (): string => 'marketing_prospects';
-
-    mark = (state:string) => this.httpService.put(`marketing/prospects/${this.id}`, { status: state })
-    
-    override _serialize(json: any) {
-        const existingActivities = this.activities?.length ? this.activities : undefined;
-        super._serialize(json);
-        if (existingActivities && json && !('activities' in json)) {
-            this.activities = existingActivities;
+        const card = this.card()!;
+        const fnRow = card.rows.find(r => r.key === 'FN');
+        const nRow = card.rows.find(r => r.key === 'N');
+        if (fnRow && nRow) return;
+        const missing: string[] = [];
+        if (!fnRow) {
+            const fn = nRow ? [nRow.vals[1], nRow.vals[0]].filter(Boolean).join(' ') || emailFallback : emailFallback;
+            missing.push(`FN:${fn}`);
         }
-        return this;
+        if (!nRow) {
+            const n = fnRow?.vals[0] || emailFallback;
+            missing.push(`N:${n};;;;`);
+        }
+        let vcardStr = card.toString();
+        const endIdx = vcardStr.lastIndexOf('\nEND:VCARD');
+        vcardStr = endIdx !== -1
+            ? vcardStr.slice(0, endIdx) + '\n' + missing.join('\n') + vcardStr.slice(endIdx)
+            : vcardStr + '\n' + missing.join('\n');
+        this.card.set(new Vcard(vcardStr));
     }
 
-    serialize = () => {
-        super.serialize({});
-
-        // For converted prospects, get data from company_contact relationships
-        // Otherwise, get it from the prospect's own vcard
-        if (this.company_contact_id && this.company_contact) {
-            const linkedContact = this.company_contact.contact;
-
-            // Get name from contact
-            if (linkedContact?.card) {
-                const fn = linkedContact.card.get('FN')?.first()?.vals?.join('');
-                if (fn) this.name = fn;
-            }
-
-            this.firstName = linkedContact?.firstName || this.firstName;
-            this.familyName = linkedContact?.familyName || this.familyName;
-            this.fullName = linkedContact?.fullName || this.fullName || this.name || '';
-
-            // Get company from company
-            if (this.company_contact.company?.card) {
-                this.company = this.company_contact.company.card.get('ORG')?.map(_ => _.vals.join(' ')).join(', ');
-            }
-        } else {
-            // Use prospect's own vcard
-            this.company = this.card.get('ORG')?.map(_ => _.vals.join(' ')).join(', ');
-        }
-
-        this.fullName = (this.fullName || this.name || '').trim();
-
-        if ((!this.firstName || !this.familyName) && this.fullName) {
-            const parts = this.fullName.split(/\s+/).filter(Boolean);
-            if (!this.firstName && parts.length > 0) {
-                this.firstName = parts[0];
-            }
-            if (!this.familyName && parts.length > 1) {
-                this.familyName = parts.slice(1).join(' ');
-            }
-        }
-    }
-
-}
-
-export class MarketingProspectStats extends Serializable {
-
-    static API_PATH = (): string => 'marketing_prospects';
-    SERVICE = MarketingService;
-
-    total!: number;
-    by_status!: {
-        new: number;
-        engaged: number;
-        converted: number;
-    };
-    activities_pending!: number;
-    activities_overdue!: number;
 }
 
 // Supporting interfaces

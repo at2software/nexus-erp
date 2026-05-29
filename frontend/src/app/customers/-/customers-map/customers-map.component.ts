@@ -1,7 +1,8 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, ViewChild, ElementRef, inject } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, afterNextRender, inject, signal, viewChild } from '@angular/core';
 import { CompanyService } from '@models/company/company.service';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import * as L from 'leaflet';
+import { SpinnerComponent } from '@shards/spinner/spinner.component';
 
 interface CustomerLocation {
     id: string;
@@ -14,74 +15,68 @@ interface CustomerLocation {
 }
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'customers-map',
     templateUrl: './customers-map.component.html',
     styleUrls: ['./customers-map.component.scss'],
     standalone: true,
-    imports: [ToolbarComponent]
+    imports: [ToolbarComponent, SpinnerComponent],
 })
-export class CustomersMapComponent implements OnInit, AfterViewInit, OnDestroy {
+export class CustomersMapComponent implements OnDestroy {
+    private readonly mapContainer = viewChild.required<ElementRef<HTMLElement>>('mapContainer');
 
-    @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRef<HTMLElement>;
-    
     #companyService = inject(CompanyService);
-    
+
     #map?: L.Map;
     #markers: L.Marker[] = [];
     customers: CustomerLocation[] = [];
-    loading = true;
+    loading = signal(true);
 
     constructor() {
-        // Fix Leaflet default marker icons
         delete (L.Icon.Default.prototype as any)._getIconUrl;
         L.Icon.Default.mergeOptions({
             iconRetinaUrl: 'assets/leaflet/marker-icon-2x.png',
             iconUrl: 'assets/leaflet/marker-icon.png',
             shadowUrl: 'assets/leaflet/marker-shadow.png',
         });
-    }
-
-    ngOnInit(): void {
         this.#loadCustomers();
-    }
-
-    ngAfterViewInit(): void {
-        this.#initializeMap();
+        afterNextRender(() => this.#initializeMap());
     }
 
     ngOnDestroy(): void {
-        if (this.#map) {
-            this.#map.remove();
-        }
+        this.#map?.remove();
     }
 
     #loadCustomers(): void {
-        this.loading = true;
-        this.#companyService.getWithCoordinates().subscribe((response: any) => {
-            this.customers = response as CustomerLocation[];
-            this.loading = false;
-            if (this.#map) {
-                this.#addMarkersToMap();
-            }
-        }, (error) => {
-            console.error('Error loading customers:', error);
-            this.loading = false;
-        });
+        this.loading.set(true);
+        this.#companyService.getWithCoordinates().subscribe(
+            (response: any) => {
+                this.customers = response as CustomerLocation[];
+                this.loading.set(false);
+                if (this.#map) {
+                    this.#addMarkersToMap();
+                }
+            },
+            (error) => {
+                console.error('Error loading customers:', error);
+                this.loading.set(false);
+            },
+        );
     }
 
     #initializeMap(): void {
         // Initialize map centered on Europe
-        this.#map = L.map(this.mapContainer.nativeElement, {
+        this.#map = L.map(this.mapContainer().nativeElement, {
             center: [50.0, 10.0], // Center of Europe
             zoom: 4,
             zoomControl: false,
             scrollWheelZoom: true,
-            attributionControl: false
+            attributionControl: false,
         });
 
         // Add dark themed tile layer
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-            maxZoom: 18
+            maxZoom: 18,
         }).addTo(this.#map);
 
         // Add markers if customers are already loaded
@@ -94,28 +89,27 @@ export class CustomersMapComponent implements OnInit, AfterViewInit, OnDestroy {
         if (!this.#map) return;
 
         // Clear existing markers
-        this.#markers.forEach(marker => marker.remove());
+        this.#markers.forEach((marker) => marker.remove());
         this.#markers = [];
 
         // Add markers for each customer
-        this.customers.forEach(customer => {
+        this.customers.forEach((customer) => {
             // Validate coordinates before creating marker
-            if (customer.lat && customer.lng && 
-                !isNaN(customer.lat) && !isNaN(customer.lng) && 
-                isFinite(customer.lat) && isFinite(customer.lng)) {
-                
+            if (customer.lat && customer.lng && !isNaN(customer.lat) && !isNaN(customer.lng) && isFinite(customer.lat) && isFinite(customer.lng)) {
                 // Create custom icon based on pin properties
                 const customIcon = this.#createCustomIcon(customer.pinSize, customer.pinColor);
-                
+
                 const marker = L.marker([customer.lat, customer.lng], { icon: customIcon })
-                    .bindPopup(`
+                    .bindPopup(
+                        `
                         <div class="customer-popup">
                             <h6>${customer.name}</h6>
                             <button class="btn btn-sm btn-primary mt-2" onclick="window.open('${customer.path}', '_blank')">
                                 View Customer
                             </button>
                         </div>
-                    `)
+                    `,
+                    )
                     .on('click', () => {
                         // Optional: navigate to customer detail
                         // this.#router.navigate([customer.path]);
@@ -143,7 +137,7 @@ export class CustomersMapComponent implements OnInit, AfterViewInit, OnDestroy {
         const sizes: Record<string, [number, number]> = {
             small: [12, 19],
             medium: [18, 29],
-            large: [24, 38]
+            large: [24, 38],
         };
 
         const iconSize = sizes[size as keyof typeof sizes] || sizes.small;
@@ -154,7 +148,7 @@ export class CustomersMapComponent implements OnInit, AfterViewInit, OnDestroy {
             iconAnchor: [iconSize[0] / 2, iconSize[1]],
             popupAnchor: [0, -iconSize[1]],
             shadowSize: [41, 41],
-            shadowAnchor: [12, 41]
+            shadowAnchor: [12, 41],
         });
     }
 
@@ -164,7 +158,7 @@ export class CustomersMapComponent implements OnInit, AfterViewInit, OnDestroy {
             red: '#dc3545',
             orange: '#fd7e14',
             yellow: '#ffc107',
-            green: '#28a745'
+            green: '#28a745',
         };
 
         const fillColor = colors[color as keyof typeof colors] || colors.grey;

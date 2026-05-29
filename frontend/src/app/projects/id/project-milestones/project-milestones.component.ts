@@ -1,7 +1,6 @@
-import { ProjectService } from '@models/project/project.service';
-import { Component, DestroyRef, OnInit, inject, viewChild } from '@angular/core';
+﻿import { ProjectService } from '@models/project/project.service';
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, viewChild, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { firstOrDefault } from '@constants/constants';
 import { Project } from '@models/project/project.model';
 import { Assignee } from '@models/assignee/assignee.model';
 import { Milestone } from '@models/milestones/milestone.model';
@@ -13,45 +12,47 @@ import { ConfirmationService } from '@app/_modals/modal-confirm/confirmation.ser
 import { Toast } from '@shards/toast/toast';
 import { Task } from '@models/tasks/task.model';
 import { CustomGanttComponent, GanttRow } from '@app/projects/_shards/custom-gantt/custom-gantt.component';
+import { SpinnerComponent } from '@shards/spinner/spinner.component';
 
-
-interface T_ASSIGNMENT { assignee: Assignee, tasks: Task[] }
+interface T_ASSIGNMENT {
+    assignee: Assignee;
+    tasks: Task[];
+}
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'project-milestones',
     templateUrl: './project-milestones.component.html',
     styleUrls: ['./project-milestones.component.scss'],
     standalone: true,
-    host: { class: 'container-full'},
-    imports: [ToolbarComponent, CustomGanttComponent, NgbTooltipModule, NgbDropdownModule]
+    host: { class: 'container-full' },
+    imports: [ToolbarComponent, CustomGanttComponent, NgbTooltipModule, NgbDropdownModule, SpinnerComponent],
 })
-export class ProjectMilestonesComponent implements OnInit {
-
+export class ProjectMilestonesComponent {
     ganttComponent = viewChild(CustomGanttComponent);
 
-    project: Project
-    assignees: T_ASSIGNMENT[] = []
-    currentViewMode: string = localStorage.getItem('projectMilestonesViewMode') || 'Week'
-    ganttRows: GanttRow[] = []
-    isLoading = true
+    project!: Project;
+    assignees: T_ASSIGNMENT[] = [];
+    currentViewMode: string = localStorage.getItem('projectMilestonesViewMode') || 'Week';
+    ganttRows: GanttRow[] = [];
+    isLoading = signal(true);
     #isInitialized = false;
 
-    parent = inject(ProjectDetailGuard)
+    parent = inject(ProjectDetailGuard);
 
-    #destroyRef = inject(DestroyRef)
-    #projectService = inject(ProjectService)
-    #inputModalService = inject(InputModalService)
-    #confirmationService = inject(ConfirmationService)
+    #destroyRef = inject(DestroyRef);
+    #projectService = inject(ProjectService);
+    #inputModalService = inject(InputModalService);
+    #confirmationService = inject(ConfirmationService);
 
-    ngOnInit(): void {
-        this.parent.onChange.subscribe(() => {
-            this.project = this.parent.current
-            // Only load milestones once on initial load
+    constructor() {
+        effect(() => {
+            this.project = this.parent.object();
             if (!this.#isInitialized) {
                 this.#isInitialized = true;
-                this.loadMilestones()
+                this.loadMilestones();
             }
-        })
+        });
     }
 
     loadMilestones() {
@@ -59,29 +60,32 @@ export class ProjectMilestonesComponent implements OnInit {
             return;
         }
 
-        this.isLoading = true;
-        this.#projectService.indexMilestones(this.project.id).pipe(takeUntilDestroyed(this.#destroyRef)).subscribe({
-            next: (response: any) => {
-                const milestonesWithTasks = response.milestones || [];
-                const projectTasks = response.project_tasks || [];
+        this.isLoading.set(true);
+        this.#projectService
+            .indexMilestones(this.project.id)
+            .pipe(takeUntilDestroyed(this.#destroyRef))
+            .subscribe({
+                next: (response: any) => {
+                    const milestonesWithTasks = response.milestones || [];
+                    const projectTasks = response.project_tasks || [];
 
-                // Extract milestones and properly instantiate them as Milestone objects
-                const milestones = milestonesWithTasks.map((item: any) => {
-                    const milestone = Milestone.fromJson(item.milestone);
-                    milestone.project = this.project;
-                    return milestone;
-                });
+                    // Extract milestones and properly instantiate them as Milestone objects
+                    const milestones = milestonesWithTasks.map((item: any) => {
+                        const milestone = Milestone.fromJson(item.milestone);
+                        milestone.project = this.project;
+                        return milestone;
+                    });
 
-                this.project.milestones = milestones;
-                this.project.tasks = projectTasks;
-                this.#prepareGanttRows();
-                this.isLoading = false;
-            },
-            error: (error: any) => {
-                console.error('Error loading milestones:', error);
-                this.isLoading = false;
-            }
-        });
+                    this.project.milestones = milestones;
+                    this.project.tasks = projectTasks;
+                    this.#prepareGanttRows();
+                    this.isLoading.set(false);
+                },
+                error: (error: any) => {
+                    console.error('Error loading milestones:', error);
+                    this.isLoading.set(false);
+                },
+            });
     }
 
     #prepareGanttRows() {
@@ -91,7 +95,7 @@ export class ProjectMilestonesComponent implements OnInit {
         this.ganttRows.push({
             type: 'header',
             data: this.project,
-            project: this.project
+            project: this.project,
         });
 
         // Add project-level tasks
@@ -99,7 +103,7 @@ export class ProjectMilestonesComponent implements OnInit {
             this.ganttRows.push({
                 type: 'task',
                 data: task,
-                project: this.project
+                project: this.project,
             });
         });
 
@@ -108,7 +112,7 @@ export class ProjectMilestonesComponent implements OnInit {
             this.ganttRows.push({
                 type: 'milestone',
                 data: milestone,
-                project: this.project
+                project: this.project,
             });
 
             // Add tasks for this milestone
@@ -117,21 +121,24 @@ export class ProjectMilestonesComponent implements OnInit {
                     type: 'task',
                     data: task,
                     project: this.project,
-                    milestone: milestone
+                    milestone: milestone,
                 });
             });
         });
     }
 
-    find = (id: string): T_ASSIGNMENT => firstOrDefault(this.assignees, ((x: any) => x.assignee.id == id), this.assignees[0])
+    find = (id: string): T_ASSIGNMENT => this.assignees.find((x: any) => x.assignee.id == id) ?? this.assignees[0];
 
     onAddButton = () => {
-        this.#inputModalService.open($localize`:@@i18n.common.addMilestone:add milestone`)
-            .then(result => {
+        this.#inputModalService
+            .open($localize`:@@i18n.common.addMilestone:add milestone`)
+            .then((result) => {
                 if (result?.text?.trim()) {
-                    this.#projectService.createMilestone(this.project.id, {
-                        name: result.text.trim()
-                    }).pipe(takeUntilDestroyed(this.#destroyRef))
+                    this.#projectService
+                        .createMilestone(this.project.id, {
+                            name: result.text.trim(),
+                        })
+                        .pipe(takeUntilDestroyed(this.#destroyRef))
                         .subscribe({
                             next: () => {
                                 Toast.success($localize`:@@i18n.milestone.created:milestone created`);
@@ -140,19 +147,19 @@ export class ProjectMilestonesComponent implements OnInit {
                             error: (error: any) => {
                                 Toast.error($localize`:@@i18n.milestone.createError:failed to create milestone`);
                                 console.error('Error creating milestone:', error);
-                            }
+                            },
                         });
                 }
             })
             .catch(() => {
                 // User cancelled - no action needed
             });
-    }
+    };
 
     onViewModeChange = (mode: string) => {
         this.currentViewMode = mode;
         localStorage.setItem('projectMilestonesViewMode', mode);
-    }
+    };
 
     onConvertInvoiceItems = () => {
         if (!this.project?.id) {
@@ -164,7 +171,8 @@ export class ProjectMilestonesComponent implements OnInit {
         }
 
         // Use bulk conversion endpoint
-        this.#projectService.convertInvoiceItemsToMilestones(this.project.id)
+        this.#projectService
+            .convertInvoiceItemsToMilestones(this.project.id)
             .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe({
                 next: (response: any) => {
@@ -176,9 +184,9 @@ export class ProjectMilestonesComponent implements OnInit {
                 error: (error) => {
                     // Keep error logging for debugging purposes
                     console.error('Error converting invoice items to milestones:', error);
-                }
+                },
             });
-    }
+    };
 
     onWipeBoard = () => {
         if (!this.project?.id) {
@@ -190,42 +198,47 @@ export class ProjectMilestonesComponent implements OnInit {
             return;
         }
 
-        this.#confirmationService.confirm({
-            title: $localize`:@@i18n.milestones.wipeBoardTitle:Wipe Board`,
-            message: $localize`:@@i18n.milestones.wipeBoardMessage:Are you sure you want to delete all ${milestoneCount} milestones? This action cannot be undone.`,
-            btnOkText: $localize`:@@i18n.common.delete:delete`,
-            btnCancelText: $localize`:@@i18n.common.cancel:cancel`,
-            dialogSize: 'sm'
-        })
-        .then(() => {
-            // User confirmed - proceed with deletion
-            this.#projectService.wipeMilestones(this.project.id.toString())
-                .pipe(takeUntilDestroyed(this.#destroyRef))
-                .subscribe({
-                    next: () => {
-                        Toast.success($localize`:@@i18n.milestones.allMilestonesDeleted:All milestones deleted successfully`);
-                        this.loadMilestones(); // Reload to clear the list
-                    },
-                    error: (error) => {
-                        Toast.error($localize`:@@i18n.milestones.errorDeletingMilestones:Failed to delete milestones`);
-                        console.error('Error deleting all milestones:', error);
-                    }
-                });
-        })
-        .catch(() => {
-            // User cancelled - no action needed
-        });
-    }
+        this.#confirmationService
+            .confirm({
+                title: $localize`:@@i18n.milestones.wipeBoardTitle:Wipe Board`,
+                message: $localize`:@@i18n.milestones.wipeBoardMessage:Are you sure you want to delete all ${milestoneCount} milestones? This action cannot be undone.`,
+                btnOkText: $localize`:@@i18n.common.delete:delete`,
+                btnCancelText: $localize`:@@i18n.common.cancel:cancel`,
+                dialogSize: 'sm',
+            })
+            .then(() => {
+                // User confirmed - proceed with deletion
+                this.#projectService
+                    .wipeMilestones(this.project.id.toString())
+                    .pipe(takeUntilDestroyed(this.#destroyRef))
+                    .subscribe({
+                        next: () => {
+                            Toast.success($localize`:@@i18n.milestones.allMilestonesDeleted:All milestones deleted successfully`);
+                            this.loadMilestones(); // Reload to clear the list
+                        },
+                        error: (error) => {
+                            Toast.error($localize`:@@i18n.milestones.errorDeletingMilestones:Failed to delete milestones`);
+                            console.error('Error deleting all milestones:', error);
+                        },
+                    });
+            })
+            .catch(() => {
+                // User cancelled - no action needed
+            });
+    };
 
     onAddTask = (project: Project) => {
-        this.#inputModalService.open($localize`:@@i18n.task.addTask:Add Task`)
-            .then(result => {
+        this.#inputModalService
+            .open($localize`:@@i18n.task.addTask:Add Task`)
+            .then((result) => {
                 if (result?.text?.trim()) {
-                    this.#projectService.createTaskForProject(project.id, {
-                        name: result.text.trim(),
-                        parent_type: 'App\\Models\\Project',
-                        parent_id: project.id
-                    }).pipe(takeUntilDestroyed(this.#destroyRef))
+                    this.#projectService
+                        .createTaskForProject(project.id, {
+                            name: result.text.trim(),
+                            parent_type: 'App\\Models\\Project',
+                            parent_id: project.id,
+                        })
+                        .pipe(takeUntilDestroyed(this.#destroyRef))
                         .subscribe({
                             next: () => {
                                 Toast.success($localize`:@@i18n.task.created:Task created`);
@@ -234,13 +247,12 @@ export class ProjectMilestonesComponent implements OnInit {
                             error: (error: any) => {
                                 Toast.error($localize`:@@i18n.task.createError:Failed to create task`);
                                 console.error('Error creating task:', error);
-                            }
+                            },
                         });
                 }
             })
             .catch(() => {
                 // User cancelled
             });
-    }
-
+    };
 }

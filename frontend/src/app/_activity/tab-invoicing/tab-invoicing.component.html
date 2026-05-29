@@ -1,0 +1,10 @@
+<activity-tab icon="attach_money">
+    @let _user = user();
+    <div class="container">
+        @if (_user) {
+            <scrollbar>
+                <tab-tasks-invoiceable></tab-tasks-invoiceable>
+            </scrollbar>
+        }
+    </div>
+</activity-tab>

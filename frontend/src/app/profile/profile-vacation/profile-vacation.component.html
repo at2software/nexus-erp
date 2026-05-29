@@ -1,10 +1,11 @@
+@let _user = user();
 <div class="row">
-  <div class="col-3">
-    <profile-vacation-widget></profile-vacation-widget>
-  </div>
-  <div class="col-9">
-    @if (user) {
-      <hr-vacation [user]="user"></hr-vacation>
-    }
-  </div>
+    <div class="col-3">
+        <profile-vacation-widget></profile-vacation-widget>
+    </div>
+    <div class="col-9">
+        @if (_user) {
+            <hr-vacation [user]="_user"></hr-vacation>
+        }
+    </div>
 </div>

@@ -1,11 +1,12 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MarketingService } from '@models/marketing/marketing.service';
 import { MarketingWorkflow } from '@models/marketing/marketing-workflow.model';
 import { MarketingActivity } from '@models/marketing/marketing-activity.model';
-import { NexusModule } from 'src/app/nx/nexus.module';
+import { Nx } from '@app/nx/nx.directive';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { GuidedTourComponent } from '@shards/guided-tour/guided-tour.component';
@@ -13,32 +14,34 @@ import { GuidedTourComponent } from '@shards/guided-tour/guided-tour.component';
 const ActivityStatsColors = MarketingActivity.STATS_COLORS;
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'marketing-workflows',
     templateUrl: './marketing-workflows.component.html',
     styleUrl: './marketing-workflows.component.scss',
     standalone: true,
-    imports: [FormsModule, NexusModule, RouterModule, NgbTooltipModule, EmptyStateComponent, GuidedTourComponent]
+    imports: [FormsModule, Nx, RouterModule, NgbTooltipModule, EmptyStateComponent, GuidedTourComponent],
 })
 export class MarketingWorkflowsComponent implements OnInit {
     #marketingService = inject(MarketingService);
     #route = inject(ActivatedRoute);
     #router = inject(Router);
+    #destroyRef = inject(DestroyRef);
 
     readonly STATS_COLORS = ActivityStatsColors;
 
     workflows: MarketingWorkflow[] = [];
     currentWorkflowId: string | null = null;
 
-    showCreateModal = false;
+    showCreateModal = signal(false);
     newWorkflow: Partial<MarketingWorkflow> = {
         name: '',
         description: '',
-        is_active: true
+        is_active: true,
     };
 
     ngOnInit() {
         // Monitor child route params to track current workflow
-        this.#route.firstChild?.params.subscribe(params => {
+        this.#route.firstChild?.params.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe((params) => {
             this.currentWorkflowId = params['id'] || null;
         });
 
@@ -46,47 +49,47 @@ export class MarketingWorkflowsComponent implements OnInit {
     }
 
     loadWorkflows() {
-        this.#marketingService.indexWorkflows()
-            .subscribe((workflows: MarketingWorkflow[]) => {
-                this.workflows = workflows;
+        this.#marketingService.indexWorkflows().subscribe((workflows: MarketingWorkflow[]) => {
+            this.workflows = workflows;
 
-                // Auto-select first workflow if none is selected
-                if (workflows.length > 0 && !this.currentWorkflowId) {
-                    this.#router.navigate(['/marketing/workflows', workflows[0].id]);
-                }
-            });
+            // Auto-select first workflow if none is selected
+            if (workflows.length > 0 && !this.currentWorkflowId) {
+                this.#router.navigate(['/marketing/workflows', workflows[0].id]);
+            }
+        });
     }
 
     createWorkflow() {
         if (!this.newWorkflow.name) return;
 
-        this.#marketingService.storeWorkflow({
-            name: this.newWorkflow.name!,
-            description: this.newWorkflow.description,
-            is_active: this.newWorkflow.is_active ?? true
-        }).subscribe((workflow: MarketingWorkflow) => {
-            this.workflows.push(workflow);
-            this.resetCreateForm();
-            // Navigate to newly created workflow
-            this.#router.navigate(['/marketing/workflows', workflow.id]);
-        });
+        this.#marketingService
+            .storeWorkflow({
+                name: this.newWorkflow.name!,
+                description: this.newWorkflow.description,
+                is_active: this.newWorkflow.is_active ?? true,
+            })
+            .subscribe((workflow: MarketingWorkflow) => {
+                this.workflows.push(workflow);
+                this.resetCreateForm();
+                // Navigate to newly created workflow
+                this.#router.navigate(['/marketing/workflows', workflow.id]);
+            });
     }
 
     deleteWorkflow(workflow: MarketingWorkflow) {
         if (!confirm(`Delete workflow "${workflow.name}"?`)) return;
 
-        this.#marketingService.destroyWorkflow(workflow.id)
-            .subscribe(() => {
-                this.workflows = this.workflows.filter(w => w.id !== workflow.id);
-                if (this.currentWorkflowId === workflow.id) {
-                    // Navigate to first remaining workflow or no selection
-                    if (this.workflows.length > 0) {
-                        this.#router.navigate(['/marketing/workflows', this.workflows[0].id]);
-                    } else {
-                        this.#router.navigate(['/marketing/workflows']);
-                    }
+        this.#marketingService.destroyWorkflow(workflow.id).subscribe(() => {
+            this.workflows = this.workflows.filter((w) => w.id !== workflow.id);
+            if (this.currentWorkflowId === workflow.id) {
+                // Navigate to first remaining workflow or no selection
+                if (this.workflows.length > 0) {
+                    this.#router.navigate(['/marketing/workflows', this.workflows[0].id]);
+                } else {
+                    this.#router.navigate(['/marketing/workflows']);
                 }
-            });
+            }
+        });
     }
 
     isWorkflowActive(workflowId: string): boolean {
@@ -94,11 +97,11 @@ export class MarketingWorkflowsComponent implements OnInit {
     }
 
     resetCreateForm() {
-        this.showCreateModal = false;
+        this.showCreateModal.set(false);
         this.newWorkflow = {
             name: '',
             description: '',
-            is_active: true
+            is_active: true,
         };
     }
 }

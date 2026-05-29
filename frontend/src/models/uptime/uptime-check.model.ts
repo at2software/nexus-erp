@@ -1,6 +1,8 @@
 import { Serializable } from '../serializable';
 import { UptimeMonitorService } from './uptime-monitor.service';
+import { Model } from '@constants/type-discriminators';
 
+@Model('UptimeCheck')
 export class UptimeCheck extends Serializable {
     static API_PATH = (): string => 'uptime_checks';
 

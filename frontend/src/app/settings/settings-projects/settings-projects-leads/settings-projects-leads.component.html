@@ -1,18 +1,18 @@
 <div class="card mb-3">
-  <div class="card-header">
-    <span i18n="@@i18n.project.leadSources">lead sources</span>
-    <div class="card-header-actions">
-      <i class="pointer text-primary" (click)="onNewSource()" (keyup.enter)="onNewSource()" tabindex="0">add</i>
+    <div class="card-header">
+        <span i18n="@@i18n.project.leadSources">lead sources</span>
+        <div class="card-header-actions">
+            <i class="pointer text-primary" (click)="onNewSource()" (keyup.enter)="onNewSource()" tabindex="0">add</i>
+        </div>
     </div>
-  </div>
-  @if (global.lead_sources.length === 0) {
-    <empty-state class="settings" title="no lead sources defined yet"></empty-state>
-  }
-  <ul class="list-group">
-    @for (source of global.lead_sources; track source.id) {
-    <li class="list-group-item" [nx]="source" [tables]="global.lead_sources">
-      {{source.name}}
-    </li>
+    @if (global.lead_sources.length === 0) {
+        <empty-state class="settings" title="no lead sources defined yet"></empty-state>
     }
-  </ul>
+    <ul class="list-group">
+        @for (source of global.lead_sources; track source.id) {
+            <li class="list-group-item" [nx]="source" [tables]="global.lead_sources">
+                {{ source.name }}
+            </li>
+        }
+    </ul>
 </div>

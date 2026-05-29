@@ -1,574 +1,330 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { from, mergeMap, switchMap, tap, toArray } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgbDropdownModule, NgbModal, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { MarketingService } from '@models/marketing/marketing.service';
 import { MarketingProspect } from '@models/marketing/marketing.prospect.model';
 import { MarketingInitiative } from '@models/marketing/marketing-initiative.model';
-import { NexusModule } from 'src/app/nx/nexus.module';
-import { AvatarComponent } from '@app/_shards/avatar/avatar.component';
-import { SearchService } from '@models/search.service';
-import { ScrollbarComponent } from "@app/app/scrollbar/scrollbar.component";
+import { Nx } from '@app/nx/nx.directive';
+import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
-import { NxGlobal } from 'src/app/nx/nx.global';
-import { MarketingProspectActivity } from '@models/marketing/marketing-prospect-activity.model';
+import { NxGlobal } from '@app/nx/nx.global';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
-import { User } from '@models/user/user.model';
+import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { MarketingCsvImportModalComponent, parseCsv, type CsvColumnMapping, type CsvImportResult } from './marketing-csv-import-modal/marketing-csv-import-modal.component';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'marketing-prospects',
     templateUrl: './marketing-prospects.component.html',
     styleUrls: ['./marketing-prospects.component.scss'],
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, NgbDropdownModule, NgbTooltipModule, NexusModule, AvatarComponent, ScrollbarComponent, EmptyStateComponent, ToolbarComponent]
+    imports: [FormsModule, RouterModule, NgbDropdownModule, NgbTooltipModule, Nx, AvatarComponent, EmptyStateComponent, ToolbarComponent, SpinnerComponent],
 })
-export class MarketingProspectsComponent implements OnInit {
-
+export class MarketingProspectsComponent {
     #marketingService = inject(MarketingService);
-    #searchService = inject(SearchService);
     #route = inject(ActivatedRoute);
     #router = inject(Router);
     #inputModalService = inject(InputModalService);
-
-    prospects: MarketingProspect[] = [];
-    initiatives: MarketingInitiative[] = [];
-    selectedProspect?: MarketingProspect;
-    isLoading = false;
-
-    get availableUsers(): User[] { return NxGlobal.global.team ?? []; }
-
-    // Filters
-    searchTerm = '';
-    statusFilter = '';
-    initiativeFilter = '';
-    addedViaFilter = '';
-    userFilter = '';
-
+    #ngbModal = inject(NgbModal);
     readonly #STORAGE_KEY = 'marketing-prospects-filters';
 
-    statusFilters = [
-        {
-            key: 'new',
-            label: $localize`:@@i18n.common.new:new`,
-            badgeClass: 'bg-cyan rounded-pill',
-            icon: 'person_add',
-            count: 0,
-            selected: true
-        },
-        {
-            key: 'engaged',
-            label: $localize`:@@i18n.marketing.engaged:engaged`,
-            badgeClass: 'bg-primary rounded-pill',
-            icon: 'forum',
-            count: 0,
-            selected: true
-        },
-        {
-            key: 'converted',
-            label: $localize`:@@i18n.marketing.converted:converted`,
-            badgeClass: 'bg-success rounded-pill',
-            icon: 'verified',
-            count: 0,
-            selected: true
-        },
-        {
-            key: 'unresponsive',
-            label: $localize`:@@i18n.marketing.unresponsive:unresponsive`,
-            badgeClass: 'bg-warning rounded-pill',
-            icon: 'voice_over_off',
-            count: 0,
-            selected: true
-        },
-        {
-            key: 'disqualified',
-            label: $localize`:@@i18n.marketing.disqualified:disqualified`,
-            badgeClass: 'bg-danger rounded-pill',
-            icon: 'block',
-            count: 0,
-            selected: true
-        },
-        {
-            key: 'on_hold',
-            label: $localize`:@@i18n.marketing.on_hold:on hold`,
-            badgeClass: 'bg-secondary rounded-pill',
-            icon: 'pause_circle',
-            count: 0,
-            selected: true
-        }
-    ];
+    protected readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
 
-    onStatusFilterChange() {
-        this.filterProspectsByStatus();
-        this.#saveFiltersToLocalStorage();
-    }
+    isLoading = signal(false);
+    prospects = signal<MarketingProspect[]>([]);
+    initiatives = signal<MarketingInitiative[]>([]);
+    initiativeFilter = signal('');
+    userFilter = signal('');
+    selectedProspectId = signal('');
 
-    filterProspectsByStatus() {
-        // Update counts for each filter
-        this.statusFilters.forEach(f => {
-            f.count = this.prospects.filter(p => p.status === f.key).length;
-        });
-        const selectedKeys = this.statusFilters.filter(f => f.selected).map(f => f.key);
-        // If all selected, show all
-        if (selectedKeys.length === this.statusFilters.length) {
-            this.filteredProspects = [...this.prospects];
-        } else {
-            this.filteredProspects = this.prospects.filter(p => selectedKeys.includes(p.status));
-        }
-    }
+    statusFilters = signal([
+        { key: 'new',          label: $localize`:@@i18n.common.new:new`,                     badgeClass: 'bg-cyan rounded-pill',      icon: MarketingProspect.STATUS_ICONS['new'],          selected: true },
+        { key: 'engaged',      label: $localize`:@@i18n.marketing.engaged:engaged`,           badgeClass: 'bg-primary rounded-pill',   icon: MarketingProspect.STATUS_ICONS['engaged'],      selected: true },
+        { key: 'converted',    label: $localize`:@@i18n.marketing.converted:converted`,       badgeClass: 'bg-success rounded-pill',   icon: MarketingProspect.STATUS_ICONS['converted'],    selected: true },
+        { key: 'unresponsive', label: $localize`:@@i18n.marketing.unresponsive:unresponsive`, badgeClass: 'bg-warning rounded-pill',   icon: MarketingProspect.STATUS_ICONS['unresponsive'], selected: true },
+        { key: 'disqualified', label: $localize`:@@i18n.marketing.disqualified:disqualified`, badgeClass: 'bg-danger rounded-pill',    icon: MarketingProspect.STATUS_ICONS['disqualified'], selected: true },
+        { key: 'on_hold',      label: $localize`:@@i18n.marketing.on_hold:on hold`,           badgeClass: 'bg-secondary rounded-pill', icon: MarketingProspect.STATUS_ICONS['on_hold'],      selected: true },
+    ]);
 
-    filteredProspects: MarketingProspect[] = [];
+    availableUsers    = computed(() => NxGlobal.global.team ?? []);
+    selectedUser      = computed(() => this.availableUsers().find(u => String(u.id) === this.userFilter()));
+    selectedUserName  = computed(() => this.selectedUser()?.fullName() ?? this.userFilter());
+    totalOverdueCount = computed(() => this.initiatives().reduce((sum, i) => sum + (i.overdue_prospects_count ?? 0), 0));
 
-    // Call filterProspectsByStatus after stats are updated
-    // Remove duplicate #calculateStats
+    selectedInitiativeName         = computed(() => this.initiatives().find(i => String(i.id) === this.initiativeFilter())?.name ?? '');
+    selectedInitiativeOverdueCount = computed(() => this.initiatives().find(i => String(i.id) === this.initiativeFilter())?.overdue_prospects_count ?? 0);
 
-    // Link search
-    companyMatches: any[] = [];
-    contactMatches: any[] = [];
-    selectedCompanyId: number | null = null;
-    selectedContactId: number | null = null;
+    statusCounts = computed(() => {
+        const counts: Record<string, number> = {};
+        this.prospects().forEach(p => counts[p.status] = (counts[p.status] ?? 0) + 1);
+        return counts;
+    });
 
-    // Today's activities
-    todayActivities: MarketingProspectActivity[] = [];
-    overdueActivities: MarketingProspectActivity[] = [];
+    filteredProspects = computed(() => {
+        const filters = this.statusFilters();
+        const selected = filters.filter(f => f.selected).map(f => f.key);
+        if (selected.length === filters.length) return this.prospects();
+        return this.prospects().filter(p => selected.includes(p.status));
+    });
 
-    // Statistics
-    stats = {
-        total: 0,
-        new: 0,
-        engaged: 0,
-        converted: 0,
-        activitiesToday: 0,
-        activitiesOverdue: 0
-    };
-
-    ngOnInit() {
-        // Restore filters from localStorage
+    constructor() {
         this.#restoreFiltersFromLocalStorage();
 
-        // Pre-select current user filter if not restored from localStorage
-        if (!this.userFilter && NxGlobal.global.user) {
-            this.userFilter = NxGlobal.global.user.id.toString();
+        if (!this.userFilter() && NxGlobal.global.user) {
+            this.userFilter.set(NxGlobal.global.user.id.toString());
         }
 
-        this.#loadInitiatives();
-        this.#loadProspects();
-        this.#loadTodayActivities();
+        const directId = this.#route.snapshot.firstChild?.params['id'];
+        if (directId) {
+            this.#marketingService.showProspect(directId).subscribe({
+                next: (prospect: MarketingProspect) => {
+                    const initiativeId = prospect.marketing_initiative?.id;
+                    if (initiativeId) {
+                        this.initiativeFilter.set(String(initiativeId));
+                        this.#saveFiltersToLocalStorage();
+                    }
+                    this.#loadInitiatives();
+                    this.#loadProspects();
+                },
+                error: () => { this.#loadInitiatives(); this.#loadProspects(); },
+            });
+        } else {
+            this.#loadInitiatives();
+            this.#loadProspects();
+        }
 
-        // Track selected prospect from route
-        this.#route.firstChild?.params.subscribe(params => {
-            if (params['id']) {
-                const prospect = this.prospects.find(p => p.id === params['id']);
-                if (prospect) {
-                    this.selectedProspect = prospect;
-                }
-            }
+        this.#route.firstChild?.params.pipe(takeUntilDestroyed()).subscribe(params => {
+            this.selectedProspectId.set(params['id'] ?? '');
         });
     }
 
     #loadInitiatives() {
-        this.#marketingService.indexInitiatives({ status: 'active' })
-            .subscribe((response: any) => {
-                this.initiatives = response.data || response;
-                this.#refreshInitiativeOverdueCounts();
+        const params: any = this.userFilter() ? { user_id: parseInt(this.userFilter()) } : {};
+        this.#marketingService
+            .indexInitiatives({ status: 'active' })
+            .pipe(
+                tap((response: any) => this.initiatives.set(response.data || response)),
+                switchMap(() => this.#marketingService.indexProspects(params)),
+            )
+            .subscribe((prospects: MarketingProspect[]) => {
+                const counts = new Map<string, number>();
+                prospects.forEach(p => {
+                    if (p.has_overdue_activities && p.marketing_initiative?.id && !['unresponsive', 'disqualified', 'on_hold'].includes(p.status)) {
+                        const key = String(p.marketing_initiative.id);
+                        counts.set(key, (counts.get(key) || 0) + 1);
+                    }
+                });
+                this.initiatives.update(inits => {
+                    inits.forEach(i => i.overdue_prospects_count = counts.get(String(i.id)) ?? 0);
+                    return [...inits];
+                });
             });
-    }
-
-    #refreshInitiativeOverdueCounts() {
-        const params: any = {};
-        if (this.userFilter) params.user_id = parseInt(this.userFilter);
-        this.#marketingService.indexProspects(params).subscribe((prospects: MarketingProspect[]) => {
-            const counts = new Map<string, number>();
-            prospects.forEach(p => {
-                if (p.has_overdue_activities && p.marketing_initiative?.id &&
-                    !['unresponsive', 'disqualified', 'on_hold'].includes(p.status)) {
-                    const key = String(p.marketing_initiative.id);
-                    counts.set(key, (counts.get(key) || 0) + 1);
-                }
-            });
-            this.initiatives.forEach(i => {
-                i.overdue_prospects_count = counts.get(String(i.id)) ?? 0;
-            });
-        });
     }
 
     #loadProspects() {
-        this.isLoading = true;
+        this.isLoading.set(true);
         const params = {
-            ...(this.searchTerm && { search: this.searchTerm }),
-            ...(this.statusFilter && { status: this.statusFilter }),
-            ...(this.initiativeFilter && { marketing_initiative_id: parseInt(this.initiativeFilter) }),
-            ...(this.addedViaFilter && { added_via: this.addedViaFilter }),
-            ...(this.userFilter && { user_id: parseInt(this.userFilter) })
+            ...(this.initiativeFilter() && { marketing_initiative_id: parseInt(this.initiativeFilter()) }),
+            ...(this.userFilter() && { user_id: parseInt(this.userFilter()) }),
         };
-
-        this.#marketingService.indexProspects(params)
-            .subscribe((response: any) => {
-                this.prospects = response.data || response;
-                this.#calculateStats();
-                this.isLoading = false;
-
-                // Auto-route to first prospect if no subroute selected
-                if (this.prospects.length > 0 && !this.#route.firstChild) {
-                    this.#router.navigate(['/marketing/prospects', this.prospects[0].id]);
-                }
-            });
-    }
-
-    #loadTodayActivities() {
-        // This would need a specific endpoint for activities due today/overdue
-        // For now, we'll implement this when the prospect is selected
-    }
-
-    selectProspect(prospect: MarketingProspect) {
-        this.selectedProspect = prospect;
-        this.#loadProspectDetails(prospect.id);
-        // Automatically search for matches when selecting unlinked prospect
-        if (!prospect.company_contact_id && !prospect.company_id) {
-            this.#searchForMatches(prospect);
-        }
-    }
-
-    #loadProspectDetails(id: string) {
-        this.#marketingService.showProspect(id)
-            .subscribe((prospect: MarketingProspect) => {
-                this.selectedProspect = prospect;
-                // Search for matches after loading details
-                if (!prospect.company_contact_id && !prospect.company_id) {
-                    this.#searchForMatches(prospect);
-                }
-            });
-    }
-
-    #searchForMatches(prospect: MarketingProspect) {
-        // Search by name for contacts using SearchService
-        if (prospect.name) {
-            this.#searchService.search(prospect.name, { only: 'Contact,CompanyContact' })
-                .subscribe((response: any) => {
-                    this.contactMatches = (response || []).slice(0, 5);
-                });
-        }
-
-        // Search by company for companies using SearchService
-        if (prospect.company) {
-            this.#searchService.search(prospect.company, { only: 'Company' })
-                .subscribe((response: any) => {
-                    this.companyMatches = (response || []).slice(0, 5);
-                });
-        }
-    }
-
-    updateProspectStatus(prospect: MarketingProspect, status: string) {
-        this.#marketingService.updateProspect(prospect.id, { status: status as any })
-            .subscribe(() => {
-                const index = this.prospects.findIndex(p => p.id === prospect.id);
-                if (index !== -1) {
-                    this.prospects[index].status = status as any;
-                }
-                this.#calculateStats();
-            });
-    }
-
-    markActivityCompleted(activity: MarketingProspectActivity, notes?: string) {
-        if (!this.selectedProspect) return;
-
-        this.#marketingService.updateProspectActivityStatus(
-            this.selectedProspect.id,
-            activity.id,
-            { status: 'completed', notes }
-        ).subscribe((updated: MarketingProspectActivity) => {
-            // Update the activity in the selected prospect
-            if (this.selectedProspect?.activities) {
-                const index = this.selectedProspect.activities.findIndex(a => a.id === activity.id);
-                if (index !== -1) {
-                    this.selectedProspect.activities[index] = updated;
-                }
+        this.#marketingService.indexProspects(params).subscribe((response: any) => {
+            this.prospects.set(response.data || response);
+            this.isLoading.set(false);
+            if (!this.#route.firstChild) {
+                const first = this.filteredProspects()[0];
+                if (first) this.#router.navigate(['/marketing/prospects', first.id]);
             }
         });
     }
 
-    markActivitySkipped(activity: MarketingProspectActivity, reason?: string) {
-        if (!this.selectedProspect) return;
-
-        this.#marketingService.updateProspectActivityStatus(
-            this.selectedProspect.id,
-            activity.id,
-            { status: 'skipped', notes: reason }
-        ).subscribe((updated: MarketingProspectActivity) => {
-            if (this.selectedProspect?.activities) {
-                const index = this.selectedProspect.activities.findIndex(a => a.id === activity.id);
-                if (index !== -1) {
-                    this.selectedProspect.activities[index] = updated;
-                }
-            }
-        });
-    }
-
-    openLinkedInProfile(prospect: MarketingProspect) {
-        if (prospect.linkedin_url) {
-            window.open(prospect.linkedin_url, '_blank');
-        }
-    }
-
-    get selectedUser(): User | undefined {
-        return this.availableUsers.find(u => String(u.id) === String(this.userFilter));
-    }
-
-    get selectedUserName(): string {
-        return this.selectedUser?.fullName ?? this.userFilter;
+    toggleStatusFilter(key: string) {
+        this.statusFilters.update(filters => filters.map(f => f.key === key ? { ...f, selected: !f.selected } : f));
+        this.#saveFiltersToLocalStorage();
     }
 
     setUserFilter(id: any) {
-        this.userFilter = id ? String(id) : '';
+        this.userFilter.set(id ? String(id) : '');
+        this.#saveFiltersToLocalStorage();
         this.#loadInitiatives();
-        this.onFilterChange();
-    }
-
-    overdueCountForInitiative(initiative: MarketingInitiative): number {
-        return initiative.overdue_prospects_count ?? 0;
-    }
-
-    isSubscribedToInitiative(initiative: MarketingInitiative): boolean {
-        const checkId = this.userFilter ? parseInt(this.userFilter) : NxGlobal.global.user?.id;
-        return initiative.users?.some(u => u.id === checkId) ?? false;
-    }
-
-    get totalOverdueCount(): number {
-        return this.initiatives.reduce((sum, i) => sum + (i.overdue_prospects_count ?? 0), 0);
+        this.#loadProspects();
     }
 
     setInitiativeFilter(id: any) {
-        this.initiativeFilter = id ? String(id) : '';
-        this.onFilterChange();
-    }
-
-    onSearch = () => this.#loadProspects();
-
-    onFilterChange = () => {
+        this.initiativeFilter.set(id ? String(id) : '');
         this.#saveFiltersToLocalStorage();
         this.#loadProspects();
-    };
+    }
 
-    actionsResolved = () => this.#loadProspects();
+    isSubscribedToInitiative(initiative: MarketingInitiative): boolean {
+        const checkId = this.userFilter() ? parseInt(this.userFilter()) : NxGlobal.global.user?.id;
+        return initiative.users?.some(u => u.id === checkId) ?? false;
+    }
+
+    actionsResolved = () => this.prospects.update(p => [...p]);
 
     navigateToProspect(event: MouseEvent, prospect: MarketingProspect) {
-        if (!event.ctrlKey && !event.shiftKey) {
-            this.#router.navigate(['/marketing/prospects', prospect.id]);
-        }
-    }
-
-    filterByStatus(status: string) {
-        this.statusFilter = status;
-        this.#loadProspects();
-    }
-
-    #calculateStats() {
-        this.stats = {
-            total: this.prospects.length,
-            new: this.prospects.filter(p => p.status === 'new').length,
-            engaged: this.prospects.filter(p => p.status === 'engaged').length,
-            converted: this.prospects.filter(p => p.status === 'converted').length,
-            activitiesToday: 0, // Would need to calculate from activities
-            activitiesOverdue: 0 // Would need to calculate from activities
-        };
-        // After stats calculation, update filter counts and filtered prospects
-        this.filterProspectsByStatus();
-    }
-
-    getStatusBadgeClass(status: string): string {
-        switch (status) {
-            case 'new': return 'bg-cyan';
-            case 'engaged': return 'bg-primary';
-            case 'converted': return 'bg-success';
-            case 'unresponsive': return 'bg-warning';
-            case 'disqualified': return 'bg-danger';
-            case 'on_hold': return 'bg-secondary';
-            default: return 'bg-secondary';
-        }
-    }
-
-    getActivityStatusBadgeClass(status: string): string {
-        switch (status) {
-            case 'pending': return 'bg-warning';
-            case 'completed': return 'bg-success';
-            case 'skipped': return 'bg-secondary';
-            case 'overdue': return 'bg-danger';
-            case 'failed': return 'bg-danger';
-            default: return 'bg-secondary';
-        }
-    }
-
-    getPendingActivities(): MarketingProspectActivity[] {
-        const activities = this.selectedProspect?.activities?.filter((a: any) => a.status === 'pending') || [];
-        return activities.map(a => MarketingProspectActivity.fromJson(a));
-    }
-
-    getCompletedActivities(): MarketingProspectActivity[] {
-        const activities = this.selectedProspect?.activities?.filter((a: any) => a.status === 'completed') || [];
-        return activities.map(a => MarketingProspectActivity.fromJson(a));
-    }
-
-    isActivityOverdue(activity: MarketingProspectActivity): boolean {
-        return new Date(activity.scheduled_at) < new Date() && activity.status === 'pending';
-    }
-
-    openEditActivityModal(activity: MarketingProspectActivity) {
-        console.log('openEditActivityModal called', activity);
-        // TODO: Implement edit activity modal
-        alert('Edit activity modal - to be implemented');
-    }
-
-    // Linking methods
-    linkToCompany() {
-        if (!this.selectedProspect || !this.selectedCompanyId) return;
-
-        this.#marketingService.linkToCompany(this.selectedProspect.id, `${this.selectedCompanyId}`).subscribe((updated: any) => {
-            this.selectedProspect = MarketingProspect.fromJson(updated);
-            this.selectedCompanyId = null;
-            this.companyMatches = [];
-            this.contactMatches = [];
-            this.#loadProspects();
-        });
-    }
-
-    linkToContact() {
-        if (!this.selectedProspect || !this.selectedContactId) return;
-
-        this.#marketingService.updateProspect(this.selectedProspect.id, {
-            company_contact_id: this.selectedContactId
-        }).subscribe((updated: MarketingProspect) => {
-            this.selectedProspect = updated;
-            this.selectedContactId = null;
-            this.companyMatches = [];
-            this.contactMatches = [];
-            this.#loadProspects();
-        });
-    }
-
-    unlinkContact() {
-        if (!this.selectedProspect) return;
-
-        if (!confirm('Unlink this contact from the prospect?')) return;
-
-        this.#marketingService.updateProspect(this.selectedProspect.id, {
-            company_contact_id: null
-        }).subscribe((updated: MarketingProspect) => {
-            this.selectedProspect = updated;
-            this.#loadProspects();
-        });
-    }
-
-    unlinkCompany() {
-        if (!this.selectedProspect) return;
-
-        if (!confirm('Unlink this company from the prospect?')) return;
-
-        this.#marketingService.updateProspect(this.selectedProspect.id, {
-            company_id: null
-        }).subscribe((updated: MarketingProspect) => {
-            this.selectedProspect = updated;
-            this.#loadProspects();
-        });
+        if (!event.ctrlKey && !event.shiftKey) this.#router.navigate(['/marketing/prospects', prospect.id]);
     }
 
     createNewProspect() {
-        // Get the selected initiative
-        const initiative = this.initiatives.find(i => String(i.id) === String(this.initiativeFilter));
-        if (!initiative) {
-            console.error('No initiative found', {
-                initiativeFilter: this.initiativeFilter,
-                initiatives: this.initiatives.map(i => ({ id: i.id, name: i.name }))
-            });
-            return;
-        }
+        const initiative = this.initiatives().find(i => String(i.id) === this.initiativeFilter());
+        if (!initiative) return;
 
-        console.log('Initiative:', initiative);
-
-        // Get the primary channel or first channel
-        let leadSourceId: number | null = null;
-        if (initiative.channels && initiative.channels.length > 0) {
-            const primaryChannel = initiative.channels.find((c: any) => c.pivot?.is_primary);
-            leadSourceId = primaryChannel ? primaryChannel.id : initiative.channels[0].id;
-        }
+        const primaryChannel = initiative.channels?.find((c: any) => c.pivot?.is_primary);
+        const leadSourceId: number | null = primaryChannel?.id ?? initiative.channels?.[0]?.id ?? null;
 
         if (!leadSourceId) {
             alert('No lead source configured for this initiative');
             return;
         }
 
-        // Ask for prospect name
         this.#inputModalService.open('Prospect Name').then(result => {
-            if (!result) return;
-
-            const prospectName = result.text.trim();
+            const prospectName = result?.text?.trim();
             if (!prospectName) return;
 
-            // Parse name into components (simple: last word is family name, rest is given name)
             const nameParts = prospectName.split(' ');
-            const familyName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : prospectName;
-            const givenName = nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : '';
-
+            const familyName = nameParts.length > 1 ? nameParts.at(-1)! : prospectName;
+            const givenName  = nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : '';
             const vcard = `BEGIN:VCARD\nVERSION:3.0\nFN:${prospectName}\nN:${familyName};${givenName};;;\nX-LANG:de\nX-FORMALITY:formal\nORG:\nROLE:\nEMAIL:\nTEL:\nEND:VCARD`;
-            const newProspect = {
-                name: prospectName,
-                vcard: vcard,
-                email: '',
-                status: 'new',
-                added_via: 'manual',
-                marketing_initiative_id: this.initiativeFilter,
-                lead_source_id: leadSourceId
-            };
 
-            this.#marketingService.storeProspect(newProspect).subscribe((created: MarketingProspect) => {
-                this.prospects.unshift(created);
-                this.selectedProspect = created;
-                this.#calculateStats();
-                // Navigate to the new prospect
+            this.#marketingService.storeProspect({
+                name: prospectName, vcard, email: '', status: 'new', added_via: 'manual',
+                marketing_initiative_id: this.initiativeFilter(), lead_source_id: leadSourceId,
+            }).subscribe((created: MarketingProspect) => {
+                this.prospects.update(p => [created, ...p]);
                 this.#router.navigate(['/marketing/prospects', created.id]);
             });
-        }).catch(err => {
-            console.error('Modal error:', err);
+        }).catch(() => {});
+    }
+
+    exportCsv() {
+        const prospects = this.filteredProspects();
+        const headers = ['Name', 'Company', 'Email', 'Phone', 'Website', 'City', 'Role', 'Status'];
+        const rows = prospects.map(p => {
+            const card = p.card();
+            return [
+                p.getName(),
+                card?.org ?? '',
+                p.email ?? '',
+                card?.first('TEL')?.vals[0] ?? '',
+                card?.url ?? '',
+                card?.first('ADR')?.vals[3] ?? '',
+                card?.first('ROLE')?.vals[0] ?? '',
+                p.status,
+            ];
+        });
+        const csv = [headers, ...rows]
+            .map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
+            .join('\n');
+        const a = Object.assign(document.createElement('a'), {
+            href: URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })),
+            download: 'prospects.csv',
+        });
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    openImportFile() { this.fileInput().nativeElement.click(); }
+
+    handleFileSelect(event: Event) {
+        const file = (event.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const { headers, rows } = parseCsv(e.target!.result as string);
+            if (!headers.length) return;
+            const existingNames = this.prospects().flatMap(p => [
+                p.getName()?.toLowerCase(),
+                p.company()?.toLowerCase(),
+            ]).filter((n): n is string => !!n);
+            const modalRef = this.#ngbModal.open(MarketingCsvImportModalComponent, { size: 'xl' });
+            modalRef.componentInstance.init({
+                headers, rows,
+                initiatives:         this.initiatives(),
+                currentInitiativeId: this.initiativeFilter(),
+                existingNames,
+            });
+            modalRef.result.then((result: CsvImportResult) => this.#doImport(result)).catch(() => {});
+        };
+        reader.readAsText(file);
+        (event.target as HTMLInputElement).value = '';
+    }
+
+    #doImport(result: CsvImportResult) {
+        const { mappings, rows, initiativeId, leadSourceId } = result;
+        const existing = new Set(
+            this.prospects().flatMap(p => [p.getName()?.toLowerCase(), p.company()?.toLowerCase()]).filter(Boolean)
+        );
+        const getField = (row: string[], field: string) => {
+            const idx = mappings.findIndex((m: CsvColumnMapping) => m.field === field);
+            return idx >= 0 ? (row[idx] ?? '').trim() : '';
+        };
+        const toImport = rows.filter(row => {
+            const org = getField(row, 'org').toLowerCase();
+            const fn  = getField(row, 'fn').toLowerCase();
+            // skip rows with no usable identity at all
+            if (!org && !fn && !getField(row, 'family_name') && !getField(row, 'given_name') && !getField(row, 'email')) return false;
+            return (!org || !existing.has(org)) && (!fn || !existing.has(fn));
+        });
+        const requests = toImport.map(row => {
+            const fn         = getField(row, 'fn');
+            const familyName = getField(row, 'family_name');
+            const givenName  = getField(row, 'given_name');
+            const org        = getField(row, 'org');
+            const email      = getField(row, 'email');
+            const tel        = getField(row, 'tel');
+            const url        = getField(row, 'url');
+            const location   = getField(row, 'location');
+            const role       = getField(row, 'role');
+            const notes      = getField(row, 'notes');
+            const displayName = fn || (givenName && familyName ? `${givenName} ${familyName}` : familyName || givenName || org || email) || '';
+            const vcardLines = [
+                'BEGIN:VCARD', 'VERSION:3.0',
+                `FN:${displayName}`,
+                `N:${familyName || ''};${givenName || ''};;;`,
+                `ORG:${org}`, `EMAIL:${email}`, `TEL:${tel}`, `URL:${url}`, `ROLE:${role}`,
+                'X-LANG:de', 'X-FORMALITY:formal',
+            ];
+            if (location) vcardLines.push(`ADR:;;;${location};;;`);
+            vcardLines.push('END:VCARD');
+            return this.#marketingService.storeProspect({
+                name: displayName, vcard: vcardLines.join('\n'), email,
+                ...(notes && { notes }),
+                status: 'new', added_via: 'import',
+                marketing_initiative_id: initiativeId,
+                lead_source_id: leadSourceId,
+            });
+        });
+        from(requests).pipe(mergeMap(req => req, 3), toArray()).subscribe(created => {
+            this.prospects.update(p => [...created, ...p]);
         });
     }
 
     #saveFiltersToLocalStorage() {
-        const filters = {
-            initiativeFilter: this.initiativeFilter,
-            userFilter: this.userFilter,
-            statusFilters: this.statusFilters.map(f => ({
-                key: f.key,
-                selected: f.selected
-            }))
-        };
-        localStorage.setItem(this.#STORAGE_KEY, JSON.stringify(filters));
+        localStorage.setItem(this.#STORAGE_KEY, JSON.stringify({
+            initiativeFilter: this.initiativeFilter(),
+            userFilter: this.userFilter(),
+            statusFilters: this.statusFilters().map(f => ({ key: f.key, selected: f.selected })),
+        }));
     }
 
     #restoreFiltersFromLocalStorage() {
         try {
             const saved = localStorage.getItem(this.#STORAGE_KEY);
-            if (saved) {
-                const filters = JSON.parse(saved);
-                
-                if (filters.initiativeFilter !== undefined) {
-                    this.initiativeFilter = filters.initiativeFilter;
-                }
-                
-                if (filters.userFilter !== undefined) {
-                    this.userFilter = filters.userFilter;
-                }
-                
-                if (filters.statusFilters && Array.isArray(filters.statusFilters)) {
-                    filters.statusFilters.forEach((savedFilter: any) => {
-                        const filter = this.statusFilters.find(f => f.key === savedFilter.key);
-                        if (filter) {
-                            filter.selected = savedFilter.selected;
-                        }
-                    });
-                }
+            if (!saved) return;
+            const filters = JSON.parse(saved);
+            if (filters.initiativeFilter !== undefined) this.initiativeFilter.set(filters.initiativeFilter);
+            if (filters.userFilter !== undefined) this.userFilter.set(filters.userFilter);
+            if (Array.isArray(filters.statusFilters)) {
+                this.statusFilters.update(current => current.map(f => {
+                    const s = filters.statusFilters.find((x: any) => x.key === f.key);
+                    return s ? { ...f, selected: s.selected } : f;
+                }));
             }
-        } catch (error) {
-            console.error('Error restoring filters from localStorage:', error);
-        }
+        } catch {}
     }
 }

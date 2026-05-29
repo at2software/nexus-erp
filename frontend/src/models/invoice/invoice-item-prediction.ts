@@ -1,8 +1,9 @@
-import { InvoiceItemService } from "src/models/invoice/invoice-item.service";
-import { Serializable } from "../serializable";
+import { InvoiceItemService } from '@models/invoice/invoice-item.service';
+import { Serializable } from '../serializable';
+import { Model } from '@constants/type-discriminators';
 
+@Model('InvoiceItemPrediction')
 export class InvoiceItemPrediction extends Serializable {
-    static API_PATH = (): string => 'invoice_items'
-    SERVICE = InvoiceItemService
-    
+    static API_PATH = (): string => 'invoice_items';
+    SERVICE = InvoiceItemService;
 }

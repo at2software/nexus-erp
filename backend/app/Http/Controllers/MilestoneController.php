@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\MilestoneState;
+use App\Http\Requests\MilestoneRequest;
 use App\Jobs\ChatSendMessageJob;
 use App\Models\InvoiceItem;
 use App\Models\Milestone;
@@ -153,20 +154,8 @@ class MilestoneController extends Controller {
             'invoice_item_id' => $invoiceItem->id,
         ]);
     }
-    public function update(Request $request, Milestone $milestone) {
-        $data = $request->validate([
-            'name'           => 'string|nullable',
-            'comments'       => 'string|nullable',
-            'started_at'     => 'date|nullable',
-            'due_at'         => 'date|nullable',
-            'duration'       => 'integer|min:0|nullable',
-            'progress'       => 'numeric|min:0|max:100|nullable',
-            'state'          => 'integer|nullable',
-            'position'       => 'integer|nullable',
-            'user_id'        => 'integer|exists:users,id|nullable',
-            'depends_on'     => 'nullable|integer|exists:milestones,id',
-            'workload_hours' => 'numeric|min:0|nullable',
-        ]);
+    public function update(MilestoneRequest $request, Milestone $milestone) {
+        $data = $request->validated();
 
         // Handle depends_on separately
         if ($request->has('depends_on')) {

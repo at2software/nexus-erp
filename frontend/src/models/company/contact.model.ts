@@ -1,18 +1,18 @@
-import { ContactService } from "src/models/company/contact.service"
-import type { CompanyContact } from "./company-contact.model"
-import { VcardClass } from "../vcard/VcardClass"
-import type { Company } from "./company.model"
-import { AutoWrapArray } from "@constants/autowrap"
+import { ContactService } from '@models/company/contact.service';
+import { CompanyContact } from './company-contact.model';
+import { VcardClass } from '../vcard/VcardClass';
+import { Company } from './company.model';
+import { Type } from 'class-transformer';
+import { Model } from '@constants/type-discriminators';
 
+@Model('Contact')
 export class Contact extends VcardClass {
+    static API_PATH = (): string => 'contacts';
+    SERVICE = ContactService;
 
-    static API_PATH = (): string => 'contacts'
-    SERVICE = ContactService
-
-    @AutoWrapArray('CompanyContact') company_contacts:CompanyContact[]
-    @AutoWrapArray('Company') companies:Company[]
+    @Type(()=>CompanyContact) company_contacts!: CompanyContact[];
+    @Type(()=>Company) companies!: Company[];
 
     qr_code?: string;
     qr_code_content?: string;
-
 }

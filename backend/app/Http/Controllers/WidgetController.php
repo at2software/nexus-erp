@@ -346,6 +346,28 @@ class WidgetController extends Controller {
             ];
         }
 
+        foreach (User::whereHas('activeEmployments')->withMin('employments', 'started_at')->get() as $_) {
+            if (! $_->employments_min_started_at) {
+                continue;
+            }
+            $startDate      = Carbon::parse($_->employments_min_started_at)->startOfDay();
+            $nextOccurrence = $this->getNextOccurence($startDate, $now);
+            if (! $nextOccurrence || $nextOccurrence > $upcomingDateBirthdays) {
+                continue;
+            }
+            $yearsEmployed = $nextOccurrence->year - $startDate->year;
+            if ($yearsEmployed < 1) {
+                continue;
+            }
+            $collection[] = [
+                'type'  => 2,
+                'next'  => $nextOccurrence->format('Y-m-d'),
+                'path'  => $_->path,
+                'name'  => $_->name,
+                'label' => "$yearsEmployed. Arbeitsjubiläum",
+            ];
+        }
+
         $companies = Company::whereAfter(now()->subYears(2), 'updated_at')
             ->whereHas('invoices', fn ($q) => $q->where('created_at', '>', now()->subYears(2)))
             ->get();

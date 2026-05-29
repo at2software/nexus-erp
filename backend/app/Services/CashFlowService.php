@@ -24,7 +24,11 @@ class CashFlowService {
         return $data;
     }
     public static function importBankCsv(UploadedFile $file): array {
-        $lines = explode("\n", file_get_contents($file->getRealPath()));
+        $content = file_get_contents($file->getRealPath());
+        if (str_starts_with($content, "\xEF\xBB\xBF")) {
+            $content = substr($content, 3);
+        }
+        $lines = explode("\n", $content);
         if (count($lines) < 2) {
             return ['error' => 'CSV file is empty', 'imported' => 0];
         }
@@ -75,14 +79,14 @@ class CashFlowService {
             }
 
             try {
-                $date = Carbon::createFromFormat('d.m.Y', $row[$buchungstagIndex])->startOfDay();
+                $date = Carbon::createFromFormat('j.n.Y', $row[$buchungstagIndex])->startOfDay();
                 if ($latestDate && $date->lte($latestDate)) {
                     continue;
                 }
 
                 $entriesByDate[$date->format('Y-m-d')] = [
                     'date'  => $date,
-                    'value' => (float)str_replace(',', '.', $row[$saldoIndex]),
+                    'value' => (float)str_replace(',', '.', str_replace('.', '', $row[$saldoIndex])),
                 ];
             } catch (\Exception $e) {
                 continue;

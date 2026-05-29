@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class MarketingInitiative extends BaseModel {
     protected $table    = 'marketing_initiatives';
@@ -17,10 +18,13 @@ class MarketingInitiative extends BaseModel {
         'start_date',
         'end_date',
     ];
-    protected $casts = [
-        'start_date' => 'date',
-        'end_date'   => 'date',
-    ];
+
+    protected function casts(): array {
+        return [
+            'start_date' => 'date',
+            'end_date'   => 'date',
+        ];
+    }
 
     // Self-referencing relationship
     public function parent(): BelongsTo {
@@ -290,5 +294,66 @@ class MarketingInitiative extends BaseModel {
             }]);
         }
         return $query->latest()->paginate(50)->withQueryString();
+    }
+    public function getInitiativeStats(): array {
+        $timeline  = [];
+        $startDate = now()->subDays(30)->startOfDay();
+
+        for ($i = 0; $i <= 30; $i++) {
+            $date    = $startDate->copy()->addDays($i);
+            $dateStr = $date->format('Y-m-d');
+
+            $timeline[] = [
+                'date'      => $dateStr,
+                'timestamp' => $date->timestamp * 1000,
+                'new'       => $this->prospects()
+                    ->where('status', 'new')
+                    ->where('created_at', '<=', $date->endOfDay())
+                    ->count(),
+                'engaged' => $this->prospects()
+                    ->where('status', 'engaged')
+                    ->where('created_at', '<=', $date->endOfDay())
+                    ->count(),
+                'unresponsive' => $this->prospects()
+                    ->where('status', 'unresponsive')
+                    ->where('created_at', '<=', $date->endOfDay())
+                    ->count(),
+                'converted' => $this->prospects()
+                    ->where('status', 'converted')
+                    ->where('created_at', '<=', $date->endOfDay())
+                    ->count(),
+            ];
+        }
+
+        $initiativeActivityIds = $this->initiativeActivities()->pluck('id')->toArray();
+        $perActivityStats      = DB::table('marketing_prospect_activities')
+            ->whereIn('marketing_initiative_activity_id', $initiativeActivityIds)
+            ->selectRaw('marketing_initiative_activity_id,
+                COUNT(*) as total,
+                SUM(CASE WHEN status = "completed" THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status = "skipped" THEN 1 ELSE 0 END) as skipped,
+                SUM(CASE WHEN status = "pending" AND scheduled_at < NOW() THEN 1 ELSE 0 END) as overdue,
+                SUM(CASE WHEN status = "pending" AND (scheduled_at IS NULL OR scheduled_at >= NOW()) THEN 1 ELSE 0 END) as pending')
+            ->groupBy('marketing_initiative_activity_id')
+            ->get()
+            ->keyBy('marketing_initiative_activity_id');
+
+        return [
+            'prospects' => [
+                'total'     => $this->prospects()->count(),
+                'by_status' => $this->getProspectsCountByStatus(),
+                'recent'    => $this->prospects()->where('created_at', '>=', now()->subDays(7))->count(),
+            ],
+            'activities' => $perActivityStats,
+            'metrics'    => $this->performanceMetrics->map(fn ($metric) => [
+                'id'                  => $metric->id,
+                'name'                => $metric->name,
+                'type'                => $metric->metric_type,
+                'current_value'       => $metric->getCurrentValue(),
+                'target_value'        => $metric->target_value,
+                'progress_percentage' => $metric->getProgressPercentage(),
+            ]),
+            'timeline' => $timeline,
+        ];
     }
 }

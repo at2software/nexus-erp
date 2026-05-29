@@ -29,9 +29,13 @@ class MarketingProspect extends BaseModel {
         'notes',
         'color',
     ];
-    protected $casts = [
-        'external_data' => 'array',
-    ];
+
+    protected function casts(): array {
+        return [
+            'external_data' => 'array',
+        ];
+    }
+
     protected $appends = [
         'gender',
     ];
@@ -329,6 +333,40 @@ class MarketingProspect extends BaseModel {
             'activities_overdue' => (int)$activityCounts->overdue,
         ];
     }
+    public static function searchByPhone(string $phoneNumber): ?static {
+        $variants = static::normalizePhoneVariants($phoneNumber);
+        foreach ($variants as $variant) {
+            $regex    = static::buildPhoneRegex($variant);
+            $prospect = static::where('vcard', 'REGEXP', $regex)->first();
+            if ($prospect) return $prospect;
+        }
+        return null;
+    }
+
+    private static function normalizePhoneVariants(string $search): array {
+        $search = preg_replace('/\(0\)/', '', $search);
+        $search = preg_replace('/[\(\)]/', '', $search);
+        $search = preg_replace('/[\s\-]/', '', $search);
+
+        if (str_starts_with($search, '0')) {
+            return ['0'.substr($search, 1), '+49'.substr($search, 1)];
+        }
+        if (str_starts_with($search, '+49')) {
+            return str_starts_with(substr($search, 3), '0')
+                ? ['+49'.substr($search, 4), '0'.substr($search, 4)]
+                : ['+49'.substr($search, 3), '0'.substr($search, 3)];
+        }
+        return [$search];
+    }
+
+    private static function buildPhoneRegex(string $normalizedNumber): string {
+        $pattern = '';
+        foreach (str_split($normalizedNumber) as $char) {
+            $pattern .= preg_quote($char, '/').'[\s\-\(\)]*';
+        }
+        return $pattern;
+    }
+
     public static function createFromAddon(array $validated, $user): mixed {
         $vcard       = new Vcard($validated['vcard']);
         $linkedinUrl = $vcard->getFirstValue('URL');

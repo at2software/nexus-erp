@@ -1,13 +1,12 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
-import { GlobalService } from 'src/models/global.service';
-import { User } from 'src/models/user/user.model';
-import { UserService } from 'src/models/user/user.service';
+import { GlobalService } from '@models/global.service';
+import { UserService } from '@models/user/user.service';
 import { ProfileVacationWidgetComponent } from '../widgets/profile-vacation-widget/profile-vacation-widget.component';
 import { ColorPickerDirective } from 'ngx-color-picker';
 import { FormsModule } from '@angular/forms';
-import { LiveSharingService } from 'src/models/live-sharing.service';
-
+import { LiveSharingService } from '@models/live-sharing.service';
 import { HrWorkloadComponent } from '@app/hr/hr-workload/hr-workload.component';
 import { HrWorkloadHeatmapComponent } from '@app/hr/hr-workload-heatmap/hr-workload-heatmap.component';
 import { RouterModule } from '@angular/router';
@@ -17,32 +16,21 @@ import { RouterModule } from '@angular/router';
     templateUrl: './profile-dashboard.component.html',
     styleUrls: ['./profile-dashboard.component.scss'],
     standalone: true,
-    imports: [ScrollbarComponent, ProfileVacationWidgetComponent, ColorPickerDirective, FormsModule, HrWorkloadComponent, HrWorkloadHeatmapComponent, RouterModule]
+    imports: [ScrollbarComponent, ProfileVacationWidgetComponent, ColorPickerDirective, FormsModule, HrWorkloadComponent, HrWorkloadHeatmapComponent, RouterModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProfileDashboardComponent implements OnInit {
+export class ProfileDashboardComponent {
+    global = inject(GlobalService);
+    #userService = inject(UserService);
+    #liveSharingService = inject(LiveSharingService);
 
-    user: User
-    global               = inject(GlobalService)
-    #userService         = inject(UserService)
-    #liveSharingService  = inject(LiveSharingService)
-    workloadTitle        = $localize`:@@i18n.common.workload:workload`
-    liveSharingEnabled   = false
+    readonly workloadTitle = $localize`:@@i18n.common.workload:workload`;
+    readonly liveSharingEnabled = toSignal(this.#liveSharingService.featureEnabled$, { initialValue: false });
 
-    ngOnInit() {
-        this.user = this.global.user!
-        this.liveSharingEnabled = this.#liveSharingService.featureEnabled$.value
-        this.reload()
-    }
-    reload()  {
-        this.#userService.showVacationStats(this.user).subscribe()
-    }
-    saveColor(e:any) {
-        this.user.update({color:e}).subscribe()
-    }
-    toggleLiveSharing(event: Event) {
-        const enabled = (event.target as HTMLInputElement).checked
-        this.liveSharingEnabled = enabled
-        this.#liveSharingService.toggleFeature(enabled)
+    constructor() {
+        this.#userService.showVacationStats(this.global.user!).subscribe();
     }
 
+    saveColor = (e: any) => this.global.user!.update({ color: e }).subscribe();
+    toggleLiveSharing = (event: Event) => this.#liveSharingService.toggleFeature((event.target as HTMLInputElement).checked);
 }

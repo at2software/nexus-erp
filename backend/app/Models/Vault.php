@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Http\Controllers\At2ConnectController;
+use App\Http\Controllers\PluginFintsController;
 use App\Http\Controllers\PluginGitController;
 use App\Http\Controllers\PluginLocalAiController;
 use App\Http\Controllers\PluginMattermostController;
@@ -39,12 +40,13 @@ class Vault extends Model {
                 'controller' => PluginMattermostController::class,
                 'active'     => false,
                 'keys'       => collect([
-                    'ENDPOINT'    => 'URL',
-                    'TEAM_ID'     => 'team id',
-                    'TEAM_NAME'   => 'team name (URL slug)',
-                    'LOGIN_ID'    => 'login',
-                    'PASSWORD'    => 'password',
-                    'TOWN_SQUARE' => 'broadcast channel id',
+                    'ENDPOINT'        => 'URL',
+                    'TEAM_ID'         => 'team id',
+                    'TEAM_NAME'       => 'team name (URL slug)',
+                    'LOGIN_ID'        => 'login',
+                    'PASSWORD'        => 'password',
+                    'TOWN_SQUARE'     => 'broadcast channel id',
+                    'DEFAULT_USER_ID' => 'default user ID',
                 ]),
             ],
             [
@@ -65,6 +67,19 @@ class Vault extends Model {
                     'URL'    => 'GitLab URL',
                     'TOKEN'  => 'access token',
                     'APIKEY' => 'api key for webhooks',
+                ]),
+            ],
+            [
+                'prefix'     => 'FINTS',
+                'name'       => 'FinTS/HBCI Banking',
+                'controller' => PluginFintsController::class,
+                'active'     => false,
+                'keys'       => collect([
+                    'URL'      => 'FinTS server URL',
+                    'BLZ'      => 'bank code (BLZ)',
+                    'IBAN'     => 'account IBAN',
+                    'USERNAME' => 'login ID (Kennung)',
+                    'PIN'      => 'PIN',
                 ]),
             ],
             // [

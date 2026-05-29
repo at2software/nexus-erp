@@ -1,46 +1,41 @@
-import { Component, contentChild, ElementRef, inject, model, OnDestroy, Type, OnInit, input } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, Type, contentChild, inject, input, model } from '@angular/core';
 import { ActivityService } from './activity.service';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'activity-tab',
     template: '<ng-content></ng-content>',
     host: { class: 'tab-pane fade' },
-    standalone: true
+    standalone: true,
 })
-export class ActivityTabComponent implements OnDestroy, OnInit {
+export class ActivityTabComponent {
+    readonly el = inject(ElementRef);
+    readonly #srv = inject(ActivityService);
+    readonly scroll = contentChild(ScrollbarComponent);
 
-    icon = input<string>()
-    nicon = input<string>()
-    hidden = model<boolean>(false)
-    badge = model<string|undefined>(undefined)
-    componentType = input<Type<any>>()
+    icon = input<string>();
+    nicon = input<string>();
+    hidden = model(false);
+    badge = model<string | undefined>(undefined);
+    componentType = input<Type<any>>();
+    onFocus: () => void = () => { /* no-op */ };
+    onBlur: () => void = () => { /* no-op */ };
 
-    scroll = contentChild(ScrollbarComponent);
-
-    index: number = 0
-    id: number = 0
-
-    el = inject(ElementRef)
-    #srv = inject(ActivityService)
-
-    ngOnInit(): void { 
-        this.id = this.#srv.getCurrentUniqueId()
-        this.#srv.addTab(this) 
+    constructor() {
+        this.#srv.addTab(this);
+        inject(DestroyRef).onDestroy(() => this.#srv.removeTab(this));
     }
-    ngOnDestroy(): void { 
-        this.#srv.removeTab(this) 
-    }
-    prepare(id:number) {
-        this.el.nativeElement.setAttribute('id', 'activity-' + id)
-        this.el.nativeElement.setAttribute('name', 'activity-' + id)
-        this.el.nativeElement.setAttribute('aria-labelledby', 'activity-tab-' + id)
-        this.el.nativeElement.setAttribute('role', 'tabpanel')
-    }
-    onFocus: () => void = () => { /* noop */ }
-    onBlur:  () => void = () => { /* noop */ }
 
-    show = () => this.hidden.set(false)
-    hide = () => this.hidden.set(true)
-    focus = () => this.#srv.focus(this)
+    prepare(id: number) {
+        const el = this.el.nativeElement;
+        el.setAttribute('id', 'activity-' + id);
+        el.setAttribute('name', 'activity-' + id);
+        el.setAttribute('aria-labelledby', 'activity-tab-' + id);
+        el.setAttribute('role', 'tabpanel');
+    }
+
+    readonly show = () => this.hidden.set(false);
+    readonly hide = () => this.hidden.set(true);
+    readonly focus = () => this.#srv.focus(this);
 }

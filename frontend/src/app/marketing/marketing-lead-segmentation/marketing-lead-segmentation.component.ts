@@ -1,11 +1,10 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 @Component({
     selector: 'marketing-lead-segmentation',
     templateUrl: './marketing-lead-segmentation.component.html',
     styleUrls: ['./marketing-lead-segmentation.component.scss'],
-    standalone: true
+    standalone: true,
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MarketingLeadSegmentationComponent {
-
-}
+export class MarketingLeadSegmentationComponent {}

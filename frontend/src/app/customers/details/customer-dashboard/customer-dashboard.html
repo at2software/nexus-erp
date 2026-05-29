@@ -1,218 +1,176 @@
+@let _company = company();
+@let _product = product();
+@let _invoices = invoices();
+@let _quickContacts = quickContacts();
+@let _hasInvoicingRole = globalUserHasInvoicingRole;
+@let _forecastRevenue = forecastRevenue();
+@let _currentRevenue = currentRevenue();
+@let _forecastUp = forecastUp();
+@let _forecastChange = forecastChange();
 <toolbar>
-  <button type="button" class="btn btn-primary" (click)="onAddProject()" ngbTooltip="CTRL+ALT+N" placement="bottom" hotkey="CTRL+ALT+N">
-    <i>add</i>
-    <span i18n="@@i18n.common.project">project</span>
-  </button>
+    <button type="button" class="btn btn-primary" (click)="onAddProject()" ngbTooltip="CTRL+ALT+N" placement="bottom" hotkey="CTRL+ALT+N">
+        <i>add</i>
+        <span i18n="@@i18n.common.project">project</span>
+    </button>
 </toolbar>
-<scrollbar>
-  <div class="row">
-    <div class="col-md-3">
-      @if (parent.current) {
-        <div class="card mb-3">
-          <div class="card-header">
-            <span i18n="@@i18n.common.contact">contact</span>
-            <div class="card-header-actions">
-              <button class="card-header-action btn text-primary" type="submit" routerLink="contacts" title="edit" i18n-title="@@i18n.common.edit">
-                <i>edit</i>
-              </button>
-            </div>
-          </div>
-          @if (parent.current.card) {
-            <div class="card-body">
-              <div [innerHTML]="parent.current.address | safe:'html'"></div>
-              @for (a of parent.current.url; track a) {
-                <div>
-                  <a [href]="a" target="_blank">{{a}}</a>
-                </div>
-              }
-              <div class="mt-2">
-                <company-locale-selector [company]="parent.current" (localeChanged)="reload()"></company-locale-selector>
-              </div>
-            </div>
-          }
-          @if (quickContacts.length) {
-            <div class="card-header">
-              <span i18n="@@i18n.common.favorites">favorites</span>
-            </div>
-            @for (_ of quickContacts; track _.id) {
-            <list-group-item-contact [nx]="_" [tables]="quickContacts" [contact]="_" [role]="_.role" [showQuickContact]="true" routerLink="{{_.id}}">
-            </list-group-item-contact>
-            }
-          }
-          <div class="card-body">
-            <ng-container roles="financial">
-              <div class="hstack gap-2 pointer" (click)="showDefaultProduct = !showDefaultProduct" (keyup.enter)="showDefaultProduct = !showDefaultProduct" tabindex="0">
-                <div class="flex-fill text-muted" i18n="@@i18n.project.defaultProduct">default product</div>
-                <div class="text-truncate text-end" [ngbTooltip]="product?.name">{{product?.name ?? '-'}}</div>
-              </div>
-              @if (showDefaultProduct) {
-                <div class="py-2">
-                  <search-input class="p-0" only="Product" [has_icon]="true" [minSearch]="1" (itemSelected)="onProductSelect($event)" [query]="product ? product.name : ''" [selected]="product"></search-input>
-                </div>
-              }
-            </ng-container>
-            @if (parent.current.card) {
-              <div class="hstack gap-2 pointer" (click)="showLeadSource = !showLeadSource" (keyup.enter)="showLeadSource = !showLeadSource" tabindex="0">
-                <div class="flex-fill text-muted" i18n="@@i18n.projects.leadSource">lead source</div>
-                <div class="text-truncate text-end" [ngbTooltip]="parent.current.source?.name">{{parent.current.source?.name ?? '-'}}</div>
-              </div>
-              @if (showLeadSource) {
-                <div class="py-2">
-                  <search-input only="Contact,LeadSource,User" [selected]="parent.current.source" [has_icon]="true" [query]="parent.current.source?.name ?? ''" (itemSelected)="onLeadSourceSelected($event)"></search-input>
-                </div>
-              }
-            }
-            <div class="hstack gap-2 mt-2">
-              <ng-container roles="financial">
-                <button type="button"
-                        class="btn btn-sm flex-fill d-flex align-items-center justify-content-center"
-                        [class.btn-danger]="parent.current.is_deprecated"
-                        [class.text-muted]="!parent.current.is_deprecated"
-                        (click)="parent.current.update({is_deprecated: !parent.current.is_deprecated}).subscribe()"
-                        [ngbTooltip]="parent.current.is_deprecated ? 'Customer is deprecated and ignored for maintenance checks' : 'Customer is active for maintenance checks'"
-                        placement="bottom">
-                  <i>{{parent.current.is_deprecated ? 'block' : 'check_circle'}}</i>
-                </button>
-                <button type="button"
-                        class="btn btn-sm flex-fill d-flex align-items-center justify-content-center"
-                        [class.btn-warning]="parent.current.requires_po"
-                        [class.text-muted]="!parent.current.requires_po"
-                        (click)="parent.current.update({requires_po: !parent.current.requires_po}).subscribe()"
-                        [ngbTooltip]="parent.current.requires_po ? 'Customer requires purchase orders before invoicing' : 'No purchase order required'"
-                        placement="bottom">
-                  <i>{{parent.current.requires_po ? 'assignment' : 'assignment_turned_in'}}</i>
-                </button>
-                <button type="button"
-                        class="btn btn-sm flex-fill d-flex align-items-center justify-content-center"
-                        [class.btn-info]="parent.current.has_nda"
-                        [class.text-muted]="!parent.current.has_nda"
-                        (click)="parent.current.update({has_nda: !parent.current.has_nda}).subscribe()"
-                        [ngbTooltip]="parent.current.has_nda ? 'NDA is in place' : 'No NDA signed'"
-                        placement="bottom">
-                  <i>{{parent.current.has_nda ? 'gavel' : 'description'}}</i>
-                </button>
-                <button type="button"
-                        class="btn btn-sm flex-fill d-flex align-items-center justify-content-center"
-                        [class.btn-success]="parent.current.accepts_support"
-                        [class.text-muted]="!parent.current.accepts_support"
-                        (click)="parent.current.update({accepts_support: !parent.current.accepts_support}).subscribe()"
-                        [ngbTooltip]="parent.current.accepts_support ? 'Customer accepts support invoicing without prior notice' : 'Customer requires notification before support invoicing'"
-                        placement="bottom">
-                  <i>{{parent.current.accepts_support ? 'support_agent' : 'support'}}</i>
-                </button>
-              </ng-container>
-              <div ngbDropdown class="flex-fill">
-                <button type="button"
-                        class="btn btn-sm w-100 d-flex align-items-center justify-content-center gap-1 dropdown-toggle-simple"
-                        [class.btn-primary]="parent.current.remarketing_interval"
-                        [class.text-muted]="!parent.current.remarketing_interval"
-                        ngbDropdownToggle
-                        [ngbTooltip]="'Remarketing interval: ' + getIntervalText(parent.current.remarketing_interval)"
-                        placement="bottom">
-                  <n>marketing</n>
-                  <span class="small">{{getIntervalIcon(parent.current.remarketing_interval)}}</span>
-                </button>
-                <div ngbDropdownMenu>
-                  @for (key of getIntervalKeys(); track key) {
-                    <button type="button"
-                            ngbDropdownItem
-                            (click)="parent.current.update({remarketing_interval: key}).subscribe()">
-                      {{getIntervalText(key)}}
-                    </button>
-                  }
-                  @if (parent.current.remarketing_interval) {
-                    <div class="dropdown-divider"></div>
-                    <button type="button"
-                            ngbDropdownItem
-                            (click)="parent.current.update({remarketing_interval: null}).subscribe()">
-                      <i class="text-muted">clear</i>
-                    </button>
-                  }
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      }
-    </div>
 
-    @if (parent.current) {
-      <div class="col-md-9">
-        @if (global.user?.hasRole('invoicing')) {
-          <div class="row">
-            <div class="col-lg-4">
-              <div class="card chart-card mb-3">
-                <div class="card-header hstack gap-2">
-                  <span i18n="@@i18n.common.revenue">revenue</span>
-                  <span class="badge bg-lighter py-1 px-1" ngbTooltip="accumulated revenue of the last 12 months" i18n="@@i18n.common.12m" i18n-ngbTooltip="@@i18n.invoice.revenue12m">12m</span>
-                  @if (forecastRevenue) {
-                    <i class="ms-auto"
-                       [class.text-success]="forecastUp"
-                       [class.text-danger]="!forecastUp"
-                       [ngbTooltip]="forecastTip" placement="auto">
-                      {{forecastUp ? 'trending_up' : 'trending_down'}}
-                    </i>
-                    <ng-template #forecastTip>
-                      <div class="text-start small">
-                        <div class="hstack gap-3">
-                          <span class="text-muted" i18n="@@i18n.common.current">current</span>
-                          <span class="ms-auto font-monospace">{{currentRevenue | money}}</span>
-                        </div>
-                        <div class="hstack gap-3">
-                          <span class="text-muted" i18n="@@i18n.common.forecast">forecast</span>
-                          <span class="ms-auto font-monospace">{{forecastRevenue | money}}</span>
-                        </div>
-                        <div class="hstack gap-3 mt-1" style="border-top: 1px solid rgba(255,255,255,0.15); padding-top: 4px;">
-                          <span class="text-muted">Δ</span>
-                          <span class="ms-auto font-monospace" [class.text-success]="forecastUp" [class.text-danger]="!forecastUp">
-                            {{forecastChange | percent:'1.0-0'}}
-                          </span>
-                        </div>
-                      </div>
-                    </ng-template>
-                  }
+<scrollbar>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <span i18n="@@i18n.common.contact">contact</span>
+                    <div class="card-header-actions">
+                        <button class="card-header-action btn text-primary" type="submit" routerLink="contacts" title="edit" i18n-title="@@i18n.common.edit">
+                            <i>edit</i>
+                        </button>
+                    </div>
                 </div>
-                <chart-card-range keyPath="{{parent.current.getParamPath('INVOICE_REVENUE_12M')}}" [color]="['primary']"></chart-card-range>
-              </div>
-            </div>
-            <div class="col-lg-4">
-              <div class="card chart-card mb-3">
-                <div class="card-header hstack gap-2">
-                    <span i18n="@@i18n.widget-prediction-bias" class="flex-fill text-truncate">prediction bias</span>
+                @if (_company.card()) {
+                <div class="card-body">
+                    <div [innerHTML]="_company.address | safe:'html'"></div>
+                    @for (a of _company.url(); track a) {
+                    <div>
+                        <a [href]="a" target="_blank">{{a}}</a>
+                    </div>
+                    }
+                    <div class="mt-2">
+                        <company-locale-selector [company]="_company" (localeChanged)="reload()"></company-locale-selector>
+                    </div>
                 </div>
-                <customer-prediction-bias-chart [company]="parent.current"></customer-prediction-bias-chart>
-              </div>
+                } @if (_quickContacts.length) {
+                <div class="card-header">
+                    <span i18n="@@i18n.common.favorites">favorites</span>
+                </div>
+                @for (_ of _quickContacts; track _.id) {
+                <list-group-item-contact [nx]="_" [tables]="_quickContacts" [contact]="_" [role]="_.role()" [showQuickContact]="true" routerLink="{{_.id}}"> </list-group-item-contact>
+                } }
+                <div class="card-body">
+                    <ng-container roles="financial">
+                        <div class="hstack gap-2 pointer" (click)="showDefaultProduct.set(!showDefaultProduct())" (keyup.enter)="showDefaultProduct.set(!showDefaultProduct())" tabindex="0">
+                            <div class="flex-fill text-muted" i18n="@@i18n.project.defaultProduct">default product</div>
+                            <div class="text-truncate text-end" [ngbTooltip]="_product?.name">{{_product?.name ?? '-'}}</div>
+                        </div>
+                        @if (showDefaultProduct()) {
+                        <div class="py-2">
+                            <search-input class="p-0" only="Product" [has_icon]="true" [minSearch]="1" (itemSelected)="onProductSelect($event)" [query]="_product?.name ?? ''" [selected]="_product"></search-input>
+                        </div>
+                        }
+                    </ng-container>
+                    @let companySourceName = _company.source?.getName() ?? '';
+                    @if (_company.card()) {
+                    <div class="hstack gap-2 pointer" (click)="showLeadSource.set(!showLeadSource())" (keyup.enter)="showLeadSource.set(!showLeadSource())" tabindex="0">
+                        <div class="flex-fill text-muted" i18n="@@i18n.projects.leadSource">lead source</div>
+                        <div class="text-truncate text-end" [ngbTooltip]="companySourceName">{{companySourceName}}</div>
+                    </div>
+                    @if (showLeadSource()) {
+                    <div class="py-2">
+                        <search-input only="Contact,LeadSource,User" [selected]="_company.source" [has_icon]="true" [query]="companySourceName" (itemSelected)="onLeadSourceSelected($event)"></search-input>
+                    </div>
+                    } }
+                    <div class="hstack gap-2 mt-2">
+                        <ng-container roles="financial">
+                            <button type="button" class="btn btn-sm flex-fill d-flex align-items-center justify-content-center" [class.btn-danger]="_company.is_deprecated" [class.text-muted]="!_company.is_deprecated" (click)="_company.update({is_deprecated: !_company.is_deprecated}).subscribe()" [ngbTooltip]="_company.is_deprecated ? 'Customer is deprecated and ignored for maintenance checks' : 'Customer is active for maintenance checks'" placement="bottom">
+                                <i>{{_company.is_deprecated ? 'block' : 'check_circle'}}</i>
+                            </button>
+                            <button type="button" class="btn btn-sm flex-fill d-flex align-items-center justify-content-center" [class.btn-warning]="_company.requires_po" [class.text-muted]="!_company.requires_po" (click)="_company.update({requires_po: !_company.requires_po}).subscribe()" [ngbTooltip]="_company.requires_po ? 'Customer requires purchase orders before invoicing' : 'No purchase order required'" placement="bottom">
+                                <i>{{_company.requires_po ? 'assignment' : 'assignment_turned_in'}}</i>
+                            </button>
+                            <button type="button" class="btn btn-sm flex-fill d-flex align-items-center justify-content-center" [class.btn-info]="_company.has_nda" [class.text-muted]="!_company.has_nda" (click)="_company.update({has_nda: !_company.has_nda}).subscribe()" [ngbTooltip]="_company.has_nda ? 'NDA is in place' : 'No NDA signed'" placement="bottom">
+                                <i>{{_company.has_nda ? 'gavel' : 'description'}}</i>
+                            </button>
+                            <button type="button" class="btn btn-sm flex-fill d-flex align-items-center justify-content-center" [class.btn-success]="_company.accepts_support" [class.text-muted]="!_company.accepts_support" (click)="_company.update({accepts_support: !_company.accepts_support}).subscribe()" [ngbTooltip]="_company.accepts_support ? 'Customer accepts support invoicing without prior notice' : 'Customer requires notification before support invoicing'" placement="bottom">
+                                <i>{{_company.accepts_support ? 'support_agent' : 'support'}}</i>
+                            </button>
+                        </ng-container>
+                        <div ngbDropdown class="flex-fill">
+                            <button type="button" class="btn btn-sm w-100 d-flex align-items-center justify-content-center gap-1 dropdown-toggle-simple" [class.btn-primary]="_company.remarketing_interval" [class.text-muted]="!_company.remarketing_interval" ngbDropdownToggle [ngbTooltip]="'Remarketing interval: ' + getIntervalText(_company.remarketing_interval)" placement="bottom">
+                                <n>marketing</n>
+                                <span class="small">{{getIntervalIcon(_company.remarketing_interval)}}</span>
+                            </button>
+                            <div ngbDropdownMenu>
+                                @for (key of intervalKeys; track key) {
+                                <button type="button" ngbDropdownItem (click)="_company.update({remarketing_interval: key}).subscribe()">{{getIntervalText(key)}}</button>
+                                } @if (_company.remarketing_interval) {
+                                <div class="dropdown-divider"></div>
+                                <button type="button" ngbDropdownItem (click)="_company.update({remarketing_interval: null}).subscribe()">
+                                    <i class="text-muted">clear</i>
+                                </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="col-lg-4">
-              <div class="card chart-card mb-3">
-                <customer-quickstats [company]="parent.current"></customer-quickstats>
-              </div>
-            </div>
-          </div>
-        }
-        <div class="row">
-          <div class="col-8">
-            <media-preview [parent]="parent.current"></media-preview>
-            @if (parent.current.base_projects && parent.current.base_projects.length > 0) {
-              <div class="card mb-3">
-                <div class="card-header" i18n="@@i18n.common.activeProjects">active projects</div>
-                <projects-table [projects]="parent.current.base_projects"></projects-table>
-              </div>
-            }
-            @if (invoices && invoices.length > 0) {
-              <div class="card mb-3">
-                <div class="card-header" i18n="@@i18n.common.openInvoices">open invoices</div>
-                <invoices-table [invoices]="invoices"></invoices-table>
-              </div>
-            }
-            <customer-initiatives [company]="parent.current"></customer-initiatives>
-          </div>
-          <div class="col-4">
-            <project-team-planning [entity]="parent.current"></project-team-planning>
-          </div>
         </div>
-      </div>
-    }
-  </div>
+
+        <div class="col-md-9">
+            @if (_hasInvoicingRole) {
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="card chart-card mb-3">
+                        <div class="card-header hstack gap-2">
+                            <span i18n="@@i18n.common.revenue">revenue</span>
+                            <span class="badge bg-lighter py-1 px-1" ngbTooltip="accumulated revenue of the last 12 months" i18n="@@i18n.common.12m" i18n-ngbTooltip="@@i18n.invoice.revenue12m">12m</span>
+                            @if (_forecastRevenue) {
+                            <i class="ms-auto" [class.text-success]="_forecastUp" [class.text-danger]="!_forecastUp" [ngbTooltip]="forecastTip" placement="auto"> {{_forecastUp ? 'trending_up' : 'trending_down'}} </i>
+                            <ng-template #forecastTip>
+                                <div class="text-start small">
+                                    <div class="hstack gap-3">
+                                        <span class="text-muted" i18n="@@i18n.common.current">current</span>
+                                        <span class="ms-auto font-monospace">{{_currentRevenue | money}}</span>
+                                    </div>
+                                    <div class="hstack gap-3">
+                                        <span class="text-muted" i18n="@@i18n.common.forecast">forecast</span>
+                                        <span class="ms-auto font-monospace">{{_forecastRevenue | money}}</span>
+                                    </div>
+                                    <div class="hstack gap-3 mt-1" style="border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 4px">
+                                        <span class="text-muted">Δ</span>
+                                        <span class="ms-auto font-monospace" [class.text-success]="_forecastUp" [class.text-danger]="!_forecastUp"> {{_forecastChange | percent:'1.0-0'}} </span>
+                                    </div>
+                                </div>
+                            </ng-template>
+                            }
+                        </div>
+                        <echarts-range-card keyPath="{{_company.getParamPath('INVOICE_REVENUE_12M')}}" [color]="['primary']"></echarts-range-card>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card chart-card mb-3">
+                        <div class="card-header hstack gap-2">
+                            <span i18n="@@i18n.widget-prediction-bias" class="flex-fill text-truncate">prediction bias</span>
+                        </div>
+                        <customer-prediction-bias-chart [company]="_company"></customer-prediction-bias-chart>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card chart-card mb-3">
+                        <customer-quickstats [company]="_company"></customer-quickstats>
+                    </div>
+                </div>
+            </div>
+            }
+            <div class="row">
+                <div class="col-8">
+                    <media-preview [parent]="_company"></media-preview>
+                    @if (_company.base_projects && _company.base_projects.length > 0) {
+                    <div class="card mb-3">
+                        <div class="card-header" i18n="@@i18n.common.activeProjects">active projects</div>
+                        <projects-table [projects]="_company.base_projects"></projects-table>
+                    </div>
+                    } @if (_invoices.length > 0) {
+                    <div class="card mb-3">
+                        <div class="card-header" i18n="@@i18n.common.openInvoices">open invoices</div>
+                        <invoices-table [invoices]="_invoices"></invoices-table>
+                    </div>
+                    }
+                    <customer-initiatives [company]="_company"></customer-initiatives>
+                </div>
+                <div class="col-4">
+                    <project-team-planning [entity]="_company"></project-team-planning>
+                </div>
+            </div>
+        </div>
+    </div>
 </scrollbar>
 <router-outlet></router-outlet>

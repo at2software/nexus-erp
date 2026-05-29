@@ -1,10 +1,10 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 
 import { StatsService } from '@models/stats-service';
 import { GlobalService } from '@models/global.service';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { Color } from '@constants/Color';
-import { EChartsSimpleOptions } from '@charts/ChartOptions';
+import { EChartsSimpleOptions, ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 
 interface FocusAccuracyData {
@@ -22,43 +22,50 @@ interface FocusAccuracyData {
 }
 
 @Component({
-  selector: 'hr-stats-invoice-focus',
-  standalone: true,
-  imports: [NgxEchartsModule, EmptyStateComponent],
-  templateUrl: './hr-stats-invoice-focus.component.html',
-  styleUrl: './hr-stats-invoice-focus.component.scss'
+    selector: 'hr-stats-invoice-focus',
+    standalone: true,
+    imports: [NgxEchartsModule, EmptyStateComponent],
+    templateUrl: './hr-stats-invoice-focus.component.html',
+    styleUrl: './hr-stats-invoice-focus.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HrStatsInvoiceFocusComponent implements OnInit {
-    #statsService = inject(StatsService)
-    #global = inject(GlobalService)
+export class HrStatsInvoiceFocusComponent {
+    #statsService = inject(StatsService);
+    #global = inject(GlobalService);
 
-    users: FocusAccuracyData[] = [];
-    chartOptions: Record<number, any> = {};
-    donutChartOptions: Record<number, any> = {};
+    users = signal<FocusAccuracyData[]>([]);
+    chartOptions = signal<Record<number, any>>({});
+    donutChartOptions = signal<Record<number, any>>({});
 
-    ngOnInit() {
+    constructor() {
         this.#statsService.showFocusAccuracy().subscribe((response: FocusAccuracyData[]) => {
-            this.users = response.sort((a, b) => {
-                const teamA = this.#global.team.findIndex(t => t.id === a.id.toString());
-                const teamB = this.#global.team.findIndex(t => t.id === b.id.toString());
+            const sorted = response.sort((a, b) => {
+                const teamA = this.#global.team.findIndex((t) => t.id === a.id.toString());
+                const teamB = this.#global.team.findIndex((t) => t.id === b.id.toString());
                 return teamA - teamB;
             });
 
-            this.users.forEach(user => {
-                this.chartOptions[user.id] = this.#createChartOptions(user);
-                this.donutChartOptions[user.id] = this.#createDonutChartOptions(user);
+            const charts: Record<number, any> = {};
+            const donuts: Record<number, any> = {};
+            sorted.forEach((user) => {
+                charts[user.id] = this.#createChartOptions(user);
+                donuts[user.id] = this.#createDonutChartOptions(user);
             });
-        })
+
+            this.users.set(sorted);
+            this.chartOptions.set(charts);
+            this.donutChartOptions.set(donuts);
+        });
     }
 
     #createChartOptions(user: FocusAccuracyData): any {
-        const months = user.monthly_focus_accuracy.map(item => item.month).sort();
-        const countData = months.map(month => {
-            const monthData = user.monthly_focus_accuracy.find(item => item.month === month);
+        const months = user.monthly_focus_accuracy.map((item) => item.month).sort();
+        const countData = months.map((month) => {
+            const monthData = user.monthly_focus_accuracy.find((item) => item.month === month);
             return monthData ? monthData.focused_percentage_count : null;
         });
-        const durationData = months.map(month => {
-            const monthData = user.monthly_focus_accuracy.find(item => item.month === month);
+        const durationData = months.map((month) => {
+            const monthData = user.monthly_focus_accuracy.find((item) => item.month === month);
             return monthData ? monthData.focused_percentage_duration : null;
         });
         return {
@@ -67,13 +74,13 @@ export class HrStatsInvoiceFocusComponent implements OnInit {
             xAxis: {
                 type: 'category',
                 data: months,
-                show: false
+                show: false,
             },
             yAxis: {
                 type: 'value',
                 show: false,
                 min: 0,
-                max: 100
+                max: 100,
             },
             tooltip: {
                 ...EChartsSimpleOptions.tooltip,
@@ -81,7 +88,7 @@ export class HrStatsInvoiceFocusComponent implements OnInit {
                 borderWidth: 0,
                 formatter: (params: any) => {
                     const month = params[0].axisValue;
-                    const monthData = user.monthly_focus_accuracy.find(item => item.month === month);
+                    const monthData = user.monthly_focus_accuracy.find((item) => item.month === month);
 
                     if (!monthData) return '';
 
@@ -93,27 +100,27 @@ export class HrStatsInvoiceFocusComponent implements OnInit {
                     tooltipContent += `<div class="d-flex justify-content-between"><span>Focused Duration:</span><span class="ms-2">${monthData.focused_duration.toFixed(1)}h</span></div>`;
                     tooltipContent += `<div class="d-flex justify-content-between"><span>Duration %:</span><span class="ms-2">${monthData.focused_percentage_duration.toFixed(1)}%</span></div>`;
                     return `<div class="card">${tooltipContent}</div>`;
-                }
+                },
             },
             series: [
                 {
-                    name: 'Focus Accuracy (Count)',
+                    name: $localize`:@@i18n.hr.focusAccuracyCount:Focus Accuracy (Count)`,
                     type: 'line',
                     data: countData,
                     lineStyle: {
                         color: Color.fromVar('cyan').toHexString(),
                         width: 2,
-                        type: 'dashed'
+                        type: 'dashed',
                     },
                     itemStyle: {
-                        color: Color.fromVar('cyan').toHexString()
+                        color: Color.fromVar('cyan').toHexString(),
                     },
                     symbol: 'circle',
                     symbolSize: 4,
-                    z: 10
+                    z: 10,
                 },
                 {
-                    name: 'Focus Accuracy (Duration)',
+                    name: $localize`:@@i18n.hr.focusAccuracyDuration:Focus Accuracy (Duration)`,
                     type: 'line',
                     data: durationData,
                     lineStyle: {
@@ -121,20 +128,18 @@ export class HrStatsInvoiceFocusComponent implements OnInit {
                         width: 2,
                     },
                     itemStyle: {
-                        color: Color.fromVar('primary').toHexString()
+                        color: Color.fromVar('primary').toHexString(),
                     },
                     symbol: 'diamond',
                     symbolSize: 4,
-                    z: 10
-                }
-            ]
+                    z: 10,
+                },
+            ],
         };
     }
 
     #createDonutChartOptions(user: FocusAccuracyData): any {
-        const latestMonth = user.monthly_focus_accuracy.length > 0
-            ? user.monthly_focus_accuracy.sort((a, b) => b.month.localeCompare(a.month))[0]
-            : null;
+        const latestMonth = user.monthly_focus_accuracy.length > 0 ? user.monthly_focus_accuracy.sort((a, b) => b.month.localeCompare(a.month))[0] : null;
 
         const overallCountAccuracy = latestMonth ? latestMonth.focused_percentage_duration : 0;
 
@@ -143,40 +148,38 @@ export class HrStatsInvoiceFocusComponent implements OnInit {
         return {
             ...EChartsSimpleOptions,
             backgroundColor: 'transparent',
-            series: [{
-                type: 'pie',
-                radius: ['75%', '90%'],
-                center: ['50%', '50%'],
-                startAngle: 90,
-                endAngle: 450,
-                data: [
-                    {
-                        value: deviation,
-                        name: 'Focused',
-                        itemStyle: {
-                            color: Color.fromVar('primary').toHexString()
-                        }
+            series: [
+                {
+                    type: 'pie',
+                    radius: ['75%', '90%'],
+                    center: ['50%', '50%'],
+                    startAngle: 90,
+                    endAngle: 450,
+                    data: [
+                        {
+                            value: deviation,
+                            name: $localize`:@@i18n.hr.focused:Focused`,
+                            itemStyle: { color: Color.fromVar('primary').toHexString(), ...ECHARTS_DONUT_ITEM_STYLE },
+                        },
+                        {
+                            value: remaining,
+                            name: $localize`:@@i18n.hr.unfocused:Unfocused`,
+                            itemStyle: { color: '#333333', ...ECHARTS_DONUT_ITEM_STYLE },
+                        },
+                    ],
+                    label: {
+                        show: true,
+                        position: 'center',
+                        formatter: `${overallCountAccuracy.toFixed(0)}%`,
+                        fontSize: 18,
+                        fontWeight: 'bold',
+                        color: '#ccc',
                     },
-                    {
-                        value: remaining,
-                        name: 'Unfocused',
-                        itemStyle: {
-                            color: "#333333"
-                        }
-                    }
-                ],
-                label: {
-                    show: true,
-                    position: 'center',
-                    formatter: `${overallCountAccuracy.toFixed(0)}%`,
-                    fontSize: 18,
-                    fontWeight: 'bold',
-                    color: '#ccc'
+                    labelLine: {
+                        show: false,
+                    },
                 },
-                labelLine: {
-                    show: false
-                }
-            }],
+            ],
             tooltip: {
                 backgroundColor: 'transparent',
                 borderWidth: 0,
@@ -191,13 +194,13 @@ export class HrStatsInvoiceFocusComponent implements OnInit {
                             </div>
                         </div>
                     </div>`;
-                }
-            }
+                },
+            },
         };
     }
 
     getUserForAvatar = (user: FocusAccuracyData) => {
-        const teamMember = this.#global.team.find(t => t.id === user.id.toString());
+        const teamMember = this.#global.team.find((t) => t.id === user.id.toString());
         return teamMember || { id: user.id.toString(), name: user.name, icon: '', badge: undefined };
     };
 }

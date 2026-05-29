@@ -1,0 +1,31 @@
+<div class="modal-header">
+    <span class="modal-title" i18n="@@i18n.invoices.selectRecurringInvoiceItem">select recurring invoice item</span>
+    <button class="btn-close" i18n-aria-label="@@i18n.common.close" aria-label="Close" (click)="activeModal.dismiss()"></button>
+</div>
+
+<div class="modal-body p-0">
+    @if (loading()) {
+        <spinner class="py-4"></spinner>
+    } @else if (!items.length) {
+        <div class="text-muted small p-3" i18n="@@i18n.invoices.noRecurringInvoiceItemsFound">no recurring invoice items found</div>
+    } @else {
+        <ul class="list-group list-group-flush">
+            @for (item of items; track item.id) {
+                <li class="list-group-item list-group-item-action d-flex align-items-center gap-3" style="cursor: pointer" tabindex="0" (click)="select(item)" (keydown.enter)="select(item)">
+                    <div class="flex-fill">
+                        <span class="text-white">{{ item.name }}</span>
+                        @if (item.company) {
+                            <small class="text-muted ms-2">{{ item.company.name }}</small>
+                        }
+                    </div>
+                    <span class="text-muted small">{{ item.net | number: '1.2-2' }}</span>
+                    <span class="badge bg-secondary {{ typeColor(item.type) }}">{{ typeLabel(item.type) }}</span>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+<div class="modal-footer">
+    <button class="btn btn-outline-primary" (click)="activeModal.dismiss()" i18n="@@i18n.common.cancel">cancel</button>
+</div>

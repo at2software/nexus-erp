@@ -16,27 +16,26 @@ import { HrStatsPredictionAccuracyComponent } from './hr-stats/hr-stats-predicti
 import { HrStatsInvoiceFocusComponent } from './hr-stats/hr-stats-invoice-focus/hr-stats-invoice-focus.component';
 import { HrMilestonesComponent } from './hr-milestones/hr-milestones.component';
 
-
 @NgModule({
     imports: [
         RouterModule.forChild([
-            { 
+            {
                 path: '',
                 component: HrNavComponent,
                 children: [
-                    { 
-                        path: 'stats', 
+                    {
+                        path: 'stats',
                         component: HrStatsComponent,
                         children: [
                             { path: 'focus-categories', component: HrStatsFocusCategoriesComponent },
                             { path: 'workload', component: HrStatsWorkloadComponent },
                             { path: 'prediction-accuracy', component: HrStatsPredictionAccuracyComponent },
                             { path: 'invoice-focus', component: HrStatsInvoiceFocusComponent },
-                            { path: '', redirectTo: 'focus-categories', pathMatch: 'full' }
-                        ]
+                            { path: '', redirectTo: 'focus-categories', pathMatch: 'full' },
+                        ],
                     },
                     {
-                        path: ':id', 
+                        path: ':id',
                         ...HrDetailGuard.routeActivators(),
                         component: HrTeamComponent,
                         children: [
@@ -47,12 +46,12 @@ import { HrMilestonesComponent } from './hr-milestones/hr-milestones.component';
                             { path: 'employment', component: HrEmploymentComponent },
                             { path: 'milestones', component: HrMilestonesComponent },
                             { path: '**', redirectTo: 'contact' },
-                        ]
+                        ],
                     },
                     { path: '**', redirectTo: () => (NxGlobal.global?.user?.id ?? '') + '/contact' },
-                ]
-            }
+                ],
+            },
         ]),
-    ]
+    ],
 })
-export class HrModule { }
+export class HrModule {}

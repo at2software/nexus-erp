@@ -1,4 +1,4 @@
 export enum ProjectVersioningSource {
     None,
-    GitLab
+    GitLab,
 }

@@ -1,7 +1,6 @@
-
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { HeaderModule } from '@app/app/header/header.module';
+import { HeaderComponent } from '@app/app/header/header.component';
 import { HeaderRouteNavComponent } from '@app/app/header/header-route-nav/header-route-nav.component';
 import { GlobalService } from '@models/global.service';
 
@@ -10,9 +9,9 @@ import { GlobalService } from '@models/global.service';
     templateUrl: './customers-nav.component.html',
     styleUrls: ['./customers-nav.component.scss'],
     standalone: true,
-    imports: [RouterModule, HeaderModule, HeaderRouteNavComponent]
+    imports: [RouterModule, HeaderComponent, HeaderRouteNavComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CustomersNavComponent {
-
-    global = inject(GlobalService)
+    global = inject(GlobalService);
 }

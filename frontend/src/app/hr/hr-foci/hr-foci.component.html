@@ -1,1 +1,4 @@
-<hr-focus-table [user]="user"></hr-focus-table>
+@let _user = user();
+@if (_user) {
+    <hr-focus-table [user]="_user"></hr-focus-table>
+}

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { SearchService } from '@models/search.service';
@@ -8,81 +8,82 @@ import { AvatarComponent } from '@app/_shards/avatar/avatar.component';
 import { CompanyContact } from '@models/company/company-contact.model';
 import { Contact } from '@models/company/contact.model';
 import { REFLECTION } from '@constants/constants';
+import { SpinnerComponent } from '@shards/spinner/spinner.component';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'marketing-link-contact-modal',
     templateUrl: './marketing-link-contact-modal.component.html',
     styleUrls: ['./marketing-link-contact-modal.component.scss'],
     standalone: true,
-    imports: [FormsModule, ScrollbarComponent, AvatarComponent]
+    imports: [FormsModule, ScrollbarComponent, AvatarComponent, SpinnerComponent],
 })
-export class MarketingLinkContactModalComponent extends ModalBaseComponent<{company_contact_id: string} | null> {
+export class MarketingLinkContactModalComponent extends ModalBaseComponent<{ company_contact_id: string } | null> {
+    prospect!: MarketingProspect;
+    searchQuery: string = '';
+    contactResults: CompanyContact[] = [];
+    selectedContact: CompanyContact | null = null;
+    isLoading = signal(false);
 
-    prospect: MarketingProspect
-    searchQuery: string = ''
-    contactResults: CompanyContact[] = []
-    selectedContact: CompanyContact | null = null
-    isLoading: boolean = false
-
-    #searchService = inject(SearchService)
-    #searchDelay: any
+    #searchService = inject(SearchService);
+    #searchDelay: any;
 
     init(...args: any): void {
-        this.prospect = args[0].prospect
+        this.prospect = args[0].prospect;
         // Pre-fill search with prospect name
-        if (this.prospect.name) {
-            this.searchQuery = this.prospect.name
-            this.#searchContacts()
+        if (this.prospect.getName()) {
+            this.searchQuery = this.prospect.getName();
+            this.#searchContacts();
         }
     }
 
     onSearchInput() {
-        if (this.#searchDelay) clearTimeout(this.#searchDelay)
+        if (this.#searchDelay) clearTimeout(this.#searchDelay);
 
         if (this.searchQuery.length >= 2) {
-            this.#searchDelay = setTimeout(() => this.#searchContacts(), 300)
+            this.#searchDelay = setTimeout(() => this.#searchContacts(), 300);
         } else {
-            this.contactResults = []
+            this.contactResults = [];
         }
     }
 
     #searchContacts() {
-        this.isLoading = true
+        this.isLoading.set(true);
         this.#searchService.search(this.searchQuery, { only: 'Contact,CompanyContact' }).subscribe({
             next: (results: any) => {
-                const reflected = Object.values(results).map((x: any) => REFLECTION(x))
-                const contacts: CompanyContact[] = []
-                
+                const reflected = Object.values(results).map((x: any) => REFLECTION(x));
+                const contacts: CompanyContact[] = [];
+
                 // Process results - could be Contact or CompanyContact objects
                 for (const item of reflected) {
                     if (item instanceof CompanyContact) {
-                        contacts.push(item)
+                        contacts.push(item);
                     } else if (item instanceof Contact && item.company_contacts?.length) {
                         // Add all company_contacts from this Contact
-                        contacts.push(...item.company_contacts)
+                        contacts.push(...item.company_contacts);
                     }
                 }
-                
-                this.contactResults = contacts
-                this.isLoading = false
+
+                this.contactResults = contacts;
+                this.isLoading.set(false);
             },
             error: () => {
-                this.isLoading = false
-                this.contactResults = []
-            }
-        })
+                this.isLoading.set(false);
+                this.contactResults = [];
+            },
+        });
     }
 
     selectContact(contact: CompanyContact) {
-        this.selectedContact = contact
+        this.selectedContact = contact;
     }
 
     onSuccess() {
         if (this.selectedContact) {
             return {
-                company_contact_id: this.selectedContact.id
-            }
+                company_contact_id: this.selectedContact.id,
+            };
         }
-        return null
+        return null;
     }
 }

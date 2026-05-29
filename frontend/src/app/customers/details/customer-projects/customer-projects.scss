@@ -6,6 +6,7 @@
     width: 24px;
     transition: opacity 0.2s;
     opacity: 0.7;
+    flex-shrink: 0;
 
     &:hover {
         opacity: 1;
@@ -15,58 +16,102 @@
         font-size: 20px;
     }
 }
+
 .col-date { width: 100px !important; text-align: right; }
 .col-net { width: 75px !important; text-align: right; }
 
 .collapse-toggle-spacer {
     width: 24px;
+    flex-shrink: 0;
 }
 
-.project-content {
-    border-radius: 4px;
-    padding: 4px 8px;
-    margin: -4px -8px;
-    cursor: move;
-    transition: all 0.2s;
-    border: 2px solid transparent;
+// All list-group-items have no padding — project-row owns the spacing
+.project-list-item {
+    padding: 0 !important;
 }
 
-.make-root-icon {
-    cursor: pointer;
-    opacity: 0.6;
-    transition: opacity 0.2s;
-    padding: 0 4px;
+.project-row {
+    padding: 0.4rem 0.75rem;
+    cursor: grab;
+    transition: background-color 0.15s;
 
     &:hover {
-        opacity: 1;
+        background-color: rgba(255, 255, 255, 0.03);
     }
 
-    i {
-        font-size: 18px;
+    &:active {
+        cursor: grabbing;
+    }
+}
+
+// Level hierarchy indicators (dark-grey dots, one per level)
+.level-indicators {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.level-dot {
+    width: 3px;
+    height: 14px;
+    border-radius: 2px;
+    background-color: var(--bs-gray-600);
+    flex-shrink: 0;
+}
+
+// Nested subproject container with subtle tree line
+.subprojects-container {
+    margin-left: 1.5rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+// Drop target highlight during drag
+.drop-target-active > .drop-zone-wrapper {
+    background-color: rgba(var(--bs-success-rgb), 0.08);
+
+    > .project-row {
+        background-color: transparent;
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border: 1px solid rgba(var(--bs-success-rgb), 0.4);
+        border-radius: 4px;
+        pointer-events: none;
     }
 }
 
 .drop-zone-wrapper {
     min-height: 30px;
     position: relative;
-    transition: background-color 0.2s;
-}
-li ul.list-group li {
-    padding: 0 !important;
 }
 
-// Only highlight during drag - when body has project-dragging class
+// Hover highlight during drag (body class approach for non-hovered items)
 body.project-dragging {
-    .drop-zone-wrapper:not(:has(.drop-zone-wrapper:hover)):hover > .project-row .project-content {
-        background-color: rgba(var(--bs-success-rgb), 0.15) !important;
-        border-color: var(--bs-success) !important;
-        box-shadow: 0 0 0 2px rgba(var(--bs-success-rgb), 0.2) !important;
+    .project-row {
+        background-color: transparent;
     }
 }
 
+// Drag preview — matches the dragged row size (matchSize)
 .cdk-drag-preview {
-    opacity: 0.8;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    opacity: 0.95;
+    border-radius: 4px;
+    overflow: hidden;
+
+    .drag-preview-row {
+        height: 100%;
+        padding: 0.4rem 0.75rem;
+        background: rgba(var(--bs-primary-rgb), 0.12);
+        border: 1px solid rgba(var(--bs-primary-rgb), 0.35);
+        border-radius: 4px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        color: var(--bs-body-color);
+        backdrop-filter: blur(4px);
+    }
 }
 
 .cdk-drag-animating {

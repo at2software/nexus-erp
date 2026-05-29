@@ -1,68 +1,117 @@
-
-import { Component, effect, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { NgbCalendar, NgbDatepickerModule, NgbDate, NgbDateAdapter } from '@ng-bootstrap/ng-bootstrap';
+import { NgbDateAdapter, NgbDatepickerModule, NgbDate } from '@ng-bootstrap/ng-bootstrap';
 import { NgbDateCarbonAdapter } from '@directives/ngb-date.adapter';
-import { NexusModule } from '@app/nx/nexus.module';
+import { Nx } from '@app/nx/nx.directive';
+import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { Company } from '@models/company/company.model';
 import { GlobalService } from '@models/global.service';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { InvoiceItemService } from '@models/invoice/invoice-item.service';
-import { MoneyPipe } from '../../../../pipes/money.pipe';
-import { SafePipe } from '../../../../pipes/safe.pipe';
+import { MoneyPipe } from '@pipes/money.pipe';
+import { SafePipe } from '@pipes/safe.pipe';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
+import { EchartsComponent } from '@charts/echarts-wrapper/echarts-wrapper.component';
+import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS, ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'invoices-standing',
     templateUrl: './invoices-standing.component.html',
     styleUrls: ['./invoices-standing.component.scss'],
     providers: [{ provide: NgbDateAdapter, useClass: NgbDateCarbonAdapter }],
     standalone: true,
-    imports: [MoneyPipe, NexusModule, FormsModule, NgbDatepickerModule, SafePipe, EmptyStateComponent]
+    imports: [MoneyPipe, Nx, AvatarComponent, FormsModule, NgbDatepickerModule, SafePipe, EmptyStateComponent, EchartsComponent],
 })
 export class InvoicesStandingComponent {
+    parent = input<Company | null>(null);
 
-    parent = input.required<Company>()
+    isLoaded = signal(false);
+    items = signal<InvoiceItem[]>([]);
+    sum = signal(0);
+    selection = signal<InvoiceItem[]>([]);
+    selectionSum = signal(0);
+    selectedCategories = signal<Set<string>>(new Set());
 
-    isLoaded: boolean = false
-    items:InvoiceItem[] = []
-    sum:number = 0
-    selection:InvoiceItem[] = []
-    selectionSum = 0
+    categories = computed(() => {
+        const map = new Map<string, { name: string; color: string; total: number }>();
+        for (const item of this.items()) {
+            const group = item.product_source?.rootGroup;
+            const name = group?.name ?? 'Other';
+            const color = group?.color || '#666666';
+            if (!map.has(name)) map.set(name, { name, color, total: 0 });
+            map.get(name)!.total += item.getYearlyPrice();
+        }
+        return Array.from(map.values()).sort((a, b) => b.total - a.total);
+    });
 
-    itemService = inject(InvoiceItemService)
-    global      = inject(GlobalService)
-    calendar    = inject(NgbCalendar)
+    filteredItems = computed(() => {
+        const sel = this.selectedCategories();
+        if (!sel.size) return this.items();
+        return this.items().filter(item => sel.has(item.product_source?.rootGroup?.name ?? 'Other'));
+    });
+
+    filteredSum = computed(() => this.filteredItems().reduce((a, b) => a + b.getYearlyPrice(), 0));
+
+    donutOptions = computed(() => {
+        const cats = this.categories();
+        if (!cats.length) return null;
+        return {
+            chart: { height: 180 },
+            backgroundColor: 'transparent',
+            tooltip: { trigger: 'item', ...ECHARTS_DEFAULT_TOOLTIP_OPTIONS, formatter: '{b}: {d}%' },
+            series: [{
+                type: 'pie',
+                radius: ['50%', '72%'],
+                avoidLabelOverlap: false,
+                label: { show: false },
+                labelLine: { show: false },
+                emphasis: { scale: false },
+                data: cats.map(c => ({ name: c.name, value: Math.round(c.total * 100) / 100, itemStyle: { color: c.color, ...ECHARTS_DONUT_ITEM_STYLE } })),
+            }],
+        };
+    });
+
+    #itemService = inject(InvoiceItemService);
+    #global = inject(GlobalService);
 
     constructor() {
-        effect(() => {
-            if (this.parent()) {
-                this.reload()
-            }
-        })
+        effect(() => this.reload(this.parent()));
 
-        this.global.onSelectionIn(() => this.items, 'yearlyPrice').subscribe(_ => { [this.selection, this.selectionSum] = _ })
+        this.#global
+            .onSelectionIn(() => this.items(), 'yearlyPrice')
+            .pipe(takeUntilDestroyed())
+            .subscribe(([items, sum]) => {
+                this.selection.set(items as InvoiceItem[]);
+                this.selectionSum.set(sum as number);
+            });
     }
-    reload() {
-        this.itemService.indexStandingOrders(this.parent()).subscribe(items => {
-            this.isLoaded = true
-            this.items = items
-            this.sum = items.reduce((a, b) => a + b.getYearlyPrice(), 0)
-        })
+
+    reload(parent: Company | null = this.parent()) {
+        this.#itemService.indexStandingOrders(parent ?? undefined).subscribe((items) => {
+            this.isLoaded.set(true);
+            this.items.set(items);
+            this.sum.set(items.reduce((a, b) => a + b.getYearlyPrice(), 0));
+        });
     }
 
     updateDate(item: InvoiceItem, field: string, date: NgbDate) {
         const dateString = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
-        item.update({ [field]: dateString }).subscribe(() => {
-            this.reload();
-        });
+        item.update({ [field]: dateString }).subscribe(() => this.reload());
     }
 
     getDaysUntilNext = (item: InvoiceItem): number => {
-        if (!item.next_recurrence_at) return 0
-        const today = new Date()
-        const nextDate = new Date(item.next_recurrence_at)
-        const diffTime = nextDate.getTime() - today.getTime()
-        return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        if (!item.next_recurrence_at) return 0;
+        const diffTime = new Date(item.next_recurrence_at).getTime() - Date.now();
+        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    };
+
+    toggleCategory(name: string) {
+        this.selectedCategories.update(sel => {
+            const next = new Set(sel);
+            next.has(name) ? next.delete(name) : next.add(name);
+            return next;
+        });
     }
 }

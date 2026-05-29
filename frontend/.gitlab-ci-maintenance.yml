@@ -1,0 +1,27 @@
+workflow:
+  rules:
+    - when: manual
+
+variables:
+  NODE_PATH: $NODE_VERSIONS\v22.12.0
+  NODE_OPTIONS: --max_old_space_size=8192   # prevent memory bottlenecks
+  GIT_CLEAN_FLAGS: -ffdx -e node_modules/ -e .angular/  # keep deps + build cache between runs
+
+stages:
+  - tools
+
+deploy-clean:
+  stage: tools
+  variables:
+    GIT_CLEAN_FLAGS: -ffdx                  # full clean — removes node_modules/ and .angular/
+  script:
+    - set PATH=%NODE_PATH%;%PATH%
+    - call npm install --legacy-peer-deps
+    - call npm run build:i18n
+    - 'winscp sftp://%PROD_USER%@%PROD_IP%/ /privatekey="E:\nexus.ppk" /command "synchronize remote -transfer=binary -mirror -delete -filemask=""|.*/;.*;"" ./dist/nexus/browser/ /var/www/html/frontend/" "exit"'
+    - 'ssh -i E:\nexus.pem %PROD_USER%@%PROD_IP% -p22 "sudo chmod -R 777 /var/www/html/frontend"'
+  rules:
+    - when: manual
+      allow_failure: true
+  tags:
+    - win

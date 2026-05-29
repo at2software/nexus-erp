@@ -1,22 +1,20 @@
-import { ReplaySubject } from "rxjs";
-import { Focus } from "./focus.model";
-import { Assignee } from "@models/assignee/assignee.model";
-
+import { Signal } from '@angular/core';
+import { Focus } from './focus.model';
+import { Assignee } from '@models/assignee/assignee.model';
 export interface IHasFoci {
-    foci            : Focus[]
-    class           : string
-    id              : string
-    name            : string
-    has_time_budget : boolean
-    icon            : string
-    pivot          ?: Assignee
-    badge: undefined | [string, string];
-    ngLink?:string
-    getApiPath: () => string
-    getApiPathWithId: () => string
+    foci: Focus[];
+    class: string;
+    id: string;
+    hasTimeBudget: () => boolean;
+    icon: string;
+    pivot?: Assignee;
+    badge: Signal<[string, string] | undefined>;
+    ngLink: Signal<string | undefined>;
+    getName: () => string;
+    apiPath: () => string;
+    apiPathWithId: () => string;
 }
 
 export interface IHasFociGuard {
-    onChange: ReplaySubject<any>
-    current: IHasFoci
+    object: Signal<IHasFoci>;
 }

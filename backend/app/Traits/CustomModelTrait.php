@@ -180,14 +180,22 @@ trait CustomModelTrait {
         return $this;
     }
 
+    /**
+     * @deprecated Use applyAndSave($request) instead to avoid request() coupling.
+     */
     public function applyAndSaveRequest(array $ignore = []) {
         return $this->applyAndSave(request(), $ignore);
     }
+
     public function appendRequest() {
         if (! ($a = request('append'))) {
             return $this;
         }
         $appends = explode(',', $a);
+        $allowed = $this->allowedAppends ?? [];
+        if (count($allowed)) {
+            $appends = array_intersect($appends, $allowed);
+        }
         if (! count($appends)) {
             return $this;
         }

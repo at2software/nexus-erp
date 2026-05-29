@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\NLog;
+use App\Jobs\GitBuildWebhookJob;
 use App\Jobs\GitIssueWebhookJob;
 use App\Jobs\GitNoteWebhookJob;
 use App\Jobs\GitPipelineWebhookJob;
@@ -63,6 +64,14 @@ class PluginGitController extends PluginController {
         $url = $this->env('URL').'api/v4/projects/'.$projectId.'/jobs/'.$jobId.'/artifacts/'.$artifactPath;
         return $this->get($url);
     }
+    public function getPipeline(int $projectId, int $pipelineId): ?array {
+        $url = $this->env('URL').'api/v4/projects/'.$projectId.'/pipelines/'.$pipelineId;
+        return $this->get($url);
+    }
+    public function getPipelineJobs(int $projectId, int $pipelineId): ?array {
+        $url = $this->env('URL').'api/v4/projects/'.$projectId.'/pipelines/'.$pipelineId.'/jobs';
+        return $this->get($url);
+    }
     public function downloadTest() {
         $projectId = null; // Configure with your GitLab project ID
         $jobId     = null; // Configure with your GitLab job ID
@@ -84,9 +93,10 @@ class PluginGitController extends PluginController {
 
         switch ($data->object_kind) {
             case 'build':
+                GitBuildWebhookJob::dispatch($links, $data->project, $data->all(), $this->credentials ?? []);
                 break;
             case 'pipeline':
-                GitPipelineWebhookJob::dispatch($links, $data->project, $data->object_attributes, $data->builds, $this->credentials ?? []);
+                GitPipelineWebhookJob::dispatch($links, $data->project, $data->object_attributes, $data->builds);
                 break;
             case 'issue':
                 GitIssueWebhookJob::dispatch($links, $data->project, $data->object_attributes, $data->user, $data->assignees ?? [], $data->changes ?? []);
@@ -95,7 +105,7 @@ class PluginGitController extends PluginController {
                 GitNoteWebhookJob::dispatch($links, $data->project, $data->issue, $data->object_attributes, $data->user);
                 break;
             case 'push':
-                GitPushWebhookJob::dispatch($links, $this->credentials);
+                GitPushWebhookJob::dispatch($links, $data->project, $this->credentials);
                 break;
             default:
                 NLog::info(print_r(request()->all(), true));

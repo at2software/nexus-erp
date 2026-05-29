@@ -1,33 +1,36 @@
-import { ChangeDetectorRef, Component, forwardRef, inject, input } from '@angular/core';
+﻿import { ChangeDetectionStrategy, ChangeDetectorRef, Component, forwardRef, inject, input } from '@angular/core';
 
 import { FormsModule, ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
-type I18nValue = string | { language: string, formality: string, text: string }[];
+type I18nValue = string | { language: string; formality: string; text: string }[];
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'i18n-textarea',
     standalone: true,
     imports: [FormsModule],
     templateUrl: './i18n-textarea.component.html',
     styleUrls: ['./i18n-textarea.component.scss'],
-    providers: [{
-        provide: NG_VALUE_ACCESSOR,
-        useExisting: forwardRef(() => I18nTextareaComponent),
-        multi: true
-    }]
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => I18nTextareaComponent),
+            multi: true,
+        },
+    ],
 })
 export class I18nTextareaComponent implements ControlValueAccessor {
     #cdr = inject(ChangeDetectorRef);
 
-    placeholder         = input<string|undefined>();
-    rows                = input<number|undefined>();
-    label               = input<string|undefined>();
-    showPlaceholderInfo = input<boolean|undefined>();
+    placeholder = input<string | undefined>();
+    rows = input<number | undefined>();
+    label = input<string | undefined>();
+    showPlaceholderInfo = input<boolean | undefined>();
 
     currentLanguage = 'de';
     currentFormality = 'formal';
     #internalValue = '';
-    #i18nVariants: { language: string, formality: string, text: string }[] = [];
+    #i18nVariants: { language: string; formality: string; text: string }[] = [];
     #onChange: (value: I18nValue) => void = () => {
         // No-op
     };
@@ -39,7 +42,7 @@ export class I18nTextareaComponent implements ControlValueAccessor {
     writeValue(value: I18nValue): void {
         if (Array.isArray(value)) {
             this.#i18nVariants = value;
-            const defaultVariant = value.find(v => v.language === 'de' && v.formality === 'formal') || value[0];
+            const defaultVariant = value.find((v) => v.language === 'de' && v.formality === 'formal') || value[0];
             if (defaultVariant) {
                 this.currentLanguage = defaultVariant.language;
                 this.currentFormality = defaultVariant.formality;
@@ -48,9 +51,9 @@ export class I18nTextareaComponent implements ControlValueAccessor {
         } else if (value === '@@i18n') {
             // Backend marker without resolved variants (e.g. no i18n records yet) — initialize as empty localized state
             this.#i18nVariants = [
-                { language: 'de', formality: 'formal',   text: '' },
+                { language: 'de', formality: 'formal', text: '' },
                 { language: 'de', formality: 'informal', text: '' },
-                { language: 'en', formality: 'formal',   text: '' },
+                { language: 'en', formality: 'formal', text: '' },
                 { language: 'en', formality: 'informal', text: '' },
             ];
             this.currentLanguage = 'de';
@@ -81,10 +84,10 @@ export class I18nTextareaComponent implements ControlValueAccessor {
     }
 
     get availableLocales() {
-        return this.#i18nVariants.map(v => ({
+        return this.#i18nVariants.map((v) => ({
             language: v.language,
             formality: v.formality,
-            label: `${v.language.toUpperCase()} - ${v.formality}`
+            label: `${v.language.toUpperCase()} - ${v.formality}`,
         }));
     }
 
@@ -102,9 +105,7 @@ export class I18nTextareaComponent implements ControlValueAccessor {
 
         if (this.isLocalized) {
             // Update the current variant
-            const variant = this.#i18nVariants.find(
-                v => v.language === this.currentLanguage && v.formality === this.currentFormality
-            );
+            const variant = this.#i18nVariants.find((v) => v.language === this.currentLanguage && v.formality === this.currentFormality);
             if (variant) {
                 variant.text = val;
             }
@@ -151,9 +152,7 @@ export class I18nTextareaComponent implements ControlValueAccessor {
         this.currentFormality = formality;
 
         // Load text for selected locale
-        const variant = this.#i18nVariants.find(
-            v => v.language === lang && v.formality === formality
-        );
+        const variant = this.#i18nVariants.find((v) => v.language === lang && v.formality === formality);
         if (variant) {
             this.#internalValue = variant.text;
         }

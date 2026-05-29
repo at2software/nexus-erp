@@ -14,9 +14,12 @@ class MarketingWorkflow extends BaseModel {
         'description',
         'is_active',
     ];
-    protected $casts = [
-        'is_active' => 'boolean',
-    ];
+
+    protected function casts(): array {
+        return [
+            'is_active' => 'boolean',
+        ];
+    }
 
     // Relationships
     public function marketingInitiatives(): BelongsToMany {

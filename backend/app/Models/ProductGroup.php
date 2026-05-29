@@ -15,10 +15,12 @@ class ProductGroup extends BaseModel {
     protected $touches  = ['parent_group'];
     protected $appends  = ['class', 'icon', 'path'];
     protected $access   = ['admin' => '*', 'project_manager' => 'r', 'user' => 'r'];
-    protected $casts    = [
-        'net' => PrecomputedAuth::class,
-    ];
 
+    protected function casts(): array {
+        return [
+            'net' => PrecomputedAuth::class,
+        ];
+    }
     public function parent_group() {
         return $this->belongsTo(ProductGroup::class);
     }

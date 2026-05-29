@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { HrTeamService } from './hr-team/hr-team.service';
-import { HeaderModule } from '@app/app/header/header.module';
+import { HeaderComponent } from '@app/app/header/header.component';
+import { HeaderLinkItemComponent } from '@app/app/header/header-link-item/header-link-item.component';
 import { PermissionsDirective } from '@directives/permissions.directive';
 
 @Component({
@@ -9,10 +10,9 @@ import { PermissionsDirective } from '@directives/permissions.directive';
     templateUrl: './hr-nav.component.html',
     styleUrls: ['./hr-nav.component.scss'],
     standalone: true,
-    imports: [HeaderModule, RouterModule, PermissionsDirective]
+    imports: [HeaderComponent, HeaderLinkItemComponent, RouterModule, PermissionsDirective],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HrNavComponent {
-
-    srv = inject(HrTeamService)
-
+    srv = inject(HrTeamService);
 }

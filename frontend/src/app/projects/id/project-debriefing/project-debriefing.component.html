@@ -1,7 +1,15 @@
+@let _loading = loading();
+@let _creating = creating();
+@let _debriefs = debriefs();
+@let _categories = categories();
+@let _aiLoadingMap = aiLoadingMap();
+@let _aiSuggestionsMap = aiSuggestionsMap();
+@let _expandedProblemId = expandedProblemId();
+
 <toolbar>
-    <button class="btn btn-primary" (click)="createDebrief()" [disabled]="creating">
-        @if (creating) {
-            <span class="spinner-border spinner-border-sm me-1"></span>
+    <button class="btn btn-primary" (click)="createDebrief()" [disabled]="_creating">
+        @if (_creating) {
+            <spinner [size]="20" [inline]="true" class="me-1"></spinner>
         } @else {
             <i>add</i>
         }
@@ -9,38 +17,33 @@
     </button>
 </toolbar>
 
-@if (loading) {
-    <div class="d-flex align-items-center justify-content-center p-5">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">
-                <span i18n="@@i18n.common.loading">loading</span>
-                <span class="notranslate">...</span>
-            </span>
-        </div>
-    </div>
+@if (_loading) {
+    <spinner class="p-5"></spinner>
 }
 
-@if (!loading && !debriefs.length) {
+@if (!_loading && !_debriefs.length) {
     <div class="card">
         <empty-state [card]="false" class="projects" title="No debriefs yet. Create the first one." i18n-title="@@i18n.debrief.noDebriefs"></empty-state>
     </div>
 }
 
-@if (!loading) {
+@if (!_loading) {
     <div class="container-fluid p-3 d-flex flex-column gap-4">
-        @for (debrief of debriefs; track debrief.id; let num = $index) {
+        @for (debrief of _debriefs; track debrief.id; let num = $index) {
+            @let _isCompleted = debrief.isCompleted();
+            @let _isDraft = debrief.isDraft();
 
             <!-- Debrief Header -->
             <div>
                 <div class="d-flex align-items-center gap-2 mb-3">
-                    <span class="badge bg-dark">#{{ debriefs.length - num }}</span>
+                    <span class="badge bg-dark">#{{ _debriefs.length - num }}</span>
                     @if (debrief.conducted_at) {
-                        <span class="text-muted small">{{ debrief.conducted_at | date:'mediumDate' }}</span>
+                        <span class="text-muted small">{{ debrief.conducted_at | date: 'mediumDate' }}</span>
                     }
                     <div ngbDropdown>
                         <button ngbDropdownToggle class="btn btn-sm btn-plain dropdown-toggle-simple p-0 text-muted small">
                             @if (debrief.debriefed_user) {
-                                — {{ debrief.debriefed_user.name }}
+                                — {{ debrief.debriefed_user.getName() }}
                             } @else {
                                 <span i18n="@@i18n.debrief.selectDebriefedUser">select debriefed user</span>
                             }
@@ -49,36 +52,32 @@
                             <button ngbDropdownItem (click)="setDebriefedUser(debrief, null)">
                                 <span i18n="@@i18n.common.none">none</span>
                             </button>
-                            @for (user of projectUsers; track user.id) {
-                                <button ngbDropdownItem
-                                        [class.active]="debrief.debriefed_user_id === user.id"
-                                        (click)="setDebriefedUser(debrief, user)">
-                                    {{ user.name }}
+                            @for (user of projectUsers(); track user.id) {
+                                <button ngbDropdownItem [class.active]="debrief.debriefed_user_id === user.id" (click)="setDebriefedUser(debrief, user)">
+                                    {{ user.getName() }}
                                 </button>
                             }
                         </div>
                     </div>
-                    @if (debrief.isCompleted()) {
+                    @if (_isCompleted) {
                         <span class="badge bg-success ms-1">
                             <i class="me-1">check_circle</i>
                             <span i18n="@@i18n.debrief.completed">completed</span>
                         </span>
                     }
                     <div class="ms-auto d-flex align-items-center gap-2">
-                        @if (debrief.isDraft()) {
+                        @if (_isDraft) {
                             <button class="btn btn-sm btn-primary" (click)="markAsCompleted(debrief)">
                                 <i class="me-1">check</i>
                                 <span i18n="@@i18n.debrief.markComplete">mark as complete</span>
                             </button>
                         }
-                        @if (debrief.isCompleted()) {
-                            <button class="btn btn-sm btn-plain p-0" (click)="reopenDebrief(debrief)"
-                                    ngbTooltip="Reopen debrief" i18n-ngbTooltip="@@i18n.debrief.reopen">
+                        @if (_isCompleted) {
+                            <button class="btn btn-sm btn-plain p-0" (click)="reopenDebrief(debrief)" ngbTooltip="Reopen debrief" i18n-ngbTooltip="@@i18n.debrief.reopen">
                                 <i>lock_open</i>
                             </button>
                         }
-                        <button class="btn btn-sm btn-plain p-0 text-danger" (click)="deleteDebrief(debrief)"
-                                ngbTooltip="Delete debrief" i18n-ngbTooltip="@@i18n.debrief.delete">
+                        <button class="btn btn-sm btn-plain p-0 text-danger" (click)="deleteDebrief(debrief)" ngbTooltip="Delete debrief" i18n-ngbTooltip="@@i18n.debrief.delete">
                             <i>delete</i>
                         </button>
                     </div>
@@ -100,54 +99,32 @@
                                 <span i18n="@@i18n.debrief.summaryNotes">summary notes</span>
                                 <div class="star-rating">
                                     @for (star of [1, 2, 3, 4, 5]; track star) {
-                                        <i [class.cursor-pointer]="debrief.isDraft()"
-                                           [class.text-warning]="debrief.rating && star <= debrief.rating"
-                                           [class.text-muted]="!debrief.rating || star > debrief.rating"
-                                           [attr.tabindex]="debrief.isDraft() ? 0 : null"
-                                           (click)="debrief.isDraft() && setRating(debrief, star)"
-                                           (keydown.enter)="debrief.isDraft() && setRating(debrief, star)"
-                                           (keydown.space)="debrief.isDraft() && setRating(debrief, star)">
+                                        <i [class.cursor-pointer]="_isDraft" [class.text-warning]="debrief.rating && star <= debrief.rating" [class.text-muted]="!debrief.rating || star > debrief.rating" [attr.tabindex]="_isDraft ? 0 : null" (click)="_isDraft && setRating(debrief, star)" (keydown.enter)="_isDraft && setRating(debrief, star)" (keydown.space)="_isDraft && setRating(debrief, star)">
                                             {{ debrief.rating && star <= debrief.rating ? 'star' : 'star_border' }}
                                         </i>
                                     }
                                 </div>
                             </div>
                             <div class="card-body d-flex flex-column gap-2">
-                                <textarea class="form-control border-0 bg-transparent flex-grow-1"
-                                          rows="5"
-                                          [(ngModel)]="debrief.summary_notes"
-                                          [autosave]="debrief"
-                                          autosaveKey="summary_notes"
-                                          [readonly]="debrief.isCompleted()"
-                                          placeholder="Add any additional notes about this debrief..."
-                                          i18n-placeholder="@@i18n.debrief.summaryPlaceholder"></textarea>
+                                <textarea class="form-control border-0 bg-transparent flex-grow-1" rows="5" [(ngModel)]="debrief.summary_notes" [autosave]="debrief" autosaveKey="summary_notes" [readonly]="_isCompleted" placeholder="Add any additional notes about this debrief..." i18n-placeholder="@@i18n.debrief.summaryPlaceholder"></textarea>
 
                                 <!-- Local AI Section -->
-                                @if (debrief.isDraft() && localAiPlugin) {
+                                @if (_isDraft && localAiPlugin) {
                                     <div class="d-flex align-items-start gap-2 flex-wrap">
-                                        <button class="btn btn-sm btn-outline-primary"
-                                                (click)="runLocalAI(debrief)"
-                                                [disabled]="aiLoadingMap[debrief.id]">
-                                            @if (aiLoadingMap[debrief.id]) {
-                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                        <button class="btn btn-sm btn-outline-primary" (click)="runLocalAI(debrief)" [disabled]="_aiLoadingMap[debrief.id]">
+                                            @if (_aiLoadingMap[debrief.id]) {
+                                                <spinner [size]="20" [inline]="true" class="me-1"></spinner>
                                             } @else {
                                                 <i class="me-1">smart_toy</i>
                                             }
                                             <span i18n="@@i18n.debrief.localAI">Local AI</span>
                                         </button>
-                                        @if (aiSuggestionsMap[debrief.id]?.length) {
-                                            @for (suggestion of aiSuggestionsMap[debrief.id]; track suggestion.title) {
-                                                <span class="badge d-flex align-items-center gap-1 cursor-pointer"
-                                                      [ngClass]="suggestion.type === 'problem' ? getSeverityClass(suggestion.severity || 'medium') : 'bg-success'"
-                                                      tabindex="0" (click)="applySuggestion(debrief, suggestion)" (keyup.enter)="applySuggestion(debrief, suggestion)"
-                                                      ngbTooltip="{{ suggestion.category }}"
-                                                      [disableTooltip]="!suggestion.category">
+                                        @if (_aiSuggestionsMap[debrief.id]?.length) {
+                                            @for (suggestion of _aiSuggestionsMap[debrief.id]; track suggestion.title) {
+                                                <span class="badge d-flex align-items-center gap-1 cursor-pointer" [class]="suggestion.type === 'problem' ? getSeverityClass(suggestion.severity || 'medium') : 'bg-success'" tabindex="0" (click)="applySuggestion(debrief, suggestion)" (keyup.enter)="applySuggestion(debrief, suggestion)" ngbTooltip="{{ suggestion.category }}" [disableTooltip]="!suggestion.category">
                                                     <i class="small">{{ suggestion.type === 'problem' ? 'warning' : 'thumb_up' }}</i>
                                                     {{ suggestion.title }}
-                                                    <button class="btn-close btn-close-white ms-1"
-                                                            style="font-size:0.5rem"
-                                                            aria-label="remove"
-                                                            (click)="$event.stopPropagation(); removeSuggestion(debrief.id, suggestion)"></button>
+                                                    <button class="btn-close btn-close-white ms-1" style="font-size: 0.5rem" aria-label="remove" (click)="$event.stopPropagation(); removeSuggestion(debrief.id, suggestion)"></button>
                                                 </span>
                                             }
                                         }
@@ -169,19 +146,14 @@
                                     <span class="badge bg-dark">{{ debrief.problems.length }}</span>
                                 }
                             </div>
-                            @if (debrief.isDraft()) {
+                            @if (_isDraft) {
                                 <div class="card-body pb-2">
                                     <div class="d-flex gap-2 mb-3">
                                         <div class="flex-grow-1">
-                                            <debrief-problem-autocomplete
-                                                [categories]="categories"
-                                                [excludeProblemIds]="getExcludedProblemIds(debrief)"
-                                                (problemSelected)="onProblemSelected(debrief, $event)"
-                                                (createProblem)="onCreateProblem(debrief, $event)">
-                                            </debrief-problem-autocomplete>
+                                            <debrief-problem-autocomplete [categories]="_categories" [excludeProblemIds]="getExcludedProblemIds(debrief)" (problemSelected)="onProblemSelected(debrief, $event)" (createProblem)="onCreateProblem(debrief, $event)"> </debrief-problem-autocomplete>
                                         </div>
                                         <div ngbDropdown>
-                                            <button ngbDropdownToggle class="btn btn-sm" [ngClass]="getSeverityClass(getSelectedSeverity(debrief.id))">
+                                            <button ngbDropdownToggle class="btn btn-sm" [class]="getSeverityClass(getSelectedSeverity(debrief.id))">
                                                 {{ getSelectedSeverity(debrief.id) }}
                                             </button>
                                             <div ngbDropdownMenu>
@@ -194,31 +166,28 @@
                                     </div>
                                 </div>
                             }
-                            @if (debrief.problems.length === 0 && debrief.isCompleted()) {
+                            @if (debrief.problems.length === 0 && _isCompleted) {
                                 <empty-state [card]="false" class="projects" i18n-title="@@i18n.debrief.noProblems" title="no problems recorded"></empty-state>
                             }
                             @if (debrief.problems.length > 0) {
                                 <ul class="list-group list-group-flush">
                                     @for (problem of debrief.problems; track problem.id) {
                                         <li class="list-group-item p-0">
-                                            <div class="d-flex p-2 align-items-center gap-2 cursor-pointer" [nx]="problem" tabindex="0"
-                                                 (click)="toggleProblem(problem)"
-                                                 (keydown.enter)="toggleProblem(problem)"
-                                                 (keydown.space)="toggleProblem(problem)">
+                                            <div class="d-flex p-2 align-items-center gap-2 cursor-pointer" [nx]="problem" tabindex="0" (click)="toggleProblem(problem)" (keydown.enter)="toggleProblem(problem)" (keydown.space)="toggleProblem(problem)">
                                                 <div class="flex-grow-1">{{ problem.title }}</div>
-                                                @if (debrief.isDraft()) {
+                                                @if (_isDraft) {
                                                     <div ngbDropdown tabindex="0" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation()">
                                                         <span ngbDropdownToggle class="badge bg-dark cursor-pointer" tabindex="0">
                                                             {{ getCategoryName(problem.debrief_problem_category_id) }}
                                                         </span>
                                                         <div ngbDropdownMenu>
-                                                            @for (cat of categories; track cat.id) {
+                                                            @for (cat of _categories; track cat.id) {
                                                                 <button ngbDropdownItem (click)="updateProblemCategory(debrief, problem, cat.id)">{{ cat.name }}</button>
                                                             }
                                                         </div>
                                                     </div>
                                                     <div ngbDropdown tabindex="0" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation()">
-                                                        <span ngbDropdownToggle class="badge cursor-pointer" [ngClass]="getSeverityClass(problem.severity || 'medium')" tabindex="0">
+                                                        <span ngbDropdownToggle class="badge cursor-pointer" [class]="getSeverityClass(problem.severity || 'medium')" tabindex="0">
                                                             {{ problem.severity || 'medium' }}
                                                         </span>
                                                         <div ngbDropdownMenu>
@@ -230,10 +199,10 @@
                                                     </div>
                                                 } @else {
                                                     <span class="badge bg-dark">{{ getCategoryName(problem.debrief_problem_category_id) }}</span>
-                                                    <span class="badge" [ngClass]="getSeverityClass(problem.severity || 'medium')">{{ problem.severity || 'medium' }}</span>
+                                                    <span class="badge" [class]="getSeverityClass(problem.severity || 'medium')">{{ problem.severity || 'medium' }}</span>
                                                 }
                                             </div>
-                                            @if (expandedProblemId === problem.id) {
+                                            @if (_expandedProblemId === problem.id) {
                                                 <div class="ps-4 pe-2">
                                                     @if (problem.description) {
                                                         <p class="text-muted small mb-2 form-label">{{ problem.description }}</p>
@@ -241,13 +210,7 @@
                                                     <div class="d-flex align-items-center gap-2">
                                                         <span class="form-label mb-0 me-2" i18n="@@i18n.debrief.solutions">solutions</span>
                                                         <div class="flex-fill">
-                                                            <debrief-solution-inline
-                                                                [problem]="problem"
-                                                                [debriefId]="debrief.id"
-                                                                [readonly]="debrief.isCompleted()"
-                                                                (solutionLinked)="reloadDebrief(debrief.id)"
-                                                                (solutionRated)="reloadDebrief(debrief.id)">
-                                                            </debrief-solution-inline>
+                                                            <debrief-solution-inline [problem]="problem" [debriefId]="debrief.id" [readonly]="_isCompleted" (solutionLinked)="reloadDebrief(debrief.id)" (solutionRated)="reloadDebrief(debrief.id)"> </debrief-solution-inline>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -268,15 +231,12 @@
                                     <span class="badge bg-dark">{{ debrief.positives.length }}</span>
                                 }
                             </div>
-                            @if (debrief.isDraft()) {
+                            @if (_isDraft) {
                                 <div class="card-body pb-2">
-                                    <debrief-positive-autocomplete
-                                        [categories]="categories"
-                                        (addPositive)="onAddPositive(debrief, $event)">
-                                    </debrief-positive-autocomplete>
+                                    <debrief-positive-autocomplete [categories]="_categories" (addPositive)="onAddPositive(debrief, $event)"> </debrief-positive-autocomplete>
                                 </div>
                             }
-                            @if (debrief.positives.length === 0 && debrief.isCompleted()) {
+                            @if (debrief.positives.length === 0 && _isCompleted) {
                                 <empty-state [card]="false" class="projects" i18n-title="@@i18n.debrief.noPositives" title="no positives recorded"></empty-state>
                             }
                             @if (debrief.positives.length > 0) {
@@ -294,13 +254,11 @@
                         </div>
                     </div>
                 </div>
-
             </div>
 
             @if (!$last) {
-                <hr class="opacity-25">
+                <hr class="opacity-25" />
             }
-
         }
     </div>
 }

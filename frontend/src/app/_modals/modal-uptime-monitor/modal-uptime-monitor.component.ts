@@ -1,22 +1,23 @@
-import { Component, inject } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, inject, signal, Injectable } from '@angular/core';
 import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { FormsModule } from '@angular/forms';
 
 import { UptimeMonitor } from '@models/uptime/uptime-monitor.model';
 import { UptimeMonitorService } from '@models/uptime/uptime-monitor.service';
-import { Injectable } from '@angular/core';
+import { SpinnerComponent } from '@shards/spinner/spinner.component';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'modal-uptime-monitor',
     templateUrl: './modal-uptime-monitor.component.html',
     styleUrls: ['./modal-uptime-monitor.component.scss'],
     standalone: true,
-    imports: [FormsModule]
+    imports: [FormsModule, SpinnerComponent],
 })
 export class ModalUptimeMonitorComponent {
     monitor!: UptimeMonitor;
-    isCreating: boolean = false;
-    isSaving: boolean = false;
+    isCreating = signal(false);
+    isSaving = signal(false);
     projectIds: string[] = [];
 
     activeModal = inject(NgbActiveModal);
@@ -43,21 +44,19 @@ export class ModalUptimeMonitorComponent {
             check_interval: this.monitor.check_interval,
             is_active: this.monitor.is_active,
             request_headers: this.monitor.request_headers,
-            request_body: this.monitor.request_body
+            request_body: this.monitor.request_body,
         };
 
         // Include project IDs if creating from a project context
-        if (this.isCreating && this.projectIds.length > 0) {
+        if (this.isCreating() && this.projectIds.length > 0) {
             payload.project_ids = this.projectIds;
         }
 
-        this.isSaving = true;
-        const action = this.isCreating
-            ? this.#service.store(payload)
-            : this.#service.update(this.monitor.id, payload);
+        this.isSaving.set(true);
+        const action = this.isCreating() ? this.#service.store(payload) : this.#service.update(this.monitor.id, payload);
         action.subscribe({
             next: (result) => {
-                this.isSaving = false;
+                this.isSaving.set(false);
                 if (Array.isArray(result) && result.length === 0) {
                     alert('Failed to save monitor: Server returned empty response.');
                     return;
@@ -65,9 +64,9 @@ export class ModalUptimeMonitorComponent {
                 this.activeModal.close(true);
             },
             error: (err) => {
-                this.isSaving = false;
+                this.isSaving.set(false);
                 alert(`Failed to save monitor: ${err?.error?.message || err?.message || 'Unknown error'}`);
-            }
+            },
         });
     }
 
@@ -85,7 +84,7 @@ export class UptimeMonitorModalService {
 
         if (monitor) {
             modalRef.componentInstance.monitor = Object.assign(new UptimeMonitor(), monitor);
-            modalRef.componentInstance.isCreating = false;
+            modalRef.componentInstance.isCreating.set(false);
         } else {
             const newMonitor = new UptimeMonitor();
             newMonitor.method = 'GET';
@@ -95,7 +94,7 @@ export class UptimeMonitorModalService {
             newMonitor.check_interval = 300;
             newMonitor.is_active = true;
             modalRef.componentInstance.monitor = newMonitor;
-            modalRef.componentInstance.isCreating = true;
+            modalRef.componentInstance.isCreating.set(true);
             modalRef.componentInstance.projectIds = projectIds || [];
         }
         return modalRef.result;

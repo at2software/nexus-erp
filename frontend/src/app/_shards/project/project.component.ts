@@ -1,21 +1,27 @@
-
-import { Component, HostBinding, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostBinding, input } from '@angular/core';
+import { Color } from '@constants/Color';
+import { tracked } from '@constants/tracked';
 import { SmartLinkDirective } from '@directives/smart-link.directive';
 import { NgbTooltip } from '@ng-bootstrap/ng-bootstrap';
-import { Project } from 'src/models/project/project.model';
+import { Project } from '@models/project/project.model';
 
 @Component({
     selector: 'project',
     templateUrl: './project.component.html',
     styleUrls: ['./project.component.scss'],
     imports: [NgbTooltip, SmartLinkDirective],
-    standalone: true
+    standalone: true,
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectComponent {
-    project   = input.required<Project>()
-    title     = input<string>()
-    click     = input<()=>void>()
-    noRouting = input<boolean>(false)
-    @HostBinding('class.is-internal') get isInternal () { return this.project().is_internal }
-    tooltip = () => this.title() ? this.title() : this.project().name + ' (' + Math.round(100 * this.project().progress) + '%)'
+    readonly projectIn = input.required<Project>({ alias: 'project' });
+    readonly project = tracked(this.projectIn);
+    title = input<string>();
+    click = input<() => void>();
+    noRouting = input<boolean>(false);
+    @HostBinding('class.is-internal') get isInternal() {
+        return this.project().is_internal;
+    }
+    tooltip = () => (this.title() ? this.title() : this.project().name + ' (' + Math.round(100 * this.project().progress()) + '%)');
+    darker = (color: string) => (new Color(color)).darken(15).toHexString();
 }

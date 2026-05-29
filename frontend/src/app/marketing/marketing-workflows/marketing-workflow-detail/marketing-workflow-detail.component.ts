@@ -1,54 +1,63 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { NgApexchartsModule } from 'ng-apexcharts';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { MarketingService } from '@models/marketing/marketing.service';
 import { MarketingWorkflow } from '@models/marketing/marketing-workflow.model';
 import { MarketingActivity } from '@models/marketing/marketing-activity.model';
 import { IActivityBase } from '@models/marketing/activity-base.interface';
-import { NexusModule } from 'src/app/nx/nexus.module';
-import { Color } from 'src/constants/Color';
+import { Nx } from '@app/nx/nx.directive';
 import { I18nTextareaComponent } from '@app/_shards/i18n-textarea/i18n-textarea.component';
-import { ScrollbarComponent } from "@app/app/scrollbar/scrollbar.component";
+import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { ActivityTableComponent } from '@app/marketing/shared/activity-table/activity-table.component';
 
 // Expose MarketingActivity to template
 const ActivityStatsColors = MarketingActivity.STATS_COLORS;
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'marketing-workflow-detail',
     templateUrl: './marketing-workflow-detail.component.html',
     styleUrl: './marketing-workflow-detail.component.scss',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, NexusModule, NgbTooltipModule, NgApexchartsModule, ActivityTableComponent, I18nTextareaComponent, ScrollbarComponent, EmptyStateComponent]
+    imports: [NgTemplateOutlet, FormsModule, RouterModule, Nx, NgbTooltipModule, ActivityTableComponent, I18nTextareaComponent, ScrollbarComponent, EmptyStateComponent],
 })
 export class MarketingWorkflowDetailComponent implements OnInit {
     #marketingService = inject(MarketingService);
     #route = inject(ActivatedRoute);
+    #router = inject(Router);
 
-    selectedWorkflow: MarketingWorkflow | null = null;
-    workflowStats: any = null;
-    pieChartOptions: any = null;
+    selectedWorkflow = signal<MarketingWorkflow | null>(null);
 
     // Expose colors to template
     readonly STATS_COLORS = ActivityStatsColors;
 
     // Activity management
-    showActivityModal = false;
+    showActivityModal = signal(false);
     editingActivity: MarketingActivity | null = null;
     newActivity: Partial<MarketingActivity> = {
         name: '',
         day_offset: 1,
         description: '',
         is_required: true,
-        quick_action: null
+        quick_action: null,
     };
 
+    constructor() {
+        this.#marketingService.workflowActivitySaved$
+            .pipe(takeUntilDestroyed())
+            .subscribe((workflowId) => {
+                if (String(this.#route.snapshot.params['id']) === workflowId) {
+                    this.loadWorkflow(workflowId);
+                }
+            });
+    }
+
     ngOnInit() {
-        this.#route.params.subscribe(params => {
+        this.#route.params.subscribe((params) => {
             if (params['id']) {
                 this.loadWorkflow(params['id']);
             }
@@ -56,101 +65,47 @@ export class MarketingWorkflowDetailComponent implements OnInit {
     }
 
     loadWorkflow(id: string) {
-        this.#marketingService.showWorkflow(id)
-            .subscribe((workflow: MarketingWorkflow) => {
-                this.selectedWorkflow = workflow;
-                this.#loadWorkflowStats(id);
-                this.#buildPieChart(workflow);
-            });
-    }
-
-    #buildPieChart(workflow: MarketingWorkflow) {
-        if (!workflow.prospect_stats || workflow.prospect_stats.total === 0) {
-            this.pieChartOptions = null;
-            return;
-        }
-
-        const stats = workflow.prospect_stats;
-
-        this.pieChartOptions = {
-            series: [stats.new, stats.engaged, stats.unresponsive, stats.converted],
-            chart: {
-                type: 'donut',
-                height: 200,
-            },
-            labels: ['New', 'Engaged', 'Unresponsive', 'Converted'],
-            colors: [
-                Color.fromVar('info').toHexString(),
-                Color.fromVar('primary').toHexString(),
-                Color.fromVar('danger').toHexString(),
-                Color.fromVar('success').toHexString()
-            ],
-            legend: {
-                show: false,
-            },
-            dataLabels: {
-                enabled: true,
-                formatter: function (val: number) {
-                    return Math.round(val) + '%';
-                }
-            },
-            stroke: {
-                show: true,
-                width: 2,
-                colors: '#111'
-            },
-            plotOptions: {
-                pie: {
-                    donut: {
-                        size: '65%'
-                    }
-                }
+        this.#marketingService.showWorkflow(id).subscribe((workflow: MarketingWorkflow) => {
+            this.selectedWorkflow.set(workflow);
+            if (!this.#route.firstChild && workflow.marketing_activities?.length) {
+                this.#router.navigate(['activity', workflow.marketing_activities[0].id], { relativeTo: this.#route });
             }
-        };
-    }
-
-    #loadWorkflowStats(id: string) {
-        this.#marketingService.showWorkflowStats(id)
-            .subscribe((stats: any) => {
-                this.workflowStats = stats;
-            });
+        });
     }
 
     // Activity Management
     createActivity() {
-        if (!this.selectedWorkflow || !this.newActivity.name) return;
+        const wf = this.selectedWorkflow();
+        if (!wf || !this.newActivity.name) return;
 
         if (this.editingActivity) {
-            // Update existing activity
-            // description can be either string or array of i18n objects - backend cast handles both
-            this.#marketingService.updateWorkflowActivity(
-                this.selectedWorkflow.id,
-                this.editingActivity.id,
-                {
+            this.#marketingService
+                .updateWorkflowActivity(wf.id, this.editingActivity.id, {
                     name: this.newActivity.name,
                     day_offset: this.newActivity.day_offset!,
                     description: this.newActivity.description,
                     is_required: this.newActivity.is_required ?? true,
                     quick_action: this.newActivity.quick_action,
-                    parent_activity_id: this.newActivity.parent_activity_id || null
-                }
-            ).subscribe(() => {
-                this.loadWorkflow(this.selectedWorkflow!.id);
-                this.resetActivityForm();
-            });
+                    parent_activity_id: this.newActivity.parent_activity_id || null,
+                })
+                .subscribe(() => {
+                    this.loadWorkflow(wf.id);
+                    this.resetActivityForm();
+                });
         } else {
-            // Create new activity
-            this.#marketingService.storeWorkflowActivity(this.selectedWorkflow.id, {
-                name: this.newActivity.name,
-                day_offset: this.newActivity.day_offset!,
-                description: this.newActivity.description || '',
-                is_required: this.newActivity.is_required ?? true,
-                quick_action: this.newActivity.quick_action,
-                parent_activity_id: this.newActivity.parent_activity_id || null
-            }).subscribe(() => {
-                this.loadWorkflow(this.selectedWorkflow!.id);
-                this.resetActivityForm();
-            });
+            this.#marketingService
+                .storeWorkflowActivity(wf.id, {
+                    name: this.newActivity.name,
+                    day_offset: this.newActivity.day_offset!,
+                    description: this.newActivity.description || '',
+                    is_required: this.newActivity.is_required ?? true,
+                    quick_action: this.newActivity.quick_action,
+                    parent_activity_id: this.newActivity.parent_activity_id || null,
+                })
+                .subscribe(() => {
+                    this.loadWorkflow(wf.id);
+                    this.resetActivityForm();
+                });
         }
     }
 
@@ -160,7 +115,7 @@ export class MarketingWorkflowDetailComponent implements OnInit {
             console.warn('Cannot edit initiative activities from workflow view');
             return;
         }
-        
+
         this.editingActivity = activity as MarketingActivity;
         this.newActivity = {
             name: activity.name,
@@ -168,21 +123,21 @@ export class MarketingWorkflowDetailComponent implements OnInit {
             description: activity.description,
             is_required: activity.is_required,
             quick_action: activity.quick_action || null,
-            parent_activity_id: activity.parent_activity_id || undefined
+            parent_activity_id: activity.parent_activity_id || undefined,
         };
-        this.showActivityModal = true;
+        this.showActivityModal.set(true);
     }
 
     deleteActivity(activity: MarketingActivity) {
-        if (!this.selectedWorkflow) return;
+        const wf = this.selectedWorkflow();
+        if (!wf) return;
         if (!confirm(`Delete activity "${activity.name}"?`)) return;
 
-        this.#marketingService.destroyWorkflowActivity(this.selectedWorkflow.id, activity.id)
-            .subscribe(() => this.loadWorkflow(this.selectedWorkflow!.id));
+        this.#marketingService.destroyWorkflowActivity(wf.id, activity.id).subscribe(() => this.loadWorkflow(wf.id));
     }
 
     resetActivityForm() {
-        this.showActivityModal = false;
+        this.showActivityModal.set(false);
         this.editingActivity = null;
         this.newActivity = {
             name: '',
@@ -190,88 +145,49 @@ export class MarketingWorkflowDetailComponent implements OnInit {
             description: '',
             is_required: true,
             quick_action: null,
-            parent_activity_id: undefined
+            parent_activity_id: undefined,
         };
     }
 
-    // Get root activities (no parent)
     getRootActivities(): MarketingActivity[] {
-        if (!this.selectedWorkflow?.marketing_activities) return [];
-        return this.selectedWorkflow.marketing_activities.filter(a => !a.parent_activity_id);
+        return this.selectedWorkflow()?.marketing_activities?.filter((a) => !a.parent_activity_id) ?? [];
     }
 
-    // Get child activities for a given parent
     getChildActivities(parentId: string): MarketingActivity[] {
-        if (!this.selectedWorkflow?.marketing_activities) return [];
-        return this.selectedWorkflow.marketing_activities.filter(a => a.parent_activity_id === parentId);
+        return this.selectedWorkflow()?.marketing_activities?.filter((a) => a.parent_activity_id === parentId) ?? [];
     }
 
-    // Calculate absolute day for an activity (considering parent offsets)
     getAbsoluteDay(activity: MarketingActivity): number {
-        if (!activity.parent_activity_id) {
-            return activity.day_offset;
-        }
-
-        const parent = this.selectedWorkflow?.marketing_activities?.find(a => a.id === activity.parent_activity_id);
-        if (!parent) {
-            return activity.day_offset;
-        }
-        return this.getAbsoluteDay(parent) + activity.day_offset;
+        if (!activity.parent_activity_id) return activity.day_offset;
+        const parent = this.selectedWorkflow()?.marketing_activities?.find((a) => a.id === activity.parent_activity_id);
+        return parent ? this.getAbsoluteDay(parent) + activity.day_offset : activity.day_offset;
     }
 
-    // Handle activity actions completion (e.g., after deletion)
     onActivityActionResolved() {
-        console.log('Activity action resolved, reloading workflow');
-        if (this.selectedWorkflow) {
-            this.loadWorkflow(this.selectedWorkflow.id);
-        }
+        const wf = this.selectedWorkflow();
+        if (wf) this.loadWorkflow(wf.id);
     }
 
-    // Handle dependency creation from flowchart
-    onDependencyAdded(event: {sourceId: string, targetId: string}) {
-        if (!this.selectedWorkflow) return;
-
-        const targetActivity = this.selectedWorkflow.marketing_activities?.find(a => a.id === event.targetId);
+    onDependencyAdded(event: { sourceId: string; targetId: string }) {
+        const wf = this.selectedWorkflow();
+        if (!wf) return;
+        const targetActivity = wf.marketing_activities?.find((a) => a.id === event.targetId);
         if (!targetActivity) return;
-
-        // Update the activity's parent_activity_id
-        this.#marketingService.updateWorkflowActivity(
-            this.selectedWorkflow.id,
-            targetActivity.id,
-            { parent_activity_id: event.sourceId }
-        ).subscribe({
-            next: () => {
-                this.loadWorkflow(this.selectedWorkflow!.id);
-            },
-            error: (err) => {
-                console.error('Failed to create dependency:', err);
-                alert('Failed to create dependency. Please try again.');
-            }
+        this.#marketingService.updateWorkflowActivity(wf.id, targetActivity.id, { parent_activity_id: event.sourceId }).subscribe({
+            next: () => this.loadWorkflow(wf.id),
+            error: () => alert('Failed to create dependency. Please try again.'),
         });
     }
 
-    // Handle dependency removal from flowchart
-    onDependencyRemoved(event: {activityId: string}) {
-        if (!this.selectedWorkflow) return;
-
-        const activity = this.selectedWorkflow.marketing_activities?.find(a => a.id === event.activityId);
+    onDependencyRemoved(event: { activityId: string }) {
+        const wf = this.selectedWorkflow();
+        if (!wf) return;
+        const activity = wf.marketing_activities?.find((a) => a.id === event.activityId);
         if (!activity || !activity.parent_activity_id) return;
-
         if (!confirm(`Remove dependency from "${activity.name}"?`)) return;
-
-        // Clear the activity's parent_activity_id
-        this.#marketingService.updateWorkflowActivity(
-            this.selectedWorkflow.id,
-            activity.id,
-            { parent_activity_id: null }
-        ).subscribe({
-            next: () => {
-                this.loadWorkflow(this.selectedWorkflow!.id);
-            },
-            error: (err) => {
-                console.error('Failed to remove dependency:', err);
-                alert('Failed to remove dependency. Please try again.');
-            }
+        this.#marketingService.updateWorkflowActivity(wf.id, activity.id, { parent_activity_id: null }).subscribe({
+            next: () => this.loadWorkflow(wf.id),
+            error: () => alert('Failed to remove dependency. Please try again.'),
         });
     }
 

@@ -93,7 +93,7 @@ class OwnCalDAVBackend extends AbstractBackend {
         }
         return null;
     }
-    private function getCalendarDataFromVcard($name, $vcard) {
+    private function getCalendarDataFromVcard($name, $vcard, $uid) {
         $birthday = $this->getBirthdayFromVCard($vcard);
         if ($birthday === null) {
             return null;
@@ -101,7 +101,7 @@ class OwnCalDAVBackend extends AbstractBackend {
         return "BEGIN:VCALENDAR\r\n".
                "VERSION:2.0\r\n".
                "BEGIN:VEVENT\r\n".
-               'UID:'.uniqid()."\r\n".
+               'UID:'.$uid."\r\n".
                'DTSTAMP:'.gmdate('Ymd\THis\Z')."\r\n".
                'DTSTART;VALUE=DATE:'.date('Ymd', strtotime($birthday))."\r\n".
                'SUMMARY:Birthday of '.$name."\r\n".
@@ -129,7 +129,7 @@ class OwnCalDAVBackend extends AbstractBackend {
         return "BEGIN:VCALENDAR\r\n".
                 "VERSION:2.0\r\n".
                 "BEGIN:VEVENT\r\n".
-                'UID:'.uniqid()."\r\n".
+                'UID:vacation-'.$vacation->id.'@nexus'."\r\n".
                 'DTSTAMP:'.gmdate('Ymd\THis\Z')."\r\n".
                 $timestamp.
                 'SUMMARY:'.$vacationType.' of '.$vacation->user->name."\r\n".
@@ -181,7 +181,7 @@ class OwnCalDAVBackend extends AbstractBackend {
         $result = [];
         if ($calendarId == 0) {
             foreach (User::whereHasBirthday()->get() as $user) {
-                $calendarData = $this->getCalendarDataFromVcard($user->name, $user->vcard);
+                $calendarData = $this->getCalendarDataFromVcard($user->name, $user->vcard, 'birthday-user-'.$user->id.'@nexus');
                 if ($calendarData === null) {
                     continue;
                 }
@@ -195,7 +195,7 @@ class OwnCalDAVBackend extends AbstractBackend {
                 ];
             }
             foreach (Contact::whereHasBirthday()->get() as $contact) {
-                $calendarData = $this->getCalendarDataFromVcard($contact->name, $contact->vcard);
+                $calendarData = $this->getCalendarDataFromVcard($contact->name, $contact->vcard, 'birthday-contact-'.$contact->id.'@nexus');
                 if ($calendarData === null) {
                     continue;
                 }
@@ -304,7 +304,7 @@ class OwnCalDAVBackend extends AbstractBackend {
                 if (empty($user)) {
                     return [];
                 }
-                $calendardata = $this->getCalendarDataFromVcard($user->name, $user->vcard);
+                $calendardata = $this->getCalendarDataFromVcard($user->name, $user->vcard, 'birthday-user-'.$user->id.'@nexus');
                 if ($calendardata === null) {
                     return [];
                 }
@@ -323,7 +323,7 @@ class OwnCalDAVBackend extends AbstractBackend {
                 if (empty($contact)) {
                     return [];
                 }
-                $calendardata = $this->getCalendarDataFromVcard($contact->name, $contact->vcard);
+                $calendardata = $this->getCalendarDataFromVcard($contact->name, $contact->vcard, 'birthday-contact-'.$contact->id.'@nexus');
                 if ($calendardata === null) {
                     return [];
                 }

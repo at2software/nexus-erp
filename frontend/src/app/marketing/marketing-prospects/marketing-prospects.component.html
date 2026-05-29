@@ -1,14 +1,22 @@
+@let _isLoading = isLoading();
+@let _prospects = prospects();
+@let _filteredProspects = filteredProspects();
+@let _initiatives = initiatives();
+@let _statusFilters = statusFilters();
+@let _statusCounts = statusCounts();
+@let _initiativeFilter = initiativeFilter();
+@let _userFilter = userFilter();
+@let _totalOverdueCount = totalOverdueCount();
 
 <toolbar>
     <div ngbDropdown placement="bottom-end">
-        <button class="btn btn-sm btn-plain dropdown-toggle-simple d-flex align-items-center gap-2 px-2 py-1"
-            ngbDropdownToggle>
-            @if (!userFilter) {
-                <i class="align-middle" style="font-size:1rem">group</i>
+        <button class="btn btn-sm btn-plain dropdown-toggle-simple d-flex align-items-center gap-2 px-2 py-1" ngbDropdownToggle>
+            @if (!_userFilter) {
+                <i class="align-middle" style="font-size: 1rem">group</i>
                 <span class="small" i18n="@@i18n.common.all_users">all users</span>
             } @else {
-                <avatar [object]="selectedUser" size="sm"></avatar>
-                <span class="small">{{selectedUserName}}</span>
+                <avatar [object]="selectedUser()" size="sm"></avatar>
+                <span class="small">{{ selectedUserName() }}</span>
             }
         </button>
         <div ngbDropdownMenu>
@@ -17,128 +25,131 @@
                 <span i18n="@@i18n.common.all_users">all users</span>
             </button>
             <div class="dropdown-divider"></div>
-            @for (user of availableUsers; track user.id) {
+            @for (user of availableUsers(); track user.id) {
                 <button ngbDropdownItem class="d-flex align-items-center gap-2" (click)="setUserFilter(user.id)">
                     <avatar [object]="user" size="sm"></avatar>
-                    <span>{{user.fullName}}</span>
+                    <span>{{ user.fullName() }}</span>
                 </button>
             }
         </div>
     </div>
 </toolbar>
 
-<!-- Main Content -->
 <div class="row" col-slider>
-    <!-- Filter Sidebar -->
     <div class="col-3">
-        <div class="card sticky-side">
+        <div class="card mb-3">
             <div class="card-header hstack gap-2">
-                <span class="flex-fill" i18n="@@i18n.marketing.initiatives">initiatives</span>
+                <div ngbDropdown class="flex-fill" placement="bottom-start">
+                    <button class="btn btn-plain btn-sm dropdown-toggle-simple hstack gap-2 p-0 w-100 text-start" ngbDropdownToggle>
+                        <span class="flex-fill">
+                            @if (!_initiativeFilter) {
+                                <span i18n="@@i18n.marketing.prospects">prospects</span>
+                            } @else {
+                                {{ selectedInitiativeName() }}
+                            }
+                        </span>
+                        @if (!_initiativeFilter && _totalOverdueCount > 0) {
+                            <span class="badge bg-danger rounded-pill">{{ _totalOverdueCount }}</span>
+                        }
+                        @if (_initiativeFilter && selectedInitiativeOverdueCount() > 0) {
+                            <span class="badge bg-danger rounded-pill">{{ selectedInitiativeOverdueCount() }}</span>
+                        }
+                    </button>
+                    <div ngbDropdownMenu>
+                        <button ngbDropdownItem class="d-flex align-items-center gap-2" (click)="setInitiativeFilter(null)">
+                            <span class="flex-fill" i18n="@@i18n.marketing.all_initiatives">all initiatives</span>
+                            @if (_totalOverdueCount > 0) {
+                                <span class="badge bg-danger rounded-pill">{{ _totalOverdueCount }}</span>
+                            }
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        @for (initiative of _initiatives; track initiative.id) {
+                            <button ngbDropdownItem class="d-flex align-items-center gap-2" (click)="setInitiativeFilter(initiative.id)">
+                                <span class="flex-fill" [class.text-muted]="!isSubscribedToInitiative(initiative)">{{ initiative.name }}</span>
+                                @if ((initiative.overdue_prospects_count ?? 0) > 0) {
+                                    <span class="badge bg-danger rounded-pill">{{ initiative.overdue_prospects_count }}</span>
+                                }
+                            </button>
+                        }
+                    </div>
+                </div>
+                @if (!_isLoading) {
+                    <span class="badge bg-primary rounded-pill me-1">{{ _filteredProspects.length }}</span>
+                }
+                <i class="cursor-pointer text-primary" tabindex="0" (keydown.enter)="createNewProspect()" (click)="createNewProspect()">add</i>
             </div>
 
-            <!-- Status toggle badges -->
-            <div class="card-footer d-flex flex-wrap gap-1 align-items-center justify-content-center">
-                @for (filter of statusFilters; track filter.key) {
-                <span class="btn px-2 py-1 cursor-pointer text-black d-flex align-items-center gap-1" [ngClass]="filter.badgeClass"
-                    [class.opacity-25]="!filter.selected"
-                    [ngbTooltip]="filter.label"
-                    tabindex="0" (click)="filter.selected = !filter.selected; onStatusFilterChange()" (keyup.enter)="filter.selected = !filter.selected; onStatusFilterChange()">
-                    <i style="font-size: 0.85rem;">{{filter.icon}}</i>
-
-                </span>
+            <div class="px-2 py-2 border-bottom d-flex flex-wrap gap-1">
+                @for (filter of _statusFilters; track filter.key) {
+                    <span class="status-filter-btn d-flex align-items-center gap-1 cursor-pointer px-2 py-1 text-black" [class]="filter.badgeClass" [class.opacity-25]="!filter.selected" [ngbTooltip]="filter.label" tabindex="0" (click)="toggleStatusFilter(filter.key)" (keyup.enter)="toggleStatusFilter(filter.key)">
+                        <i class="status-filter-icon">{{ filter.icon }}</i>
+                        @if (_statusCounts[filter.key] > 0) {
+                            <span class="status-filter-count">{{ _statusCounts[filter.key] }}</span>
+                        }
+                    </span>
                 }
             </div>
 
-            <!-- Initiative list -->
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex align-items-center cursor-pointer"
-                    [class.active]="!initiativeFilter"
-                    tabindex="0" (click)="setInitiativeFilter(null)" (keyup.enter)="setInitiativeFilter(null)">
-                    <span class="flex-fill" i18n="@@i18n.marketing.all_initiatives">all initiatives</span>
-                    @if (totalOverdueCount > 0) {
-                        <span class="badge bg-danger ms-2">{{totalOverdueCount}}</span>
-                    }
-                </li>
-                @for (initiative of initiatives; track initiative.id) {
-                <li class="list-group-item d-flex align-items-center cursor-pointer"
-                    [class.active]="initiativeFilter === initiative.id"
-                    tabindex="0" (click)="setInitiativeFilter(initiative.id)" (keyup.enter)="setInitiativeFilter(initiative.id)">
-                    <span class="flex-fill" [class.text-muted]="!isSubscribedToInitiative(initiative)">{{initiative.name}}</span>
-                    @if (overdueCountForInitiative(initiative) > 0) {
-                        <span class="badge bg-danger ms-2">{{overdueCountForInitiative(initiative)}}</span>
-                    }
-                </li>
+            <input #fileInput type="file" accept=".csv" class="d-none" (change)="handleFileSelect($event)">
+
+            <div class="card-body p-0">
+                @if (_isLoading) {
+                    <spinner class="py-4"></spinner>
                 }
-            </ul>
+
+                @if (!_isLoading && _prospects.length === 0) {
+                    <empty-state [card]="false" class="marketing" i18n-title="@@i18n.marketing.no_prospects_found" title="no prospects yet">
+                        <p class="text-muted small" i18n="@@i18n.marketing.add_prospects_hint">Add prospects manually or through the Firefox addon.</p>
+                    </empty-state>
+                }
+
+                @if (!_isLoading && _prospects.length > 0) {
+                    <ul class="list-group list-group-flush">
+                        @for (prospect of _filteredProspects; track prospect.id) {
+                            <li class="list-group-item" [class.router-active]="selectedProspectId() === prospect.id" [nx]="prospect" [tables]="_filteredProspects" (actionsResolved)="actionsResolved()" (click)="navigateToProspect($event, prospect)" (keydown.enter)="navigateToProspect($any($event), prospect)" tabindex="0">
+                                <div class="hstack gap-2">
+                                    <i [class]="'status-icon flex-shrink-0 ' + prospect.statusTextClass()">{{ prospect.statusIcon() }}</i>
+                                    <div class="prospect-info">
+                                        <div class="text-truncate" [class.text-muted]="['unresponsive', 'disqualified', 'on_hold'].includes(prospect.status)">
+                                            @if (prospect.company_contact) {
+                                                {{ prospect.company_contact.contact.getName() }}
+                                            } @else {
+                                                {{ prospect.getName() }}
+                                            }
+                                        </div>
+                                        @if (!prospect.company_contact && prospect.company()) {
+                                            <div class="text-truncate text-muted small">{{ prospect.company() }}</div>
+                                        }
+                                    </div>
+                                    @if (prospect.company_contact?.company) {
+                                        <div class="flex-shrink-0" (click)="$event.stopPropagation()" (keyup.enter)="$event.stopPropagation()" tabindex="0">
+                                            <avatar [object]="prospect.company_contact!.company!"></avatar>
+                                        </div>
+                                    }
+                                    @if (prospect.has_overdue_activities && !['unresponsive', 'disqualified', 'on_hold'].includes(prospect.status)) {
+                                        <span class="status status-red flex-shrink-0 ms-auto"></span>
+                                    }
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+
+            <div class="card-footer d-flex gap-2 justify-content-end py-2">
+                <button class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" (click)="openImportFile()" i18n-ngbTooltip="@@i18n.marketing.importCsvTooltip" ngbTooltip="Import prospects from CSV file">
+                    <i style="font-size: 1rem">upload</i>
+                    <span>Import</span>
+                </button>
+                <button class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" (click)="exportCsv()" [disabled]="filteredProspects().length === 0" i18n-ngbTooltip="@@i18n.marketing.exportCsvTooltip" ngbTooltip="Export filtered prospects as CSV">
+                    <i style="font-size: 1rem">download</i>
+                    <span>Export</span>
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Prospects List -->
-    <div class="col-md-3">
-        <scrollbar style="overflow: visible;">
-            <div class="card mb-3">
-                <div class="card-header hstack gap-2">
-                    <span class="flex-fill" i18n="@@i18n.marketing.prospects">prospects</span>
-                    <i class="cursor-pointer text-primary" tabindex="0" (keydown.enter)="createNewProspect()" (click)="createNewProspect()">add</i>
-                </div>
-                @if (isLoading) {
-                <div class="card-body">
-                    <div class="text-center p-4">
-                        <div class="spinner-border" role="status">
-                            <span class="visually-hidden" i18n="@@i18n.common.loading">loading</span>
-                        </div>
-                    </div>
-                </div>
-                }
-
-                @if (!isLoading && prospects.length === 0) {
-                <empty-state [card]="false" class="marketing" i18n-title="@@i18n.marketing.no_prospects_found" title="no prospects yet">
-                  <p class="text-muted small" i18n="@@i18n.marketing.add_prospects_hint">Add prospects manually or through the Firefox addon.</p>
-                </empty-state>
-                }
-
-                @if (!isLoading && prospects.length > 0) {
-                <ul class="list-group list-group-flush">
-                    @for (prospect of filteredProspects; track prospect.id) {
-                    <li class="list-group-item {{prospect.markerClass()}}"
-                        [class.marker]="prospect.has_overdue_activities && !['unresponsive', 'disqualified', 'on_hold'].includes(prospect.status)"
-                        [class.marker-red]="prospect.has_overdue_activities && !['unresponsive', 'disqualified', 'on_hold'].includes(prospect.status)"
-                        [class.router-active]="selectedProspect?.id === prospect.id"
-                        [nx]="prospect" [tables]="filteredProspects" (nxActionsResolved)="actionsResolved()"
-                        (click)="navigateToProspect($event, prospect)"
-                        (keydown.enter)="navigateToProspect($any($event), prospect)"
-                        tabindex="0">
-                        <div class="hstack gap-2 text-truncate">
-                            <span class="status-dot rounded-circle flex-shrink-0" [ngClass]="getStatusBadgeClass(prospect.status)"></span>
-                            <div class="flex-fill" [class.text-muted]="['unresponsive', 'disqualified', 'on_hold'].includes(prospect.status)">
-                                @if(prospect.company_contact) {
-                                {{prospect.company_contact.contact.name}}
-                                } @else {
-                                {{prospect.name}}
-                                }
-                            </div>
-                            <div class="ms-auto text-truncate">
-                                @if (!prospect.company_contact) {
-                                <small class="text-end text-truncate text-muted small"
-                                    [ngbTooltip]="prospect.company">{{prospect.company}}</small>
-                                } @else if (prospect.company_contact.company) {
-                                <div (click)="$event.stopPropagation()" (keyup.enter)="$event.stopPropagation()" tabindex="0">
-                                    <avatar [object]="prospect.company_contact!.company!"></avatar>
-                                </div>
-                                }
-                            </div>
-                        </div>
-                    </li>
-                    }
-                </ul>
-                }
-            </div>
-        </scrollbar>
-    </div>
-    <!-- Prospect Details -->
-    <div class="col-md-6">
-        <scrollbar class="sticky-side">
-            <router-outlet></router-outlet>
-        </scrollbar>
+    <div class="col-9">
+        <router-outlet></router-outlet>
     </div>
 </div>

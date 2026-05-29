@@ -1,53 +1,56 @@
 import { Router } from '@angular/router';
-import { Component, ViewChild, HostListener, ElementRef, inject } from '@angular/core';
-import { SearchInputComponent } from 'src/app/_shards/search-input/search-input.component';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { SearchInputComponent } from '@shards/search-input/search-input.component';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'app-search',
     templateUrl: './search.component.html',
     styleUrls: ['./search.component.scss'],
-    host: { class: 'd-flex align-items-center' },
     standalone: true,
-    imports: [SearchInputComponent]
+    imports: [SearchInputComponent],
+    host: {
+        class: 'd-flex align-items-center',
+        '(document:click)': 'onDocumentClick($event)',
+    },
 })
 export class SearchComponent {
+    
+    #router = inject(Router);
+    #eRef = inject(ElementRef);
 
-    expanded: boolean = false
+    searchbox = viewChild.required(SearchInputComponent);
+    expanded = signal(false);
 
-    #router: Router = inject(Router)
-    #eRef: ElementRef = inject(ElementRef)
-
-    @ViewChild(SearchInputComponent) searchbox: any
-
-    @HostListener('document:click', ['$event']) clickout(event: MouseEvent) {
+    onDocumentClick(event: MouseEvent) {
         if (!this.#eRef.nativeElement.contains(event.target)) {
-            this.expanded = false
+            this.expanded.set(false);
         }
     }
 
     toggleSearchBox() {
-        this.expanded = !this.expanded;
-        if (this.expanded) {
-            this.searchbox.query = ''
-            setTimeout(() => this.searchbox.focus(), 50)
+        this.expanded.update((v) => !v);
+        if (this.expanded()) {
+            this.searchbox().query.set('');
+            setTimeout(() => this.searchbox().focus(), 50);
         }
     }
 
-    pathFor(o: any) {
-        switch (o.class) {
-            case 'Company': return '/customers/' + o.id
-            case 'CompanyContact': return '/customers/' + o.company_id
-            case 'Project': return '/projects/' + o.id
-            case 'Product': return '/products/' + o.id
-            case 'Invoice': return '/invoices/' + o.id
-        }
-        return '/'
-    }
     onSelect(e: any) {
-        this.searchbox.blur()
-        this.searchbox.empty()
-        this.expanded = false
-        this.#router.navigate([this.pathFor(e)])
+        this.searchbox().blur();
+        this.searchbox().empty();
+        this.expanded.set(false);
+        this.#router.navigate([this.#pathFor(e)]);
     }
 
+    #pathFor(o: any) {
+        switch (o.class) {
+            case 'Company': return '/customers/' + o.id;
+            case 'CompanyContact': return '/customers/' + o.company_id;
+            case 'Project': return '/projects/' + o.id;
+            case 'Product': return '/products/' + o.id;
+            case 'Invoice': return '/financial/' + o.id;
+        }
+        return '/';
+    }
 }

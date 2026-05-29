@@ -1,49 +1,61 @@
-
 <div class="card mb-3">
-  <div class="card-header" i18n="@@i18n.common.remarketing_intervals">remarketing intervals</div>
-
-  <ul class="list-group">
-    @for (item of observed; track item.id) {
-      <ng-container *ngTemplateOutlet="row; context: { $implicit: item }"></ng-container>
-    }
-  </ul>
-
-  <div class="card-header" i18n="@@i18n.marketing.suggested_for_remarketing">suggested for remarketing</div>
-  <ul class="list-group">
-    @for (item of suggested; track item.id) {
-      <ng-container *ngTemplateOutlet="row; context: { $implicit: item }"></ng-container>
-    }
-  </ul>
-
+    <div class="card-header hstack gap-2">
+        <span class="flex-fill" i18n="@@i18n.marketing.suggested_for_remarketing">suggested for remarketing</span>
+        <span class="badge bg-primary rounded-pill">{{ suggestedList.length }}</span>
+    </div>
+    <ul class="list-group list-group-flush">
+        @for (item of suggestedList; track item.id) {
+            <ng-container *ngTemplateOutlet="row; context: { $implicit: item }"></ng-container>
+        }
+        @if (!suggestedList.length) {
+            <li class="list-group-item text-muted small text-center py-3" i18n="@@i18n.marketing.no_suggestions">no suggestions available</li>
+        }
+    </ul>
 </div>
 
-<ng-template #row let-item>
-  <li class="list-group-item" [nx]="item">
-    <div class="vstack">
-      <div class="hstack gap-2">
-        <avatar [object]="item"></avatar>
-        <div class="flex-fill text-truncate">{{item.name}}</div>
-        <div class="text-end" ngbTooltip="revenue last 12 months" i18n-ngbTooltip="@@i18n.marketing.revenue_last_12_months">{{item.var.revenue_12 | money}}</div>
-        <div class="text-end" style="width:10%;" ngbTooltip="last contact" i18n-ngbTooltip="@@i18n.marketing.last_contact">{{item.updated_at | date}}</div>
-        <div class="input-group" style="width:20%;">
-          <select class="form-select" [autosave]="item" [(ngModel)]="item.remarketing_interval">
-            <option value="1" i18n="@@i18n.common.daily">daily</option>
-            <option value="4" i18n="@@i18n.common.weekly">weekly</option>
-            <option value="5" i18n="@@i18n.marketing.everyTwoWeeks">every two weeks</option>
-            <option value="2" i18n="@@i18n.common.monthly">monthly</option>
-            <option value="6" i18n="@@i18n.marketing.everyTwoMonths">every two months</option>
-            <option value="7" i18n="@@i18n.marketing.everyThreeMonths">every three months</option>
-            <option value="8" i18n="@@i18n.marketing.everySixMonths">every six months</option>
-            <option value="3" i18n="@@i18n.common.yearly">yearly</option>
-          </select>
-          @if (item.remarketing_interval) {
-            <button type="button" class="btn btn-plain"><i class="text-primary pointer" (click)="item.update({remarketing_interval:null}).subscribe()" (keyup.enter)="item.update({remarketing_interval:null}).subscribe()" tabindex="0" i18n="@@i18n.common.clear">clear</i></button>
-          }
-        </div>
-      </div>
-      <div>
-        <progress-bar [progress]="item.remarketingProgress" style="primary" overStyle="danger" ngbTooltip="remarketing due in {{item.remarketingDays - item.lastUpdateDuration}} days" i18n-ngbTooltip="@@i18n.common.remarketing_due_in_days"></progress-bar>
-      </div>
+<div class="card mb-3">
+    <div class="card-header hstack gap-2">
+        <span class="flex-fill" i18n="@@i18n.common.remarketing_intervals">remarketing intervals</span>
+        <span class="badge bg-primary rounded-pill">{{ observedList.length }}</span>
     </div>
-  </li>
+    <ul class="list-group list-group-flush">
+        @for (item of observedList; track item.id) {
+            <ng-container *ngTemplateOutlet="row; context: { $implicit: item }"></ng-container>
+        }
+        @if (!observedList.length) {
+            <li class="list-group-item text-muted small text-center py-3" i18n="@@i18n.marketing.no_remarketing_intervals">no remarketing intervals configured</li>
+        }
+    </ul>
+</div>
+
+
+<ng-template #row let-item>
+    <li class="list-group-item remarketing-row" [nx]="item">
+        <div class="hstack gap-3 align-items-center">
+            <avatar [object]="item"></avatar>
+            <div class="flex-fill text-truncate fw-medium">{{ item.name }}</div>
+            <small class="text-muted text-nowrap remarketing-revenue" ngbTooltip="revenue last 12 months" i18n-ngbTooltip="@@i18n.marketing.revenue_last_12_months">{{ item.var.revenue_12 | money }}</small>
+            <small class="text-muted text-nowrap remarketing-date text-end" ngbTooltip="last contact" i18n-ngbTooltip="@@i18n.marketing.last_contact">{{ item.updated_at | date }}</small>
+            <div class="d-flex align-items-center gap-1">
+                <select class="form-select form-select-sm remarketing-select" [autosave]="item" [(ngModel)]="item.remarketing_interval">
+                    <option value="1" i18n="@@i18n.common.daily">daily</option>
+                    <option value="4" i18n="@@i18n.common.weekly">weekly</option>
+                    <option value="5" i18n="@@i18n.marketing.everyTwoWeeks">every two weeks</option>
+                    <option value="2" i18n="@@i18n.common.monthly">monthly</option>
+                    <option value="6" i18n="@@i18n.marketing.everyTwoMonths">every two months</option>
+                    <option value="7" i18n="@@i18n.marketing.everyThreeMonths">every three months</option>
+                    <option value="8" i18n="@@i18n.marketing.everySixMonths">every six months</option>
+                    <option value="3" i18n="@@i18n.common.yearly">yearly</option>
+                </select>
+                @if (item.remarketing_interval) {
+                    <button type="button" class="btn btn-sm btn-plain text-primary px-1" ngbTooltip="clear" i18n-ngbTooltip="@@i18n.common.clear" (click)="clearRemarketingInterval(item)" (keyup.enter)="clearRemarketingInterval(item)">
+                        <i>close</i>
+                    </button>
+                } @else {
+                    <div class="remarketing-clear-placeholder"></div>
+                }
+            </div>
+        </div>
+        <progress-bar class="mt-2 d-block" [progress]="item.remarketingProgress()" overStyle="danger"></progress-bar>
+    </li>
 </ng-template>

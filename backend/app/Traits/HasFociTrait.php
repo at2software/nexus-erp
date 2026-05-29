@@ -12,6 +12,7 @@ use App\Models\User;
 use Auth;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Http\Request;
 
 trait HasFociTrait {
     abstract protected function hasTimeBudget(): Attribute;
@@ -67,8 +68,9 @@ trait HasFociTrait {
             get: fn () => $this->foci()->whereNull('invoice_item_id')->sum('duration')
         );
     }
-    public function createInvoiceItemsFromFoci() {
-        $data     = json_decode(request()->getContent());
+    public function createInvoiceItemsFromFoci(?Request $request = null) {
+        $request  = $request ?? request();
+        $data     = json_decode($request->getContent());
         $price    = Param::get('INVOICE_HOURLY_WAGE')->value;
         $discount = 0;
         if (! count($data->itemIds)) {

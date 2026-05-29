@@ -1,2 +1,1 @@
-<button class="btn text-white" (click)="onOptionsClicked()"><i>settings</i></button>
-<button class="btn text-white" (click)="deleted.next(true)"><i class="text-danger">delete</i></button>
+<button class="btn text-white" (click)="onOptionsClicked(); $event.stopPropagation()"><i>settings</i></button> <button class="btn text-white" (click)="deleted.emit(true); $event.stopPropagation()"><i class="text-danger">delete</i></button>

@@ -1,43 +1,56 @@
-<ng-template #milestonesTemplate let-items="items" let-title="title" let-color="color">
+<ng-template #milestonesTemplate let-items="items" let-title="title" let-color="color" let-sectionKey="sectionKey">
     @if (items.length) {
-    <div class="header text-{{color}} align-items-center hstack gap-2">
-        <n>nexus</n>
-        <span>{{title}}</span>
-    </div>
-    <ul class="list-group">
-        @for (_ of items; track _.track_id) {
-        <li class="list-group-item d-flex" [ngbTooltip]="_.name" [nx]="_" [tables]="items">
-            <div class="avatar float-end mt-1 d-flex me-3">
-                <avatar [object]="_.project"></avatar>
-            </div>
-            <div class="flex-fill text-truncate">{{_.name}}</div>
-            @if (!_.isCurrentUserAssigned() && _.user) {
-            <avatar [object]="_.user"></avatar>
-            }
-        </li>
+        <div class="header text-{{ color }} align-items-center hstack gap-2">
+            <n>nexus</n>
+            <span class="flex-fill">{{ title }}</span>
+            <i class="pointer" (click)="toggle(sectionKey)">{{ isCollapsed(sectionKey) ? 'expand_less' : 'expand_more' }}</i>
+        </div>
+        @if (!isCollapsed(sectionKey)) {
+            <ul class="list-group">
+                @for (_ of items; track _.track_id) {
+                    <li class="list-group-item d-flex" [ngbTooltip]="_.name" [nx]="_" [tables]="items">
+                        <div class="avatar float-end mt-1 d-flex me-3">
+                            <avatar [object]="_.project"></avatar>
+                        </div>
+                        <div class="flex-fill text-truncate">{{ _.name }}</div>
+                        @if (!_.isCurrentUserAssigned() && _.user) {
+                            <avatar [object]="_.user"></avatar>
+                        }
+                    </li>
+                }
+            </ul>
         }
-    </ul>
     }
 </ng-template>
 
-<ng-container *ngTemplateOutlet="milestonesTemplate; context: { items: milestonesOverdue, title: 'overdue milestones', color: 'danger' }"></ng-container>
-<ng-container *ngTemplateOutlet="milestonesTemplate; context: { items: milestonesNeedStarting, title: 'milestones that need to be started', color: 'warning' }"></ng-container>
-<ng-container *ngTemplateOutlet="milestonesTemplate; context: { items: milestonesNeedAssignment, title: 'milestones that need assignment', color: 'warning' }"></ng-container>
-<ng-container *ngTemplateOutlet="milestonesTemplate; context: { items: milestonesNoDuration, title: 'milestones without work duration', color: 'info' }"></ng-container>
-<ng-container *ngTemplateOutlet="milestonesTemplate; context: { items: milestonesRunning, title: 'running milestones', color: 'muted' }"></ng-container>
+@let _overdue = milestonesOverdue();
+@let _needStarting = milestonesNeedStarting();
+@let _needAssignment = milestonesNeedAssignment();
+@let _noDuration = milestonesNoDuration();
+@let _running = milestonesRunning();
+@let _noCoverage = projectsNoCoverage();
 
-@if (projectsNoCoverage.length) {
-<div class="header text-warning align-items-center hstack gap-2">
-    <n>nexus</n>
-    <span i18n="@@i18n.activity.projectsNoCoverage">projects without milestone coverage</span>
-</div>
-<ul class="list-group">
-    @for (project of projectsNoCoverage; track project.id) {
-    <li class="list-group-item hstack gap-2" [nx]="project">
-        <avatar [object]="project"></avatar>
-        <div class="flex-fill text-truncate">{{project.name}}</div>
-        <span class="badge bg-warning text-dark align-self-center" i18n="@@i18n.milestones.noCoverage">no coverage</span>
-    </li>
+<ng-container *ngTemplateOutlet="milestonesTemplate; context: { items: _overdue, title: 'overdue milestones', color: 'danger', sectionKey: 'overdue' }"></ng-container>
+<ng-container *ngTemplateOutlet="milestonesTemplate; context: { items: _needStarting, title: 'milestones that need to be started', color: 'warning', sectionKey: 'needStarting' }"></ng-container>
+<ng-container *ngTemplateOutlet="milestonesTemplate; context: { items: _needAssignment, title: 'milestones that need assignment', color: 'warning', sectionKey: 'needAssignment' }"></ng-container>
+<ng-container *ngTemplateOutlet="milestonesTemplate; context: { items: _noDuration, title: 'milestones without work duration', color: 'info', sectionKey: 'noDuration' }"></ng-container>
+<ng-container *ngTemplateOutlet="milestonesTemplate; context: { items: _running, title: 'running milestones', color: 'muted', sectionKey: 'running' }"></ng-container>
+
+@if (_noCoverage.length) {
+    <div class="header text-warning align-items-center hstack gap-2">
+        <n>nexus</n>
+        <span class="flex-fill" i18n="@@i18n.activity.projectsNoCoverage">projects without milestone coverage</span>
+        <i class="pointer" (click)="toggle('noCoverage')">{{ isCollapsed('noCoverage') ? 'expand_less' : 'expand_more' }}</i>
+    </div>
+    @if (!isCollapsed('noCoverage')) {
+        <ul class="list-group">
+            @for (project of _noCoverage; track project.id) {
+                <li class="list-group-item hstack gap-2" [nx]="project">
+                    <avatar [object]="project"></avatar>
+                    <div class="flex-fill text-truncate">{{ project.name }}</div>
+                    <span class="badge bg-warning text-dark align-self-center" i18n="@@i18n.milestones.noCoverage">no coverage</span>
+                </li>
+            }
+        </ul>
     }
-</ul>
 }

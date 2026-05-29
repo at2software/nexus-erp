@@ -1,115 +1,103 @@
-import { GlobalService } from 'src/models/global.service';
-import { Component, ElementRef, HostListener, inject, ViewChild, OnInit, OnDestroy } from '@angular/core';
+import { GlobalService } from '@models/global.service';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
 import { Router, RouterModule } from '@angular/router';
-import { fromEvent, Subscription } from 'rxjs';
-import { NexusModule } from '@app/nx/nexus.module';
+import { fromEvent } from 'rxjs';
+import { NComponent } from '@shards/n/n.component';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { GuidedTourComponent } from '@shards/guided-tour/guided-tour.component';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'app-navigation',
     templateUrl: './navigation.component.html',
     styleUrls: ['./navigation.component.scss'],
     standalone: true,
-    imports: [NexusModule, SearchInputComponent, RouterModule, HotkeyDirective, GuidedTourComponent]
+    imports: [NComponent, SearchInputComponent, RouterModule, HotkeyDirective, GuidedTourComponent],
+    host: { '(document:click)': 'onDocumentClick($event)' },
 })
-export class NavigationComponent implements OnInit, OnDestroy {
+export class NavigationComponent {
+    search = viewChild.required('search', { read: SearchInputComponent });
+    searchEl = viewChild.required('search', { read: ElementRef });
 
-    @ViewChild('search', { read: SearchInputComponent }) searchbox?: SearchInputComponent
-    @ViewChild('search', { read: ElementRef }) searchboxEl?: ElementRef<HTMLElement>
+    searchExpanded = signal(false);
+    isMobile = signal(false);
+    isMenuOpen = signal(false);
 
-    searchExpanded: boolean = false
-    isMobile: boolean = false
-    isMenuOpen: boolean = false
-    #resizeSubscription?: Subscription
-    #initSubscription?: Subscription
+    readonly global = inject(GlobalService);
+    #router = inject(Router);
+    #destroyRef = inject(DestroyRef);
 
-    global = inject(GlobalService)
-    router = inject(Router)
+    readonly navigationItems = computed(() => this.global.navigationItems());
+    readonly bottomNavigationItems = computed(() => this.global.bottomNavigationItems());
 
-    get navigationItems() { return this.global.navigationItems }
-    get bottomNavigationItems() { return this.global.bottomNavigationItems }
+    navVisible = (logo: string) => this.navigationItems().some((i) => i.logo === logo && i.visible);
+    bottomNavVisible = (logo: string) => this.bottomNavigationItems().some((i) => i.logo === logo && i.visible);
 
-    navVisible = (logo: string) => this.navigationItems.some(i => i.logo === logo && i.visible)
-    bottomNavVisible = (logo: string) => this.bottomNavigationItems.some(i => i.logo === logo && i.visible)
+    constructor() {
+        this.global.init.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(() => {
+            this.#checkIfMobile();
+            fromEvent(window, 'resize')
+                .pipe(takeUntilDestroyed(this.#destroyRef))
+                .subscribe(() => this.#checkIfMobile());
+        });
+    }
+
+    #checkIfMobile() {
+        this.isMobile.set(window.innerWidth <= 768);
+        if (!this.isMobile()) this.isMenuOpen.set(false);
+    }
 
     onSearchExpand() {
-        this.searchExpanded = !this.searchExpanded
-        if (this.searchExpanded) {
-            this.searchbox?.focus()
+        this.searchExpanded.update((v) => !v);
+        if (this.searchExpanded()) {
+            this.search().focus();
         } else {
-            this.clearSearch()
+            this.clearSearch();
         }
     }
 
     clearSearch() {
-        this.searchbox?.blur()
-        this.searchbox?.clear()
-        this.searchbox?.empty()
-        this.searchExpanded = false
-    }
-
-    pathFor(o: any) {
-        switch (o.class) {
-            case 'Company': return '/customers/' + o.id
-            case 'CompanyContact': return '/customers/' + o.company_id
-            case 'Project': return '/projects/' + o.id
-            case 'Product': return '/products/' + o.id
-            case 'Invoice': return '/invoices/' + o.id
-        }
-        return '/'
+        this.search().blur();
+        this.search().clear();
+        this.search().empty();
+        this.searchExpanded.set(false);
     }
 
     onSelect(e: any) {
-        this.clearSearch()
-        this.router.navigate([this.pathFor(e)])
+        this.clearSearch();
+        this.#router.navigate([this.#pathFor(e)]);
     }
 
-    ngOnInit() {
-        this.#initSubscription = this.global.init.subscribe(() => {
-            this.#checkIfMobile()
-            this.#resizeSubscription = fromEvent(window, 'resize').subscribe(() => {
-                this.#checkIfMobile()
-            })
-        })
-    }
-
-    ngOnDestroy() {
-        this.#resizeSubscription?.unsubscribe()
-        this.#initSubscription?.unsubscribe()
-    }
-
-    #checkIfMobile() {
-        this.isMobile = window.innerWidth <= 768
-        if (!this.isMobile) {
-            this.isMenuOpen = false
+    #pathFor(o: any) {
+        switch (o.class) {
+            case 'Company': return '/customers/' + o.id;
+            case 'CompanyContact': return '/customers/' + o.company_id;
+            case 'Project': return '/projects/' + o.id;
+            case 'Product': return '/products/' + o.id;
+            case 'Invoice': return '/financial/' + o.id;
         }
+        return '/';
     }
 
-    toggleMobileMenu() {
-        this.isMenuOpen = !this.isMenuOpen
-    }
+    toggleMobileMenu() { this.isMenuOpen.update((v) => !v); }
+    closeMobileMenu() { this.isMenuOpen.set(false); }
 
-    closeMobileMenu() {
-        this.isMenuOpen = false
-    }
-
-    @HostListener('document:click', ['$event']) onDocumentClick(event: MouseEvent) {
-        const searchboxElement = this.searchboxEl?.nativeElement
-        const target = event.target as Node | null
+    onDocumentClick(event: MouseEvent) {
+        const searchboxElement = this.searchEl().nativeElement;
+        const target = event.target as Node | null;
 
         if (searchboxElement && target && !searchboxElement.contains(target)) {
-            const totalOffset = event.layerX + event.layerY + event.clientX + event.clientY
-            if (totalOffset > 0) {
-                this.clearSearch()
+            if (event.layerX + event.layerY + event.clientX + event.clientY > 0) {
+                this.clearSearch();
             }
         }
 
-        if (this.isMobile && this.isMenuOpen) {
-            const target = event.target as HTMLElement
-            if (!target.closest('app-navigation') && !target.closest('.mobile-burger-btn')) {
-                this.closeMobileMenu()
+        if (this.isMobile() && this.isMenuOpen()) {
+            const el = event.target as HTMLElement;
+            if (!el.closest('app-navigation') && !el.closest('.mobile-burger-btn')) {
+                this.closeMobileMenu();
             }
         }
     }

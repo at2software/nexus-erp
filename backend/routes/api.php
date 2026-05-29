@@ -14,9 +14,11 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CorsController;
 use App\Http\Controllers\DebriefController;
 use App\Http\Controllers\EncryptionController;
+use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\FocusController;
+use App\Http\Controllers\GitlabAuditController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\InvoiceItemController;
 use App\Http\Controllers\InvoiceItemPredictionController;
@@ -32,6 +34,7 @@ use App\Http\Controllers\PluginLinkController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductGroupController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectStateController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SentinelController;
@@ -140,7 +143,7 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
         Route::prefix('{_}')->group(function () {
             Route::post('avatar', [FileController::class, 'storeCompanyAvatar']);
             Route::post('media', [FileController::class, 'uploadCompanyMedia']);
-            Route::post('projects', fn (Company $_) => $_->createProject());
+            Route::post('projects', [CompanyController::class, 'storeProject']);
             Route::get('stats', fn (Company $_) => $_->stats());
         })->whereNumber('_');
         ParamController::getRoute(Company::class);
@@ -172,11 +175,12 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
 
     Route::prefix('expenses')->middleware('role:admin|financial')->group(function () {
         Route::get('/categories', fn () => ExpenseCategory::all());
+        Route::get('/bank-transactions', [ExpenseController::class, 'bankTransactions']);
     });
 
     Route::prefix('foci')->middleware('role:admin|hr|project_manager')->group(function () {
         Route::get('/uninvoiced/{path}/{id}', fn (string $path, string $id) => Focus::fromPath($path.'/'.$id)->foci_unbilled()->get());
-        Route::post('/create-items/{path}/{id}', fn (string $path, string $id) => Focus::fromPath($path.'/'.$id)->createInvoiceItemsFromFoci());
+        Route::post('/create-items/{path}/{id}', fn (string $path, string $id) => Focus::fromPath($path.'/'.$id)->createInvoiceItemsFromFoci(request()));
     });
 
     Route::prefix('live-sharing')->controller(LiveSharingController::class)->group(function () {
@@ -186,6 +190,7 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
 
     Route::prefix('invoices')->middleware('role:admin|invoicing')->group(function () {
         Route::get('/cashflow', [InvoiceController::class, 'showCashFlow']);
+        Route::get('/liquidity', [InvoiceController::class, 'showLiquidity']);
         Route::post('/cashflow/upload', [InvoiceController::class, 'uploadBankCsv']);
         Route::get('/current_no', fn () => Invoice::getCurrentInvoiceNumber());
         Route::get('/current_no_int', fn () => Invoice::getCurrentInvoiceNumberInt());
@@ -265,8 +270,12 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
                 Route::delete('users/{userId}', 'unsubscribeUserFromInitiative');
                 Route::get('activities', 'indexInitiativeActivities');
                 Route::post('activities', 'storeInitiativeActivity');
-                Route::put('activities/{marketingInitiativeActivity}', 'updateInitiativeActivity');
-                Route::delete('activities/{marketingInitiativeActivity}', 'destroyInitiativeActivity');
+                Route::prefix('activities/{marketingInitiativeActivity}')->group(function () {
+                    Route::put('', 'updateInitiativeActivity');
+                    Route::delete('', 'destroyInitiativeActivity');
+                    Route::post('metrics', 'attachInitiativeActivityMetric');
+                    Route::delete('metrics/{marketingPerformanceMetric}', 'detachInitiativeActivityMetric');
+                });
             });
         });
 
@@ -298,9 +307,11 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
             Route::get('', 'indexProspects');
             Route::post('', 'storeProspect');
             Route::get('stats', 'showProspectStats');
+            Route::get('by-phone', 'showProspectByPhone');
             Route::post('from-addon', 'storeProspectFromAddon');
             Route::get('activities-for-addon', 'indexProspectActivitiesForAddon');
             Route::put('activity/{activityId}', 'updateProspectActivityById');
+            Route::post('activity/{activityId}/bump', 'bumpProspectActivity');
             Route::prefix('{marketingProspect}')->group(function () {
                 Route::get('', 'showProspect');
                 Route::put('', 'updateProspect');
@@ -600,12 +611,14 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
     Route::resource('company_contacts', CompanyContactController::class);
     Route::resource('contacts', ContactController::class);
     Route::resource('encryptions', EncryptionController::class);
-    Route::resource('expenses', ExpenseController::class);
+    Route::resource('expenses', ExpenseController::class)->middleware('role:financial');
+    Route::resource('expense-categories', ExpenseCategoryController::class)->middleware('role:financial');
     Route::resource('files', FileController::class);
     Route::resource('foci', FocusController::class);
     Route::resource('invoices', InvoiceController::class);
     Route::resource('invoice_items', InvoiceItemController::class);
     Route::resource('lead_sources', LeadSourceController::class);
+    Route::resource('project_states', ProjectStateController::class)->only(['index', 'update']);
     Route::resource('milestones', MilestoneController::class);
     Route::resource('plugin_links', PluginLinkController::class);
     Route::resource('products', ProductController::class);
@@ -618,7 +631,16 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
     Route::post('users', [UserController::class, 'store'])->middleware('role:admin|hr');
     Route::get('users', [UserController::class, 'index'])->middleware('hr_permission');
     Route::resource('vacations', VacationController::class);
+    Route::post('vaults/tan', [VaultController::class, 'submitTan']);
+    Route::get('vaults/bank-lookup', [VaultController::class, 'bankLookup']);
     Route::resource('vaults', VaultController::class);
+
+    Route::prefix('gitlab-audit')->controller(GitlabAuditController::class)->group(function () {
+        Route::get('', 'index');
+        Route::post('', 'store');
+        Route::put('{gitlabAuditProject}', 'update');
+        Route::delete('{gitlabAuditProject}', 'destroy');
+    });
 });
 
 Route::prefix('at2-connect')->middleware('cache.headers:no_cache;must_revalidate')->middleware(At2ConnectAuthMiddleware::class)->controller(At2ConnectController::class)->group(function () {

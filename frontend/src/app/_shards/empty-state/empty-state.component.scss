@@ -35,6 +35,7 @@ $image-size: 9rem;
 
         // Existing flat-design images
         &.select     { background-image: url('../../../assets/empty-state/nothing-selected.png'); }
+        &.description     { background-image: url('../../../assets/empty-state/empty-description.png?2'); }
         &.shrug      { background-image: url('../../../assets/empty-state/nothing-selected.png'); }
         &.encryption { background-image: url('../../../assets/empty-state/empty-state-encryption.png'); }
         &.get-well   { background-image: url('../../../assets/empty-state/get-well.png'); }

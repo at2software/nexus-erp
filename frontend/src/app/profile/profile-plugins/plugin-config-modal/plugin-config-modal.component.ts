@@ -1,40 +1,45 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { ConfirmationService } from '@app/_modals/modal-confirm/confirmation.service';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
-import { PluginInstanceFactory } from 'src/models/http/plugin.instance.factory';
-import { MantisPlugin } from 'src/models/http/plugin.mantis';
-import { IAIPlugin } from 'src/models/ai/ai.plugin.interface';
-import { PluginInstance } from 'src/models/http/plugin.instance';
+import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
+import { MantisPlugin } from '@models/http/plugin.mantis';
+import { IAIPlugin } from '@models/ai/ai.plugin.interface';
+import { PluginInstance } from '@models/http/plugin.instance';
 
 import { FormsModule } from '@angular/forms';
+import { SpinnerComponent } from '@shards/spinner/spinner.component';
 
 @Component({
     selector: 'plugin-config-modal',
     templateUrl: './plugin-config-modal.component.html',
     styleUrls: ['./plugin-config-modal.component.scss'],
     standalone: true,
-    imports: [FormsModule]
+    imports: [FormsModule, SpinnerComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PluginConfigModalComponent implements OnInit {
-    plugin: any;
-    isNewPlugin: boolean = false;
-    availableModels: any[] = [];
-    isLoadingModels: boolean = false;
-    isTestingConnection: boolean = false;
+export class PluginConfigModalComponent {
     factory = inject(PluginInstanceFactory);
     activeModal = inject(NgbActiveModal);
     #confirmationService = inject(ConfirmationService);
     #inputModalService = inject(InputModalService);
 
-    ngOnInit() {
-        // Ensure plugin.value exists and has default structure
+    plugin: any;
+    isNewPlugin = signal(false);
+    availableModels = signal<any[]>([]);
+    isLoadingModels = signal(false);
+    isTestingConnection = signal(false);
+
+    constructor() {
+        // plugin is set by NgbModal before change detection, so we handle init lazily via a setter pattern
+        Promise.resolve().then(() => this.#init());
+    }
+
+    #init() {
         if (this.plugin && (!this.plugin.value || typeof this.plugin.value !== 'object')) {
             this.plugin.value = this.#getDefaultValuesForType(this.plugin.type);
         }
-
-        // Load models for LocalAI plugins that are already configured
-        if (this.plugin?.type === 'local_ai' && !this.isNewPlugin && this.plugin.value?.url) {
+        if (this.plugin?.type === 'local_ai' && !this.isNewPlugin() && this.plugin.value?.url) {
             this.loadAvailableModels();
         }
     }
@@ -42,226 +47,152 @@ export class PluginConfigModalComponent implements OnInit {
     #getDefaultValuesForType(type: string): any {
         switch (type) {
             case 'mattermost': return { url: '', team: '', token: '' };
-            case 'git'       : return { url: '', token: '' };
-            case 'mantis'    : return { url: '', token: '', filterId: undefined };
-            case 'slack'     : return { url: '', token: '' };
-            case 'local_ai'  : return { url: '', login: '', password: '', model: '' };
-            default          : return {};
+            case 'git': return { url: '', token: '' };
+            case 'mantis': return { url: '', token: '', filterId: undefined };
+            case 'slack': return { url: '', token: '' };
+            case 'local_ai': return { url: '', login: '', password: '', model: '' };
+            default: return {};
         }
     }
 
     onDelete = () => {
-        this.#confirmationService.confirm({
-            title        : $localize`:@@i18n.profile.deletePlugin:delete plugin`,
-            message      : $localize`:@@i18n.common.areYouSure:are you sure?`,
-            btnOkText    : $localize`:@@i18n.common.yes:yes`,
-            btnCancelText: $localize`:@@i18n.common.no:no`
-        }).then(() => {
-            // The parent component will handle the actual deletion
-            this.activeModal.close('delete');
-        });
-    }
+        this.#confirmationService
+            .confirm({
+                title: $localize`:@@i18n.profile.deletePlugin:delete plugin`,
+                message: $localize`:@@i18n.common.areYouSure:are you sure?`,
+                btnOkText: $localize`:@@i18n.common.yes:yes`,
+                btnCancelText: $localize`:@@i18n.common.no:no`,
+            })
+            .then(() => this.activeModal.close('delete'));
+    };
 
     onLinkMyId = () => {
-        this.#inputModalService.open('Your ID').then(response => {
-            if (response?.text) {
-                this.plugin.update({ my_id: response.text }).subscribe();
-            }
+        this.#inputModalService.open('Your ID').then((response) => {
+            if (response?.text) this.plugin.update({ my_id: response.text }).subscribe();
         });
-    }
+    };
 
     getMantisProjects = () => {
-        if (!this.plugin || this.isNewPlugin || !this.plugin.value?.url) return [];
+        if (!this.plugin || this.isNewPlugin() || !this.plugin.value?.url) return [];
         try {
-            return ((this.factory.instanceFor(this.plugin)) as MantisPlugin).projects ?? [];
+            return (this.factory.instanceFor(this.plugin) as MantisPlugin).projects ?? [];
         } catch {
             return [];
         }
-    }
+    };
 
     getMantisConnectionStatus = (): string => {
-        if (!this.plugin || this.isNewPlugin || !this.plugin.value?.url) return 'not configured';
+        if (!this.plugin || this.isNewPlugin() || !this.plugin.value?.url) return 'not configured';
         try {
-            const encryption = this.factory.getPluginEncryptionsOfType('mantis').find(p => p.id === this.plugin.id);
+            const encryption = this.factory.getPluginEncryptionsOfType('mantis').find((p) => p.id === this.plugin.id);
             if (!encryption) return 'unknown';
             return this.factory.instanceFor(encryption)?.state || 'unknown';
         } catch {
             return 'error';
         }
-    }
+    };
 
-    close = () => this.activeModal.close()
+    close = () => this.activeModal.close();
 
     save = () => {
-        if (this.isNewPlugin) {
-            // For new plugins, parent component handles creation
+        if (this.isNewPlugin()) {
             this.activeModal.close('save');
         } else {
-            // For existing plugins, find the original encryption object
-            const originalEncryption = this.factory.getPluginEncryptions().find(e => e.id === this.plugin.id);
-
+            const originalEncryption = this.factory.getPluginEncryptions().find((e) => e.id === this.plugin.id);
             if (!originalEncryption) return;
 
-            // Update the original encryption's value with our changes
             originalEncryption.value = { ...this.plugin.value };
-
-            // Now call update on the original encryption object
             originalEncryption.update().subscribe({
                 next: (updatedPlugin: any) => {
-                    // Update local plugin data with server response (already decrypted)
                     this.plugin.value = updatedPlugin.value;
-
-                    // Clear plugin instance cache so it recreates with new config
                     if (this.plugin.value?.url && this.factory.instances[this.plugin.value.url]) {
                         delete this.factory.instances[this.plugin.value.url];
                     }
-
                     this.activeModal.close('updated');
                 },
-                error: (error: any) => {
-                    console.error('Failed to update plugin:', error);
-                }
             });
         }
-    }
+    };
 
     loadAvailableModels = () => {
-        if (!this.plugin || this.plugin.type !== 'local_ai' || !this.plugin.value?.url) {
-            console.warn('Cannot load models: missing plugin data or URL');
-            return;
-        }
+        if (!this.plugin || this.plugin.type !== 'local_ai' || !this.plugin.value?.url || this.isNewPlugin()) return;
 
-        // For new plugins, we can't test connection until they're saved
-        if (this.isNewPlugin) {
-            console.warn('Cannot test connection for new plugin - please save first');
-            return;
-        }
-
-        // Check if this is a proper Encryption object or we need to find it
         let encryption = this.plugin;
         if (!this.plugin.key) {
-            // This might be a spread object, find the original encryption
-            const localAIPlugins = this.factory.getPluginEncryptionsOfType('local_ai');
-            encryption = localAIPlugins.find(p => p.id === this.plugin.id);
-            if (!encryption) {
-                console.error('Could not find original encryption object for plugin:', this.plugin);
-                return;
-            }
+            encryption = this.factory.getPluginEncryptionsOfType('local_ai').find((p) => p.id === this.plugin.id);
+            if (!encryption) return;
         }
 
         try {
             const aiPlugin = this.factory.instanceFor(encryption) as IAIPlugin & PluginInstance;
+            if (!aiPlugin?.IAIPluginProperty || aiPlugin.state !== 'connected') return;
 
-            if (!aiPlugin) {
-                console.warn('Could not create plugin instance');
-                return;
-            }
-
-            if (!aiPlugin.IAIPluginProperty) {
-                console.warn('Plugin does not implement IAIPlugin interface');
-                return;
-            }
-
-            if (aiPlugin.state !== 'connected') {
-                console.warn('LocalAI plugin not connected, state:', aiPlugin.state);
-                return;
-            }
-
-            this.isLoadingModels = true;
-
+            this.isLoadingModels.set(true);
             aiPlugin.listModels().subscribe({
                 next: (models) => {
-                    // Sort models alphabetically by name or id
-                    this.availableModels = models.sort((a, b) => {
-                        const nameA = (a.name || a.id || '').toLowerCase();
-                        const nameB = (b.name || b.id || '').toLowerCase();
-                        return nameA.localeCompare(nameB);
-                    });
-                    this.isLoadingModels = false;
-
-                    // Set default model if none selected (use first alphabetically sorted model)
-                    if (!this.plugin.value.model && this.availableModels.length > 0) {
-                        this.plugin.value.model = this.availableModels[0].id;
-                    }
+                    const sorted = models.sort((a, b) => (a.name || a.id || '').toLowerCase().localeCompare((b.name || b.id || '').toLowerCase()));
+                    this.availableModels.set(sorted);
+                    this.isLoadingModels.set(false);
+                    if (!this.plugin.value.model && sorted.length > 0) this.plugin.value.model = sorted[0].id;
                 },
-                error: (error) => {
-                    console.error('Failed to load models:', error);
-                    this.isLoadingModels = false;
-                    this.availableModels = [];
-                }
+                error: () => {
+                    this.isLoadingModels.set(false);
+                    this.availableModels.set([]);
+                },
             });
-        } catch (error) {
-            console.error('Error getting plugin instance:', error);
-            this.isLoadingModels = false;
+        } catch {
+            this.isLoadingModels.set(false);
         }
-    }
+    };
 
     onLocalAIConnectionTest = () => {
         if (!this.plugin?.value?.url) return;
-
-        if (this.factory.instances[this.plugin.value.url]) {
-            delete this.factory.instances[this.plugin.value.url];
-        }
-
+        if (this.factory.instances[this.plugin.value.url]) delete this.factory.instances[this.plugin.value.url];
         setTimeout(() => this.loadAvailableModels(), 100);
-    }
+    };
 
     onMantisConnectionTest = () => {
-        if (!this.plugin?.value?.url || !this.plugin?.value?.token || this.isNewPlugin) return;
+        if (!this.plugin?.value?.url || !this.plugin?.value?.token || this.isNewPlugin()) return;
 
         let encryption = this.plugin;
         if (!this.plugin.key) {
-            encryption = this.factory.getPluginEncryptionsOfType('mantis').find(p => p.id === this.plugin.id);
+            encryption = this.factory.getPluginEncryptionsOfType('mantis').find((p) => p.id === this.plugin.id);
             if (!encryption) return;
         }
 
-        this.isTestingConnection = true;
-
+        this.isTestingConnection.set(true);
         try {
-            if (this.factory.instances[this.plugin.value.url]) {
-                delete this.factory.instances[this.plugin.value.url];
-            }
-
-            if (encryption && 'state' in encryption) {
-                (encryption as any).state = 'idle';
-            }
+            if (this.factory.instances[this.plugin.value.url]) delete this.factory.instances[this.plugin.value.url];
+            if (encryption && 'state' in encryption) (encryption as any).state = 'idle';
 
             const mantisPlugin = this.factory.instanceFor(encryption) as MantisPlugin;
-            if (!mantisPlugin) {
-                this.isTestingConnection = false;
-                return;
-            }
+            if (!mantisPlugin) { this.isTestingConnection.set(false); return; }
 
-            const connectionTimeout = setTimeout(() => {
-                if (this.isTestingConnection) this.isTestingConnection = false;
-            }, 10000);
+            const timeout = setTimeout(() => { if (this.isTestingConnection()) this.isTestingConnection.set(false); }, 10000);
 
             const checkState = () => {
                 if (mantisPlugin.state === 'connected') {
-                    clearTimeout(connectionTimeout);
-                    this.isTestingConnection = false;
+                    clearTimeout(timeout);
+                    this.isTestingConnection.set(false);
                     this.plugin = { ...this.plugin };
                 } else if (mantisPlugin.state === 'connection fail') {
-                    clearTimeout(connectionTimeout);
-                    this.isTestingConnection = false;
+                    clearTimeout(timeout);
+                    this.isTestingConnection.set(false);
                 } else if (mantisPlugin.state === 'connecting') {
                     setTimeout(checkState, 1000);
                 }
             };
 
             setTimeout(checkState, 500);
-
             mantisPlugin.init.subscribe({
                 next: () => {
-                    clearTimeout(connectionTimeout);
-                    this.isTestingConnection = false;
+                    clearTimeout(timeout);
+                    this.isTestingConnection.set(false);
                     this.plugin = { ...this.plugin };
-                }
+                },
             });
-
         } catch {
-            this.isTestingConnection = false;
+            this.isTestingConnection.set(false);
         }
-    }
-
+    };
 }

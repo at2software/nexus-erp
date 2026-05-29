@@ -118,6 +118,7 @@ return [
     'MARKETING_VIDEO_CONTENT_DESC'           => ['type' => TextParam::class, 'history' => false],
     'MARKETING_DOCUMENTS_DESC'               => ['type' => TextParam::class, 'history' => false],
     'VACATION_MAIL_SUBJECT'                  => ['type' => StringParam::class, 'history' => false],
+    'AUDIT_DEFAULT_PRODUCT_ID'               => ['type' => FloatParam::class,  'history' => false],
     'SETTINGS_GIT_PIPELINE'                  => ['type' => TextParam::class,   'history' => false],
     'WEBDAV_TOKEN'                           => ['type' => StringParam::class, 'history' => false],
     'NOTIFICATION_EMAIL_ON_FRAMEWORK_UPDATE' => ['type' => StringParam::class, 'history' => false],

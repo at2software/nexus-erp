@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ProductTreeComponent } from './product-tree/product-tree.component';
 import { RouterModule } from '@angular/router';
 
@@ -7,7 +7,7 @@ import { RouterModule } from '@angular/router';
     templateUrl: './product-nav.component.html',
     styleUrls: ['./product-nav.component.scss'],
     standalone: true,
-    imports: [ProductTreeComponent, RouterModule]
+    imports: [ProductTreeComponent, RouterModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProductNavComponent {
-}
+export class ProductNavComponent {}

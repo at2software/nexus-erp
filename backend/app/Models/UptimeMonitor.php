@@ -26,14 +26,18 @@ class UptimeMonitor extends BaseModel {
         'last_notified_at',
         'created_by_user_id',
     ];
-    protected $casts = [
-        'request_headers'  => 'array',
-        'is_active'        => 'boolean',
-        'last_check_at'    => 'datetime',
-        'last_notified_at' => 'datetime',
-        'created_at'       => 'datetime',
-        'updated_at'       => 'datetime',
-    ];
+
+    protected function casts(): array {
+        return [
+            'request_headers'  => 'array',
+            'is_active'        => 'boolean',
+            'last_check_at'    => 'datetime',
+            'last_notified_at' => 'datetime',
+            'created_at'       => 'datetime',
+            'updated_at'       => 'datetime',
+        ];
+    }
+
     protected $access = ['admin' => '*', 'project_manager' => 'crud', 'developer' => 'ru'];
 
     public function getIconAttribute(): string {

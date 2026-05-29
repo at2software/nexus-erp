@@ -38,19 +38,23 @@ class Company extends BaseModel {
     protected $fillable = ['vcard', 'created_at', 'updated_at', 'customer_number', 'company_id', 'contact_id', 'net', 'flags'];
     protected $appends  = ['icon', 'class', 'path', 'name', 'needs_vat_handling', 'address', 'has_time_budget'];
     protected $hidden   = ['deleted_at'];
-    protected $casts    = [
-        'net'                  => PrecomputedAuth::class,
-        'net_remaining'        => 'float',
-        'total_time'           => Precomputed::class,
-        'remarketing_interval' => Recurrence::class,
-        'discount'             => 'double',
-        'has_direct_debit'     => 'boolean',
-        'requires_po'          => 'boolean',
-        'has_nda'              => 'boolean',
-        'is_deprecated'        => 'boolean',
-        'needs_vat_handling'   => 'boolean',
-        'has_time_budget'      => 'boolean',
-    ];
+
+    protected function casts(): array {
+        return [
+            'net'                  => PrecomputedAuth::class,
+            'net_remaining'        => 'float',
+            'total_time'           => Precomputed::class,
+            'remarketing_interval' => Recurrence::class,
+            'discount'             => 'double',
+            'has_direct_debit'     => 'boolean',
+            'requires_po'          => 'boolean',
+            'has_nda'              => 'boolean',
+            'is_deprecated'        => 'boolean',
+            'needs_vat_handling'   => 'boolean',
+            'has_time_budget'      => 'boolean',
+        ];
+    }
+
     protected $access = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'r'];
 
     public function newCollection(array $models = []) {
@@ -215,22 +219,20 @@ class Company extends BaseModel {
         $contact = Contact::create(['vcard' => "FN:New Employee\nN:Employee;New;;;"]);
         CompanyContact::create(['vcard' => "EMAIL:\nTEL;type=voice,work:\nTEL;type=cell,work:", 'company_id' => $this->id, 'contact_id' => $contact->id]);
     }
-    public function createProject() {
-        $data    = json_decode(request()->getContent());
-        $name    = isset($data->name) ? $data->name : 'New project';
+    public function createProject(string $name = 'New project', ?int $parentProjectId = null, ?int $userId = null) {
         $payload = [
             'company_id'  => $this->id,
             'name'        => $name,
             'description' => '',
             'remind_at'   => now()->addDays(14),
         ];
-        if (isset($data->project_id)) {
-            $payload['project_id'] = $data->project_id;
+        if ($parentProjectId) {
+            $payload['project_id'] = $parentProjectId;
         }
         if ($this->default_product_id) {
             $payload['product_id'] = $this->default_product_id;
         }
-        $payload['project_manager_id'] = Auth::id();
+        $payload['project_manager_id'] = $userId ?? Auth::id();
 
         $p          = Project::create($payload);
         $assignment = $p->addAssignee(Auth::user(), 2);

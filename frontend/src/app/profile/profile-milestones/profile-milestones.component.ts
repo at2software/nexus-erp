@@ -1,8 +1,7 @@
-import { Component, DestroyRef, OnInit, inject, viewChild } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 
-import { GlobalService } from 'src/models/global.service';
-import { MilestoneService } from 'src/models/milestones/milestone.service';
+import { GlobalService } from '@models/global.service';
+import { MilestoneService } from '@models/milestones/milestone.service';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { Milestone } from '@models/milestones/milestone.model';
 import { Project } from '@models/project/project.model';
@@ -13,6 +12,7 @@ import { Task } from '@models/tasks/task.model';
 import { TaskService } from '@models/tasks/task.service';
 import { Toast } from '@shards/toast/toast';
 import { CustomGanttComponent, GanttRow } from '@app/projects/_shards/custom-gantt/custom-gantt.component';
+import { SpinnerComponent } from '@shards/spinner/spinner.component';
 
 @Component({
     selector: 'profile-milestones',
@@ -20,194 +20,157 @@ import { CustomGanttComponent, GanttRow } from '@app/projects/_shards/custom-gan
     styleUrls: ['./profile-milestones.component.scss'],
     standalone: true,
     host: { class: 'container-full' },
-    imports: [ToolbarComponent, CustomGanttComponent, NgbDropdownModule]
+    imports: [ToolbarComponent, CustomGanttComponent, NgbDropdownModule, SpinnerComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProfileMilestonesComponent implements OnInit {
-    ganttComponent = viewChild(CustomGanttComponent);
-
-    allMilestones: Milestone[] = [];
-    ganttRows: GanttRow[] = [];
-    milestoneProjectMap = new Map<string, Project>();
-    projectGroups: any[] = [];
-    currentViewMode: string = localStorage.getItem('profileMilestonesViewMode') || 'Week';
-    loading: boolean = true;
-    error: string | null = null;
-    #destroyRef = inject(DestroyRef);
-
+export class ProfileMilestonesComponent {
     global = inject(GlobalService);
     #milestoneService = inject(MilestoneService);
     #projectService = inject(ProjectService);
     #taskService = inject(TaskService);
     #inputModalService = inject(InputModalService);
 
-    ngOnInit(): void {
-        this.loadMilestones();
+    ganttRows = signal<GanttRow[]>([]);
+    milestoneProjectMap = signal(new Map<string, Project>());
+    currentViewMode = signal(localStorage.getItem('profileMilestonesViewMode') || 'Week');
+    loading = signal(true);
+    error = signal<string | null>(null);
+
+    #allMilestones: Milestone[] = [];
+    #projectGroups: any[] = [];
+
+    constructor() {
+        this.#loadMilestones();
     }
 
-    loadMilestones() {
+    #loadMilestones() {
         if (!this.global.user?.id) {
-            this.error = 'No user found';
-            this.loading = false;
+            this.error.set('No user found');
+            this.loading.set(false);
             return;
         }
 
-        this.loading = true;
-        this.error = null;
+        this.loading.set(true);
+        this.error.set(null);
 
-        this.#milestoneService.indexUserMilestones(this.global.user.id)
-            .pipe(takeUntilDestroyed(this.#destroyRef))
-            .subscribe({
-                next: (groups: any[]) => {
-                    groups.forEach(_ => {
-                        _.project = Project.fromJson(_.project);
-                        _.project_tasks = _.project_tasks || [];
-                        _.milestones = _.milestones.map((item: any) => {
-                            const ms = Milestone.fromJson(item.milestone)
-                            ms.project = _.project;
-                            (ms as any).tasks = item.tasks || [];
-                            return ms;
-                        });
+        this.#milestoneService.indexUserMilestones(this.global.user.id).subscribe({
+            next: (groups: any[]) => {
+                groups.forEach((_) => {
+                    _.project = Project.fromJson(_.project);
+                    _.project_tasks = _.project_tasks || [];
+                    _.milestones = _.milestones.map((item: any) => {
+                        const ms = Milestone.fromJson(item.milestone);
+                        ms.project = _.project;
+                        (ms as any).tasks = item.tasks || [];
+                        return ms;
                     });
+                });
 
-                    this.projectGroups = groups;
-                    this.#prepareMilestones(groups);
-                    this.#prepareGanttRows();
-                    this.loading = false;
-
-                    // Note: Custom rows are now rendered by gantt-chart component
-                },
-                error: (error) => {
-                    console.error('Error loading user milestones:', error);
-                    this.error = 'Failed to load milestones';
-                    this.loading = false;
-                }
-            });
+                this.#projectGroups = groups;
+                this.#prepareMilestones(groups);
+                this.#prepareGanttRows();
+                this.loading.set(false);
+            },
+            error: () => {
+                this.error.set('Failed to load milestones');
+                this.loading.set(false);
+            },
+        });
     }
 
     #prepareMilestones(groups: any[]) {
-        this.allMilestones = [];
-        this.milestoneProjectMap.clear();
+        this.#allMilestones = [];
+        const map = new Map<string, Project>();
 
-        // Combine all milestones from all projects
-        groups.forEach(group => {
-            if (group.milestones && group.milestones.length > 0) {
+        groups.forEach((group) => {
+            if (group.milestones?.length > 0) {
                 group.milestones.forEach((milestone: Milestone) => {
-                    this.milestoneProjectMap.set(milestone.id, group.project);
-                    this.allMilestones.push(milestone);
+                    map.set(milestone.id, group.project);
+                    this.#allMilestones.push(milestone);
                 });
             }
         });
 
-        // Sort by project_id and then by id
-        this.allMilestones.sort((a, b) => {
+        this.milestoneProjectMap.set(map);
+
+        this.#allMilestones.sort((a, b) => {
             const aProjectId = String(a.project_id || '');
             const bProjectId = String(b.project_id || '');
-            if (aProjectId !== bProjectId) {
-                return aProjectId.localeCompare(bProjectId);
-            }
+            if (aProjectId !== bProjectId) return aProjectId.localeCompare(bProjectId);
             return String(a.id || '').localeCompare(String(b.id || ''));
         });
     }
 
     #prepareGanttRows() {
-        this.ganttRows = [];
+        const rows: GanttRow[] = [];
 
-        this.projectGroups.forEach(group => {
+        this.#projectGroups.forEach((group) => {
             const project = group.project;
 
-            // Add header row for project
-            this.ganttRows.push({
-                type: 'header',
-                data: project,
-                project: project
-            });
+            rows.push({ type: 'header', data: project, project });
 
-            // Add project-level tasks
             (group.project_tasks || []).forEach((task: any) => {
                 const taskInstance = Task.fromJson(task);
                 taskInstance.httpService = this.#taskService;
-                this.ganttRows.push({
-                    type: 'task',
-                    data: taskInstance,
-                    project: project
-                });
+                rows.push({ type: 'task', data: taskInstance, project });
             });
 
-            // Add milestones and their tasks
             (group.milestones || []).forEach((milestone: Milestone) => {
-                this.ganttRows.push({
-                    type: 'milestone',
-                    data: milestone,
-                    project: project
-                });
+                rows.push({ type: 'milestone', data: milestone, project });
 
-                // Add milestone-level tasks
                 ((milestone as any).tasks || []).forEach((task: any) => {
                     const taskInstance = Task.fromJson(task);
                     taskInstance.httpService = this.#taskService;
-                    this.ganttRows.push({
-                        type: 'task',
-                        data: taskInstance,
-                        project: project
-                    });
+                    rows.push({ type: 'task', data: taskInstance, project });
                 });
             });
         });
+
+        this.ganttRows.set(rows);
     }
 
     onViewModeChange = (mode: string) => {
-        this.currentViewMode = mode;
+        this.currentViewMode.set(mode);
         localStorage.setItem('profileMilestonesViewMode', mode);
-    }
+    };
 
     onAddMilestone(project: Project) {
-        this.#inputModalService.open($localize`:@@i18n.common.addMilestone:add milestone`)
-            .then(result => {
+        this.#inputModalService
+            .open($localize`:@@i18n.common.addMilestone:add milestone`)
+            .then((result) => {
                 if (result?.text?.trim()) {
-                    this.#projectService.createMilestone(project.id, {
-                        name: result.text.trim()
-                    }).pipe(takeUntilDestroyed(this.#destroyRef))
-                        .subscribe({
-                            next: () => {
-                                Toast.success($localize`:@@i18n.milestone.created:milestone created`);
-                                this.loadMilestones();
-                            },
-                            error: (error) => {
-                                Toast.error($localize`:@@i18n.milestone.createError:failed to create milestone`);
-                                console.error('Error creating milestone:', error);
-                            }
-                        });
+                    this.#projectService.createMilestone(project.id, { name: result.text.trim() }).subscribe({
+                        next: () => {
+                            Toast.success($localize`:@@i18n.milestone.created:milestone created`);
+                            this.#loadMilestones();
+                        },
+                        error: () => Toast.error($localize`:@@i18n.milestone.createError:failed to create milestone`),
+                    });
                 }
             })
-            .catch(() => {
-                // User cancelled
-            });
+            .catch(() => void 0);
     }
 
     onAddTask(project: Project) {
-        this.#inputModalService.open($localize`:@@i18n.task.addTask:Add Task`)
-            .then(result => {
+        this.#inputModalService
+            .open($localize`:@@i18n.task.addTask:Add Task`)
+            .then((result) => {
                 if (result?.text?.trim()) {
-                    this.#projectService.createTaskForProject(project.id, {
-                        name: result.text.trim(),
-                        parent_type: 'App\\Models\\Project',
-                        parent_id: project.id
-                    }).pipe(takeUntilDestroyed(this.#destroyRef))
+                    this.#projectService
+                        .createTaskForProject(project.id, {
+                            name: result.text.trim(),
+                            parent_type: 'App\\Models\\Project',
+                            parent_id: project.id,
+                        })
                         .subscribe({
                             next: () => {
                                 Toast.success($localize`:@@i18n.task.created:Task created`);
-                                this.loadMilestones();
+                                this.#loadMilestones();
                             },
-                            error: (error: any) => {
-                                Toast.error($localize`:@@i18n.task.createError:Failed to create task`);
-                                console.error('Error creating task:', error);
-                            }
+                            error: () => Toast.error($localize`:@@i18n.task.createError:Failed to create task`),
                         });
                 }
             })
-            .catch(() => {
-                // User cancelled
-            });
+            .catch(() => void 0);
     }
-
 }

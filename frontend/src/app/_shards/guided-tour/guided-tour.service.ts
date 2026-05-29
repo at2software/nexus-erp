@@ -34,7 +34,6 @@ const DISABLED_KEY = 'nexus_guide_disabled';
 
 @Injectable({ providedIn: 'root' })
 export class GuidedTourService {
-
     #seenIds = new Set<string>();
     #disabled = false;
     #queue: InternalSlide[] = [];
@@ -46,7 +45,9 @@ export class GuidedTourService {
     readonly sessionTotal$ = new BehaviorSubject<number>(0);
     readonly sessionDone$ = new BehaviorSubject<number>(0);
 
-    get isDisabled(): boolean { return this.#disabled; }
+    get isDisabled(): boolean {
+        return this.#disabled;
+    }
 
     constructor() {
         this.#loadFromStorage();
@@ -55,14 +56,11 @@ export class GuidedTourService {
     register(slides: GuidedSlide[], domDepth: number): void {
         if (this.#disabled) return;
 
-        const newSlides: InternalSlide[] = slides
-            .filter(s => !this.#seenIds.has(s.id))
-            .map(s => ({ ...s, domDepth }));
+        const newSlides: InternalSlide[] = slides.filter((s) => !this.#seenIds.has(s.id)).map((s) => ({ ...s, domDepth }));
 
         if (!newSlides.length) return;
 
-        this.#queue = [...this.#queue, ...newSlides]
-            .sort((a, b) => a.domDepth - b.domDepth);
+        this.#queue = [...this.#queue, ...newSlides].sort((a, b) => a.domDepth - b.domDepth);
 
         this.#sessionTotal += newSlides.length;
         this.sessionTotal$.next(this.#sessionTotal);
@@ -79,7 +77,7 @@ export class GuidedTourService {
         if (!current) return;
 
         this.#markSeen(current.id);
-        this.#queue = this.#queue.filter(s => s.id !== current.id);
+        this.#queue = this.#queue.filter((s) => s.id !== current.id);
         this.#sessionDone++;
         this.sessionDone$.next(this.#sessionDone);
 
@@ -121,7 +119,9 @@ export class GuidedTourService {
         if (seen) {
             try {
                 this.#seenIds = new Set(JSON.parse(seen));
-            } catch { /* ignore corrupt data */ }
+            } catch {
+                /* ignore corrupt data */
+            }
         }
     }
 }

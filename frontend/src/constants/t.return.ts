@@ -1,1 +1,0 @@
-export type TReturn = (value: any) => void

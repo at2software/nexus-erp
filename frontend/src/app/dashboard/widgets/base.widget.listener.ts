@@ -1,7 +1,8 @@
-import { EventEmitter, Injectable, Output } from "@angular/core"
+import { Injectable } from '@angular/core';
+import { Subject } from 'rxjs';
 
-@Injectable({providedIn: 'root'})
+@Injectable({ providedIn: 'root' })
 export class BaseWidgetListener {
-    @Output() updated = new EventEmitter<[any, number, number]>()
-    @Output() deleted = new EventEmitter<[any, number, number]>()
+    updated = new Subject<[any, number, number]>();
+    deleted = new Subject<[any, number, number]>();
 }

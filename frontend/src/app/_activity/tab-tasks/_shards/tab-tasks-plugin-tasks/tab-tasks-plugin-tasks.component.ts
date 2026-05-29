@@ -1,7 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterModule } from '@angular/router';
-import { NexusModule } from '@app/nx/nexus.module';
+import { Nx } from '@app/nx/nx.directive';
+import { NComponent } from '@shards/n/n.component';
+import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
 import { Color } from '@constants/Color';
 import { PluginInstance } from '@models/http/plugin.instance';
@@ -11,53 +13,69 @@ import { ITaskPlugin } from '@models/tasks/task.plugin.interface';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { TabTasksBaseComponent } from '../tab-tasks-base.component';
 
-type TTask = ITaskPlugin & PluginInstance
+type TTask = ITaskPlugin & PluginInstance;
+interface TInstanceEntry { instance: TTask; tasks: WritableSignal<Task[]>; key: string }
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'tab-tasks-plugin-tasks',
     templateUrl: './tab-tasks-plugin-tasks.component.html',
     standalone: true,
-    imports: [NexusModule, NgbTooltipModule, RouterModule]
+    imports: [Nx, NComponent, AvatarComponent, NgbTooltipModule, RouterModule],
 })
 export class TabTasksPluginTasksComponent extends TabTasksBaseComponent {
+    instances = signal<TInstanceEntry[]>([]);
 
-    instances: TTask[] = []
+    readonly #collapsed = signal<Set<string>>(new Set());
+    toggle = (key: string) => this.#collapsed.update(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
+    isCollapsed = (key: string) => this.#collapsed().has(key);
 
-    factory = inject(PluginInstanceFactory)
-    input = inject(InputModalService)
+    factory = inject(PluginInstanceFactory);
+    input = inject(InputModalService);
 
     override reload() {
-        this.instances = this.factory.getPluginInstances().filter(_ => 'ITaskPluginProperty' in _ && _.isRootInstance()) as TTask[]
-        this.instances.forEach(instance => this.#loadInstance(instance))
+        const raw = this.factory.getPluginInstances().filter((_) => 'ITaskPluginProperty' in _ && _.isRootInstance()) as TTask[];
+        const entries: TInstanceEntry[] = raw.map((instance, i) => ({ instance, tasks: signal<Task[]>([]), key: instance.id != null ? instance.id.toString() : instance.getName() ?? i.toString() }));
+        this.instances.set(entries);
+        entries.forEach(({ instance, tasks }) => this.#loadInstance(instance, tasks));
     }
 
-    #loadInstance(instance: TTask) {
+    #loadInstance(instance: TTask, tasks: WritableSignal<Task[]>) {
         instance.init.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-            instance.indexTasks().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(response => {
-                instance.tasks = response
-            })
-        })
+            instance
+                .indexTasks()
+                .pipe(takeUntilDestroyed(this.destroyRef))
+                .subscribe((response) => {
+                    tasks.set(response);
+                });
+        });
     }
 
-    onNewTask(instance: TTask) {
-        this.input.open('title', true).then(response => {
-            if (response) {
-                const n = Task.fromJson({ name: response.text })
-                instance.create(n).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(response => {
-                    const newTask = Task.fromJson(response)
-                    newTask.var.user = instance.getUserFor(newTask.assignee?.id)
-                    newTask.var.compact = (newTask.state == 1)
-                    newTask.httpService = instance
-                    instance.tasks.push(newTask)
-                })
-            }
-        }).catch()
+    onNewTask(entry: TInstanceEntry) {
+        this.input
+            .open('title', true)
+            .then((response) => {
+                if (response) {
+                    const n = Task.fromJson({ name: response.text });
+                    entry.instance
+                        .create(n)
+                        .pipe(takeUntilDestroyed(this.destroyRef))
+                        .subscribe((response) => {
+                            const newTask = Task.fromJson(response);
+                            newTask.var.user = entry.instance.getUserFor(newTask.assignee?.id);
+                            newTask.var.compact = newTask.state == 1;
+                            newTask.httpService = entry.instance;
+                            entry.tasks.update((t) => [...t, newTask]);
+                        });
+                }
+            })
+            .catch();
     }
 
     colorFor(task: Task): string;
     colorFor(label: string): string;
     colorFor(input: Task | string): string {
-        if (typeof input === 'string') return Color.uniqueColorFromString(input ?? '')
-        return Color.uniqueColorFromString(input.project_url ?? '')
+        if (typeof input === 'string') return Color.uniqueColorFromString(input ?? '');
+        return Color.uniqueColorFromString(input.project_url ?? '');
     }
 }

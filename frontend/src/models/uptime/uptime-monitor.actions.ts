@@ -1,5 +1,5 @@
-import { NxActionType } from "@app/nx/nx.actions"
-import { UptimeMonitor } from "./uptime-monitor.model"
+import { NxActionType } from '@app/nx/nx.actions';
+import { UptimeMonitor } from './uptime-monitor.model';
 
 export const getUptimeMonitorActions = (self: UptimeMonitor) => [
     { title: $localize`:@@i18n.uptime.runTest:run test`, action: () => self.runTest(), group: true },
@@ -7,5 +7,5 @@ export const getUptimeMonitorActions = (self: UptimeMonitor) => [
     { title: $localize`:@@i18n.uptime.subscribe:subscribe`, on: () => !self.isSubscribed(), action: () => self.subscribe(), group: true },
     { title: $localize`:@@i18n.uptime.unsubscribe:unsubscribe`, on: () => self.isSubscribed(), action: () => self.unsubscribe(), group: true },
     { title: $localize`:@@i18n.uptime.unlinkFromProject:unlink from project`, context: 'project-dashboard', action: () => self.unlinkFromProject(), group: true, type: NxActionType.Destructive, roles: 'project_manager' },
-    { title: $localize`:@@i18n.common.delete:delete`, action: () => self.confirm().then(() => self.delete().subscribe()), group: true, type: NxActionType.Destructive, roles: 'admin' }
-]
+    { title: $localize`:@@i18n.common.delete:delete`, action: () => self.modalConfirm().then(() => self.delete().subscribe()), group: true, type: NxActionType.Destructive, roles: 'admin' },
+];

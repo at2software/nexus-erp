@@ -2,6 +2,7 @@
 
 return [
     // Info block
+    'project'         => 'Project',
     'contact_person'  => 'Contact',
     'phone'           => 'Phone',
     'email'           => 'Email',

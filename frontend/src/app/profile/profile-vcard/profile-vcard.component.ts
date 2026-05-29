@@ -1,8 +1,7 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
-import { GlobalService } from 'src/models/global.service';
-import { User } from 'src/models/user/user.model';
-
+import { GlobalService } from '@models/global.service';
+import { tracked } from '@constants/tracked';
 import { environment } from 'src/environments/environment';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { VcardComponent } from '@app/customers/_shards/vcard/vcard.component';
@@ -11,26 +10,14 @@ import { VcardComponent } from '@app/customers/_shards/vcard/vcard.component';
     selector: 'profile-vcard',
     templateUrl: './profile-vcard.component.html',
     standalone: true,
-    imports: [ScrollbarComponent, VcardComponent, NgbTooltipModule]
+    imports: [ScrollbarComponent, VcardComponent, NgbTooltipModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProfileVcardComponent implements OnInit {
+export class ProfileVcardComponent {
+    #global = inject(GlobalService);
+    readonly user = tracked(computed(() => this.#global.user));
+    readonly carddavUrl = environment.envApi + 'carddav/';
+    readonly caldavUrl = environment.envApi + 'caldav/';
 
-    user: User
-    global = inject(GlobalService)
-
-    carddavUrl = environment.envApi + 'carddav/'
-    caldavUrl  = environment.envApi + 'caldav/'
-
-    ngOnInit() {
-        this.user = this.global.user!
-    }
-
-    copyToClipboard(text: string) {
-        navigator.clipboard.writeText(text).then(() => {
-            // Success
-        }).catch(err => {
-            console.error('Failed to copy:', err)
-        })
-    }
-
+    copyToClipboard = (text: string) => navigator.clipboard.writeText(text).catch(console.error);
 }

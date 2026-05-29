@@ -1,30 +1,31 @@
-import { ContentChild, Directive, ElementRef, HostListener, inject, AfterViewInit } from "@angular/core";
-import { NxDropdown } from "./nx.dropdown";
-import { AutopositionDirective, ECorrection } from "@directives/autoposition.directive";
+import { Directive, ElementRef, HostListener, afterNextRender, contentChild, inject } from '@angular/core';
+import { NxDropdown } from './nx.dropdown';
+import { AutopositionDirective, ECorrection } from '@directives/autoposition.directive';
 
 @Directive({ selector: '.nx-menu', standalone: true })
-export class NxSubMenu implements AfterViewInit {
-    
-    el = inject(ElementRef)
+export class NxSubMenu {
+    el = inject(ElementRef);
 
-    @ContentChild(NxDropdown) submenu?: NxDropdown
-    @ContentChild(AutopositionDirective) autoposition?: AutopositionDirective
+    private readonly submenu = contentChild(NxDropdown);
+    private readonly autoposition = contentChild(AutopositionDirective);
+
+    constructor() {
+        afterNextRender(() => {
+            this.submenu()?.el.nativeElement.classList.remove('show');
+            this.autoposition()?.corrected.subscribe((correction) => {
+                if (correction & ECorrection.Right) {
+                    this.submenu()?.parent()?.el.nativeElement.classList.add('dropstart');
+                } else {
+                    this.submenu()?.parent()?.el.nativeElement.classList.remove('dropstart');
+                }
+            });
+        });
+    }
 
     @HostListener('mouseenter') mouseenter() {
-        this.submenu?.el.nativeElement.classList.add('show')
+        this.submenu()?.el.nativeElement.classList.add('show');
     }
     @HostListener('mouseleave') mouseleave() {
-        this.submenu?.el.nativeElement.classList.remove('show')
-    }
-
-    ngAfterViewInit() {
-        this.submenu?.el.nativeElement.classList.remove('show')
-        this.autoposition?.corrected.subscribe(correction => {
-            if (correction & ECorrection.Right) {
-                this.submenu?.parent()?.el.nativeElement.classList.add('dropstart')
-            } else {
-                this.submenu?.parent()?.el.nativeElement.classList.remove('dropstart')
-            }
-        })
+        this.submenu()?.el.nativeElement.classList.remove('show');
     }
 }

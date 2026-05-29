@@ -12,7 +12,11 @@ class Connection extends BaseModel {
     use PrecomputedTrait;
 
     protected $with     = ['company1', 'company2'];
-    protected $casts    = ['net' => PrecomputedAuth::class];
+
+    protected function casts(): array {
+        return ['net' => PrecomputedAuth::class];
+    }
+
     protected $fillable = ['company1_id', 'company2_id'];
     protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 

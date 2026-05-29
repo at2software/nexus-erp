@@ -1,61 +1,58 @@
-import { Component, ViewChild, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
-import { ActivityTabComponent } from 'src/app/_activity/activity-tab.component';
+import { ActivityTabComponent } from '@activity/activity-tab.component';
+import { ActivityService } from '@activity/activity.service';
 import { WidgetFactory, TAWidget } from '@dashboard/availableWidgets';
-import { CommonModule } from '@angular/common';
+import { NgComponentOutlet } from '@angular/common';
 import { CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
-import { NxGlobal } from 'src/app/nx/nx.global';
-import { GlobalService } from 'src/models/global.service';
+import { NxGlobal } from '@app/nx/nx.global';
+import { GlobalService } from '@models/global.service';
 import { ActivatedRoute } from '@angular/router';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'activity-tab-widgets',
     templateUrl: './tab-widgets.component.html',
     styleUrls: ['./tab-widgets.component.scss'],
     standalone: true,
-    imports: [ActivityTabComponent, ScrollbarComponent, CommonModule, CdkDrag, CdkDropList, NgbTooltipModule]
+    imports: [ActivityTabComponent, ScrollbarComponent, NgComponentOutlet, CdkDrag, CdkDropList, NgbTooltipModule],
 })
-export class TabWidgetsComponent implements OnInit {
+export class TabWidgetsComponent {
+    readonly tab = viewChild.required(ActivityTabComponent);
+    readonly #global = inject(GlobalService);
+    readonly #activityService = inject(ActivityService);
+    readonly #usedWidgetKeys = new Set<string>();
+    readonly #currentDashboard = toSignal(
+        inject(ActivatedRoute).params.pipe(map(p => 'dashboard' in p ? parseInt(p['dashboard']) : 0)),
+        { initialValue: 0 }
+    );
 
-    @ViewChild(ActivityTabComponent) tab:ActivityTabComponent
+    readonly isEditMode = signal(false);
+    readonly allWidgets = signal<TAWidget[]>([]);
+    readonly isUsedWidget = (widgetKey: string) => this.#usedWidgetKeys.has(widgetKey);
 
-    global = inject(GlobalService)
-    route = inject(ActivatedRoute)
-    isEditMode: boolean = false
-    currentDashboard: number = 0
-    allWidgets:TAWidget[]
-    usedWidgetKeys = new Set<string>()
-
-    isUsedWidget = (widgetKey:string):boolean => this.usedWidgetKeys.has(widgetKey)
-
-    ngOnInit() {
-        this.route.params.subscribe(_ => {
-            if ('dashboard' in _) {
-                this.currentDashboard = parseInt(_['dashboard'])
+    constructor() {
+        NxGlobal.dashboardEditMode$.pipe(takeUntilDestroyed()).subscribe(isEditing => {
+            this.isEditMode.set(isEditing);
+            const tab = this.tab();
+            if (isEditing) {
+                this.#usedWidgetKeys.clear();
+                this.#global.dashboards?.[this.#currentDashboard()]?.cols.forEach((col: any[]) =>
+                    col.forEach((widget: any) => this.#usedWidgetKeys.add(widget.widget))
+                );
+                this.allWidgets.set(WidgetFactory.availableWidgets());
+                tab.show();
+                setTimeout(() => tab.focus(), 0);
             } else {
-                this.currentDashboard = 0
+                tab.hide();
+                setTimeout(() => {
+                    const idx = this.#activityService.tabs().findIndex(t => t !== tab && !t.hidden());
+                    if (idx !== -1) this.#activityService.switchToTab(idx);
+                }, 0);
             }
-        })
-
-        NxGlobal.dashboardEditMode$.subscribe((isEditing:boolean) => {
-            this.isEditMode = isEditing
-            if (this.tab) {
-                if (isEditing) {
-                    this.usedWidgetKeys.clear()
-                    if (this.global.dashboards && this.global.dashboards[this.currentDashboard]) {
-                        this.global.dashboards[this.currentDashboard].cols.forEach((col: any[]) => {
-                            col.forEach((widget: any) => {
-                                this.usedWidgetKeys.add(widget.widget)
-                            })
-                        })
-                    }
-                    this.allWidgets = WidgetFactory.availableWidgets()
-                    this.tab.show()
-                } else {
-                    this.tab.hide()
-                }
-            }
-        })
+        });
     }
 }

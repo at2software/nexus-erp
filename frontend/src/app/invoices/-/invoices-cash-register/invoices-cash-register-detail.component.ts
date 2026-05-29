@@ -1,10 +1,10 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject, TemplateRef, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, TemplateRef, computed, effect, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
-import { NexusModule } from '@app/nx/nexus.module';
-import { AffixInputDirective } from '@directives/affix-input.directive';
+import { Nx } from '@app/nx/nx.directive';
 import { NgbDateAdapter, NgbDatepickerModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { SaldoChartComponent } from '@shards/saldo-chart/saldo-chart.component';
 import moment from 'moment';
@@ -12,69 +12,71 @@ import { NgbDateCarbonAdapter } from '@directives/ngb-date.adapter';
 import { Cash } from '@models/cash/cash.model';
 import { CashService } from '@models/cash/cash.servcie';
 import { GlobalService } from '@models/global.service';
-import { MoneyPipe } from '../../../../pipes/money.pipe';
+import { MoneyPipe } from '@pipes/money.pipe';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'invoices-cash-register-detail',
     templateUrl: './invoices-cash-register-detail.component.html',
     styleUrls: ['./invoices-cash-register-detail.component.scss'],
     providers: [{ provide: NgbDateAdapter, useClass: NgbDateCarbonAdapter }],
     standalone: true,
-    imports: [ToolbarComponent, NexusModule, SaldoChartComponent, NgbDatepickerModule, FormsModule, AffixInputDirective, MoneyPipe, DatePipe, HotkeyDirective]
+    imports: [ToolbarComponent, Nx, SaldoChartComponent, NgbDatepickerModule, FormsModule, MoneyPipe, DatePipe, HotkeyDirective],
 })
-export class InvoicesCashRegisterDetailComponent implements OnInit {
+export class InvoicesCashRegisterDetailComponent {
 
-    id:string
-    entries:Cash[] = []
+    #global = inject(GlobalService);
+    #route = inject(ActivatedRoute);
+    #cashService = inject(CashService);
+    #modalService = inject(NgbModal);
 
-    modalData = {
-        occured_at : moment().toISOString(),
+    id = signal('');
+    entries = signal<Cash[]>([]);
+    
+    min = computed(() => this.entries().reduce((m, e) => Math.min(m, e.var.current + e.value), 0));
+    max = computed(() => this.entries().reduce((m, e) => Math.max(m, e.var.current + e.value), 0));
+    currencySymbol = computed(() => this.#global.currencySymbol() ?? '€');
+
+    modalData = signal({
+        occured_at: moment().toISOString(),
         description: '',
-        approver   : '',
-        value      : 0
-    }
+        approver: '',
+        value: 0,
+    });
 
-    global = inject(GlobalService)
-    route = inject(ActivatedRoute)
-    #cashService = inject(CashService)
-	modalService = inject(NgbModal)
+    constructor() {
+        this.#route.params.pipe(takeUntilDestroyed()).subscribe(p => this.id.set(p['id']));
 
-    min:number = 0
-    max:number = 0
-
-    ngOnInit() {
-        this.route.params.subscribe(_ => {
-            this.id = _['id']
-            this.reload()
-            this.modalData = {
-                occured_at : moment().toISOString(),
+        effect(() => {
+            if (!this.id()) return;
+            this.modalData.set({
+                occured_at: moment().toISOString(),
                 description: '',
-                approver   : this.global.user?.name ?? '',
-                value      : 0
-            }
-        })
+                approver: this.#global.user?.getName() ?? '',
+                value: 0,
+            });
+            this.reload();
+        });
     }
+
     reload() {
-        this.#cashService.indexEntries(this.id).subscribe(data => {
-            this.entries = data
-            let v = 0
-            this.max = 0
-            this.min = 0
-            this.entries.reverse().forEach(_ => {
-                _.var.current = v
-                v += _.value
-                this.max = Math.max(this.max, v)
-                this.min = Math.min(this.min, v)
-            })
-            this.entries.reverse()
-        })
+        this.#cashService.indexEntries(this.id()).subscribe((data) => {
+            let v = 0;
+            data.reverse().forEach(_ => {
+                _.var.current = v;
+                v += _.value;
+            });
+            this.entries.set(data.reverse());
+        });
     }
 
     addExpense(content: TemplateRef<any>) {
-		this.modalService.open(content, { ariaLabelledBy: 'modal-basic-title' }).result.then(() => { 
-            this.#cashService.storeEntry(this.id, this.modalData).subscribe(() => this.reload())
-        }).catch()
+        this.#modalService
+            .open(content, { ariaLabelledBy: 'modal-basic-title' })
+            .result.then(() => {
+                this.#cashService.storeEntry(this.id(), this.modalData()).subscribe(() => this.reload());
+            })
+            .catch();
     }
-
 }

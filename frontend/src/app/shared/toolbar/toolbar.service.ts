@@ -8,14 +8,12 @@ export interface ToolbarAction {
 }
 
 @Injectable({
-    providedIn: 'root'
+    providedIn: 'root',
 })
 export class ToolbarService {
-
     #actions: ToolbarAction[] = [];
 
-    setActions = (actions: ToolbarAction[]) => this.#actions = actions;
+    setActions = (actions: ToolbarAction[]) => (this.#actions = actions);
     getActions = (): ToolbarAction[] => this.#actions;
-    clearActions = () => this.#actions = [];
-
+    clearActions = () => (this.#actions = []);
 }

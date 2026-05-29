@@ -22,24 +22,26 @@ class AddCompanyNewsComments extends Command {
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Adds comments to companies based on news from Handelsregister and Bundesanzeiger';
 
     /**
      * Execute the console command.
      */
     public function handle() {
-        return;
-        $companyDataArray = $this->getCompanyDataAndInsolvency();
-        foreach ($companyDataArray as $companyData) {
-            $company            = $companyData['company'];
-            $companyInformation = $companyData['information'];
+        $companies      = Company::whereNotNull('commercial_register')->whereNot('is_deprecated', true)->get();
+        $handelsRegister = app(HandelsRegister::class);
+        $bundesanzeiger  = app(Bundesanzeiger::class);
 
-            if ($companyInformation['insolvent']) {
-                $commentText = 'Insolvenz erkannt!';
+        foreach ($companies as $company) {
+            $commentCount = 0;
+            $this->info('Processing: '.$company->name);
 
-                $existingComment = $company->comments()->where('text', $commentText)->first();
+            // Check Handelsregister for insolvency
+            $registerInfo = $handelsRegister->process($company->commercial_register);
+            if (! empty($registerInfo) && ! empty($registerInfo['fehlerhaft'])) {
+                $commentText = '[Handelsregister] Registernummer fehlerhaft: '.$company->commercial_register;
 
-                if (! $existingComment) {
+                if (! $company->comments()->where('text', $commentText)->exists()) {
                     $company->comments()->create([
                         'text'    => $commentText,
                         'user_id' => null,
@@ -47,48 +49,54 @@ class AddCompanyNewsComments extends Command {
                         'type'    => CommentType::Warning,
                         ...$company->toPoly(),
                     ]);
+                    $commentCount++;
                 }
             }
+            if (! empty($registerInfo) && ! empty($registerInfo['insolvent'])) {
+                $commentText = '[Handelsregister] Insolvenz erkannt!';
 
-            $reports = $this->getReports($companyInformation);
-
-            foreach ($reports as $report) {
-                $commentText = $report['date'].' '.$report['name'].' '.$report['link'];
-
-                $existingComment = $company->comments()->where('text', $commentText)->first();
-
-                if (! $existingComment) {
+                if (! $company->comments()->where('text', $commentText)->exists()) {
                     $company->comments()->create([
                         'text'    => $commentText,
                         'user_id' => null,
                         'is_mini' => true,
-                        'type'    => CommentType::Notice,
+                        'type'    => CommentType::Warning,
                         ...$company->toPoly(),
                     ]);
+                    $commentCount++;
                 }
             }
-        }
-    }
 
-    private function getCompanyDataAndInsolvency() {
-        $handelsRegister = app(HandelsRegister::class);
-        $results         = [];
-        foreach (Company::whereNotNull('commercial_register')->get() as $company) {
-            $result = $handelsRegister->process($company->commercial_register);
-            if (! empty($result)) {
-                $results[] = ['company' => $company, 'information' => $result];
+            // Check Bundesanzeiger for new publications (searched by company name)
+            $reports = $bundesanzeiger->process($company->name);
+
+            if (! empty($reports)) {
+                foreach ($reports as $report) {
+                    $parsedDate = Carbon::createFromFormat('d.m.Y', $report['date']);
+                    if (! $parsedDate || $parsedDate->year < 2026) {
+                        continue;
+                    }
+
+                    $commentText = '[Bundesanzeiger] '.$report['name'];
+
+                    if (! $company->comments()->where('text', $commentText)->exists()) {
+                        $company->comments()->create([
+                            'text'    => $commentText,
+                            'user_id' => null,
+                            'is_mini' => true,
+                            'type'    => CommentType::Notice,
+                            ...$company->toPoly(),
+                        ]);
+                        $commentCount++;
+                    }
+                }
+            }
+
+            if ($commentCount > 0) {
+                $this->info('  → '.$commentCount.' comment(s) added');
             }
         }
-        return $results;
-    }
-    private function getReports($company) {
-        $bundesanzeiger = app(Bundesanzeiger::class);
 
-        $results = $bundesanzeiger->process(
-            $company['name'].' '.$company['state'],
-            '01.01.2023',
-            Carbon::now()->format('d.m.Y')
-        );
-        return $results;
+        $this->info('Done.');
     }
 }

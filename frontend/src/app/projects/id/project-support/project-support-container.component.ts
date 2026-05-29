@@ -1,12 +1,17 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { tracked } from '@constants/tracked';
 import { ProjectDetailGuard } from '@app/projects/project-details.guard';
 import { ProjectSupportComponent } from './project-support.component';
 
 @Component({
-    template: '@if (guard.current) {<project-support [parent]="guard.current"></project-support>}',
+    selector: 'project-support-container',
+    template: '@if (guard.object()) {<project-support [parent]="guard.object()"></project-support>}',
     standalone: true,
-    imports: [ProjectSupportComponent]
+    imports: [ProjectSupportComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectSupportContainerComponent {
-    guard = inject(ProjectDetailGuard)
+    guard = inject(ProjectDetailGuard);
+
+    readonly object = tracked(this.guard.object);
 }

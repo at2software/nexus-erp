@@ -8,6 +8,7 @@ use App\Models\Assignment;
 use App\Models\CompanyContact;
 use App\Models\Project;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 trait HasAssignmentsTrait {
@@ -25,8 +26,8 @@ trait HasAssignmentsTrait {
     public function assignedContacts() {
         return $this->morphedByMany(CompanyContact::class, 'assignee', 'assignments', 'parent_id');
     }
-    public function addAssigneeFromRequest() {
-        $request = request();
+    public function addAssigneeFromRequest(?Request $request = null) {
+        $request = $request ?? request();
         $request->validate([
             'class' => 'required|in:user,company_contact',
             'id'    => 'required|numeric',

@@ -1,22 +1,21 @@
-import { Component, OnInit, AfterViewInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgbTooltipModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
 import { NgxEchartsDirective } from 'ngx-echarts';
-import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS } from '@charts/ChartOptions';
+import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS } from '@charts/echarts-presets';
 import * as echarts from 'echarts/core';
 import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from 'echarts/components';
 import { BarChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
-import { NexusModule } from '@app/nx/nexus.module';
+import { Nx } from '@app/nx/nx.directive';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
-import { ProductService } from 'src/models/product/product.service';
-import { Product } from 'src/models/product/product.model';
-import { MoneyPipe } from 'src/pipes/money.pipe';
+import { ProductService } from '@models/product/product.service';
+import { Product } from '@models/product/product.model';
+import { MoneyPipe } from '@pipes/money.pipe';
 import moment from 'moment';
 
-// Register ECharts components
 echarts.use([TitleComponent, TooltipComponent, LegendComponent, GridComponent, BarChart, CanvasRenderer]);
 
 @Component({
@@ -24,243 +23,150 @@ echarts.use([TitleComponent, TooltipComponent, LegendComponent, GridComponent, B
     templateUrl: './product-statistics.component.html',
     styleUrls: ['./product-statistics.component.scss'],
     standalone: true,
-    imports: [CommonModule, FormsModule, NgbTooltipModule, NgbDropdownModule, NgxDaterangepickerMd, NgxEchartsDirective, NexusModule, ToolbarComponent, MoneyPipe]
+    imports: [DecimalPipe, FormsModule, NgbTooltipModule, NgbDropdownModule, NgxDaterangepickerMd, NgxEchartsDirective, Nx, ToolbarComponent, MoneyPipe],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProductStatisticsComponent implements OnInit, AfterViewInit {
-    statistics: any = null;
-    period?: { startDate: any, endDate: any } = { startDate: moment().subtract(3, 'year'), endDate: moment() };
-    rootGroups: any[] = [];
-    selectedRootGroups: any[] = [];
-    chartOption: any = {};
-    
-    ranges: any = {
+export class ProductStatisticsComponent {
+    readonly #productService = inject(ProductService);
+
+    readonly statistics = signal<any>(null);
+    readonly rootGroups = signal<any[]>([]);
+    readonly selectedRootGroups = signal<any[]>([]);
+    readonly period = signal<{ startDate: any; endDate: any } | undefined>({
+        startDate: moment().subtract(3, 'year'),
+        endDate: moment(),
+    });
+
+    readonly chartOption = signal<any>({
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'cross' },
+            ...ECHARTS_DEFAULT_TOOLTIP_OPTIONS,
+            formatter: (params: any) => {
+                let result = `<div style="text-align: center;"><strong>${params[0].axisValue}</strong></div>`;
+                params.forEach((param: any) => {
+                    const value = param.value || 0;
+                    result += `<div style="display: flex; justify-content: space-between; align-items: center; margin: 2px 0; gap: 0.5rem;">`;
+                    result += `<span style="display: flex; align-items: center;">`;
+                    result += `<span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:${param.color};"></span>`;
+                    result += `${param.seriesName}</span>`;
+                    result += `<span style="font-weight: bold;">€${value.toLocaleString()}</span>`;
+                    result += `</div>`;
+                });
+                return result;
+            },
+        },
+        legend: { data: [], top: 5 },
+        grid: { left: '3%', right: '4%', bottom: '3%', top: '15%' },
+        xAxis: { type: 'category', data: [], axisPointer: { type: 'shadow' } },
+        yAxis: {
+            type: 'value',
+            axisLabel: { formatter: '€{value}', inside: true, align: 'left', margin: -60 },
+            splitLine: { lineStyle: { color: '#222' } },
+        },
+        series: [],
+    });
+
+    readonly ranges: any = {
         'This year': [moment().startOf('year'), moment().endOf('year')],
         'Last year': [moment().subtract(1, 'year').startOf('year'), moment().subtract(1, 'year').endOf('year')],
         'Last 3 years': [moment().subtract(3, 'year'), moment()],
         'Last 5 years': [moment().subtract(5, 'year'), moment()],
-        'All': [moment('2000-01-01'), moment()]
+        All: [moment('2000-01-01'), moment()],
     };
 
-    constructor(private productService: ProductService) {}
+    readonly selectedGroupsText = computed(() => {
+        const selected = this.selectedRootGroups();
+        const all = this.rootGroups();
+        if (!selected.length) return 'No groups selected';
+        if (selected.length === all.length) return 'All groups';
+        return `${selected.length} group${selected.length > 1 ? 's' : ''} selected`;
+    });
 
-    ngOnInit() {
-        this.loadRootGroups();
-    }
+    readonly hasChartData = computed(() => {
+        const opt = this.chartOption();
+        return opt?.series && Array.isArray(opt.series) && opt.series.length > 0;
+    });
 
-    ngAfterViewInit() {
-        this.initChart();
-    }
-    
-    loadRootGroups() {
-        this.productService.getRootGroups().subscribe({
-            next: (groups: any[]) => {
-                this.rootGroups = groups;
-                // Default: only select active root groups
-                this.selectedRootGroups = groups.filter(group => group.is_active);
-                // Load statistics after groups are loaded and filtered
-                this.#loadStatistics();
-            },
-            error: (error: any) => {
-                console.error('Error loading root groups:', error);
-            }
+    constructor() {
+        this.#productService.getRootGroups().subscribe(groups => {
+            this.rootGroups.set(groups);
+            this.selectedRootGroups.set(groups.filter((g: any) => g.is_active));
+            this.#loadStatistics();
         });
     }
 
-    onDateRangeChanged() {
+    readonly onDateRangeChanged = () => this.#loadStatistics();
+
+    readonly toggleRootGroup = (group: any) => {
+        this.selectedRootGroups.update(groups => {
+            const index = groups.findIndex(g => g.id === group.id);
+            return index > -1 ? groups.filter((_, i) => i !== index) : [...groups, group];
+        });
         this.#loadStatistics();
-    }
+    };
+
+    readonly isRootGroupSelected = (group: any) => this.selectedRootGroups().some(g => g.id === group.id);
 
     #loadStatistics() {
-        // Don't load statistics if no groups are loaded yet or no groups are selected
-        if (this.rootGroups.length === 0 || this.selectedRootGroups.length === 0) {
-            this.statistics = null;
+        if (!this.rootGroups().length || !this.selectedRootGroups().length) {
+            this.statistics.set(null);
             return;
         }
-        
+        const p = this.period();
         const filters: any = {};
-        if (this.period?.startDate) {
-            filters.dateStart = this.period.startDate.format('YYYY-MM-DD');
-        }
-        if (this.period?.endDate) {
-            filters.dateEnd = this.period.endDate.format('YYYY-MM-DD');
-        }
-        // Send rootGroupIds since we know groups are selected
-        filters.rootGroupIds = this.selectedRootGroups.map(group => group.id);
-        
-        this.productService.showStatistics(filters).subscribe({
-            next: (data: any) => {
-                // Convert plain JSON objects to Product instances
-                const toProducts = (arr: any) => Array.isArray(arr) ? arr.map((item: any) => Product.fromJson(item)) : []
-                this.statistics = {
-                    top_products: toProducts(data.top_products),
-                    fastest_sellers: toProducts(data.fastest_sellers),
-                    most_repurchased: toProducts(data.most_repurchased),
-                    timeline: data.timeline || {}
-                };
-                this.updateChart();
-            },
-            error: (error: any) => {
-                console.error('Error loading product statistics:', error);
-            }
+        if (p?.startDate) filters.dateStart = p.startDate.format('YYYY-MM-DD');
+        if (p?.endDate) filters.dateEnd = p.endDate.format('YYYY-MM-DD');
+        filters.rootGroupIds = this.selectedRootGroups().map(g => g.id);
+
+        this.#productService.showStatistics(filters).subscribe((data: any) => {
+            const toProducts = (arr: any) => Array.isArray(arr) ? arr.map((item: any) => Product.fromJson(item)) : [];
+            this.statistics.set({
+                top_products: toProducts(data.top_products),
+                fastest_sellers: toProducts(data.fastest_sellers),
+                most_repurchased: toProducts(data.most_repurchased),
+                timeline: data.timeline || {},
+            });
+            this.#updateChart();
         });
     }
-    
-    toggleRootGroup(group: any) {
-        const index = this.selectedRootGroups.findIndex(g => g.id === group.id);
-        if (index > -1) {
-            this.selectedRootGroups.splice(index, 1);
-        } else {
-            this.selectedRootGroups.push(group);
-        }
-        this.#loadStatistics();
-    }
-    
-    isRootGroupSelected(group: any): boolean {
-        return this.selectedRootGroups.some(g => g.id === group.id);
-    }
-    
-    onGroupFilterChanged() {
-        this.#loadStatistics();
-    }
-    
-    get selectedGroupsText(): string {
-        if (this.selectedRootGroups.length === 0) {
-            return 'No groups selected';
-        }
-        if (this.selectedRootGroups.length === this.rootGroups.length) {
-            return 'All groups';
-        }
-        return `${this.selectedRootGroups.length} group${this.selectedRootGroups.length > 1 ? 's' : ''} selected`;
-    }
 
-    get hasChartData(): boolean {
-        return this.chartOption && this.chartOption.series && Array.isArray(this.chartOption.series) && this.chartOption.series.length > 0;
-    }
+    #updateChart() {
+        const stats = this.statistics();
+        if (!stats?.timeline) return;
 
-
-    initChart() {
-        this.chartOption = {
-            title: {
-                text: '',
-                left: 'center'
-            },
-            tooltip: {
-                trigger: 'axis',
-                axisPointer: {
-                    type: 'cross'
-                },
-                ...ECHARTS_DEFAULT_TOOLTIP_OPTIONS,
-                formatter: (params: any) => {
-                    let result = `<div style="text-align: center;"><strong>${params[0].axisValue}</strong></div>`;
-                    params.forEach((param: any) => {
-                        const value = param.value || 0;
-                        result += `<div style="display: flex; justify-content: space-between; align-items: center; margin: 2px 0; gap: 0.5rem;">`;
-                        result += `<span style="display: flex; align-items: center;">`;
-                        result += `<span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:${param.color};"></span>`;
-                        result += `${param.seriesName}</span>`;
-                        result += `<span style="font-weight: bold;">€${value.toLocaleString()}</span>`;
-                        result += `</div>`;
-                    });
-                    return result;
-                }
-            },
-            legend: {
-                data: [],
-                top: 5
-            },
-            grid: {
-                left: '3%',
-                right: '4%',
-                bottom: '3%',
-                top: '15%'
-            },
-            xAxis: {
-                type: 'category',
-                data: [],
-                axisPointer: {
-                    type: 'shadow'
-                }
-            },
-            yAxis: {
-                type: 'value',
-                axisLabel: {
-                    formatter: '€{value}',
-                    inside: true,
-                    align: 'left',
-                    margin: -60
-                },
-                splitLine: {
-                    lineStyle: {
-                        color: '#222'
-                    }
-                }
-            },
-            series: []
-        };
-    }
-
-    updateChart() {
-        if (!this.statistics?.timeline) {
-            return;
-        }
-
-        // Process timeline data from backend
-        const timelineData = this.statistics.timeline;
+        const timelineData = stats.timeline;
         const months = Object.keys(timelineData).sort();
-        
-        // Get unique groups
-        const groups = new Map();
+
+        const groups = new Map<any, any>();
         months.forEach(month => {
             timelineData[month].forEach((item: any) => {
                 if (!groups.has(item.group_id)) {
-                    groups.set(item.group_id, {
-                        id: item.group_id,
-                        name: item.group_name,
-                        color: item.group_color || '#007bff'
-                    });
+                    groups.set(item.group_id, { id: item.group_id, name: item.group_name, color: item.group_color || '#007bff' });
                 }
             });
         });
 
-        // Prepare series data
         const series: any[] = [];
         groups.forEach((group, groupId) => {
-            const data = months.map(month => {
-                const monthData = timelineData[month];
-                const groupData = monthData.find((item: any) => item.group_id === groupId);
-                const value = groupData ? parseFloat(groupData.total_net) : 0;
-                return Math.max(0, value); // Limit to minimum of 0
-            });
-
             series.push({
                 name: group.name,
                 type: 'bar',
                 stack: 'revenue',
-                emphasis: {
-                    focus: 'series'
-                },
-                itemStyle: {
-                    color: group.color
-                },
-                data: data
+                emphasis: { focus: 'series' },
+                itemStyle: { color: group.color },
+                data: months.map(month => {
+                    const groupData = timelineData[month].find((item: any) => item.group_id === groupId);
+                    return Math.max(0, groupData ? parseFloat(groupData.total_net) : 0);
+                }),
             });
         });
 
-        // Update chart options
-        this.chartOption = {
-            ...this.chartOption,
-            legend: {
-                ...this.chartOption.legend,
-                data: Array.from(groups.values()).map(g => g.name)
-            },
-            xAxis: {
-                ...this.chartOption.xAxis,
-                data: months.map(month => {
-                    const date = moment(month + '-01');
-                    return date.format('MMM YYYY');
-                })
-            },
-            series: series
-        };
+        this.chartOption.update(opt => ({
+            ...opt,
+            legend: { ...opt.legend, data: Array.from(groups.values()).map(g => g.name) },
+            xAxis: { ...opt.xAxis, data: months.map(m => moment(m + '-01').format('MMM YYYY')) },
+            series,
+        }));
     }
 }

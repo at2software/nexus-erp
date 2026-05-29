@@ -1,39 +1,27 @@
-import { CommonModule } from "@angular/common";
-import { NgModule } from "@angular/core";
-import { NexusModule } from "@app/nx/nexus.module";
-import { ApxChartXComponent } from "@charts/apx-chart-x/apx-chart-x.component";
-import { NgbTooltipModule } from "@ng-bootstrap/ng-bootstrap";
-import { ProgressBarComponent } from "@shards/progress-bar/progress-bar.component";
-import { MoneyPipe } from "src/pipes/money.pipe";
-import { MoneyShortPipe } from "src/pipes/mshort.pipe";
-import { WidgetOptionsComponent } from "./widget-options/widget-options.component";
-import { LineChartComponent } from "@charts/chart-card-base/chart-card-base.component";
-import { LineChartRangeComponent } from "@charts/chart-card-base/chart-card-range.component";
-import { UlCompactComponent } from "@shards/ul-compact/ul-compact.component";
-import { RouterModule } from "@angular/router";
-import { LoadingPipe } from "src/pipes/loading.pipe";
-import { EmptyStateComponent } from "@shards/empty-state/empty-state.component";
-import { NgxEchartsDirective } from "ngx-echarts";
+import { CommonModule } from '@angular/common';
+import { NgModule } from '@angular/core';
+import { Nx } from '@app/nx/nx.directive';
+import { NComponent } from '@shards/n/n.component';
+import { AvatarComponent } from '@shards/avatar/avatar.component';
+import { ProjectComponent } from '@shards/project/project.component';
+import { EchartsComponent } from '@charts/echarts-wrapper/echarts-wrapper.component';
+import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
+import { ProgressBarComponent } from '@shards/progress-bar/progress-bar.component';
+import { MoneyPipe } from '@pipes/money.pipe';
+import { MoneyShortPipe } from '@pipes/mshort.pipe';
+import { WidgetOptionsComponent } from './widget-options/widget-options.component';
+import { EchartsCardComponent } from '@charts/echarts-card/echarts-card.component';
+import { EchartsRangeCardComponent } from '@charts/echarts-card/echarts-range-card.component';
+import { RouterModule } from '@angular/router';
+import { LoadingPipe } from '@pipes/loading.pipe';
+import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
+import { NgxEchartsDirective } from 'ngx-echarts';
+import { CompactItemDirective } from '@shards/ul-compact/CompactItemDirective';
+import { UlCompactComponent } from '@shards/ul-compact/ul-compact.component';
 
-const SHARED = [
-    NexusModule, 
-    MoneyShortPipe, 
-    ProgressBarComponent, 
-    CommonModule, 
-    WidgetOptionsComponent, 
-    MoneyPipe, 
-    NgbTooltipModule, 
-    ApxChartXComponent,
-    LineChartComponent,
-    LineChartRangeComponent,
-    UlCompactComponent,
-    RouterModule,
-    LoadingPipe,
-    EmptyStateComponent,
-    NgxEchartsDirective
-]
+const SHARED = [Nx, NComponent, AvatarComponent, ProjectComponent, MoneyShortPipe, ProgressBarComponent, CommonModule, WidgetOptionsComponent, MoneyPipe, NgbTooltipModule, EchartsComponent, EchartsCardComponent, EchartsRangeCardComponent, UlCompactComponent, CompactItemDirective, RouterModule, LoadingPipe, EmptyStateComponent, NgxEchartsDirective];
 @NgModule({
     imports: SHARED,
-    exports: SHARED
+    exports: SHARED,
 })
-export class WidgetsModule { }
+export class WidgetsModule {}

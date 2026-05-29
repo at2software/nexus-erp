@@ -1,0 +1,19 @@
+@let _data = data();
+
+@if (_data.length) {
+    <div class="header hstack gap-2">
+        <n>git</n>
+        <span class="flex-fill" i18n="@@i18n.widget-missing-git">missing git repository</span>
+        <i class="pointer" (click)="toggle('missingGit')">{{ isCollapsed('missingGit') ? 'expand_less' : 'expand_more' }}</i>
+    </div>
+    @if (!isCollapsed('missingGit')) {
+        <ul class="list-group">
+            @for (_ of _data; track _.id) {
+                <li class="list-group-item hstack gap-2 pointer" [nx]="_" [tables]="_data" [routerLink]="['/projects', _.id]">
+                    <avatar [object]="_"></avatar>
+                    <div class="flex-fill text-truncate">{{ _.name }}</div>
+                </li>
+            }
+        </ul>
+    }
+}

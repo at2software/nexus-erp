@@ -44,7 +44,8 @@ ok "Node ${NODE_VER}  /  npm ${NPM_VER}"
 
 (
     cd "$SCRIPT_DIR/frontend"
-    npm install --prefer-offline --legacy-peer-deps
+    rm -f package-lock.json
+    npm install --legacy-peer-deps
     ok "Dependencies installed"
 
     node scripts/generate-model-registry.js

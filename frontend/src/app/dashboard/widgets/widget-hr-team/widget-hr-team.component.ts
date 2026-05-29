@@ -1,35 +1,29 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BaseWidgetComponent } from '../base.widget.component';
-import { StatsService } from 'src/models/stats-service';
-import { User } from 'src/models/user/user.model';
+import { StatsService } from '@models/stats-service';
+import { User } from '@models/user/user.model';
 import { WidgetsModule } from '../widgets.module';
-import { ShortPipe } from 'src/pipes/short.pipe';
-import { CommonModule } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { timer } from 'rxjs';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'widget-hr-team',
     templateUrl: './widget-hr-team.component.html',
     styleUrls: ['./widget-hr-team.component.scss', './../base.widget.component.scss'],
     standalone: true,
-    imports: [WidgetsModule, ShortPipe, CommonModule]
+    imports: [WidgetsModule, DatePipe],
 })
-export class WidgetHrTeamComponent extends BaseWidgetComponent implements OnInit {
+export class WidgetHrTeamComponent extends BaseWidgetComponent {
+    #stats = inject(StatsService);
+    data = signal<User[]>([]);
 
-    defaultOptions = () => ({})
+    defaultOptions = () => ({});
 
-    stats = inject(StatsService)
-    data: User[] = []
-
-    constructor() {
-        super()
-        timer(0, 60000).pipe(takeUntilDestroyed()).subscribe(() => this.reload())
-    }
+    _timer = timer(60000, 60000).pipe(takeUntilDestroyed()).subscribe(() => this.reload());
 
     reload(): void {
-        this.stats.showTeamStatus().subscribe((data: User[]) => {
-            this.data = data
-        })
+        this.#stats.showTeamStatus().subscribe((data: User[]) => this.data.set(data));
     }
 }

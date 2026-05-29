@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Invoice } from '@models/invoice/invoice.model';
 import moment from 'moment';
 import { deepMerge } from '@constants/deepMerge';
@@ -11,53 +11,47 @@ import { InvoiceReminder } from '@models/invoice/invoice-reminder.model';
 import { FileService } from '@models/file/file.service';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
-import { CommonModule } from '@angular/common';
-import { NexusModule } from '@app/nx/nexus.module';
+import { DatePipe } from '@angular/common';
+import { NComponent } from '@shards/n/n.component';
 import { InvoicePrepare } from '@app/invoices/_shards/invoice-prepare/invoice-prepare';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { MoneyPipe } from '../../../../pipes/money.pipe';
-import { MoneyShortPipe } from '../../../../pipes/mshort.pipe';
+import { MoneyPipe } from '@pipes/money.pipe';
+import { MoneyShortPipe } from '@pipes/mshort.pipe';
 import { ModalInvoiceAddInstalmentComponent } from '@app/_modals/modal-invoice-add-instalment/modal-invoice-add-instalment.component';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'invoice-dashboard',
     templateUrl: './invoice-dashboard.component.html',
     standalone: true,
-    imports: [ToolbarComponent, ScrollbarComponent, CommonModule, NexusModule, InvoicePrepare, NgbTooltipModule, MoneyPipe, MoneyShortPipe]
+    imports: [ToolbarComponent, ScrollbarComponent, DatePipe, NComponent, InvoicePrepare, NgbTooltipModule, MoneyPipe, MoneyShortPipe],
 })
-export class InvoiceDashboardComponent implements OnInit  {
+export class InvoiceDashboardComponent {
+    readonly parent = inject(InvoiceDetailGuard);
+    readonly invoice = this.parent.object;
+    readonly options = computed(() => {
+        const inv = this.invoice();
+        if (!inv) return InvoiceDetailChartOptions;
+        const paid_at = inv.paid_at ? inv.time_paid() : moment();
+        return deepMerge(InvoiceDetailChartOptions, {
+            series: [
+                { name: $localize`:@@i18n.invoices.created:Created`, data: [[inv.momentCreated().unix() * 1000, 1]], color: Color.fromVar('orange').toHexString() },
+                { name: $localize`:@@i18n.invoices.due:Due`, data: [[inv.time_due().unix() * 1000, 2]], color: Color.fromVar('red').toHexString() },
+                ...(inv.paid_at ? [{ name: $localize`:@@i18n.invoices.paid:Paid`, data: [[inv.time_paid().unix() * 1000, 3]], color: Color.fromVar('green').toHexString() }] : []),
+            ],
+            xaxis: { min: inv.momentCreated().unix() * 1000, max: paid_at.unix() * 1000 },
+        });
+    });
 
-    invoice: Invoice
-    options: any = InvoiceDetailChartOptions
-
-    parent = inject(InvoiceDetailGuard)
-    #modalService = inject(ModalBaseService)
-    #fileService = inject(FileService)
-
-    ngOnInit() {
-        this.parent.onChange.subscribe(() => {
-            this.invoice = this.parent.current
-            const paid_at = this.parent.current.paid_at ? this.parent.current.time_paid() : moment()
-            const options = {
-                series: [
-                    { name: 'Created', data: [[this.parent.current.time_created().unix() * 1000, 1]], color: Color.fromVar('orange').toHexString() },
-                    { name: 'Due', data: [[this.parent.current.time_due().unix() * 1000, 2]], color: Color.fromVar('red').toHexString() },
-                ],
-                xaxis: {
-                    min: this.parent.current.time_created().unix() * 1000,
-                    max: paid_at.unix() * 1000
-                },
-            }
-            if (this.parent.current.paid_at) options.series.push({ name: 'Paid', data: [[this.parent.current.time_paid().unix() * 1000, 3]], color: Color.fromVar('green').toHexString() })
-            this.options = deepMerge(this.options, options)
-        })
-    }
+    #modalService = inject(ModalBaseService);
+    #fileService = inject(FileService);
 
     onInstalmentButtonClicked() {
-        this.#modalService.open(ModalInvoiceAddInstalmentComponent, this.parent.current).then((item: InvoiceItem) => {
-            item.store().subscribe(() => this.parent.reload())
-        }).catch()
+        this.#modalService
+            .open(ModalInvoiceAddInstalmentComponent, this.invoice())
+            .then((item: InvoiceItem) => item.store().subscribe(() => this.parent.reload()))
+            .catch();
     }
-    openFile = (inv: Invoice | InvoiceReminder) => this.#fileService.show(inv)
 
+    openFile = (inv: Invoice | InvoiceReminder) => this.#fileService.show(inv);
 }

@@ -4,21 +4,13 @@
             <label for="i18n-textarea-input" class="form-label mb-0">{{ label() }}</label>
         }
         @if (!isLocalized) {
-            <button
-                type="button"
-                class="btn btn-sm btn-outline-primary"
-                (click)="localize()"
-            >
-                <i style="font-size: 1rem; vertical-align: middle;">translate</i>
+            <button type="button" class="btn btn-sm btn-outline-primary" (click)="localize()">
+                <i style="font-size: 1rem; vertical-align: middle">translate</i>
                 <span i18n="@@i18n.common.localize">localize</span>
             </button>
         }
         @if (isLocalized) {
-            <select
-                class="form-select form-select-sm w-auto"
-                [ngModel]="selectedLocaleKey"
-                (ngModelChange)="onLocaleChange($event)"
-            >
+            <select class="form-select form-select-sm w-auto" [ngModel]="selectedLocaleKey" (ngModelChange)="onLocaleChange($event)">
                 @for (variant of availableLocales; track variant.language + variant.formality) {
                     <option [value]="variant.language + '-' + variant.formality">
                         {{ variant.label }}
@@ -28,13 +20,7 @@
             </select>
         }
     </div>
-    <textarea
-        id="i18n-textarea-input"
-        class="form-control"
-        [(ngModel)]="textValue"
-        [placeholder]="placeholder()"
-        [rows]="rows()"
-    ></textarea>
+    <textarea id="i18n-textarea-input" class="form-control" [(ngModel)]="textValue" [placeholder]="placeholder()" [rows]="rows()"></textarea>
     @if (showPlaceholderInfo()) {
         <small class="text-muted">
             <span>

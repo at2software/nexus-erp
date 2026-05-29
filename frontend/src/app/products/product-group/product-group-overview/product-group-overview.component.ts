@@ -1,16 +1,17 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { switchMap } from 'rxjs';
-import { MoneyShortPipe } from 'src/pipes/mshort.pipe';
-import { LoadingPipe } from 'src/pipes/loading.pipe';
-import { ProductGroupService } from 'src/models/product/product-group.service';
-import { Company } from 'src/models/company/company.model';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { tracked } from '@constants/tracked';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { of } from 'rxjs';
+import { MoneyShortPipe } from '@pipes/mshort.pipe';
+import { LoadingPipe } from '@pipes/loading.pipe';
+import { ProductGroupService } from '@models/product/product-group.service';
+import { Company } from '@models/company/company.model';
 import { ProductGroupDetailGuard } from '../product-group-detail.guard';
-
 import { AutosaveDirective } from '@directives/autosave.directive';
 import { ColorPickerDirective } from 'ngx-color-picker';
 import { RteComponent } from '@shards/rte/rte.component';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
-import { NexusModule } from '@app/nx/nexus.module';
+import { Nx } from '@app/nx/nx.directive';
 import { FormsModule } from '@angular/forms';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 
@@ -19,27 +20,20 @@ import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
     templateUrl: './product-group-overview.component.html',
     styleUrls: ['./product-group-overview.component.scss'],
     standalone: true,
-    imports: [AutosaveDirective, FormsModule, ColorPickerDirective, RteComponent, AvatarComponent, NexusModule, NgbTooltipModule, MoneyShortPipe, LoadingPipe]
+    imports: [AutosaveDirective, FormsModule, ColorPickerDirective, RteComponent, AvatarComponent, Nx, AvatarComponent, NgbTooltipModule, MoneyShortPipe, LoadingPipe],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProductGroupOverviewComponent implements OnInit {
+export class ProductGroupOverviewComponent {
+    readonly parent = inject(ProductGroupDetailGuard);
+ readonly object = tracked(this.parent.object);
 
-    customers: Company[] = []
-    totalRevenue: number | null = null
-    totalCustomers = 0
-    parent = inject(ProductGroupDetailGuard)
-    #productGroupService = inject(ProductGroupService)
+    readonly #productGroupService = inject(ProductGroupService);
+    readonly #data = rxResource({
+        params: () => this.parent.object(),
+        stream: ({ params: group }) => group ? this.#productGroupService.indexCustomers(group) : of(null),
+    });
 
-    ngOnInit() {
-        this.parent.onChange.pipe(
-            switchMap(group => {
-                this.totalRevenue = null
-                this.customers = []
-                return this.#productGroupService.indexCustomers(group)
-            })
-        ).subscribe(data => {
-            this.customers = data.customers
-            this.totalRevenue = data.total_revenue
-            this.totalCustomers = data.total_customers
-        })
-    }
+    readonly customers = computed<Company[]>(() => this.#data.value()?.customers ?? []);
+    readonly totalRevenue = computed<number | null>(() => this.#data.value()?.total_revenue ?? null);
+    readonly totalCustomers = computed<number>(() => this.#data.value()?.total_customers ?? 0);
 }

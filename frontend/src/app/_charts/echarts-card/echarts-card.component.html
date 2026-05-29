@@ -1,0 +1,6 @@
+@let opts = chartOptions();
+@if (opts) {
+    <div echarts [options]="opts" [initOpts]="{ height: 100 }" (chartInit)="onChartInit($event)" style="height: 100px"></div>
+} @else {
+    <div class="chart-placeholder" [style.height.px]="100"></div>
+}

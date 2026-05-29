@@ -1,6 +1,6 @@
-import { Component } from '@angular/core';
-import { Milestone } from 'src/models/milestones/milestone.model';
-import { Project } from 'src/models/project/project.model';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { Milestone } from '@models/milestones/milestone.model';
+import { Project } from '@models/project/project.model';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { MilestonePopupComponent } from '@app/projects/_shards/custom-gantt/milestone-popup/milestone-popup.component';
 
@@ -9,9 +9,8 @@ import { MilestonePopupComponent } from '@app/projects/_shards/custom-gantt/mile
     templateUrl: './modal-edit-milestone.component.html',
     styleUrls: ['./modal-edit-milestone.component.scss'],
     standalone: true,
-    imports: [
-        MilestonePopupComponent
-    ]
+    imports: [MilestonePopupComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ModalEditMilestoneComponent extends ModalBaseComponent<Milestone> {
     milestone!: Milestone;

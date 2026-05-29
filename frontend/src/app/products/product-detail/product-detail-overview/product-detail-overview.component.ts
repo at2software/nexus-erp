@@ -1,66 +1,65 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { switchMap } from 'rxjs';
-import { MoneyShortPipe } from 'src/pipes/mshort.pipe';
-import { LoadingPipe } from 'src/pipes/loading.pipe';
-import { GlobalService } from 'src/models/global.service';
-import { ProductService } from 'src/models/product/product.service';
-import { Company } from 'src/models/company/company.model';
-import { InvoiceItem } from 'src/models/invoice/invoice-item.model';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { tracked } from '@constants/tracked';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { of } from 'rxjs';
+import { MoneyShortPipe } from '@pipes/mshort.pipe';
+import { LoadingPipe } from '@pipes/loading.pipe';
+import { GlobalService } from '@models/global.service';
+import { ProductService } from '@models/product/product.service';
+import { Company } from '@models/company/company.model';
+import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { ProductDetailGuard } from '../product-details.guard';
-
-import { NgClass } from '@angular/common';
 import { AutosaveDirective } from '@directives/autosave.directive';
 import { RteComponent } from '@shards/rte/rte.component';
+import { Nx } from '@app/nx/nx.directive';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
-import { NexusModule } from '@app/nx/nexus.module';
-import { AffixInputDirective } from '@directives/affix-input.directive';
 import { FormsModule } from '@angular/forms';
 import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { UlCompactComponent } from "@shards/ul-compact/ul-compact.component";
+import { CompactItemDirective } from '@shards/ul-compact/CompactItemDirective';
+import { UlCompactComponent } from '@shards/ul-compact/ul-compact.component';
 
 @Component({
     selector: 'app-product-detail-overview',
     templateUrl: './product-detail-overview.component.html',
     styleUrls: ['./product-detail-overview.component.scss'],
     standalone: true,
-    imports: [NgClass, AutosaveDirective, FormsModule, RteComponent, AvatarComponent, NexusModule, AffixInputDirective, NgbDropdownModule, NgbTooltipModule, MoneyShortPipe, LoadingPipe, UlCompactComponent]
+    imports: [AutosaveDirective, FormsModule, RteComponent, Nx, AvatarComponent, NgbDropdownModule, NgbTooltipModule, MoneyShortPipe, LoadingPipe, UlCompactComponent, CompactItemDirective],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProductDetailOverviewComponent implements OnInit {
+export class ProductDetailOverviewComponent {
+    readonly parent = inject(ProductDetailGuard);
+ readonly object = tracked(this.parent.object);
+    readonly global = inject(GlobalService);
 
-    customers: Company[] = []
-    totalRevenue: number | null = null
-    totalCustomers = 0
-    parent = inject(ProductDetailGuard)
-    global = inject(GlobalService)
-    #productService = inject(ProductService)
+    readonly #productService = inject(ProductService);
+    readonly #customersData = rxResource({
+        params: () => this.parent.object(),
+        stream: ({ params: product }) => product ? this.#productService.indexCustomers(product) : of(null),
+    });
 
-    item? :InvoiceItem;
-
-    ngOnInit() {
-        this.item = this.parent.current.getInvoiceItem()?.getClone();
-        this.parent.onChange.pipe(
-            switchMap(product => {
-                this.totalRevenue = null
-                this.customers = []
-                this.item = product.getInvoiceItem()?.getClone()
-                return this.#productService.indexCustomers(product)
-            })
-        ).subscribe(data => {
-            this.customers = data.customers
-            this.totalRevenue = data.total_revenue
-            this.totalCustomers = data.total_customers
-        })
-    }
-
-    setTimeBased = (_: number) => this.parent.current.update({ 'time_based': _ }).subscribe()
-    setItemType = (type: number) => { this.item!.type = type; this.item!.update({ type }).subscribe() }
-
-    getCurrentPriceSourceText = (): string => {
-        switch (this.parent.current.time_based) {
-            case 0: return $localize`:@@i18n.common.individualInvoiceItem:individual invoice item`
-            case 1: return $localize`:@@i18n.common.hourly:hourly`
-            case 8: return $localize`:@@i18n.common.daily:daily`
-            default: return ''
+    readonly item = signal<InvoiceItem | undefined>(undefined);
+    readonly customers = computed<Company[]>(() => this.#customersData.value()?.customers ?? []);
+    readonly totalRevenue = computed<number | null>(() => this.#customersData.value()?.total_revenue ?? null);
+    readonly totalCustomers = computed<number>(() => this.#customersData.value()?.total_customers ?? 0);
+    readonly currentPriceSourceText = computed(() => {
+        switch (this.parent.object()?.time_based) {
+            case 0: return $localize`:@@i18n.common.individualInvoiceItem:individual invoice item`;
+            case 1: return $localize`:@@i18n.common.hourly:hourly`;
+            case 8: return $localize`:@@i18n.common.daily:daily`;
+            default: return '';
         }
+    });
+
+    constructor() {
+        effect(() => this.item.set(this.parent.object()?.getInvoiceItem()?.getClone()));
     }
+
+    readonly setTimeBased = (value: number) => this.parent.object().update({ time_based: value }).subscribe();
+
+    readonly setItemType = (type: number) => {
+        const item = this.item();
+        if (!item) return;
+        item.type = type;
+        item.update({ type }).subscribe();
+    };
 }

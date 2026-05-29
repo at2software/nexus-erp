@@ -8,33 +8,25 @@
                 <div class="mb-3">
                     <span class="form-label" i18n="@@i18n.debrief.selectCanonicalTitle">select canonical title</span>
                     <div class="list-group">
-                        @for (item of items; track item.id) {
-                            <button type="button"
-                                class="list-group-item list-group-item-action"
-                                [class.active]="!useCustom && selectedTitle === item.title"
-                                (click)="selectTitle(item.title)">
+                        @for (item of items(); track item.id) {
+                            <button type="button" class="list-group-item list-group-item-action" [class.active]="!useCustom() && selectedTitle() === item.title" (click)="selectTitle(item.title)">
                                 {{ item.title }}
                             </button>
                         }
-                        <button type="button"
-                            class="list-group-item list-group-item-action"
-                            [class.active]="useCustom"
-                            (click)="enableCustom()">
+                        <button type="button" class="list-group-item list-group-item-action" [class.active]="useCustom()" (click)="enableCustom()">
                             <em i18n="@@i18n.common.enterCustomTitle">enter custom title...</em>
                         </button>
                     </div>
                 </div>
-                @if (useCustom) {
+                @if (useCustom()) {
                     <div class="mb-3">
-                        <input #customInput type="text" class="form-control" [(ngModel)]="customTitle"
-                            placeholder="custom title" i18n-placeholder="@@i18n.debrief.customTitle">
+                        <input #customInput type="text" class="form-control" [ngModel]="customTitle()" (ngModelChange)="customTitle.set($event)" placeholder="custom title" i18n-placeholder="@@i18n.debrief.customTitle" />
                     </div>
                 }
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn" (click)="decline()" i18n="@@i18n.common.cancel">cancel</button>
-                <button type="button" class="btn btn-primary" (click)="accept()" hotkey="CTRL+ENTER"
-                    [disabled]="!finalTitle.trim()" i18n="@@i18n.debrief.combineItems">combine</button>
+                <button type="button" class="btn btn-primary" (click)="accept()" hotkey="CTRL+ENTER" [disabled]="!finalTitle().trim()" i18n="@@i18n.debrief.combineItems">combine</button>
             </div>
         </div>
     </div>

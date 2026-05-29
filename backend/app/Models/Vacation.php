@@ -10,14 +10,17 @@ class Vacation extends BaseModel {
     use HasFactory;
     use SoftDeletes;
 
-    protected $casts = [
-        'approved_at' => 'date',
-        'started_at'  => 'date',
-        'ended_at'    => 'date',
-        'amount'      => 'double',
-        'hpd'         => 'integer',
-        'days'        => 'double',
-    ];
+    protected function casts(): array {
+        return [
+            'approved_at' => 'date',
+            'started_at'  => 'date',
+            'ended_at'    => 'date',
+            'amount'      => 'double',
+            'hpd'         => 'integer',
+            'days'        => 'double',
+        ];
+    }
+
     protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
     protected $fillable = ['amount', 'started_at', 'log', 'ended_at', 'vacation_grant_id', 'comment', 'state', 'approved_at', 'approved_by_id'];
 

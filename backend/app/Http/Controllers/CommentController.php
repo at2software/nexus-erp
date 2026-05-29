@@ -26,8 +26,8 @@ class CommentController extends Controller {
         $new->save();
         return $new->fresh();
     }
-    public function update(Comment $comment) {
-        return $comment->applyAndSaveRequest();
+    public function update(Request $request, Comment $comment) {
+        return $comment->applyAndSave($request);
     }
     public function destroy(Comment $comment) {
         return $comment->delete();

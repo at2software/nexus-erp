@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class MarketingProspectActivity extends BaseModel {
     protected $table    = 'marketing_prospect_activities';
@@ -15,12 +16,16 @@ class MarketingProspectActivity extends BaseModel {
         'status',
         'notes',
         'performance_value',
+        'bumps',
     ];
-    protected $casts = [
-        'scheduled_at'      => 'datetime',
-        'completed_at'      => 'datetime',
-        'performance_value' => 'decimal:2',
-    ];
+
+    protected function casts(): array {
+        return [
+            'scheduled_at'      => 'datetime',
+            'completed_at'      => 'datetime',
+            'performance_value' => 'decimal:2',
+        ];
+    }
 
     // Relationships
     public function marketingProspect(): BelongsTo {
@@ -101,12 +106,36 @@ class MarketingProspectActivity extends BaseModel {
             'notes'  => $reason,
         ]);
     }
+    public function bump(): void {
+        $this->increment('bumps');
+    }
     public function reschedule(Carbon $newDate): bool {
         if ($this->status !== 'pending') {
             return false;
         }
         return $this->update(['scheduled_at' => $newDate]);
     }
+
+    /**
+     * Shift all succeeding pending activities for the same prospect
+     * based on how early/late this activity was completed.
+     */
+    public function shiftSucceedingActivities(): void {
+        $now        = now();
+        $daysOffset = $now->startOfDay()->diffInDays($this->scheduled_at->startOfDay());
+
+        $daysDifference = $now->startOfDay() > $this->scheduled_at->startOfDay()
+            ? -$daysOffset
+            : $daysOffset;
+
+        if ($daysDifference != 0) {
+            static::where('marketing_prospect_id', $this->marketing_prospect_id)
+                ->where('status', 'pending')
+                ->where('scheduled_at', '>', $this->scheduled_at)
+                ->update(['scheduled_at' => DB::raw("DATE_ADD(scheduled_at, INTERVAL {$daysDifference} DAY)")]);
+        }
+    }
+
     public function getDaysUntilDue(): int {
         return now()->diffInDays($this->scheduled_at, false);
     }

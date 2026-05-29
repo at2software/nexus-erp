@@ -1,4 +1,4 @@
-﻿import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { MarketingService } from '@models/marketing/marketing.service';
@@ -9,149 +9,178 @@ import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { forkJoin } from 'rxjs';
 import { SankeyChartComponent, SankeyData } from '@charts/sankey-chart/sankey-chart.component';
 import { ChartProgressComponent } from '@charts/chart-progress/chart-progress.component';
-import { CommonModule } from '@angular/common';
+
 import { GlobalService } from '@models/global.service';
 import { LeadSourceService } from '@models/project/lead_source.service';
 import { LeadSource } from '@models/project/lead_source.model';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { SpinnerComponent } from '@shards/spinner/spinner.component';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'marketing-dashboard',
     templateUrl: './marketing-dashboard.component.html',
     styleUrls: ['./marketing-dashboard.component.scss'],
     standalone: true,
-    imports: [NgxDaterangepickerMd, FormsModule, NgbTooltipModule, SankeyChartComponent, ChartProgressComponent, CommonModule]
+    imports: [NgxDaterangepickerMd, FormsModule, NgbTooltipModule, SankeyChartComponent, ChartProgressComponent, SpinnerComponent],
 })
 export class MarketingDashboardComponent implements OnInit {
-
     #destroyRef = inject(DestroyRef);
 
     funnelMode: 'count' | 'money' = 'count';
-    funnelData?: SankeyData;
-    creation_span?: { startDate: any, endDate: any }
+    funnelData = signal<SankeyData | undefined>(undefined);
+    loadingFunnel = signal(false);
+    creation_span?: { startDate: any; endDate: any };
 
     presetRanges: any = {
         'Last 12 Months': [moment().subtract(12, 'months').startOf('month'), moment().endOf('month')],
         'Last 36 Months': [moment().subtract(36, 'months').startOf('month'), moment().endOf('month')],
-        'Last Year'     : [moment().subtract(1, 'year').startOf('year'), moment().subtract(1, 'year').endOf('year')],
-        'This Year'     : [moment().startOf('year'), moment().endOf('year')],
-        'Last 3 Years'  : [moment().subtract(3, 'years').startOf('year'), moment().endOf('year')],
-        'Last 5 Years'  : [moment().subtract(5, 'years').startOf('year'), moment().endOf('year')]
-    }
-    service          = inject(MarketingService)
-    router           = inject(Router)
-    #global          = inject(GlobalService)
-    #leadSourceSvc   = inject(LeadSourceService)
-    #input           = inject(InputModalService)
+        'Last Year': [moment().subtract(1, 'year').startOf('year'), moment().subtract(1, 'year').endOf('year')],
+        'This Year': [moment().startOf('year'), moment().endOf('year')],
+        'Last 3 Years': [moment().subtract(3, 'years').startOf('year'), moment().endOf('year')],
+        'Last 5 Years': [moment().subtract(5, 'years').startOf('year'), moment().endOf('year')],
+    };
+    service = inject(MarketingService);
+    router = inject(Router);
+    #global = inject(GlobalService);
+    #leadSourceSvc = inject(LeadSourceService);
+    #input = inject(InputModalService);
 
     // Assets properties
-    assetCategories: any[] = []
-    loadingAssets = false
+    assetCategories: any[] = [];
+    loadingAssets = signal(false);
 
     // Overview stats
     stats = {
         initiatives: { total: 0, active: 0 },
         prospects: { total: 0, new: 0, engaged: 0, converted: 0, unresponsive: 0, disqualified: 0, on_hold: 0 },
-        activities: { pending: 0, overdue: 0 }
+        activities: { pending: 0, overdue: 0 },
     };
 
     // Extended dashboard data
     dashboardStats: any = null;
-    loadingDashboard = true;
+    loadingDashboard = signal(true);
     remarketing: any = null;
-    loadingRemarketing = true;
+    loadingRemarketing = signal(true);
     kpiMetrics: any[] = [];
-    loadingMetrics = true;
+    loadingMetrics = signal(true);
     activitySchedule: any[] = [];
 
     ngOnInit() {
-        this.reload()
-        this.loadAssetStats()
-        this.loadOverviewStats()
-        this.loadDashboardStats()
-        this.loadRemarketing()
-        this.loadKpiMetrics()
+        this.reload();
+        this.loadAssetStats();
+        this.loadOverviewStats();
+        this.loadDashboardStats();
+        this.loadRemarketing();
+        this.loadKpiMetrics();
     }
 
     toggleFunnelMode() {
         this.funnelMode = this.funnelMode === 'count' ? 'money' : 'count';
     }
-    reload() { this.reloadFunnel() }
+    reload() {
+        this.reloadFunnel();
+    }
     getFilters() {
-        const filters: any = {}
+        const filters: any = {};
         if (this.creation_span?.startDate && this.creation_span?.endDate) {
-            filters.created_after  = this.creation_span.startDate.format('DD.MM.YYYY')
-            filters.created_before = this.creation_span.endDate.add(1, 'day').format('DD.MM.YYYY')
+            filters.created_after = this.creation_span.startDate.format('DD.MM.YYYY');
+            filters.created_before = this.creation_span.endDate.add(1, 'day').format('DD.MM.YYYY');
         }
-        return filters
+        return filters;
     }
     reloadFunnel() {
-        this.service.getFunnel(this.getFilters()).subscribe((response: any) => {
-            this.funnelData = response;
+        this.funnelData.set(undefined);
+        this.loadingFunnel.set(true);
+        this.service.getFunnel(this.getFilters()).subscribe({
+            next: (response: any) => {
+                this.funnelData.set(response);
+                this.loadingFunnel.set(false);
+            },
+            error: () => this.loadingFunnel.set(false),
         });
     }
-    clearSelection   = () => this.creation_span = undefined
-    onCreationUpdated = () => this.reload()
+    clearSelection = () => (this.creation_span = undefined);
+    onCreationUpdated = () => this.reload();
 
     loadOverviewStats() {
         forkJoin({
             initiatives: this.service.indexInitiatives(),
-            prospects:   this.service.showProspectStats()
-        }).pipe(takeUntilDestroyed(this.#destroyRef))
-        .subscribe({
-            next: (response: any) => {
-                const initiatives = response.initiatives.data || response.initiatives;
-                this.stats.initiatives = {
-                    total:  initiatives.length,
-                    active: initiatives.filter((i: any) => i.status === 'active').length
-                };
-                const p = response.prospects;
-                this.stats.prospects = {
-                    total:        p.total || 0,
-                    new:          p.by_status?.new || 0,
-                    engaged:      p.by_status?.engaged || 0,
-                    converted:    p.by_status?.converted || 0,
-                    unresponsive: p.by_status?.unresponsive || 0,
-                    disqualified: p.by_status?.disqualified || 0,
-                    on_hold:      p.by_status?.on_hold || 0
-                };
-                this.stats.activities = {
-                    pending: p.activities_pending || 0,
-                    overdue: p.activities_overdue || 0
-                };
-            },
-            error: (err) => console.error('Error loading overview stats:', err)
-        });
+            prospects: this.service.showProspectStats(),
+        })
+            .pipe(takeUntilDestroyed(this.#destroyRef))
+            .subscribe({
+                next: (response: any) => {
+                    const initiatives = response.initiatives.data || response.initiatives;
+                    this.stats.initiatives = {
+                        total: initiatives.length,
+                        active: initiatives.filter((i: any) => i.status === 'active').length,
+                    };
+                    const p = response.prospects;
+                    this.stats.prospects = {
+                        total: p.total || 0,
+                        new: p.by_status?.new || 0,
+                        engaged: p.by_status?.engaged || 0,
+                        converted: p.by_status?.converted || 0,
+                        unresponsive: p.by_status?.unresponsive || 0,
+                        disqualified: p.by_status?.disqualified || 0,
+                        on_hold: p.by_status?.on_hold || 0,
+                    };
+                    this.stats.activities = {
+                        pending: p.activities_pending || 0,
+                        overdue: p.activities_overdue || 0,
+                    };
+                },
+                error: (err) => console.error('Error loading overview stats:', err),
+            });
     }
 
     loadDashboardStats() {
-        this.loadingDashboard = true;
-        this.service.getDashboardStats().pipe(takeUntilDestroyed(this.#destroyRef))
+        this.loadingDashboard.set(true);
+        this.service
+            .getDashboardStats()
+            .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe({
                 next: (data: any) => {
                     this.dashboardStats = data;
                     this.buildActivitySchedule();
-                    this.loadingDashboard = false;
+                    this.loadingDashboard.set(false);
                 },
-                error: () => { this.loadingDashboard = false; }
+                error: () => {
+                    this.loadingDashboard.set(false);
+                },
             });
     }
 
     loadRemarketing() {
-        this.loadingRemarketing = true;
-        this.service.getRemarketing().pipe(takeUntilDestroyed(this.#destroyRef))
+        this.loadingRemarketing.set(true);
+        this.service
+            .getRemarketing()
+            .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe({
-                next:  (data: any) => { this.remarketing = data; this.loadingRemarketing = false; },
-                error: () => { this.loadingRemarketing = false; }
+                next: (data: any) => {
+                    this.remarketing = data;
+                    this.loadingRemarketing.set(false);
+                },
+                error: () => {
+                    this.loadingRemarketing.set(false);
+                },
             });
     }
 
     loadKpiMetrics() {
-        this.loadingMetrics = true;
-        this.service.indexMetrics().pipe(takeUntilDestroyed(this.#destroyRef))
+        this.loadingMetrics.set(true);
+        this.service
+            .indexMetrics()
+            .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe({
-                next:  (data: any) => { this.kpiMetrics = data; this.loadingMetrics = false; },
-                error: () => { this.loadingMetrics = false; }
+                next: (data: any) => {
+                    this.kpiMetrics = data;
+                    this.loadingMetrics.set(false);
+                },
+                error: () => {
+                    this.loadingMetrics.set(false);
+                },
             });
     }
 
@@ -166,15 +195,27 @@ export class MarketingDashboardComponent implements OnInit {
             const dateStr = d.toISOString().split('T')[0];
             const entry = (this.dashboardStats?.heatmap || []).find((h: any) => h.date === dateStr);
             schedule.push({
-                day:       i === 0 ? 'Today' : dayNames[d.getDay()],
-                date:      dateStr,
-                total:     entry?.total || 0,
+                day: i === 0 ? 'Today' : dayNames[d.getDay()],
+                date: dateStr,
+                total: entry?.total || 0,
                 completed: entry?.completed || 0,
-                pending:   entry?.pending || 0,
-                isToday:   i === 0
+                pending: entry?.pending || 0,
+                isToday: i === 0,
             });
         }
         this.activitySchedule = schedule;
+    }
+
+    get agingBars() {
+        if (!this.dashboardStats?.aging) return [];
+        const { fresh = 0, warm = 0, cooling = 0, stale = 0 } = this.dashboardStats.aging;
+        const max = Math.max(fresh, warm, cooling, stale) || 1;
+        return [
+            { label: 'fresh', value: fresh, h: Math.round((fresh / max) * 52) },
+            { label: 'warm', value: warm, h: Math.round((warm / max) * 52) },
+            { label: 'cooling', value: cooling, h: Math.round((cooling / max) * 52) },
+            { label: 'stale', value: stale, h: Math.round((stale / max) * 52) },
+        ];
     }
 
     get conversionRate(): number {
@@ -184,42 +225,58 @@ export class MarketingDashboardComponent implements OnInit {
     }
 
     onNewLeadSource() {
-        this.#input.open('Please enter the name of the new source').then(response => {
+        this.#input.open('Please enter the name of the new source').then((response) => {
             if (response) {
-                this.#leadSourceSvc.store(response.text).subscribe(_ => this.#global.lead_sources.push(LeadSource.fromJson(_)))
+                this.#leadSourceSvc.store(response.text).subscribe((_) => this.#global.lead_sources.push(LeadSource.fromJson(_)));
             }
-        })
+        });
     }
 
-    navigateToSection(route: string)      { this.router.navigate(['/marketing', route]); }
-    navigateToInitiative(id: number)      { this.router.navigate(['/marketing/initiatives', id]); }
-    navigateToWorkflow(id: number)        { this.router.navigate(['/marketing/workflows', id]); }
-    navigateToRemarketing()               { this.router.navigate(['/marketing/remarketing']); }
+    navigateToSection(route: string) {
+        this.router.navigate(['/marketing', route]);
+    }
+    navigateToInitiative(id: number) {
+        this.router.navigate(['/marketing/initiatives', id]);
+    }
+    navigateToWorkflow(id: number) {
+        this.router.navigate(['/marketing/workflows', id]);
+    }
+    navigateToRemarketing() {
+        this.router.navigate(['/marketing/remarketing']);
+    }
+    navigateToMemberProspects(userId: number) {
+        const existing = JSON.parse(localStorage.getItem('marketing-prospects-filters') || '{}');
+        localStorage.setItem('marketing-prospects-filters', JSON.stringify({ ...existing, userFilter: String(userId) }));
+        this.router.navigate(['/marketing/prospects']);
+    }
 
     loadAssetStats() {
-        this.loadingAssets = true
-        this.service.indexMarketingAssets('', '', '').subscribe((assets: any) => {
-            const defaultCategories = [
-                { name: 'Brand Assets',    icon: 'branding_watermark', color: 'primary' },
-                { name: 'Social Media',    icon: 'share',              color: 'info' },
-                { name: 'Email Templates', icon: 'email',              color: 'success' },
-                { name: 'Presentations',   icon: 'slideshow',          color: 'warning' },
-                { name: 'Print Materials', icon: 'print',              color: 'secondary' },
-                { name: 'Video Content',   icon: 'videocam',           color: 'danger' },
-                { name: 'Documents',       icon: 'description',        color: 'dark' }
-            ]
-            const categoryCounts: Record<string, number> = {}
-            assets.forEach((asset: any) => {
-                if (asset.category) categoryCounts[asset.category] = (categoryCounts[asset.category] || 0) + 1
-            })
-            this.assetCategories = defaultCategories
-                .map(c => ({ ...c, count: categoryCounts[c.name] || 0 }))
-                .filter(c => c.count > 0)
-            this.loadingAssets = false
-        }, () => { this.loadingAssets = false })
+        this.loadingAssets.set(true);
+        this.service.indexMarketingAssets('', '', '').subscribe(
+            (assets: any) => {
+                const defaultCategories = [
+                    { name: 'Brand Assets', icon: 'branding_watermark', color: 'primary' },
+                    { name: 'Social Media', icon: 'share', color: 'info' },
+                    { name: 'Email Templates', icon: 'email', color: 'success' },
+                    { name: 'Presentations', icon: 'slideshow', color: 'warning' },
+                    { name: 'Print Materials', icon: 'print', color: 'secondary' },
+                    { name: 'Video Content', icon: 'videocam', color: 'danger' },
+                    { name: 'Documents', icon: 'description', color: 'dark' },
+                ];
+                const categoryCounts: Record<string, number> = {};
+                assets.forEach((asset: any) => {
+                    if (asset.category) categoryCounts[asset.category] = (categoryCounts[asset.category] || 0) + 1;
+                });
+                this.assetCategories = defaultCategories.map((c) => ({ ...c, count: categoryCounts[c.name] || 0 })).filter((c) => c.count > 0);
+                this.loadingAssets.set(false);
+            },
+            () => {
+                this.loadingAssets.set(false);
+            },
+        );
     }
 
     navigateToAssets(categoryName: string) {
-        this.router.navigate(['/marketing/assets', encodeURIComponent(categoryName)])
+        this.router.navigate(['/marketing/assets', encodeURIComponent(categoryName)]);
     }
 }

@@ -9242,5 +9242,1174 @@
         <target>Kontextsensitive Objekte unterstützen Mehrfachauswahl, genau wie im Windows Explorer. Verwenden Sie Strg+Klick, um Elemente zur Auswahl hinzuzufügen, und Umschalt+Klick, um einen Bereich bis zu diesem Element auszuwählen.</target>
       </segment>
     </unit>
+    <unit id="i18n.common.finances">
+      <segment>
+        <source>Financial</source>
+        <target>Finanzen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.calendar.addEntry">
+      <segment>
+        <source>Add calendar entry</source>
+        <target>Kalendereintrag hinzufügen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.calendar.confirmDeleteItem">
+      <segment>
+        <source>Do you really want to delete this calendar item?</source>
+        <target>Wollen Sie diesen Kalendereintrag wirklich löschen?</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.calendar.editEntry">
+      <segment>
+        <source>Edit calendar entry</source>
+        <target>Kalendereintrag bearbeiten</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.addDiscount">
+      <segment>
+        <source>add discount</source>
+        <target>Rabatt hinzufügen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.branch">
+      <segment>
+        <source>branch</source>
+        <target>Branch</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.changeCategory">
+      <segment>
+        <source>change category</source>
+        <target>Kategorie ändern</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.check">
+      <segment>
+        <source>check</source>
+        <target>Prüfen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.close">
+      <segment>
+        <source>Close</source>
+        <target>Schließen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.combine">
+      <segment>
+        <source>combine</source>
+        <target>Kombinieren</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.custom">
+      <segment>
+        <source>custom</source>
+        <target>benutzerdefiniert</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.downpayment">
+      <segment>
+        <source>downpayment</source>
+        <target>Anzahlung</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.enterCustomTitle">
+      <segment>
+        <source>enter custom title...</source>
+        <target>Benutzerdefinierten Titel eingeben...</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.financial">
+      <segment>
+        <source>financial</source>
+        <target>Finanzen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.optional">
+      <segment>
+        <source>(optional)</source>
+        <target>(optional)</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.percentage">
+      <segment>
+        <source>percentage</source>
+        <target>Prozentsatz</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.progress">
+      <segment>
+        <source>progress</source>
+        <target>Fortschritt</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.projectId">
+      <segment>
+        <source>project ID</source>
+        <target>Projekt-ID</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.reallyDeleteThisExpenseCategory">
+      <segment>
+        <source>really delete this expense category?</source>
+        <target>Diese Ausgabenkategorie wirklich löschen?</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.rename">
+      <segment>
+        <source>rename</source>
+        <target>Umbenennen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.reopen">
+      <segment>
+        <source>reopen</source>
+        <target>Erneut öffnen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.unit">
+      <segment>
+        <source>unit</source>
+        <target>Einheit</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.view">
+      <segment>
+        <source>view</source>
+        <target>Ansicht</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.common.waiting">
+      <segment>
+        <source>Waiting…</source>
+        <target>Warten…</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.dashboard.confirmDeleteDashboard">
+      <segment>
+        <source>Do you really want to delete this dashboard?</source>
+        <target>Wollen Sie dieses Dashboard wirklich löschen?</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.dashboard.confirmDeleteWidget">
+      <segment>
+        <source>Do you really want to delete this widget?</source>
+        <target>Wollen Sie dieses Widget wirklich löschen?</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.dashboard.growthHighRevenue">
+      <segment>
+        <source>Growth High Revenue</source>
+        <target>Wachstum hoher Umsatz</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.dashboard.growthLowRevenue">
+      <segment>
+        <source>Growth Low Revenue</source>
+        <target>Wachstum niedriger Umsatz</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.dashboard.highRevenue">
+      <segment>
+        <source>High Revenue (≥ Avg Cost)</source>
+        <target>Hoher Umsatz (≥ Durchschnittskosten)</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.dashboard.lowRevenue">
+      <segment>
+        <source>Low Revenue (&lt; Avg Cost)</source>
+        <target>Niedriger Umsatz (&lt; Durchschnittskosten)</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.dashboard.missingVsLastYear">
+      <segment>
+        <source>Missing vs Last Year</source>
+        <target>Fehlend vs. Vorjahr</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.dashboard.monthlyCost">
+      <segment>
+        <source>Monthly Cost</source>
+        <target>Monatliche Kosten</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.debrief.aiError">
+      <segment>
+        <source>AI request failed</source>
+        <target>KI-Anfrage fehlgeschlagen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.debrief.aiParseError">
+      <segment>
+        <source>Could not parse AI response</source>
+        <target>KI-Antwort konnte nicht verarbeitet werden</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.debrief.combineItems">
+      <segment>
+        <source>combine items</source>
+        <target>Einträge kombinieren</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.debrief.customTitle">
+      <segment>
+        <source>custom title</source>
+        <target>Benutzerdefinierter Titel</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.debrief.localAI">
+      <segment>
+        <source>Local AI</source>
+        <target>Lokale KI</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.debrief.noData">
+      <segment>
+        <source>no data</source>
+        <target>Keine Daten</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.debrief.selectCanonicalTitle">
+      <segment>
+        <source>select canonical title</source>
+        <target>Kanonischen Titel auswählen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.financial.balanceAfter">
+      <segment>
+        <source>balance after</source>
+        <target>Kontostand danach</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.financial.cashOutDate">
+      <segment>
+        <source>cash-out date</source>
+        <target>Cashout-Datum</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.financial.cashOutDaysUntil">
+      <segment>
+        <source>(in  days)</source>
+        <target>(in  Tagen)</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.financial.liquidity">
+      <segment>
+        <source>liquidity</source>
+        <target>Liquidität</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.financial.liquidityEvents">
+      <segment>
+        <source>liquidity events</source>
+        <target>Liquiditätsereignisse</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.financial.liquidityTimeline">
+      <segment>
+        <source>12-month liquidity projection</source>
+        <target>12-Monats-Liquiditätsprognose</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.financial.noCashOut">
+      <segment>
+        <source>no cash-out in forecast</source>
+        <target>Kein Cashout in der Prognose</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.financial.noLiquidityEvents">
+      <segment>
+        <source>No liquidity events in the next 12 months.</source>
+        <target>Keine Liquiditätsereignisse in den nächsten 12 Monaten.</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.focusAccuracyCount">
+      <segment>
+        <source>Focus Accuracy (Count)</source>
+        <target>Fokusgenauigkeit (Anzahl)</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.focusAccuracyDuration">
+      <segment>
+        <source>Focus Accuracy (Duration)</source>
+        <target>Fokusgenauigkeit (Dauer)</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.focusCategories">
+      <segment>
+        <source>Focus Categories</source>
+        <target>Fokus-Kategorien</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.focusCategoriesDesc">
+      <segment>
+        <source>Analyze time allocation across different work categories</source>
+        <target>Zeitverteilung auf verschiedene Arbeitskategorien analysieren</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.focused">
+      <segment>
+        <source>Focused</source>
+        <target>Fokussiert</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.focusedAverage">
+      <segment>
+        <source>Focused Average</source>
+        <target>Fokussierter Durchschnitt</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.gap">
+      <segment>
+        <source>Gap</source>
+        <target>Lücke</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.invoiceFocus">
+      <segment>
+        <source>Invoice Focus</source>
+        <target>Rechnungsfokus</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.invoiceFocusDesc">
+      <segment>
+        <source>Analyze percentage of time spent on foci with invoice items</source>
+        <target>Prozentsatz der Zeit mit Rechnungspositionen-Foki analysieren</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.overEstimated">
+      <segment>
+        <source>Over-estimated</source>
+        <target>Überschätzt</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.overtime">
+      <segment>
+        <source>Overtime</source>
+        <target>Überstunden</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.paid">
+      <segment>
+        <source>Paid</source>
+        <target>Bezahlt</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.perfectPrediction">
+      <segment>
+        <source>Perfect Prediction</source>
+        <target>Perfekte Vorhersage</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.perfectRange">
+      <segment>
+        <source>Perfect Range</source>
+        <target>Perfekter Bereich</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.predictionAccuracy">
+      <segment>
+        <source>Prediction Accuracy</source>
+        <target>Vorhersagegenauigkeit</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.predictionAccuracyDesc">
+      <segment>
+        <source>Compare predicted vs actual effort for completed projects</source>
+        <target>Geplanten vs. tatsächlichen Aufwand für abgeschlossene Projekte vergleichen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.rangeArea">
+      <segment>
+        <source>Range Area</source>
+        <target>Bereichsfläche</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.rangeBase">
+      <segment>
+        <source>Range Base</source>
+        <target>Basisbereich</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.sick">
+      <segment>
+        <source>Sick</source>
+        <target>Krank</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.underEstimated">
+      <segment>
+        <source>Under-estimated</source>
+        <target>Unterschätzt</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.unfocused">
+      <segment>
+        <source>Unfocused</source>
+        <target>Unfokussiert</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.unfocusedAverage">
+      <segment>
+        <source>Unfocused Average</source>
+        <target>Unfokussierter Durchschnitt</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.unpaid">
+      <segment>
+        <source>Unpaid</source>
+        <target>Unbezahlt</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.vacation">
+      <segment>
+        <source>Vacation</source>
+        <target>Urlaub</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.workload">
+      <segment>
+        <source>Workload</source>
+        <target>Arbeitsauslastung</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.hr.workloadDesc">
+      <segment>
+        <source>Track team workload and productivity metrics</source>
+        <target>Teamauslastung und Produktivitätskennzahlen verfolgen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoice.cancel">
+      <segment>
+        <source>cancel</source>
+        <target>Abbrechen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoice.confirmCancel">
+      <segment>
+        <source>Are you sure you want to cancel this invoice? This will create a cancellation invoice.</source>
+        <target>Möchten Sie diese Rechnung wirklich stornieren? Dadurch wird eine Stornorechnung erstellt.</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoice.confirmUndo">
+      <segment>
+        <source>Are you sure you want to undo this invoice?</source>
+        <target>Möchten Sie diese Rechnung wirklich rückgängig machen?</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoice.undo">
+      <segment>
+        <source>undo</source>
+        <target>Rückgängig</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.addAuditPipeline">
+      <segment>
+        <source>add audit pipeline</source>
+        <target>Audit-Pipeline hinzufügen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.addSchedules">
+      <segment>
+        <source>add schedules</source>
+        <target>Zeitpläne hinzufügen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.assignToExpense">
+      <segment>
+        <source>assign to expense</source>
+        <target>Ausgabe zuordnen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.auditNamePlaceholder">
+      <segment>
+        <source>e.g. Security audit — monthly</source>
+        <target>z.B. Sicherheitsaudit — monatlich</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.avgPaymentDays">
+      <segment>
+        <source>avg. payment</source>
+        <target>Ø Zahlung</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.bankBalance">
+      <segment>
+        <source>bank balance</source>
+        <target>Kontostand</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.budgetProject">
+      <segment>
+        <source>Budget project</source>
+        <target>Budgetprojekt</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.categoryName">
+      <segment>
+        <source>category name</source>
+        <target>Kategoriename</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.changeStringOnExpense">
+      <segment>
+        <source>change string on expense</source>
+        <target>Zeichenkette bei Ausgabe ändern</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.cost">
+      <segment>
+        <source>Cost</source>
+        <target>Kosten</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.createNewExpense">
+      <segment>
+        <source>create new expense</source>
+        <target>Neue Ausgabe erstellen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.createRecurringInvoiceItem">
+      <segment>
+        <source>create recurring invoice item</source>
+        <target>Wiederkehrende Rechnungsposition erstellen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.created">
+      <segment>
+        <source>Created</source>
+        <target>Erstellt</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.cronPlaceholder">
+      <segment>
+        <source>e.g. 0 3 * * 1</source>
+        <target>z.B. 0 3 * * 1</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.downpayment">
+      <segment>
+        <source>Downpayment</source>
+        <target>Anzahlung</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.due">
+      <segment>
+        <source>Due</source>
+        <target>Fällig</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.expense">
+      <segment>
+        <source>Expense</source>
+        <target>Ausgabe</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.filterExpenses">
+      <segment>
+        <source>filter expenses…</source>
+        <target>Ausgaben filtern…</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.firstRecurrence">
+      <segment>
+        <source>first recurrence</source>
+        <target>Erste Wiederholung</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.gitlabProjectUrl">
+      <segment>
+        <source>GitLab project URL</source>
+        <target>GitLab-Projekt-URL</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.gitlabProjectUrlPlaceholder">
+      <segment>
+        <source>https://gitlab.example.com/namespace/project</source>
+        <target>https://gitlab.example.com/namespace/projekt</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.invoiced">
+      <segment>
+        <source>invoiced</source>
+        <target>Berechnet</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.jobsFromGitlabCi">
+      <segment>
+        <source>jobs from .gitlab-ci.yml</source>
+        <target>Jobs aus .gitlab-ci.yml</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.matchingPattern">
+      <segment>
+        <source>matching pattern</source>
+        <target>Übereinstimmungsmuster</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.matchingPatternPlaceholder">
+      <segment>
+        <source>e.g. Kundennummer 12345</source>
+        <target>z.B. Kundennummer 12345</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.newCategory">
+      <segment>
+        <source>New category</source>
+        <target>Neue Kategorie</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.noExpensesFound">
+      <segment>
+        <source>no expenses found</source>
+        <target>keine Ausgaben gefunden</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.noJobsFound">
+      <segment>
+        <source>No jobs found in .gitlab-ci.yml.</source>
+        <target>Keine Jobs in .gitlab-ci.yml gefunden.</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.noRecurringInvoiceItemsFound">
+      <segment>
+        <source>no recurring invoice items found</source>
+        <target>Keine wiederkehrenden Rechnungspositionen gefunden</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.oldestUnbilledFocus">
+      <segment>
+        <source>oldest unbilled</source>
+        <target>Ältester unberechnet</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.openInvoice">
+      <segment>
+        <source>Open invoice</source>
+        <target>Offene Rechnung</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.paid">
+      <segment>
+        <source>Paid</source>
+        <target>Bezahlt</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.pending">
+      <segment>
+        <source>pending</source>
+        <target>Ausstehend</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.scheduleInterval">
+      <segment>
+        <source>schedule interval</source>
+        <target>Zeitplan-Intervall</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.selectRecurringInvoiceItem">
+      <segment>
+        <source>select recurring invoice item</source>
+        <target>Wiederkehrende Rechnungsposition auswählen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.standingOrder">
+      <segment>
+        <source>Standing order</source>
+        <target>Dauerauftrag</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.startsAt">
+      <segment>
+        <source>starts at</source>
+        <target>Beginnt am</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoices.unitMonth">
+      <segment>
+        <source>month</source>
+        <target>Monat</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoicing.downPayment">
+      <segment>
+        <source>down payment</source>
+        <target>Anzahlung</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoicing.final">
+      <segment>
+        <source>final invoice</source>
+        <target>Schlussrechnung</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoicing.linkedToRecurringInvoice">
+      <segment>
+        <source>linked to recurring invoice</source>
+        <target>Mit wiederkehrender Rechnung verknüpft</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoicing.quote">
+      <segment>
+        <source>quote</source>
+        <target>Angebot</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.invoicing.support">
+      <segment>
+        <source>support</source>
+        <target>Support</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.conversion">
+      <segment>
+        <source>Conversion</source>
+        <target>Konversion</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.conversionDesc">
+      <segment>
+        <source>Conversion rate (e.g., click-through rate)</source>
+        <target>Konversionsrate (z.B. Klickrate)</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.counter">
+      <segment>
+        <source>Counter</source>
+        <target>Zähler</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.counterDesc">
+      <segment>
+        <source>Simple count (e.g., emails sent)</source>
+        <target>Einfache Anzahl (z.B. gesendete E-Mails)</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.currency">
+      <segment>
+        <source>Currency</source>
+        <target>Währung</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.currencyDesc">
+      <segment>
+        <source>Monetary value (e.g., revenue)</source>
+        <target>Geldwert (z.B. Umsatz)</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.duration">
+      <segment>
+        <source>Duration</source>
+        <target>Dauer</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.durationDesc">
+      <segment>
+        <source>Time duration (e.g., response time)</source>
+        <target>Zeitdauer (z.B. Antwortzeit)</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.no_recent_activity">
+      <segment>
+        <source>no recent activity</source>
+        <target>Keine aktuellen Aktivitäten</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.no_remarketing_intervals">
+      <segment>
+        <source>no remarketing intervals configured</source>
+        <target>Keine Remarketing-Intervalle konfiguriert</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.no_suggestions">
+      <segment>
+        <source>no suggestions available</source>
+        <target>Keine Vorschläge verfügbar</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.percentage">
+      <segment>
+        <source>Percentage</source>
+        <target>Prozentsatz</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.percentageDesc">
+      <segment>
+        <source>Value as percentage (e.g., open rate)</source>
+        <target>Wert als Prozentsatz (z.B. Öffnungsrate)</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.postpone">
+      <segment>
+        <source>postpone</source>
+        <target>Verschieben</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.postpone_12m">
+      <segment>
+        <source>12 months</source>
+        <target>12 Monate</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.postpone_1m">
+      <segment>
+        <source>1 month</source>
+        <target>1 Monat</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.postpone_1w">
+      <segment>
+        <source>1 week</source>
+        <target>1 Woche</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.postpone_2m">
+      <segment>
+        <source>2 months</source>
+        <target>2 Monate</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.postpone_2w">
+      <segment>
+        <source>2 weeks</source>
+        <target>2 Wochen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.postpone_3m">
+      <segment>
+        <source>3 months</source>
+        <target>3 Monate</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.postpone_6m">
+      <segment>
+        <source>6 months</source>
+        <target>6 Monate</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.marketing.recent_activity">
+      <segment>
+        <source>recent activity</source>
+        <target>Aktuelle Aktivitäten</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.project.inStats">
+      <segment>
+        <source>in stats</source>
+        <target>In Statistiken</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.project.noGitRequired">
+      <segment>
+        <source>no git required</source>
+        <target>Kein Git erforderlich</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.project.projectStates">
+      <segment>
+        <source>project states</source>
+        <target>Projektstatus</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.project.running">
+      <segment>
+        <source>running</source>
+        <target>Laufend</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.project.successful">
+      <segment>
+        <source>successful</source>
+        <target>Erfolgreich</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.project.undoNoGitRequired">
+      <segment>
+        <source>undo: no git required</source>
+        <target>Rückgängig: Kein Git erforderlich</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.projects.audit">
+      <segment>
+        <source>audit</source>
+        <target>Audit</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.projects.forecastWarning">
+      <segment>
+        <source>More than 50% of the time budget has not been allocated yet</source>
+        <target>Mehr als 50% des Zeitbudgets wurden noch nicht vergeben</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.projects.monitoring">
+      <segment>
+        <source>monitoring</source>
+        <target>Überwachung</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.projects.specifyDefaultProductToAddItems">
+      <segment>
+        <source>you need to specify a default product first to add new items</source>
+        <target>Sie müssen zuerst ein Standardprodukt angeben, um neue Einträge hinzuzufügen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.projects.timeBased">
+      <segment>
+        <source>time based</source>
+        <target>Zeitbasiert</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.settings.artifactFile">
+      <segment>
+        <source>artifact file</source>
+        <target>Artefakt-Datei</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.settings.artifactFileTooltip">
+      <segment>
+        <source>Path to the artifact file produced by the job (e.g. gl-sast-report.json)</source>
+        <target>Pfad zur vom Job erzeugten Artefakt-Datei (z.B. gl-sast-report.json)</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.settings.checkingEvery3s">
+      <segment>
+        <source>Checking automatically every 3 seconds…</source>
+        <target>Wird automatisch alle 3 Sekunden geprüft…</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.settings.confirmInBankingApp">
+      <segment>
+        <source>Confirm in your banking app</source>
+        <target>In Ihrer Banking-App bestätigen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.settings.device">
+      <segment>
+        <source>Device</source>
+        <target>Gerät</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.settings.enterTan">
+      <segment>
+        <source>Enter TAN</source>
+        <target>TAN eingeben</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.settings.general">
+      <segment>
+        <source>general</source>
+        <target>Allgemein</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.settings.jobName">
+      <segment>
+        <source>job name</source>
+        <target>Job-Name</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.settings.jobNameTooltip">
+      <segment>
+        <source>The CI pipeline job name as defined in .gitlab-ci.yml</source>
+        <target>Der CI-Pipeline-Job-Name wie in .gitlab-ci.yml definiert</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.settings.minChars">
+      <segment>
+        <source>min. 8 chars</source>
+        <target>Mind. 8 Zeichen</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.settings.participants">
+      <segment>
+        <source>participants</source>
+        <target>Teilnehmer</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.settings.pipelineJobs">
+      <segment>
+        <source>pipeline jobs</source>
+        <target>Pipeline-Jobs</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.settings.pluginLinks">
+      <segment>
+        <source>plugin links</source>
+        <target>Plugin-Links</target>
+      </segment>
+    </unit>
+    
+    <unit id="i18n.widget-project-analysis">
+      <segment>
+        <source>project analysis</source>
+        <target>Projektanalyse</target>
+      </segment>
+    </unit>
+    
   </file>
 </xliff>

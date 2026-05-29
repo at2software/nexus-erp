@@ -1,6 +1,6 @@
-import { SortMode } from "./sort-mode";
+import { SortMode } from './sort-mode';
 
 export interface SortData {
-  key:string,
-  sortMode:SortMode
+    key: string;
+    sortMode: SortMode;
 }

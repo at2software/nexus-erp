@@ -101,6 +101,9 @@ class ProjectStatisticsService {
         }
 
         $maxDuration       = max($samples);
+        if ($maxDuration == 0) {
+            return null;
+        }
         $normalizedSamples = array_map(fn ($x) => $x / $maxDuration, $samples);
 
         $a            = 0.0;

@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Actions\User\CalculateDailyWorkload;
+use Carbon\Carbon;
 use App\Enums\CommentType;
 use App\Enums\InvoiceItemType;
 use App\Enums\InvoiceVatHandling;
 use App\Helpers\ModelRelationship;
 use App\Http\Middleware\Auth;
+use App\Http\Requests\User\CreateTbeRequest;
+use App\Http\Requests\User\StoreEmploymentRequest;
+use App\Http\Requests\User\StoreUserRequest;
 use App\Models\Assignment;
 use App\Models\Company;
 use App\Models\LeadSource;
@@ -46,44 +50,35 @@ class UserController extends Controller {
             ->sortBy('is_retired')
             ->sortByDesc('hr_stress')->values();
     }
-    public function store(Request $request) {
-        $request->validate([
-            'name'                  => 'required_without_all:first_name,family_name|nullable|string|max:255',
-            'first_name'            => 'sometimes|nullable|string|max:255',
-            'family_name'           => 'sometimes|nullable|string|max:255',
-            'email'                 => 'required|email|unique:users,email',
-            'password'              => 'required|string|min:8',
-            'employment.type'       => 'sometimes|string',
-            'employment.hpw'        => 'sometimes|numeric',
-            'employment.started_at' => 'sometimes|date',
-        ]);
+    public function store(StoreUserRequest $request) {
+        $validated = $request->validated();
 
-        $firstName  = $request->input('first_name', '');
-        $familyName = $request->input('family_name', '');
+        $firstName  = $validated['first_name'] ?? '';
+        $familyName = $validated['family_name'] ?? '';
 
-        if (! $firstName && ! $familyName && $request->name) {
-            $parts      = explode(' ', $request->name, 2);
+        if (! $firstName && ! $familyName && ($validated['name'] ?? null)) {
+            $parts      = explode(' ', $validated['name'], 2);
             $firstName  = $parts[0];
             $familyName = $parts[1] ?? '';
         }
 
-        $fullName = trim($firstName.' '.$familyName) ?: $request->name;
+        $fullName = trim($firstName.' '.$familyName) ?: $validated['name'];
 
         $vcard = new Vcard;
         $vcard->setProperty('FN', $fullName);
         $vcard->setProperty('N', [$familyName, $firstName, '', '', ''], ['charset' => 'utf-8']);
-        $vcard->setProperty('EMAIL', $request->email, ['type' => 'work']);
+        $vcard->setProperty('EMAIL', $validated['email'], ['type' => 'work']);
 
         $user = User::create([
             'name'      => $fullName,
-            'email'     => $request->email,
-            'password'  => Hash::make($request->password),
+            'email'     => $validated['email'],
+            'password'  => Hash::make($validated['password']),
             'api_token' => Str::random(60),
             'vcard'     => $vcard->toVCardString(false),
         ]);
 
-        if ($request->has('employment')) {
-            $emp       = $request->input('employment');
+        if (isset($validated['employment'])) {
+            $emp       = $validated['employment'];
             $type      = $emp['type'] ?? 'Festanstellung';
             $hpw       = (float)($emp['hpw'] ?? 40);
             $hpd       = $hpw / 5;
@@ -369,23 +364,11 @@ class UserController extends Controller {
         $user->save();
         return response()->noContent();
     }
-    public function storeEmployment() {
-        request()->validate([
-            'user_id'       => 'exists:App\Models\User,id',
-            'mo'            => 'required|numeric',
-            'tu'            => 'required|numeric',
-            'we'            => 'required|numeric',
-            'th'            => 'required|numeric',
-            'fr'            => 'required|numeric',
-            'sa'            => 'required|numeric',
-            'su'            => 'required|numeric',
-            'is_time_based' => 'required|boolean',
-            'started_at'    => 'required|date',
-        ]);
+    public function storeEmployment(StoreEmploymentRequest $request) {
         return UserEmployment::create((array)$this->getBody());
     }
-    public function updateEmployment(User $_, UserEmployment $id) {
-        return $id->applyAndSaveRequest();
+    public function updateEmployment(Request $request, User $_, UserEmployment $id) {
+        return $id->applyAndSave($request);
     }
     public function deleteEmployment(User $_, UserEmployment $id) {
         return $id->delete();
@@ -409,12 +392,7 @@ class UserController extends Controller {
             ->whereAfter(now()->startOfDay()->subDays(30))
             ->get();
     }
-    public function createTbe(User $_) {
-        request()->validate([
-            'paid_at'  => 'required|date',
-            'raw'      => 'required|numeric',
-            'vacation' => 'required|numeric',
-        ]);
+    public function createTbe(CreateTbeRequest $request, User $_) {
         $data = $this->getBody();
         return UserPaidTime::create([
             'paid_at'            => $data->paid_at,

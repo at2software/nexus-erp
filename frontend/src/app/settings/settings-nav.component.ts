@@ -1,7 +1,8 @@
-import { GlobalService } from 'src/models/global.service';
-import { Component, inject, OnInit } from '@angular/core';
+import { GlobalService } from '@models/global.service';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { HeaderModule } from '@app/app/header/header.module';
+import { HeaderComponent } from '@app/app/header/header.component';
+import { HeaderLinkItemComponent } from '@app/app/header/header-link-item/header-link-item.component';
 import { PermissionsDirective } from '@directives/permissions.directive';
 
 @Component({
@@ -9,18 +10,10 @@ import { PermissionsDirective } from '@directives/permissions.directive';
     templateUrl: './settings-nav.component.html',
     styleUrls: ['./settings-nav.component.scss'],
     standalone: true,
-    imports: [RouterModule, HeaderModule, PermissionsDirective]
+    imports: [RouterModule, HeaderComponent, HeaderLinkItemComponent, PermissionsDirective],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SettingsNavComponent implements OnInit {
-
-    settingKeys: string[]
-
-    #global = inject(GlobalService)
-
-    ngOnInit(): void {
-        this.settingKeys = Object.keys(this.#global.settings)
-    }
-
-    reloadEnvironment = () => this.#global.reload()
-
+export class SettingsNavComponent {
+    #global = inject(GlobalService);
+    reloadEnvironment = () => this.#global.reload();
 }

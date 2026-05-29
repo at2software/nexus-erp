@@ -10,41 +10,41 @@ import { ProductOverviewComponent } from './-/product-overview/product-overview.
 import { ProductStatisticsComponent } from './-/product-statistics/product-statistics.component';
 import { ProductGroupDetailGuard } from './product-group/product-group-detail.guard';
 import { ProductDetailGuard } from './product-detail/product-details.guard';
-import { subPath } from 'src/constants/subPath';
+import { subPath } from '@constants/subPath';
 
 @NgModule({
     imports: [
         RouterModule.forChild([
             subPath('stats', ProductOverviewComponent, ProductStatisticsComponent, true, $localize`:@@i18n.common.statistics:statistics`),
             {
-                path: '', component: ProductNavComponent, children: [
+                path: '',
+                component: ProductNavComponent,
+                children: [
                     {
-                        path: 'dashboard', 
-                        component: ProductOverviewComponent, 
+                        path: 'dashboard',
+                        component: ProductOverviewComponent,
                         title: $localize`:@@i18n.common.products:products`,
                     },
                     {
                         path: 'group/:id',
                         ...ProductGroupDetailGuard.routeActivators(),
-                        component: ProductGroupComponent, 
-                        children: [
-                            { path: '', component: ProductGroupOverviewComponent }
-                        ]
+                        component: ProductGroupComponent,
+                        children: [{ path: '', component: ProductGroupOverviewComponent }],
                     },
                     {
-                        path: ':id', 
+                        path: ':id',
                         ...ProductDetailGuard.routeActivators(),
-                        component: ProductDetailComponent, 
+                        component: ProductDetailComponent,
                         children: [
                             { path: '', component: ProductDetailOverviewComponent },
-                            { path: 'refactor', component: ProductRefactorComponent }
-                        ]
+                            { path: 'refactor', component: ProductRefactorComponent },
+                        ],
                     },
                     { path: '**', redirectTo: 'dashboard' },
-                ]
+                ],
             },
             { path: '**', redirectTo: 'dashboard' },
         ]),
     ],
 })
-export class ProductsModule { }
+export class ProductsModule {}

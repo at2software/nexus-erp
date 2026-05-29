@@ -1,6 +1,5 @@
-
 export enum SortMode {
-  NONE,
-  ASCENDING,
-  DESCENDING
+    NONE,
+    ASCENDING,
+    DESCENDING,
 }

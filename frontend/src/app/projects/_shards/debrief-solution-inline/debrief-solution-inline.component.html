@@ -13,25 +13,14 @@
                 </div>
                 <div class="rating-stars d-flex gap-1">
                     @for (star of [1, 2, 3, 4, 5]; track star) {
-                        <i class="star-icon"
-                           [class.filled]="(solution.effectiveness_rating || 0) >= star"
-                           [class.cursor-pointer]="!isReadonly"
-                           [attr.tabindex]="isReadonly ? null : 0"
-                           (click)="!isReadonly && rateSolution(solution, star)"
-                           (keydown.enter)="!isReadonly && rateSolution(solution, star)"
-                           (keydown.space)="!isReadonly && rateSolution(solution, star)"
-                           [ngbTooltip]="isReadonly ? '' : 'Rate effectiveness'"
-                           i18n-ngbTooltip="@@i18n.debrief.rateEffectiveness">
-                            {{ (solution.effectiveness_rating || 0) >= star ? 'star' : 'star_border' }}
+                        <i class="star-icon" [class.filled]="(solution.effectiveness_rating() || 0) >= star" [class.cursor-pointer]="!isReadonly" [attr.tabindex]="isReadonly ? null : 0" (click)="!isReadonly && rateSolution(solution, star)" (keydown.enter)="!isReadonly && rateSolution(solution, star)" (keydown.space)="!isReadonly && rateSolution(solution, star)" [ngbTooltip]="isReadonly ? '' : 'Rate effectiveness'" i18n-ngbTooltip="@@i18n.debrief.rateEffectiveness">
+                            {{ (solution.effectiveness_rating() || 0) >= star ? 'star' : 'star_border' }}
                         </i>
                     }
                 </div>
                 @if (!isReadonly) {
-                    <button class="btn btn-sm btn-link text-muted p-0"
-                            (click)="unlinkSolution(solution)"
-                            ngbTooltip="Unlink solution"
-                            i18n-ngbTooltip="@@i18n.debrief.unlinkSolution">
-                        <i style="font-size: 18px;">link_off</i>
+                    <button class="btn btn-sm btn-link text-muted p-0" (click)="unlinkSolution(solution)" ngbTooltip="Unlink solution" i18n-ngbTooltip="@@i18n.debrief.unlinkSolution">
+                        <i style="font-size: 18px">link_off</i>
                     </button>
                 }
             </div>
@@ -41,17 +30,10 @@
     @if (!isReadonly) {
         <div class="add-solution">
             <div class="input-group mb-2">
-                <input type="text"
-                       class="form-control form-control-sm"
-                       [ngModel]="searchTerm()"
-                       (ngModelChange)="onSearchChange($event)"
-                       (focus)="onFocus()"
-                       (blur)="onBlur()"
-                       placeholder="Search or add solution..."
-                       i18n-placeholder="@@i18n.debrief.searchSolutions">
+                <input type="text" class="form-control form-control-sm" [ngModel]="searchTerm()" (ngModelChange)="onSearchChange($event)" (focus)="onFocus()" (blur)="onBlur()" placeholder="Search or add solution..." i18n-placeholder="@@i18n.debrief.searchSolutions" />
                 @if (isSearching()) {
                     <span class="input-group-text">
-                        <span class="spinner-border spinner-border-sm"></span>
+                        <spinner [size]="20"></spinner>
                     </span>
                 }
             </div>
@@ -63,8 +45,8 @@
                             <span class="flex-grow-1">{{ solution.title }}</span>
                             @if (solution.avg_effectiveness_rating) {
                                 <small class="text-warning">
-                                    <i style="font-size: 14px;">star</i>
-                                    {{ solution.avg_effectiveness_rating | number:'1.1-1' }}
+                                    <i style="font-size: 14px">star</i>
+                                    {{ solution.avg_effectiveness_rating | number: '1.1-1' }}
                                 </small>
                             }
                             <small class="text-muted">{{ solution.usage_count }}x</small>
@@ -88,12 +70,7 @@
             @if (showCreateForm()) {
                 <div class="create-form mt-2 p-2 border rounded">
                     <div class="input-group">
-                        <input type="text"
-                               class="form-control form-control-sm"
-                               [ngModel]="newSolutionTitle()"
-                               (ngModelChange)="newSolutionTitle.set($event)"
-                               placeholder="Solution title..."
-                               i18n-placeholder="@@i18n.debrief.solutionTitle">
+                        <input type="text" class="form-control form-control-sm" [ngModel]="newSolutionTitle()" (ngModelChange)="newSolutionTitle.set($event)" placeholder="Solution title..." i18n-placeholder="@@i18n.debrief.solutionTitle" />
                         <button class="btn btn-sm btn-primary" (click)="createAndLinkSolution()">
                             <i>add</i>
                         </button>

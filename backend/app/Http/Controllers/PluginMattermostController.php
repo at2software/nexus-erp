@@ -209,6 +209,13 @@ class PluginMattermostController extends PluginChatController {
     public function getIdFor(User $user): ?string {
         return $this->getUserId($user);
     }
+    public function sendDirectMessageToUserId(string $userId, string $message): void {
+        $channelId = $this->getDirectChannelIdFor($userId);
+        if ($channelId) {
+            $this->createPost($channelId, $message);
+        }
+    }
+
     public function getDirectChannelIdFor(string $userId): ?string {
         $me = $this->get('users/me');
         if (! $me || empty($me['id'])) {

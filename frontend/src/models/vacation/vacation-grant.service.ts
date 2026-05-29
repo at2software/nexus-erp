@@ -5,8 +5,6 @@ import { VacationGrant } from './vacation-grant.model';
 
 @Injectable({ providedIn: 'root' })
 export class VacationGrantService extends NexusHttpService<Vacation> {
-    
-  apiPath = 'vacation_grants'
-  TYPE = () => VacationGrant
-  
+    apiPath = 'vacation_grants';
+    TYPE = () => VacationGrant;
 }

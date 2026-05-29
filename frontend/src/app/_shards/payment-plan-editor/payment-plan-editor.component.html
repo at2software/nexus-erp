@@ -5,7 +5,7 @@
                 <small class="text-primary flex-fill" i18n="@@i18n.payment.customPlan">custom payment plan</small>
             } @else if (activeTierLabel) {
                 <small class="text-muted flex-fill">
-                    <span i18n="@@i18n.payment.defaultPlanTier">default payment plan ({{activeTierLabel}} projects)</span>
+                    <span i18n="@@i18n.payment.defaultPlanTier">default payment plan ({{ activeTierLabel }} projects)</span>
                 </small>
             } @else {
                 <small class="text-muted flex-fill" i18n="@@i18n.payment.defaultPlan">default payment plan</small>
@@ -26,8 +26,8 @@
             <div class="payment-steps">
                 @for (step of steps; track $index) {
                     <div class="d-flex align-items-center gap-2 py-1 border-bottom border-secondary border-opacity-25">
-                        <span class="badge bg-primary" style="min-width:42px;">{{step.percentage}}%</span>
-                        <span class="text-muted small flex-fill">{{getTriggerLabel(step)}}</span>
+                        <span class="badge bg-primary" style="min-width: 42px">{{ step.percentage }}%</span>
+                        <span class="text-muted small flex-fill">{{ getTriggerLabel(step) }}</span>
                     </div>
                 }
             </div>
@@ -39,19 +39,19 @@
     <div class="payment-plan-edit">
         @for (step of editSteps; let i = $index; track i) {
             <div class="d-flex align-items-center gap-2 mb-2">
-                <div class="input-group" style="width:90px; flex-shrink:0;">
-                    <input [(ngModel)]="step.percentage" type="number" min="0" max="100" class="form-control form-control-sm text-end">
+                <div class="input-group" style="width: 90px; flex-shrink: 0">
+                    <input [(ngModel)]="step.percentage" type="number" min="0" max="100" class="form-control form-control-sm text-end" />
                     <span class="input-group-text">%</span>
                 </div>
                 <select [(ngModel)]="step.trigger" class="form-select form-select-sm flex-fill" (ngModelChange)="onTriggerChange(step)">
-                    <option value="project_start"    i18n="@@i18n.payment.triggerProjectStart">upon project start</option>
+                    <option value="project_start" i18n="@@i18n.payment.triggerProjectStart">upon project start</option>
                     <option value="feature_complete" i18n="@@i18n.payment.triggerFeatureComplete">upon feature complete</option>
-                    <option value="acceptance"       i18n="@@i18n.payment.triggerAcceptance">upon acceptance</option>
-                    <option value="monthly"          i18n="@@i18n.payment.triggerMonthlyOption">monthly prepayments</option>
+                    <option value="acceptance" i18n="@@i18n.payment.triggerAcceptance">upon acceptance</option>
+                    <option value="monthly" i18n="@@i18n.payment.triggerMonthlyOption">monthly prepayments</option>
                 </select>
                 @if (step.trigger === 'monthly') {
-                    <div class="input-group" style="width:110px; flex-shrink:0;">
-                        <input [(ngModel)]="step.months" type="number" min="1" class="form-control form-control-sm text-end" placeholder="6">
+                    <div class="input-group" style="width: 110px; flex-shrink: 0">
+                        <input [(ngModel)]="step.months" type="number" min="1" class="form-control form-control-sm text-end" placeholder="6" />
                         <span class="input-group-text small" i18n="@@i18n.payment.months">mo.</span>
                     </div>
                 }
@@ -60,11 +60,11 @@
         }
 
         <div class="d-flex align-items-center gap-3 mb-2">
-            <button class="btn btn-sm btn-outline-primary" (click)="addStep()">
-                <i>add</i> <span i18n="@@i18n.payment.addStep">add step</span>
-            </button>
+            <button class="btn btn-sm btn-outline-primary" (click)="addStep()"><i>add</i> <span i18n="@@i18n.payment.addStep">add step</span></button>
             @if (totalPercentage !== 100) {
-                <small class="text-warning"><i>warning</i> <span i18n="@@i18n.payment.totalWarning">total: {{totalPercentage}}% (must be 100%)</span></small>
+                <small class="text-warning"
+                    ><i>warning</i> <span i18n="@@i18n.payment.totalWarning">total: {{ totalPercentage }}% (must be 100%)</span></small
+                >
             } @else {
                 <small class="text-success"><i>check_circle</i> 100%</small>
             }

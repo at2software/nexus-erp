@@ -1,17 +1,22 @@
-@if (due && due.length) {
-<div class="header hstack gap-2">
-    <n>marketing</n>
-    <span class="flex-fill" i18n="@@i18n.common.remarketing">remarketing</span>
-</div>
-<ul class="list-group">
-    @for (item of due; track item.id) {
-    <li class="list-group-item hstack gap-2" [nx]="item" [tables]="due">
-        <avatar [object]="item"></avatar>
-        <div class="flex-fill text-truncate">{{item.name}}</div>
-        <div class="text-end small text-muted text-nowrap" ngbTooltip="due at" i18n-ngbTooltip="@@i18n.common.dueAt">
-            {{item.var.remarketing_due_at | date}}
-        </div>
-    </li>
+@let _due = due();
+
+@if (_due.length) {
+    <div class="header hstack gap-2">
+        <n>marketing</n>
+        <span class="flex-fill" i18n="@@i18n.common.remarketing">remarketing</span>
+        <i class="pointer" (click)="toggle('remarketing')">{{ isCollapsed('remarketing') ? 'expand_less' : 'expand_more' }}</i>
+    </div>
+    @if (!isCollapsed('remarketing')) {
+        <ul class="list-group">
+            @for (item of _due; track item.id) {
+                <li class="list-group-item hstack gap-2" [nx]="item" [tables]="_due">
+                    <avatar [object]="item"></avatar>
+                    <div class="flex-fill text-truncate">{{ item.getName() }}</div>
+                    <div class="text-end small text-muted text-nowrap" ngbTooltip="due at" i18n-ngbTooltip="@@i18n.common.dueAt">
+                        {{ item.var.remarketing_due_at | date }}
+                    </div>
+                </li>
+            }
+        </ul>
     }
-</ul>
 }

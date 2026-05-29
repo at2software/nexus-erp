@@ -1,0 +1,7 @@
+<div class="modal-header">
+    <span class="modal-title">{{ label }}</span>
+    <button class="btn-close" aria-label="Close" (click)="decline()"></button>
+</div>
+<div class="modal-body">
+    <search-input [only]="onlyClass" (itemSelected)="onSelected($event)"></search-input>
+</div>

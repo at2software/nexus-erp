@@ -1,5 +1,5 @@
+import { ChangeDetectionStrategy, Component, afterNextRender, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
-import { Component, inject, ViewChild, AfterViewInit, ChangeDetectorRef, OnInit } from '@angular/core';
 import { ProjectService } from '@models/project/project.service';
 import { Project } from '@models/project/project.model';
 import moment from 'moment';
@@ -9,229 +9,137 @@ import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
-import { NexusModule } from '@app/nx/nexus.module';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
+import { Nx } from '@app/nx/nx.directive';
+import { AvatarComponent } from '@shards/avatar/avatar.component';
+import { ProjectComponent } from '@shards/project/project.component';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { MoneyShortPipe } from '../../../../pipes/mshort.pipe';
+import { MoneyShortPipe } from '@pipes/mshort.pipe';
 import { PermissionsDirective } from '@directives/permissions.directive';
 import { HotkeyDirective } from '@directives/hotkey.directive';
-import { CdkDragDrop, CdkDropList, CdkDrag } from '@angular/cdk/drag-drop';
-import { ProjectState } from '@models/project/project-state.model';
+import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragPreview } from '@angular/cdk/drag-drop';
 
 @Component({
     selector: 'customer-projects',
     templateUrl: './customer-projects.html',
     styleUrls: ['./customer-projects.scss'],
     standalone: true,
-    imports: [ToolbarComponent, ScrollbarComponent, ProjectStateFilterComponent, EmptyStateComponent, FormsModule, CommonModule, NexusModule, NgbTooltipModule, MoneyShortPipe, PermissionsDirective, HotkeyDirective, CdkDropList, CdkDrag]
+    imports: [ToolbarComponent, ScrollbarComponent, ProjectStateFilterComponent, EmptyStateComponent, FormsModule, DatePipe, NgTemplateOutlet, Nx, AvatarComponent, ProjectComponent, NgbTooltipModule, MoneyShortPipe, PermissionsDirective, HotkeyDirective, CdkDropList, CdkDrag, CdkDragPreview],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CustomerProjects implements AfterViewInit, OnInit {
+export class CustomerProjects {
+    #projectService = inject(ProjectService);
+    #parent = inject(CustomerDetailGuard);
+    #router = inject(Router);
 
-    projects: Project[] = []
-    coParticipatedProjects: Project[] = []
-    filter_prepared  = Project.fromJson({ var: { visible: true }, ...ProjectState.stateFor(1) })
-    filter_running   = Project.fromJson({ var: { visible: true }, ...ProjectState.stateFor(2) })
-    filter_finished  = Project.fromJson({ var: { visible: true }, ...ProjectState.stateFor(3) })
-    filter_failed    = Project.fromJson({ var: { visible: true }, ...ProjectState.stateFor(4) })
-    filter_alternate = Project.fromJson({ var: { visible: true }, ...ProjectState.stateFor(5) })
-    collapsedProjects = new Set<string>()
-    allDropListIds: string[] = []
+    stateFilter = viewChild.required(ProjectStateFilterComponent);
 
-    @ViewChild(ProjectStateFilterComponent) stateFilter: ProjectStateFilterComponent
+    projects = signal<Project[]>([]);
+    coParticipatedProjects = signal<Project[]>([]);
 
-    projectService = inject(ProjectService)
-    parent = inject(CustomerDetailGuard)
-    router = inject(Router)
-    cdr = inject(ChangeDetectorRef)
+    #collapsedIds = signal(new Set<string>());
+    hoveredProjectId = signal<string | null>(null);
+    allDropListIds: string[] = [];
+    getLevelArray = (level: number) => Array.from({length: level}, (_, i) => i);
 
-    ngOnInit() {
-        this.parent.onChange.subscribe(() => {
-            this.reload()
-        })
+    constructor() {
+        afterNextRender(() => this.reload());
     }
 
-    ngAfterViewInit() {
-        this.reload()
-    }
     reload() {
-        if (!this.stateFilter) return
-        const filters = this.stateFilter.getFilters()
-        filters.withParents = true
-        this.projectService.indexForCompany(this.parent.current, filters).subscribe((data: Project[]) => {
-            data.forEach((_: Project) => {
-                _.var.subprojects = []
-                _.var.total = 0
-                _.var.has_circular_dependency = false
-            })
-
-            // Detect circular dependencies
-            const hasCircularDependency = (projectId: string, visited: Set<string> = new Set()): boolean => {
-                if (visited.has(projectId)) return true
-                visited.add(projectId)
-                const project = data.find(p => p.id === projectId)
-                if (project?.project_id) {
-                    return hasCircularDependency(project.project_id, new Set(visited))
-                }
-                return false
-            }
-
-            data.forEach((_: Project) => {
-                if (_.project_id && hasCircularDependency(_.id)) {
-                    _.var.has_circular_dependency = true
-                }
-            })
-
-            data.forEach((_: Project) => {
-                if (_.project_id && !_.var.has_circular_dependency) {
-                    const a = data.find((p: Project) => p.id === _.project_id)
-                    a?.var.subprojects.push(_)
-                    if (!a) {
-                        console.warn('unknown base project', _.project_id, _.name)
-                        _.project_id = ""
-                    }
-                }
-            })
-            data = data.filter((_: Project) => !_.project_id || _.var.has_circular_dependency)
-            const recurse = (_: Project[]) => {
-                _.forEach(item => {
-                    recurse(item.var.subprojects)
-                    item.var.total = item.net + item.var.subprojects.reduce((a: number, b: Project) => a + b.var.total, 0)
-                    item.var.latest = moment.max(item.time_created(), ...item.var.subprojects.map((a: Project) => a.time_created()))
-                })
-            }
-            recurse(data)
-            this.projects = data.sort((a: Project, b: Project) => b.var.latest.diff(a.var.latest, 'seconds'))
-
-            // Build list of all drop list IDs for cross-list dragging
-            this.allDropListIds = []
-            const collectIds = (items: Project[]) => {
-                items.forEach(item => {
-                    this.allDropListIds.push('drop-' + item.id)
-                    if (item.var.subprojects?.length) {
-                        collectIds(item.var.subprojects)
-                    }
-                })
-            }
-            collectIds(this.projects)
-        })
-
-        // Load co-participated projects
-        this.projectService.indexCoParticipatedProjects(this.parent.current, filters).subscribe((data: Project[]) => {
-            data.forEach((_: Project) => {
-                _.var.subprojects = []
-                _.var.total = 0
-                _.var.has_circular_dependency = false
-            })
-
-            // Detect circular dependencies
-            const hasCircularDependency = (projectId: string, visited: Set<string> = new Set()): boolean => {
-                if (visited.has(projectId)) return true
-                visited.add(projectId)
-                const project = data.find(p => p.id === projectId)
-                if (project?.project_id) {
-                    return hasCircularDependency(project.project_id, new Set(visited))
-                }
-                return false
-            }
-
-            data.forEach((_: Project) => {
-                if (_.project_id && hasCircularDependency(_.id)) {
-                    _.var.has_circular_dependency = true
-                }
-            })
-
-            data.forEach((_: Project) => {
-                if (_.project_id && !_.var.has_circular_dependency) {
-                    const a = data.find((p: Project) => p.id === _.project_id)
-                    a?.var.subprojects.push(_)
-                    if (!a) {
-                        console.warn('unknown base project', _.project_id, _.name)
-                        _.project_id = ""
-                    }
-                }
-            })
-            data = data.filter((_: Project) => !_.project_id || _.var.has_circular_dependency)
-            const recurse = (_: Project[]) => {
-                _.forEach(item => {
-                    recurse(item.var.subprojects)
-                    item.var.total = item.net + item.var.subprojects.reduce((a: number, b: Project) => a + b.var.total, 0)
-                    item.var.latest = moment.max(item.time_created(), ...item.var.subprojects.map((a: Project) => a.time_created()))
-                })
-            }
-            recurse(data)
-            this.coParticipatedProjects = data.sort((a: Project, b: Project) => b.var.latest.diff(a.var.latest, 'seconds'))
-        })
+        const filters = this.stateFilter().getFilters();
+        const object = this.#parent.object();
+        filters.withParents = true;
+        this.#projectService.indexForCompany(object, filters).subscribe((data: Project[]) => {
+            this.projects.set(this.#buildProjectTree(data));
+            this.allDropListIds = [];
+            this.#collectIds(this.projects());
+        });
+        this.#projectService.indexCoParticipatedProjects(object, filters).subscribe((data: Project[]) => {
+            this.coParticipatedProjects.set(this.#buildProjectTree(data));
+        });
     }
 
-    getConnectedDropLists = () => this.allDropListIds
-    onDragStarted = () => document.body.classList.add('project-dragging')
-    onDragEnded = () => document.body.classList.remove('project-dragging')
+    #buildProjectTree(data: Project[]): Project[] {
+        data.forEach((_: Project) => { _.var.subprojects = []; _.var.total = 0; _.var.has_circular_dependency = false; });
 
-    onDropOnProject(event: CdkDragDrop<Project[]>, targetProject: Project) {
-        const draggedProject = event.item.data as Project
-        if (draggedProject.id !== targetProject.id) {
-            this.makeSubproject(draggedProject, targetProject)
-        }
+        const hasCircularDependency = (projectId: string, visited = new Set<string>()): boolean => {
+            if (visited.has(projectId)) return true;
+            visited.add(projectId);
+            const project = data.find((p) => p.id === projectId);
+            return project?.project_id ? hasCircularDependency(project.project_id, new Set(visited)) : false;
+        };
+
+        data.forEach((_: Project) => { if (_.project_id && hasCircularDependency(_.id)) _.var.has_circular_dependency = true; });
+        data.forEach((_: Project) => {
+            if (_.project_id && !_.var.has_circular_dependency) {
+                const parent = data.find((p: Project) => p.id === _.project_id);
+                parent?.var.subprojects.push(_);
+                if (!parent) { console.warn('unknown base project', _.project_id, _.name); _.project_id = ''; }
+            }
+        });
+
+        const result = data.filter((_: Project) => !_.project_id || _.var.has_circular_dependency);
+        const recurse = (_: Project[]) => _.forEach((item) => {
+            recurse(item.var.subprojects);
+            item.var.total = item.net + item.var.subprojects.reduce((a: number, b: Project) => a + b.var.total, 0);
+            item.var.latest = moment.max(item.momentCreated(), ...item.var.subprojects.map((a: Project) => a.momentCreated()));
+        });
+        recurse(result);
+        return result.sort((a: Project, b: Project) => b.var.latest.diff(a.var.latest, 'seconds'));
     }
 
-    onAddProject = () => this.projectService.addProject(this.parent.current.id).subscribe((x: any) => this.router.navigate(['/projects/' + x.id]))
+    #collectIds(items: Project[]) {
+        items.forEach((item) => {
+            this.allDropListIds.push('drop-' + item.id);
+            if (item.var.subprojects?.length) this.#collectIds(item.var.subprojects);
+        });
+    }
+
+    getConnectedDropLists = () => this.allDropListIds;
+    onDragStarted = () => document.body.classList.add('project-dragging');
+    onDragEnded = () => { document.body.classList.remove('project-dragging'); this.hoveredProjectId.set(null); };
+    isCollapsed = (project: Project) => this.#collapsedIds().has(project.id);
 
     toggleCollapse(project: Project) {
-        if (this.collapsedProjects.has(project.id)) {
-            this.collapsedProjects.delete(project.id)
-        } else {
-            this.collapsedProjects.add(project.id)
-        }
+        this.#collapsedIds.update((s) => {
+            const n = new Set(s);
+            if (n.has(project.id)) n.delete(project.id); else n.add(project.id);
+            return n;
+        });
     }
 
-    isCollapsed = (project: Project) => this.collapsedProjects.has(project.id)
-
-
-    makeSubproject(draggedProject: Project, targetProject: Project) {
-        console.log('makeSubproject called:', {
-            dragged: draggedProject.name,
-            draggedCurrentParent: draggedProject.project_id,
-            target: targetProject.name,
-            targetId: targetProject.id
-        })
-
-        if (this.wouldCreateCircularDependency(draggedProject.id, targetProject.id)) {
-            console.log('Blocked: would create circular dependency')
-            return
-        }
-
-        if (draggedProject.project_id === targetProject.id) {
-            console.log('Blocked: already a subproject of this parent')
-            return
-        }
-
-        console.log('Updating project_id to:', targetProject.id)
-        this.projectService.update(draggedProject.id, { project_id: targetProject.id }).subscribe(() => {
-            console.log('Update successful, reloading...')
-            this.reload()
-        })
+    onDropOnProject(event: CdkDragDrop<Project[]>, targetProject: Project) {
+        const draggedProject = event.item.data as Project;
+        if (draggedProject.id !== targetProject.id) this.#makeSubproject(draggedProject, targetProject);
     }
 
-    wouldCreateCircularDependency(projectId: string, newParentId: string): boolean {
-        if (projectId === newParentId) return true
+    onAddProject = () => this.#projectService.addProject(this.#parent.object().id).subscribe((x: any) => this.#router.navigate(['/projects/' + x.id]));
 
+    #makeSubproject(draggedProject: Project, targetProject: Project) {
+        if (this.#wouldCreateCircularDependency(draggedProject.id, targetProject.id)) return;
+        if (draggedProject.project_id === targetProject.id) return;
+        this.#projectService.update(draggedProject.id, { project_id: targetProject.id }).subscribe(() => this.reload());
+    }
+
+    #wouldCreateCircularDependency(projectId: string, newParentId: string): boolean {
+        if (projectId === newParentId) return true;
         const findProject = (id: string): Project | undefined => {
             const search = (projects: Project[]): Project | undefined => {
                 for (const p of projects) {
-                    if (p.id === id) return p
-                    const found = search(p.var.subprojects || [])
-                    if (found) return found
+                    if (p.id === id) return p;
+                    const found = search(p.var.subprojects || []);
+                    if (found) return found;
                 }
-                return undefined
-            }
-            return search(this.projects)
-        }
-
-        let current = findProject(newParentId)
+                return undefined;
+            };
+            return search(this.projects());
+        };
+        let current = findProject(newParentId);
         while (current) {
-            if (current.id === projectId) return true
-            current = current.project_id ? findProject(current.project_id) : undefined
+            if (current.id === projectId) return true;
+            current = current.project_id ? findProject(current.project_id) : undefined;
         }
-        return false
+        return false;
     }
 }

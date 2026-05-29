@@ -1,7 +1,4 @@
-import {
-    ChangeDetectionStrategy, ChangeDetectorRef, Component,
-    HostListener, inject, OnDestroy, OnInit
-} from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, inject, OnDestroy, OnInit } from '@angular/core';
 import { AsyncPipe } from '@angular/common';
 import { GuidedSlide, GuidedTourService } from './guided-tour.service';
 import { Subscription } from 'rxjs';
@@ -30,10 +27,9 @@ const WIDE_THRESHOLD = 0.5;
     styleUrls: ['./guided-tour-overlay.component.scss'],
     standalone: true,
     imports: [AsyncPipe],
-    changeDetection: ChangeDetectionStrategy.OnPush
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GuidedTourOverlayComponent implements OnInit, OnDestroy {
-
     #service = inject(GuidedTourService);
     #cdr = inject(ChangeDetectorRef);
     #sub?: Subscription;
@@ -42,16 +38,22 @@ export class GuidedTourOverlayComponent implements OnInit, OnDestroy {
     panels: OverlayPanels | null = null;
     disableChecked = false;
 
-    get queueLength$() { return this.#service.queueLength$; }
-    get sessionTotal$() { return this.#service.sessionTotal$; }
-    get sessionDone$() { return this.#service.sessionDone$; }
+    get queueLength$() {
+        return this.#service.queueLength$;
+    }
+    get sessionTotal$() {
+        return this.#service.sessionTotal$;
+    }
+    get sessionDone$() {
+        return this.#service.sessionDone$;
+    }
 
     get slideIndicators(): number[] {
         return Array(this.#service.queueLength$.value).fill(0);
     }
 
     ngOnInit(): void {
-        this.#sub = this.#service.currentSlide$.subscribe(slide => {
+        this.#sub = this.#service.currentSlide$.subscribe((slide) => {
             this.currentSlide = slide;
             if (slide) {
                 requestAnimationFrame(() => {
@@ -102,28 +104,28 @@ export class GuidedTourOverlayComponent implements OnInit, OnDestroy {
         const sw = window.innerWidth;
         const sh = window.innerHeight;
 
-        const elTop    = r.top    - PAD;
-        const elLeft   = r.left   - PAD;
-        const elRight  = r.right  + PAD;
+        const elTop = r.top - PAD;
+        const elLeft = r.left - PAD;
+        const elRight = r.right + PAD;
         const elBottom = r.bottom + PAD;
 
         const { style: card, centered: cardCentered } = this.#computeCardPosition(r, sw, sh);
         return {
-            top:    { top: '0', left: '0', right: '0', height: `${Math.max(0, elTop)}px` },
+            top: { top: '0', left: '0', right: '0', height: `${Math.max(0, elTop)}px` },
             bottom: { top: `${Math.min(sh, elBottom)}px`, left: '0', right: '0', bottom: '0' },
-            left:   { top: `${Math.max(0, elTop)}px`, left: '0', width: `${Math.max(0, elLeft)}px`, height: `${elBottom - elTop}px` },
-            right:  { top: `${Math.max(0, elTop)}px`, left: `${Math.min(sw, elRight)}px`, right: '0', height: `${elBottom - elTop}px` },
-            ring:   { top: `${elTop}px`, left: `${elLeft}px`, width: `${elRight - elLeft}px`, height: `${elBottom - elTop}px` },
+            left: { top: `${Math.max(0, elTop)}px`, left: '0', width: `${Math.max(0, elLeft)}px`, height: `${elBottom - elTop}px` },
+            right: { top: `${Math.max(0, elTop)}px`, left: `${Math.min(sw, elRight)}px`, right: '0', height: `${elBottom - elTop}px` },
+            ring: { top: `${elTop}px`, left: `${elLeft}px`, width: `${elRight - elLeft}px`, height: `${elBottom - elTop}px` },
             card,
-            cardCentered
+            cardCentered,
         };
     }
 
-    #computeCardPosition(r: DOMRect, sw: number, sh: number): { style: Record<string, string>, centered: boolean } {
+    #computeCardPosition(r: DOMRect, sw: number, sh: number): { style: Record<string, string>; centered: boolean } {
         const style: Record<string, string> = { maxWidth: `${CARD_WIDTH}px` };
-        const cx = r.left + r.width  / 2;
-        const cy = r.top  + r.height / 2;
-        const isWide = r.width  > sw * WIDE_THRESHOLD;
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const isWide = r.width > sw * WIDE_THRESHOLD;
         const isTall = r.height > sh * WIDE_THRESHOLD;
 
         if (isWide) {

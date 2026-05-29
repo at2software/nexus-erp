@@ -2,119 +2,213 @@
 
 namespace App\Helpers;
 
-use Illuminate\Support\Facades\Http;
+use Composer\CaBundle\CaBundle;
+use GuzzleHttp\Client;
+use GuzzleHttp\Cookie\CookieJar;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\DomCrawler\Crawler;
 
 class HandelsRegister {
-    private $cookies   = [];
-    private $cid       = '0';
-    private $viewState = '';
+    private Client $client;
+    private string $viewState = '';
+    private string $resultsFormAction = '';
+
+    private function initClient() {
+        $this->client = new Client([
+            'verify'      => CaBundle::getSystemCaRootBundlePath(),
+            'cookies'     => new CookieJar(),
+            'http_errors' => false,
+            'headers'     => [
+                'User-Agent'      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept'          => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language' => 'de-DE,de;q=0.9',
+            ],
+        ]);
+    }
 
     public function process($commercialRegister) {
-        $html = $this->fetchSearchResults($commercialRegister);
-        if (empty($html)) {
+        $this->initClient();
+
+        $resultsHtml = $this->fetchSearchResults($commercialRegister);
+        if ($resultsHtml === 'fehlerhaft') {
+            return ['fehlerhaft' => true];
+        }
+        if (empty($resultsHtml)) {
             return null;
         }
-        return $this->parseCompany($html);
+        return $this->parseCompany($resultsHtml);
     }
+
+    private function parseCommercialRegister($commercialRegister) {
+        if (preg_match('/[|,]/', $commercialRegister)) {
+            $parts = preg_split('/[|,]/', $commercialRegister);
+            return [
+                'art'    => trim($parts[0] ?? ''),
+                'nummer' => trim($parts[1] ?? ''),
+                'ort'    => trim($parts[2] ?? ''),
+            ];
+        }
+
+        if (preg_match('/^(.+?)\s+(HRA|HRB|GnR|PR|VR)\s+(.+)$/i', $commercialRegister, $matches)) {
+            return [
+                'art'    => trim($matches[2]),
+                'nummer' => trim($matches[3]),
+                'ort'    => trim($matches[1]),
+            ];
+        }
+
+        return null;
+    }
+
     private function fetchSearchResults($commercialRegister) {
-        $url = 'https://www.handelsregister.de/rp_web/normalesuche.xhtml';
-
-        $parts              = preg_split('/[|,]/', $commercialRegister);
-        $registerArt        = trim($parts[0] ?? '');
-        $registerNummer     = trim($parts[1] ?? '');
-        $registerGerichtOrt = trim($parts[2] ?? '');
-        $registerGericht    = $this->mapRegistergericht($registerGerichtOrt);
-
-        if (empty($registerArt) || empty($registerNummer) || empty($registerGericht)) {
+        $parsed = $this->parseCommercialRegister($commercialRegister);
+        if (! $parsed) {
+            Log::warning('HandelsRegister: Could not parse commercial register: '.$commercialRegister);
             return null;
         }
 
-        $parameters = [
-            'javax.faces.partial.ajax'      => true,
-            'javax.faces.partial.execute'   => '@all',
-            'form:btnSuche'                 => 'form:btnSuche',
-            'form'                          => 'form',
-            'form:registerArt_input'        => $registerArt,
-            'form:registerNummer'           => $registerNummer,
-            'form:registergericht_input'    => $registerGericht,
-            'form:ergebnisseProSeite_input' => 10,
-            'javax.faces.ViewState'         => 'stateless',
-        ];
-
-        $resultResponse = Http::asForm()->post($url, $parameters);
-        if ($resultResponse->failed()) {
-            $this->error('Failed to fetch the company data.');
+        $registerGericht = $this->mapRegistergericht($parsed['ort']);
+        if (empty($parsed['art']) || empty($parsed['nummer']) || empty($registerGericht)) {
+            Log::warning('HandelsRegister: Missing register data for: '.$commercialRegister);
             return null;
         }
-        foreach ($resultResponse->cookies() as $cookie) {
-            $this->cookies[$cookie->getName()] = $cookie->getValue();
+
+        // Step 1: GET welcome page to establish session
+        $r1 = $this->client->get('https://www.handelsregister.de/rp_web/welcome.xhtml');
+        if ($r1->getStatusCode() !== 200) {
+            Log::warning('HandelsRegister: Failed to load welcome page.');
+            return null;
         }
-        preg_match('/cid=(\d+)/', $resultResponse->body(), $matches);
-        if (isset($matches[1])) {
-            $this->cid = $matches[1];
+        $body1 = (string) $r1->getBody();
+
+        preg_match('/name="javax.faces.ViewState".*?value="([^"]+)"/', $body1, $vsMatch);
+        $welcomeViewState = $vsMatch[1] ?? '';
+
+        // Step 2: Navigate to search page via JSF form POST
+        $r2 = $this->client->post('https://www.handelsregister.de/rp_web/welcome.xhtml', [
+            'form_params' => [
+                'naviForm'                  => 'naviForm',
+                'naviForm:normaleSucheLink' => 'naviForm:normaleSucheLink',
+                'target'                    => 'normaleSucheLink',
+                'javax.faces.ViewState'     => $welcomeViewState,
+            ],
+        ]);
+        $body2 = (string) $r2->getBody();
+
+        preg_match('/name="javax.faces.ViewState".*?value="([^"]+)"/', $body2, $vsMatch2);
+        $searchViewState = $vsMatch2[1] ?? '';
+
+        preg_match('/<form[^>]*id="form"[^>]*action="([^"]+)"/', $body2, $formMatch);
+        $formAction = html_entity_decode($formMatch[1] ?? '');
+        if (empty($formAction)) {
+            Log::warning('HandelsRegister: Could not find search form.');
+            return null;
         }
-        preg_match('/<update id="j_id1:javax.faces.ViewState:0"><!\[CDATA\[(.*?)\]\]><\/update>/', $resultResponse->body(), $matches);
-        if (isset($matches[1])) {
-            $this->viewState = $matches[1];
+
+        // Step 3: POST search
+        $searchUrl = 'https://www.handelsregister.de'.$formAction;
+        $r3        = $this->client->post($searchUrl, [
+            'form_params' => [
+                'javax.faces.partial.ajax'      => 'true',
+                'javax.faces.source'            => 'form:btnSuche',
+                'javax.faces.partial.execute'   => '@all',
+                'javax.faces.partial.render'    => 'form',
+                'form:btnSuche'                 => 'form:btnSuche',
+                'form'                          => 'form',
+                'form:schlagwoerter'            => '',
+                'form:schlagwortOptionen'       => '1',
+                'form:registerArt_input'        => $parsed['art'],
+                'form:registerNummer'           => $parsed['nummer'],
+                'form:registergericht_input'    => $registerGericht,
+                'form:ergebnisseProSeite_input' => '10',
+                'form:auchGeloeschte_input'     => 'on',
+                'javax.faces.ViewState'         => $searchViewState,
+            ],
+        ]);
+        $body3 = (string) $r3->getBody();
+
+        // Step 4: Follow redirect to results page
+        if (preg_match('/redirect url="([^"]+)"/', $body3, $redirectMatch)) {
+            $resultsUrl = 'https://www.handelsregister.de'.$redirectMatch[1];
+            $r4         = $this->client->get($resultsUrl);
+            return (string) $r4->getBody();
         }
-        return $resultResponse->body();
+
+        if (str_contains($body3, 'fehlerhaft')) {
+            Log::warning('HandelsRegister: Registernummer fehlerhaft for: '.$commercialRegister);
+            return 'fehlerhaft';
+        }
+
+        Log::warning('HandelsRegister: No redirect to results page for: '.$commercialRegister);
+        return null;
     }
-    private function parseCompany($html) {
-        $html = trim($html);
-        $html = mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8');
-        if (preg_match('/<html.*<\/html>/s', $html, $matches)) {
-            $html = $matches[0];
-        }
-        $crawler    = new Crawler($html);
-        $form       = $crawler->filter('form[id=ergebnissForm]')->first();
-        $formAction = $form->attr('action');
 
+    private function parseCompany($html) {
+        $crawler = new Crawler($html);
+
+        if (! $crawler->filter('form[id=ergebnissForm]')->count()) {
+            return null;
+        }
+        $this->resultsFormAction = $crawler->filter('form[id=ergebnissForm]')->first()->attr('action');
+
+        if (! $crawler->filter('table[role="grid"] tbody tr[data-ri]')->count()) {
+            return null;
+        }
         $row = $crawler->filter('table[role="grid"] tbody tr[data-ri]')->first();
 
         $cells = $row->filter('td')->each(function ($cell) {
             return trim($cell->text());
         });
 
-        $links = $crawler->filter('td:nth-child(4) a')->each(function ($linkNode) {
-            $onclick = $linkNode->attr('onclick');
+        preg_match('/name="javax.faces.ViewState".*?value="([^"]+)"/', $html, $vsMatch);
+        $this->viewState = $vsMatch[1] ?? '';
 
-            preg_match_all("/'([^']+)'/", $onclick, $matches);
-            $params = $matches[1] ?? [];
-            return [
-                'text'   => $linkNode->filter('span')->text(),
-                'spanId' => $linkNode->attr('id') ?? null,
-                'params' => $params,
-            ];
-        });
+        $links = $this->extractDocumentLinks($crawler);
 
         $insolvent = false;
         foreach ($links as $link) {
-            if ($link['text'] != 'SI') {
+            if ($link['text'] !== 'SI') {
                 continue;
             }
-            $response = Http::asForm()->withCookies($this->cookies, 'www.handelsregister.de')
-                ->post('https://www.handelsregister.de'.$formAction, [
+            $response = $this->client->post('https://www.handelsregister.de'.$this->resultsFormAction, [
+                'form_params' => [
                     'ergebnissForm'         => 'ergebnissForm',
                     'javax.faces.ViewState' => $this->viewState,
                     $link['spanId']         => $link['spanId'],
                     'property'              => 'Global.Dokumentart.SI',
-                ]);
+                ],
+            ]);
 
-            if ($response->ok()) {
-                $insolvent = strpos($response->body(), 'Insolvenz') !== false;
+            if ($response->getStatusCode() === 200) {
+                $insolvent = str_contains((string) $response->getBody(), 'Insolvenz');
             }
         }
+
         return [
             'court'     => $cells[1] ?? '-',
             'name'      => $cells[2] ?? '-',
             'state'     => $cells[3] ?? '-',
             'status'    => $cells[4] ?? '-',
             'insolvent' => $insolvent,
+            'links'     => array_column($links, 'text'),
             'history'   => array_slice($cells, 8),
         ];
     }
-    private function mapRegisterGericht($registerGerichtOrt) {
+
+    private function extractDocumentLinks(Crawler $crawler) {
+        return $crawler->filter('td a')->each(function ($linkNode) {
+            $onclick = $linkNode->attr('onclick') ?? '';
+            preg_match_all("/'([^']+)'/", $onclick, $matches);
+            $text = $linkNode->filter('span')->count() ? $linkNode->filter('span')->text() : trim($linkNode->text());
+            return [
+                'text'   => $text,
+                'spanId' => $linkNode->attr('id') ?? null,
+                'params' => $matches[1] ?? [],
+            ];
+        });
+    }
+
+    private function mapRegistergericht($registerGerichtOrt) {
         $mapping = [
             'alle'                               => '',
             'Aachen'                             => 'R3101',

@@ -9,6 +9,7 @@ use App\Models\Invoice;
 use App\Models\Param;
 use App\Services\CashFlowService;
 use App\Services\InvoiceStatisticsService;
+use App\Services\LiquidityService;
 use App\Traits\ControllerHasPermissionsTrait;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -54,7 +55,6 @@ class InvoiceController extends Controller {
     }
     public function update(Request $request, Invoice $invoice) {
         if ($request->filled('paid')) {
-            NLog::info('paid');
             $invoice->paid_at = $request->boolean('paid') ? now() : null;
         }
         $invoice->applyAndSave($request);
@@ -104,6 +104,9 @@ class InvoiceController extends Controller {
     }
     public function showCashFlow() {
         return CashFlowService::getCashFlowData();
+    }
+    public function showLiquidity() {
+        return LiquidityService::getLiquidityData();
     }
     public function uploadBankCsv(Request $request) {
         if (! $request->hasFile('file')) {

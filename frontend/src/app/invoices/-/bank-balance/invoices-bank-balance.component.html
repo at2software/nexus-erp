@@ -1,0 +1,212 @@
+<toolbar>
+    <button class="btn btn-primary" (click)="load()" [disabled]="isLoading()">
+        @if (isLoading()) {
+            <span class="spinner-border spinner-border-sm me-1"></span> fetching…
+        } @else {
+            <i>sync</i> fetch transactions
+        }
+    </button>
+</toolbar>
+
+<div class="row g-3">
+    <div class="col-3">
+        @if (matched().length > 0 || unmatched().length > 0) {
+            <div class="card mb-3">
+                <div class="card-body p-0" style="height: 160px">
+                    <div echarts [options]="matchRatioChart()" style="width:100%;height:160px"></div>
+                </div>
+            </div>
+        }
+
+        @if (allExpenses().length > 0) {
+            <div class="card">
+                <div class="card-header d-flex align-items-center">
+                    <span>unassigned expenses</span>
+                    @if (categories().length > 0) {
+                        <div ngbDropdown placement="bottom-end" autoClose="outside" class="ms-auto">
+                            <button class="btn btn-sm p-0" ngbDropdownToggle
+                                [class.text-primary]="selectedCategoryIds().size > 0"
+                                [class.text-muted]="selectedCategoryIds().size === 0">
+                                <i>filter_list</i>
+                            </button>
+                            <div ngbDropdownMenu>
+                                @for (cat of categories(); track cat.id) {
+                                    <button class="dropdown-item d-flex align-items-center gap-2"
+                                        (click)="toggleCategory(cat.id)">
+                                        <i class="small" [style.color]="cat.css()">{{ isCatSelected(cat.id) ? 'check_box' : 'check_box_outline_blank' }}</i>
+                                        {{ cat.name }}
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+                <ul class="list-group list-group-flush">
+                    @for (exp of filteredExpensesWithoutPattern(); track exp.id) {
+                        <li class="list-group-item list-group-item-action p-2 px-3" [nx]="exp">
+                            <div class="hstack gap-2">
+                                <i class="small" [style.color]="categoryFor(exp)?.css() ?? '#666'">repeat</i>
+                                <span class="small">{{ exp.name }}</span>
+                                <span class="ms-auto text-muted small text-nowrap">€ {{ fmt(exp.price) }}</span>
+                            </div>
+                        </li>
+                    }
+                    @if (filteredExpensesWithoutPattern().length === 0) {
+                        <li class="list-group-item text-muted small text-center py-2">none</li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+
+    <div class="col-9">
+
+        @if (allPatternItems().length > 0) {
+            <div class="card mb-3">
+                <div class="card-header d-flex align-items-center">
+                    <span>expense patterns</span>
+                    @if (categories().length > 0) {
+                        <div ngbDropdown placement="bottom-end" autoClose="outside" class="ms-auto">
+                            <button class="btn btn-sm p-0" ngbDropdownToggle
+                                [class.text-primary]="selectedPatternCategoryIds().size > 0"
+                                [class.text-muted]="selectedPatternCategoryIds().size === 0">
+                                <i>filter_list</i>
+                            </button>
+                            <div ngbDropdownMenu>
+                                @for (cat of categories(); track cat.id) {
+                                    <button class="dropdown-item d-flex align-items-center gap-2"
+                                        (click)="togglePatternCategory(cat.id)">
+                                        <i class="small" [style.color]="cat.css()">{{ isPatternCatSelected(cat.id) ? 'check_box' : 'check_box_outline_blank' }}</i>
+                                        {{ cat.name }}
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="table-responsive">
+                    <table class="table mb-0 align-middle">
+                        <colgroup>
+                            <col style="width: 32px">
+                            <col>
+                            <col style="width: 80px">
+                            <col style="width: 190px">
+                            <col style="width: 48px">
+                            <col style="width: 100px">
+                            <col style="width: 130px">
+                            <col style="width: 28px">
+                        </colgroup>
+                        <tbody>
+                            @for (item of filteredPatternItems(); track item.expense.id) {
+                                <tr [class.border-warning]="item.is_amount_mismatch" [nx]="item.expense"
+                                    [style.cursor]="item.transactions.length > 0 ? 'pointer' : 'default'"
+                                    (click)="item.transactions.length > 0 && toggleExpand(item.expense.id)">
+                                    <td class="ps-3">
+                                        <i [style.color]="categoryFor(item.expense)?.css() ?? '#666'">repeat</i>
+                                    </td>
+                                    <td>{{ item.expense.name }}</td>
+                                    <td class="small text-muted text-nowrap">{{ item.expense.repeatString() }}</td>
+                                    <td (click)="$event.stopPropagation()">
+                                        <input type="text" class="form-control form-control-sm" [autosave]="item.expense" [(ngModel)]="item.expense.matching_string" placeholder="pattern… (* wildcard)" />
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge" [class.text-bg-primary]="item.transactions.length > 0" [class.text-bg-secondary]="item.transactions.length === 0">{{ item.transactions.length }}</span>
+                                    </td>
+                                    <td class="text-end text-nowrap small text-muted pe-3">€ {{ fmt(item.expense.price) }}</td>
+                                    <td class="text-end text-nowrap small text-muted pe-2">
+                                        € {{ fmt(item.expense.yearlyPrice) }}/yr
+                                        @if (item.is_amount_mismatch) {
+                                            <span class="badge bg-warning text-dark text-nowrap ms-1">latest: € {{ fmt(item.latest_amount) }}</span>
+                                        }
+                                    </td>
+                                    <td class="text-center pe-1">
+                                        @if (item.transactions.length > 0) {
+                                            <i class="text-muted">{{ isExpanded(item.expense.id) ? 'expand_less' : 'expand_more' }}</i>
+                                        }
+                                    </td>
+                                </tr>
+                                @if (isExpanded(item.expense.id)) {
+                                    @for (tx of item.transactions; track tx.key) {
+                                        <tr class="tx-sub-row text-muted small">
+                                            <td></td>
+                                            <td>{{ tx.sender }}</td>
+                                            <td colspan="2" class="text-truncate">{{ tx.reference }}</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td class="text-end text-nowrap pe-2">€ {{ fmt(tx.amount) }}</td>
+                                            <td class="text-nowrap">{{ tx.date }}</td>
+                                        </tr>
+                                    }
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-header hstack gap-2">
+                <span>unmatched debit transactions</span>
+                @if (unmatched().length > 0) {
+                    <input
+                        class="form-control form-control-sm ms-2"
+                        style="max-width: 220px"
+                        placeholder="filter…"
+                        [ngModel]="filterText()"
+                        (ngModelChange)="filterText.set($event)"
+                    />
+                    <button class="btn btn-sm" title="hide debitors that appear only once"
+                        [class.btn-primary]="hideSingleDebitors()"
+                        [class.text-muted]="!hideSingleDebitors()"
+                        (click)="hideSingleDebitors.update(v => !v)">
+                        <n>filter_1</n>
+                    </button>
+                    @if (selectedTxs().length > 0) {
+                        <span class="badge bg-primary ms-1">{{ selectedTxs().length }} selected</span>
+                        @if (commonPattern) {
+                            <span class="badge bg-secondary text-truncate" style="max-width:200px" [title]="commonPattern">
+                                "{{ commonPattern }}"
+                            </span>
+                        }
+                        <button class="btn btn-sm text-muted ms-auto" (click)="clearTxSelection()">
+                            <i>close</i>
+                        </button>
+                    }
+                }
+            </div>
+
+            @if (!isLoading() && unmatched().length === 0 && matched().length === 0) {
+                <div class="p-4 text-center text-muted">
+                    Click <strong>fetch transactions</strong> to load the last 90 days of debit transactions.
+                </div>
+            }
+
+            @if (filteredUnmatched.length > 0) {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <colgroup>
+                            <col style="width: 90px">
+                            <col style="width: 180px">
+                            <col>
+                            <col style="width: 110px">
+                        </colgroup>
+                        <tbody>
+                            @for (tx of filteredUnmatched; track tx.key) {
+                                <tr class="tx-row" [nx]="tx">
+                                    <td class="text-muted small text-nowrap">{{ tx.date }}</td>
+                                    <td class="text-muted text-truncate"
+                                        [ngbTooltip]="tx.sender" container="body">{{ tx.sender }}</td>
+                                    <td [ngbTooltip]="tx.reference" container="body"
+                                        [innerHTML]="highlightRef(tx.reference)"></td>
+                                    <td class="text-danger text-nowrap text-end pe-3">-€ {{ fmt(tx.amount) }}</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+
+    </div>
+</div>

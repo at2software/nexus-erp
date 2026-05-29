@@ -35,7 +35,7 @@ export abstract class BaseComponent implements OnDestroy {
      * Register multiple event listeners for automatic cleanup
      */
     protected addEventListenersCleanup(configs: EventListenerConfig[]): void {
-        configs.forEach(config => this.addEventListenerCleanup(config));
+        configs.forEach((config) => this.addEventListenerCleanup(config));
     }
 
     /**
@@ -94,7 +94,7 @@ export abstract class BaseComponent implements OnDestroy {
         this.#eventListeners.length = 0;
 
         // Clean up timeouts
-        this.#timeouts.forEach(timeout => {
+        this.#timeouts.forEach((timeout) => {
             try {
                 clearTimeout(timeout);
             } catch (error) {
@@ -104,7 +104,7 @@ export abstract class BaseComponent implements OnDestroy {
         this.#timeouts.clear();
 
         // Clean up intervals
-        this.#intervals.forEach(interval => {
+        this.#intervals.forEach((interval) => {
             try {
                 clearInterval(interval);
             } catch (error) {
@@ -114,7 +114,7 @@ export abstract class BaseComponent implements OnDestroy {
         this.#intervals.clear();
 
         // Clean up observers
-        this.#observers.forEach(observer => {
+        this.#observers.forEach((observer) => {
             try {
                 observer.disconnect();
             } catch (error) {

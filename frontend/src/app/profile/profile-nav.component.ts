@@ -1,38 +1,39 @@
-
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
-import { HeaderModule } from '@app/app/header/header.module';
+import { HeaderComponent } from '@app/app/header/header.component';
+import { HeaderLinkItemComponent } from '@app/app/header/header-link-item/header-link-item.component';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { DndDirective } from '@directives/dnd.directive';
 import { ConfirmationService } from '@app/_modals/modal-confirm/confirmation.service';
-import { AuthenticationService } from 'src/models/auth.service';
-import { GlobalService } from 'src/models/global.service';
+import { AuthenticationService } from '@models/auth.service';
+import { GlobalService } from '@models/global.service';
 
 @Component({
     selector: 'profile-nav',
     templateUrl: './profile-nav.component.html',
     styleUrls: ['./profile-nav.component.scss'],
     standalone: true,
-    imports: [RouterModule, ToolbarComponent, DndDirective, HeaderModule, NgbDropdownModule]
+    imports: [RouterModule, ToolbarComponent, DndDirective, HeaderComponent, HeaderLinkItemComponent, NgbDropdownModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileNavComponent {
-    #authService = inject(AuthenticationService)
-    #confirmationService = inject(ConfirmationService)
-    global = inject(GlobalService)
+    #authService = inject(AuthenticationService);
+    #confirmationService = inject(ConfirmationService);
+    global = inject(GlobalService);
 
     confirmLogout = async () => {
         try {
             await this.#confirmationService.confirm({
                 title: $localize`:@@i18n.common.attention:attention`,
                 message: $localize`:@@i18n.profile.confirmLogout:Do you really want to log out?`,
-                dialogSize: 'sm'
+                dialogSize: 'sm',
             });
             this.#authService.logout();
         } catch {
             // User cancelled
         }
-    }
+    };
 
-    onDndUploaded = () => window.location.reload()
+    onDndUploaded = () => window.location.reload();
 }

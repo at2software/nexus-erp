@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
@@ -8,28 +8,29 @@ import { ProjectService } from '@models/project/project.service';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
 import moment from 'moment';
 import { Project } from '@models/project/project.model';
-import { NexusModule } from '@app/nx/nexus.module';
+import { Nx } from '@app/nx/nx.directive';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
+import { SpinnerComponent } from '@shards/spinner/spinner.component';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'projects-reporting',
     standalone: true,
-    imports: [FormsModule, NgxDaterangepickerMd, AvatarComponent, NgbTooltipModule, NexusModule, EmptyStateComponent],
+    imports: [FormsModule, NgxDaterangepickerMd, AvatarComponent, NgbTooltipModule, Nx, AvatarComponent, EmptyStateComponent, SpinnerComponent],
     templateUrl: './projects-reporting.component.html',
-    styleUrl: './projects-reporting.component.scss'
+    styleUrl: './projects-reporting.component.scss',
 })
 export class ProjectsReportingComponent implements OnInit {
     #projectService = inject(ProjectService);
 
     dateRange?: StartEnd = new StartEnd({
         startDate: moment().subtract(30, 'days'),
-        endDate: moment()
+        endDate: moment(),
     });
 
     ranges: any = DATESPAN_RANGE;
-    reportData: Project[]
-    loading = false;
-
+    reportData: Project[] = [];
+    loading = signal(false);
 
     formatDate(date: any): string {
         return moment(date).format('DD.MM.YYYY HH:mm');
@@ -40,8 +41,7 @@ export class ProjectsReportingComponent implements OnInit {
         const stateMoment = moment(stateDate);
         const startDate = moment((this.dateRange.startDate as any).$d || this.dateRange.startDate);
         const endDate = moment((this.dateRange.endDate as any).$d || this.dateRange.endDate);
-        return stateMoment.isSameOrAfter(startDate, 'day') &&
-               stateMoment.isSameOrBefore(endDate, 'day');
+        return stateMoment.isSameOrAfter(startDate, 'day') && stateMoment.isSameOrBefore(endDate, 'day');
     }
 
     ngOnInit() {
@@ -58,15 +58,15 @@ export class ProjectsReportingComponent implements OnInit {
     loadReport() {
         if (!this.dateRange?.startDate || !this.dateRange?.endDate) return;
 
-        this.loading = true;
+        this.loading.set(true);
         const params = {
             start_date: this.dateRange.startDate.format('YYYY-MM-DD'),
-            end_date: this.dateRange.endDate.format('YYYY-MM-DD')
+            end_date: this.dateRange.endDate.format('YYYY-MM-DD'),
         };
 
-        this.#projectService.indexReporting(params).subscribe(data => {
+        this.#projectService.indexReporting(params).subscribe((data) => {
             this.reportData = data;
-            this.loading = false;
+            this.loading.set(false);
         });
     }
 }

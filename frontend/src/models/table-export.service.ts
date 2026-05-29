@@ -3,10 +3,9 @@ import { CdkTable } from '@angular/cdk/table';
 import { Workbook } from 'exceljs';
 
 @Injectable({
-    providedIn: 'root'
+    providedIn: 'root',
 })
 export class TableExportService {
-
     async exportAnyTableToCSV(table: HTMLTableElement | CdkTable<any>, filenamePrefix: string = '') {
         if (table instanceof HTMLTableElement) {
             await this.#exportTableAsCsv(table, filenamePrefix);
@@ -41,24 +40,24 @@ export class TableExportService {
     }
 
     #convertTableToCsv(table: HTMLTableElement): any[][] {
-        const rows = Array.from(table.rows)
-        const conv = (cell:any, data:any) => {
-            if (('exportNumeric' in cell.dataset)) return parseFloat(data)
-                return data
-        }
+        const rows = Array.from(table.rows);
+        const conv = (cell: any, data: any) => {
+            if ('exportNumeric' in cell.dataset) return parseFloat(data);
+            return data;
+        };
         return rows
-            .filter(row => !('exportHidden' in row.dataset))
-            .map(row => {
+            .filter((row) => !('exportHidden' in row.dataset))
+            .map((row) => {
                 const cells = Array.from(row.cells);
                 return cells
-                    .filter(cell => !('exportHidden' in cell.dataset))
-                    .map(cell => {
+                    .filter((cell) => !('exportHidden' in cell.dataset))
+                    .map((cell) => {
                         if (cell.dataset?.export) {
-                            return conv(cell, cell.dataset.export)
+                            return conv(cell, cell.dataset.export);
                         }
-                        return conv(cell, cell.textContent?.trim() || '')
-                    })
-            })
+                        return conv(cell, cell.textContent?.trim() || '');
+                    });
+            });
     }
 
     #exportCdkTableAsCsv(table: CdkTable<any>, filenamePrefix: string): void {
@@ -69,7 +68,7 @@ export class TableExportService {
 
         const separator = ',';
 
-        const columns = table._contentColumnDefs.map(columnDef => columnDef.name);
+        const columns = table._contentColumnDefs.map((columnDef) => columnDef.name);
         if (columns.length === 0) {
             console.error('No columns in CdkTable');
             return;
@@ -78,9 +77,9 @@ export class TableExportService {
         const headers = columns.join(separator);
         let csvContent = headers + '\n';
 
-        const data = (table.dataSource as any[]);
-        data.forEach(row => {
-            const rowData = columns.map(column => {
+        const data = table.dataSource as any[];
+        data.forEach((row) => {
+            const rowData = columns.map((column) => {
                 let cell = row[column] === null || row[column] === undefined ? '' : row[column];
                 cell = cell instanceof Date ? cell.toLocaleString() : cell.toString();
                 //cell = cell.includes(separator) || cell.includes('"') || cell.includes('\n') ? cell.replace(/"/g, '""') : cell;

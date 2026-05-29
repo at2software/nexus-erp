@@ -9,16 +9,17 @@
             </tr>
         </thead>
         <tbody>
-            @for (contact of contacts; track contact.id) {
-            <tr [nx]="contact" [tables]="contacts">
-                <td>
-                    @for (company of contact.companies; track company.id) {
-                    <avatar [object]="company" [nx]="company" [tables]="contact.companies"></avatar>
-                    }
-                </td>
-                <td class="text-truncate">{{contact.name}}</td>
-                <td><input type="text" (blur)="onUpdate(contact)" [(ngModel)]="contact.var.bday" class="form-control" placeholder="YYYY-MM-DD" i18n-placeholder="@@i18n.common.date_format_placeholder"></td>
-            </tr>
+            @let _contacts = contacts();
+            @for (contact of _contacts; track contact.id) {
+                <tr [nx]="contact" [tables]="_contacts">
+                    <td>
+                        @for (company of contact.companies; track company.id) {
+                            <avatar [object]="company" [nx]="company" [tables]="contact.companies"></avatar>
+                        }
+                    </td>
+                    <td class="text-truncate">{{ contact.getName() }}</td>
+                    <td><input type="text" (blur)="onUpdate(contact)" [(ngModel)]="contact.var.bday" class="form-control" placeholder="YYYY-MM-DD" i18n-placeholder="@@i18n.common.date_format_placeholder" /></td>
+                </tr>
             }
         </tbody>
     </table>

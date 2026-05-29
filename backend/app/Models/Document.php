@@ -2,11 +2,9 @@
 
 namespace App\Models;
 
+use App\Services\ZugferdInvoiceBuilder;
 use Barryvdh\DomPDF\Facade\Pdf;
 use horstoeko\zugferd\codelists\ZugferdInvoiceType;
-use horstoeko\zugferd\ZugferdDocumentBuilder;
-use horstoeko\zugferd\ZugferdDocumentPdfMerger;
-use horstoeko\zugferd\ZugferdProfiles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use setasign\Fpdi\Fpdi;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -102,14 +100,13 @@ class Document extends BaseModel {
         return $template;
     }
     private static function getPaymentDuration(?Project $project, CompanyContact|Company|null $contact): string {
-        // Cascade: project -> customer -> global default
-        // Do NOT pass fallback=true here — that would return the global default
-        // for entities without a custom value, making the condition truthy and
-        // short-circuiting the cascade before reaching the company check.
+        // Cascade: project -> customer company -> global default
+        // Payment duration is stored on Company, not CompanyContact — always resolve to Company.
         if ($project && $projectDuration = $project->param('INVOICE_PAYMENT_DURATION')->value) {
             return $projectDuration;
         }
-        if ($contact && $customerDuration = $contact->param('INVOICE_PAYMENT_DURATION')->value) {
+        $company = $project?->company;
+        if ($company && $customerDuration = $company->param('INVOICE_PAYMENT_DURATION')->value) {
             return $customerDuration;
         }
         return Param::get('INVOICE_PAYMENT_DURATION')->value ?? '14';
@@ -211,269 +208,7 @@ class Document extends BaseModel {
     }
 
     public static function makeZUGFeRD($pdf, $items, $company, $id = 0, string $documentTypeCode = ZugferdInvoiceType::INVOICE, $footer = [], ?Project $project = null) {
-        // Use direct method call since Laravel accessor isn't working
-        $params = $company->getParamsAttribute();
-
-        $p = Document::personalizationArray($company);
-
-        // Determine invoice type for VAT handling
-        $isReverseCharge  = $company->needs_vat_handling && ! empty($company->vat_id) && trim($company->vat_id) !== '';
-        $isEuWithoutVatId = $company->needs_vat_handling && (empty($company->vat_id) || trim($company->vat_id) === '');
-
-        $document = ZugferdDocumentBuilder::CreateNew(ZugferdProfiles::PROFILE_XRECHNUNG_3);
-
-        // Document Information
-
-        // PEPPOL-EN16931-R010: Buyer email is required (initialize before seller block)
-        $buyerEmail = trim($company->vcard?->getFirstValue('EMAIL') ?? '');
-        if (empty($buyerEmail)) {
-            $buyerEmail = 'customer@example.com';
-        }
-
-        // Initialize seller vars before conditional block (used later outside it)
-        $me   = null;
-        $iban = '';
-
-        // Seller Information
-        if ($me = Company::find(Param::get('ME_ID')->value)) {
-            $iban = Param::get('ME_IBAN')->value;
-            // PEPPOL-EN16931-R020: Seller email is required
-            $sellerEmail = Param::get('ME_EMAIL')->value ?? '';
-            if (empty($sellerEmail) || trim($sellerEmail) === '') {
-                $sellerEmail = env('MAIL_FROM_ADDRESS', 'noreply@example.com');
-            }
-
-            $document
-                // https://portal3.gefeg.com/projectdata/invoice/deliverables/installed/publishingproject/zugferd%202.1%20-%20facturx%201.0.05/en%2016931%20%E2%80%93%20facturx%201.0.05%20%E2%80%93%20zugferd%202.1%20-%20basic.scm/html/de/021.htm?https://portal3.gefeg.com/projectdata/invoice/deliverables/installed/publishingproject/zugferd%202.1%20-%20facturx%201.0.05/en%2016931%20%E2%80%93%20facturx%201.0.05%20%E2%80%93%20zugferd%202.1%20-%20basic.scm/html/de/0213.htm
-                ->setDocumentInformation($id, $documentTypeCode, new \DateTime, 'EUR')
-                ->setDocumentSupplyChainEvent(new \DateTime);
-
-            $adr = self::rfc6350toFacturX($me->vcard->getFirstAttr('ADR'));
-            $document
-                ->setDocumentSeller('at² GmbH', Param::get('ME_TAX_ID')->value)
-                ->addDocumentSellerGlobalId(Param::get('ME_SWIFT')->value, '0021')    // 0021 : SWIFT, 0088 : EAN, 0060 : DUNS, 0177 : ODETTE
-                ->addDocumentSellerTaxRegistration('FC', Param::get('ME_TAX_ID')->value);
-
-            // BR-O-02: Don't add seller VAT identifier for reverse charge invoices
-            if (! $isReverseCharge) {
-                $document->addDocumentSellerTaxRegistration('VA', Param::get('ME_VAT_ID')->value);
-            }
-
-            $document
-                ->setDocumentSellerAddress(...$adr)
-                ->setDocumentSellerContact(
-                    Param::get('ME_COMPANY_OWNERS')->value,
-                    Param::get('ME_DEPARTMENT')->value,
-                    Param::get('ME_PHONE')->value,
-                    Param::get('ME_FAX')->value,
-                    $sellerEmail);
-        }
-
-        // Set Buyer Information
-        $adr = self::rfc6350toFacturX($p['address_array']);
-        $document
-            ->setDocumentBuyer($p['companyName'], $p['customerNumber'])
-            ->setDocumentBuyerReference($p['customerNumber'])
-            ->setDocumentBuyerAddress(...$adr)
-            ->setDocumentBuyerContact('', '', '', '', $buyerEmail); // Required by PEPPOL
-
-        // BR-O-02: Add buyer VAT identifier only for reverse charge invoices
-        if ($isReverseCharge) {
-            $document->addDocumentBuyerTaxRegistration('VA', $company->vat_id);
-        }
-
-        $unitCodeMap = config('invoice.unit_codes');
-
-        // Add Items
-        foreach ($items as $k => $item) {
-            // Convert unit to UN/ECE standard
-            $unitCode = $unitCodeMap[$item['unit_name']] ?? 'C62'; // Default to piece
-
-            // PEPPOL-R046: Net price = Gross price - Discount
-            $grossPrice      = floatval($item['price']);
-            $discountedPrice = floatval($item['price_discounted']);
-            // If there's a discount, show the relationship properly
-            if ($grossPrice > $discountedPrice) {
-                $netPrice = $discountedPrice; // Net = Gross - Discount
-            } else {
-                $netPrice = $grossPrice; // No discount case
-            }
-
-            // Determine VAT category based on company location and VAT ID
-            $vatRate     = floatval($item['vat_rate']);
-            $vatCategory = 'S'; // Default: Standard rate
-
-            if (! $company->needs_vat_handling) {
-                // Non-EU: Tax-free export
-                $vatCategory = 'G'; // Export outside EU
-                $vatRate     = 0.0; // Always 0% for exports
-            } elseif ($isReverseCharge) {
-                // EU with valid VAT ID: Reverse charge (0% VAT)
-                $vatCategory = 'O'; // Not subject to VAT (reverse charge)
-                $vatRate     = 0.0; // 0% for reverse charge
-            }
-            // EU without VAT ID: Use regular German VAT rates (keep original vatRate and category 'S')
-            // This should be treated exactly like a German invoice
-
-            $document->addNewPosition($k)
-                ->setDocumentPositionProductDetails(strip_tags($item['text']), '', $item['product_id'], null, '0160', '4012345001235')
-                ->setDocumentPositionGrossPrice($grossPrice)
-                ->setDocumentPositionNetPrice($netPrice)
-                ->setDocumentPositionQuantity($item['qty'], $unitCode);
-
-            // Add position tax based on category
-            if ($vatCategory === 'O') {
-                // BR-O-05: VAT rate shall NOT be provided for category 'O' positions
-                // BR-O-02: Use exemption reason for "Not subject to VAT"
-                $document->addDocumentPositionTax($vatCategory, 'VAT', null, null, 'Steuerfrei nach §4 Nummer 1b in Verbindung mit §6a UStG');
-            } elseif ($vatCategory === 'G') {
-                // Export outside EU
-                $document->addDocumentPositionTax($vatCategory, 'VAT', $vatRate, null, 'Steuerfreie Ausfuhrlieferung gemäß §4 Nr. 1a UStG i.V.m. §6 UStG');
-            } else {
-                // Standard VAT rate
-                $document->addDocumentPositionTax($vatCategory, 'VAT', $vatRate);
-            }
-
-            $document->setDocumentPositionLineSummation(floatval($item['net']));
-        }
-
-        $totalGross = $items->sum('gross');
-        $totalNet   = $items->sum('net');
-        $totalVat   = $items->sum('vat');
-
-        // VAT breakdown (BG-23) - Required by BR-CO-18 and BR-S-01
-        $calculatedVatTotal = 0;
-
-        if (! $company->needs_vat_handling) {
-            // Non-EU: Create single tax-free export entry with exemption reason
-            $document->addDocumentTax(
-                'G', // Export outside EU
-                'VAT',
-                $totalNet, // Taxable amount
-                0.0, // Tax amount (always 0 for exports)
-                0.0, // Tax rate (always 0% for exports)
-                'Steuerfreie Ausfuhrlieferung gemäß §4 Nr. 1a UStG i.V.m. §6 UStG', // German tax law reference
-                null // BT-121: VAT exemption reason code (using text instead)
-            );
-            $calculatedVatTotal = 0.0;
-        } elseif ($isReverseCharge) {
-            // EU with valid VAT ID: Reverse charge (0% VAT)
-            $document->addDocumentTax(
-                'O', // Not subject to VAT (reverse charge)
-                'VAT',
-                $totalNet, // Taxable amount
-                0.0, // Tax amount (0 for reverse charge)
-                0.0, // BR-DE-14: VAT category rate must be provided
-                'Steuerfrei nach §4 Nummer 1b in Verbindung mit §6a UStG' // German reverse charge law
-            );
-            $calculatedVatTotal = 0.0;
-        } elseif ($isEuWithoutVatId) {
-            // EU without VAT ID: Calculate VAT breakdown from line items (like German invoices)
-            $vatBreakdown = [];
-
-            // Group line items by VAT rate to create proper breakdown
-            foreach ($items as $item) {
-                $itemVatRate = floatval($item['vat_rate']);
-                $itemNet     = floatval($item['net']);
-                $itemVat     = floatval($item['vat']);
-
-                $rateKey = (string)$itemVatRate;
-                if (! isset($vatBreakdown[$rateKey])) {
-                    $vatBreakdown[$rateKey] = [
-                        'rate'           => $itemVatRate,
-                        'taxable_amount' => 0.0,
-                        'tax_amount'     => 0.0,
-                        'category'       => 'S', // Standard rate for EU without VAT ID
-                    ];
-                }
-
-                $vatBreakdown[$rateKey]['taxable_amount'] += $itemNet;
-                $vatBreakdown[$rateKey]['tax_amount'] += $itemVat;
-            }
-
-            // Add VAT breakdown entries
-            foreach ($vatBreakdown as $breakdown) {
-                $calculatedVatTotal += $breakdown['tax_amount'];
-                $document->addDocumentTax(
-                    $breakdown['category'],
-                    'VAT',
-                    $breakdown['taxable_amount'],
-                    $breakdown['tax_amount'],
-                    $breakdown['rate']
-                );
-            }
-        } else {
-            // German customers: Use footer breakdown (original logic)
-            foreach ($footer as $footerItem) {
-                // Footer structure: [$description, $formattedAmount, $symbol, $vatData]
-                if (is_array($footerItem) && count($footerItem) >= 4 && $footerItem[3] !== null) {
-                    $vatData = $footerItem[3];
-                    $calculatedVatTotal += $vatData['tax_amount'];
-
-                    $document->addDocumentTax(
-                        $vatData['category'],
-                        'VAT',
-                        $vatData['taxable_amount'],
-                        $vatData['tax_amount'],
-                        $vatData['rate']
-                    );
-                }
-            }
-        }
-        $paymentDurationParam = $company->param('INVOICE_PAYMENT_DURATION', true);
-        $paymentDuration      = $paymentDurationParam->value;
-
-        $due_date = now()->addDays($paymentDuration);
-
-        // Payment methods - Only use direct debit if customer has valid mandate and IBAN
-        $hasDirectDebitMandate = ! empty($params['INVOICE_DD_MANDATE']) &&
-                                ! empty($params['INVOICE_DD_IBAN']) &&
-                                trim($params['INVOICE_DD_MANDATE']) !== '' &&
-                                trim($params['INVOICE_DD_IBAN']) !== '';
-
-        if ($hasDirectDebitMandate) {
-            // SEPA Direct Debit - Customer has valid mandate
-            // BR-DE-29, BR-DE-30, BR-DE-31 are required for BG-19 (DIRECT DEBIT)
-            $mandateId      = trim($params['INVOICE_DD_MANDATE']); // BR-DE-29: Mandate reference identifier
-            $creditorId     = Param::get('ME_CREDITOR_ID')->value ?? null; // BR-DE-30: Bank assigned creditor identifier
-            $debitedAccount = trim($params['INVOICE_DD_IBAN']); // BR-DE-31: Debited account identifier
-
-            // Ensure creditor ID exists for validation
-            if (empty($creditorId) || trim($creditorId) === '') {
-                $creditorId = 'DE00ZZZ00000000000'; // Fallback creditor ID
-            }
-
-            // Create BG-19 (DIRECT DEBIT) group - payment means first, then terms
-            $document->addDocumentPaymentMeanToDirectDebit($debitedAccount, $creditorId);
-        } else {
-            // Credit Transfer - Customer has no direct debit mandate
-            // BR-DE-23-a: Must provide BG-17 (CREDIT TRANSFER)
-            // BR-DE-23-b: Must NOT have BG-18 or BG-19 (no card payment, no direct debit)
-            $document->addDocumentPaymentMeanToCreditTransferNonSepa(
-                $iban, // Payment account identifier - BR-DE-19
-                $me->name,
-                substr($iban, 0, 4),
-                Param::get('ME_BIC')->value,
-                (string)$id // Payment reference
-            );
-        }
-
-        // Add payment terms after payment means to fix XML ordering
-        if ($hasDirectDebitMandate) {
-            $mandateId = trim($params['INVOICE_DD_MANDATE']);
-            $document->addDocumentPaymentTerm(null, $due_date->toDateTime(), $mandateId);
-        } else {
-            $document->addDocumentPaymentTerm(null, $due_date->toDateTime());
-        }
-
-        /* po_number */
-        if ($project && $project->po_number) {
-            $document->setDocumentProcuringProject($project->po_number, $project->name);
-        }
-
-        // Document summation - ensure VAT amount matches breakdown (BR-CO-14)
-        $document->setDocumentSummation($totalGross, $totalGross, $totalNet, 0.0, 0.0, $totalNet, $calculatedVatTotal, null, 0.0);
-        return (new ZugferdDocumentPdfMerger($document->getContent(), $pdf))->generateDocument()->downloadString('');
+        return ZugferdInvoiceBuilder::build($pdf, $items, $company, $id, $documentTypeCode, $footer, $project);
     }
     public static function mergePdfs($relativePath, $uploadedFiles) {
         $finalPdf    = new Fpdi;

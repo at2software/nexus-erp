@@ -7,16 +7,16 @@
             <div class="modal-body">
                 <div class="input-group mb-3 d-flex">
                     <span class="input-group-text" i18n="@@i18n.common.name">name</span>
-                    <input class="form-control" type="text" [(ngModel)]="grant.name">
+                    <input class="form-control" type="text" [(ngModel)]="grant.name" />
                 </div>
                 <div class="input-group mb-3 d-flex">
                     <span class="input-group-text" i18n="@@i18n.common.days">days</span>
-                    <input class="form-control" type="number" [(ngModel)]="grant.var.amount">
-                    <span class="input-group-text">= {{grant.var.amount * user.getAverageHpd()}}h</span>
+                    <input class="form-control" type="number" [(ngModel)]="grant.var.amount" />
+                    <span class="input-group-text">= {{ grant.var.amount * user.getAverageHpd() }}h</span>
                 </div>
                 <div class="input-group mb-3 d-flex">
                     <span class="input-group-text" i18n="@@i18n.hr.validUntil">valid until</span>
-                    <input class="form-control flex-fill" container="body" (click)="d.open()" placeholder="yyyy-mm-dd" [(ngModel)]="grant.expires_at" ngbDatepicker #d="ngbDatepicker">
+                    <input class="form-control flex-fill" container="body" (click)="d.open()" placeholder="yyyy-mm-dd" [(ngModel)]="grant.expires_at" ngbDatepicker #d="ngbDatepicker" />
                 </div>
             </div>
             <div class="modal-footer">

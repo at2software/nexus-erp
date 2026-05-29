@@ -1,14 +1,14 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { HeaderModule } from '@app/app/header/header.module';
+import { HeaderComponent } from '@app/app/header/header.component';
+import { HeaderRouteNavComponent } from '@app/app/header/header-route-nav/header-route-nav.component';
 
 @Component({
     selector: 'projects-nav',
     templateUrl: './projects-nav.component.html',
     styleUrls: ['./projects-nav.component.scss'],
     standalone: true,
-    imports: [RouterModule, HeaderModule]
+    imports: [RouterModule, HeaderComponent, HeaderRouteNavComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProjectsNavComponent {
-
-}
+export class ProjectsNavComponent {}

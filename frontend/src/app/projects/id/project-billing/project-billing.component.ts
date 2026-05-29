@@ -1,6 +1,5 @@
-import { Component, ElementRef, inject, ViewChild, input, effect, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input, effect, computed, signal, viewChild } from '@angular/core';
 import { GlobalService } from '@models/global.service';
-import { ToastService } from '@shards/toast/toast.service';
 import { Project } from '@models/project/project.model';
 import { Focus } from '@models/focus/focus.model';
 import { FocusService } from '@models/focus/focus.service';
@@ -17,140 +16,134 @@ import { NgbDateAdapter, NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap'
 import { NgbDateUnixAdapter } from '@constants/ngb-date-to-unix-adapter';
 import { Router, RouterModule } from '@angular/router';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
-import { CommonModule } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
 import { CdkTableModule } from '@angular/cdk/table';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
 import { NComponent } from '@shards/n/n.component';
-import { MoneyPipe } from '../../../../pipes/money.pipe';
-import { NexusModule } from '@app/nx/nexus.module';
-import { SafePipe } from '../../../../pipes/safe.pipe';
+import { MoneyPipe } from '@pipes/money.pipe';
+import { Nx } from '@app/nx/nx.directive';
+import { NComponent } from '@shards/n/n.component';
+import { AvatarComponent } from '@shards/avatar/avatar.component';
+import { ProjectComponent } from '@shards/project/project.component';
+import { SafePipe } from '@pipes/safe.pipe';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
+    changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'project-billing',
     templateUrl: './project-billing.component.html',
     styleUrls: ['./project-billing.component.scss'],
     providers: [{ provide: NgbDateAdapter, useClass: NgbDateUnixAdapter }],
     standalone: true,
-    imports: [EmptyStateComponent, CommonModule, FormsModule, NgxDaterangepickerMd, CdkTableModule, SearchInputComponent, NgbDatepickerModule, NComponent, RouterModule, MoneyPipe, NexusModule, SafePipe]
+    imports: [EmptyStateComponent, DatePipe, DecimalPipe, FormsModule, NgxDaterangepickerMd, CdkTableModule, SearchInputComponent, NgbDatepickerModule, NComponent, RouterModule, MoneyPipe, Nx, NComponent, AvatarComponent, ProjectComponent, SafePipe],
 })
 export class ProjectBillingComponent {
+    #global = inject(GlobalService);
+    #productService = inject(ProductService);
+    #focusService = inject(FocusService);
+    #invoiceItemService = inject(InvoiceItemService);
+    #router = inject(Router);
 
-    @ViewChild('desc') descField:ElementRef
+    parent = input.required<Project | Company>();
+    protected readonly descField = viewChild<ElementRef>('desc');
 
-    parent = input.required<Project|Company>()
+    readonly ranges: any = DATESPAN_RANGE;
+    readonly fociColumns = ['user_id', 'started_at', 'duration', 'comment'];
 
-    ranges        : any = DATESPAN_RANGE
-    span          : StartEnd
-    invoicedUntil?: string = undefined
-    foci          : Focus[] = []
-    allFoci       : Focus[] = []
-    fociColumns = ['user_id', 'started_at', 'duration', 'comment']
+    span = signal<StartEnd | undefined>(undefined);
+    selectionSum = signal(0);
+    selectionDescription = signal('');
+    selectionProduct = signal<Product | undefined>(undefined);
+    selection = signal<any[]>([]);
+    items = signal<InvoiceItem[]>([]);
+    allFoci = signal<Focus[]>([]);
 
-    selectionSum         : string = "0"
-    selectionDescription : string = ''
-    selectionProduct    ?: Product
-    selection            : any[] = []
+    isProject = computed(() => this.parent() instanceof Project);
+    company = computed((): Company => (this.isProject() ? (this.parent() as Project).company : (this.parent() as Company)));
+    foci = computed(() => {
+        const s = this.span();
+        return s?.startDate && s?.endDate
+            ? Focus.filterByDateRange(this.allFoci(), s.startDate, s.endDate)
+            : this.allFoci();
+    });
 
-    items:InvoiceItem[] = []
-
-    toast               = inject(ToastService)
-    #global             = inject(GlobalService)
-    #productService     = inject(ProductService)
-    #focusService       = inject(FocusService)
-    #invoiceItemService = inject(InvoiceItemService)
-    #router             = inject(Router)
-    
-    isProject = computed(() => this.parent() instanceof Project)
-    company = computed(():Company => this.isProject() ? (this.parent() as Project).company : this.parent() as Company)
-
-    constructor() { 
-        this.#global.onObjectSelected.pipe(takeUntilDestroyed()).subscribe((_) => this.onSelection(_))
+    constructor() {
+        this.#global.onObjectSelected.pipe(takeUntilDestroyed()).subscribe((_) => this.#onSelection(_));
         effect(() => {
-            const parent = this.parent()
+            const parent = this.parent();
             if (parent instanceof Project && parent.product_id) {
-                this.#productService.show(parent.product_id!).subscribe(data => this.selectionProduct = data)
+                this.#productService.show(parent.product_id).subscribe((data) => this.selectionProduct.set(data));
+            } else if (parent instanceof Company && parent.default_product_id) {
+                this.#productService.show(parent.default_product_id).subscribe((data) => this.selectionProduct.set(data));
             }
-            if (parent instanceof Company && parent.default_product_id) {
-                this.#productService.show(parent.default_product_id!).subscribe(data => this.selectionProduct = data)
-            }
-            this.invoicedUntil = undefined
-            this.reloadFoci()
-            this.reloadItems()
-        })
+            this.#reloadFoci();
+            this.#reloadItems();
+        });
     }
 
-    reloadFoci()  {        
-        this.allFoci = []
-        this.foci = []
-        this.#focusService.uninvoicedFoci(this.parent()).subscribe(_ => {
-            this.allFoci = _
-            this.filterFoci()
-        })
-    }
-    reloadItems() {
-        this.items = []
-        this.#invoiceItemService.getSupportItems(this.parent()).subscribe(_ => this.items = _.filter((x:any)=>x.type == 0))
+    #reloadFoci() {
+        this.allFoci.set([]);
+        this.#focusService.uninvoicedFoci(this.parent()).subscribe((data) => this.allFoci.set(data));
     }
 
-    filterFoci = () => {
-        if (this.span?.startDate && this.span?.endDate) {
-            this.foci = Focus.filterByDateRange(this.allFoci, this.span.startDate, this.span.endDate)
-        } else {
-            this.foci = this.allFoci
-        }
+    #reloadItems() {
+        this.items.set([]);
+        this.#invoiceItemService.getSupportItems(this.parent()).subscribe((data) => this.items.set(data.filter((x: any) => x.type == 0)));
     }
-    userIconFor = (user_id:string) => User.iconPathFor(user_id)
-    onSelection(_:any) {
-        const selected = [_].flat()
-        this.selection = selected.length && (selected[0] instanceof Focus) ? selected : []
-        this.selectionSum = this.selection.reduce((b:number, a:Focus) => a.duration + b, 0)
-        this.selection.forEach((s:Focus) => { if ((s.comment ?? '').length) this.selectionDescription = s.comment!})
-        this.descField?.nativeElement.focus()
+
+    #onSelection(_: any) {
+        const selected = [_].flat();
+        const sel = selected.length && selected[0] instanceof Focus ? selected : [];
+        this.selection.set(sel);
+        this.selectionSum.set(sel.reduce((b: number, a: Focus) => a.duration + b, 0));
+        sel.forEach((s: Focus) => {
+            if ((s.comment ?? '').length) this.selectionDescription.set(s.comment!);
+        });
+        this.descField()?.nativeElement.focus();
     }
-    onProductSelect = (_:Product) => {
-        this.selectionProduct = _
-        const parent = this.parent()
+
+    readonly userIconFor = (user_id: string) => User.iconPathFor(user_id);
+
+    onProductSelect(_: Product) {
+        this.selectionProduct.set(_);
+        const parent = this.parent();
         if (parent instanceof Project) {
-            parent.product_id = _.id
-            parent.update({product_id: _.id}).subscribe()
+            parent.product_id = _.id;
+            parent.update({ product_id: _.id }).subscribe();
         }
-        this.descField?.nativeElement.focus()
+        this.descField()?.nativeElement.focus();
     }
-    // selection range
-    datesUpdated() {
-        this.filterFoci()
+
+    dateSelect() {
+        this.#reloadFoci();
     }
-    // marker
-    dateSelect() {       
-        this.reloadFoci()
-    }
+
     onCreateNewItem() {
-        let min:moment.Moment|undefined = undefined
-        let max:moment.Moment|undefined = undefined
-        const selectedIds = this.selection.map(_ => {
-            min = min ? moment.min(_.time_created(), min) : moment(_.time_created())
-            max = max ? moment.max(_.time_created(), max) : moment(_.time_created())
-            return _.id
-        })
-        this.selection = []
-        this.foci = this.foci.filter((_:Focus) => !selectedIds.includes(_.id))
-        if (this.selectionProduct) {
-            let desc = this.selectionDescription
-            desc += '<br>' + $localize`:@@i18n.invoices.performancePeriod:performance period` + ' ' + min!.format('DD.MM.YYYY') + ' - ' + max!.format('DD.MM.YYYY')
-            this.#focusService.createInvoiceItemsFor(this.parent(), selectedIds, desc, parseFloat(this.selectionSum), this.selectionProduct.id).subscribe((newItem) => {
-                this.items.push(InvoiceItem.fromJson(newItem))
-            })
-
+        let min: moment.Moment | undefined;
+        let max: moment.Moment | undefined;
+        const selectedIds = this.selection().map((_) => {
+            const created = _.momentCreated();
+            min = min ? moment.min(created, min) : created;
+            max = max ? moment.max(created, max) : created;
+            return _.id;
+        });
+        this.selection.set([]);
+        this.allFoci.update((f) => f.filter((_: Focus) => !selectedIds.includes(_.id)));
+        const product = this.selectionProduct();
+        if (product) {
+            const desc = this.selectionDescription() + '<br>' + $localize`:@@i18n.invoices.performancePeriod:performance period` + ' ' + min!.format('DD.MM.YYYY') + ' - ' + max!.format('DD.MM.YYYY');
+            this.#focusService.createInvoiceItemsFor(this.parent(), selectedIds, desc, this.selectionSum(), product.id).subscribe((newItem) => {
+                this.items.update((items) => [...items, InvoiceItem.fromJson(newItem)]);
+            });
         }
     }
-    onPrepareInvoice() {
-        const parent = this.parent()
-        this.#invoiceItemService.prepareInvoice(parent as Project).subscribe(() => {
-            this.#router.navigate(['/customers/' + (parent as Project).company_id + '/billing'])
-        })
-    }
 
+    onPrepareInvoice() {
+        const parent = this.parent();
+        this.#invoiceItemService.prepareInvoice(parent as Project).subscribe(() => {
+            this.#router.navigate(['/customers/' + (parent as Project).company_id + '/billing']);
+        });
+    }
 }

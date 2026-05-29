@@ -1,0 +1,89 @@
+@let _projects = projects();
+@let _defaultProduct = defaultProduct();
+
+<toolbar>
+    <button class="btn btn-primary" (click)="openAddModal()">
+        <i>add</i>
+        <span>add audit pipeline</span>
+    </button>
+</toolbar>
+
+@if (loading()) {
+    <spinner class="mt-5"></spinner>
+} @else {
+    <div class="row">
+        <div class="col-3">
+            <div class="card">
+                <div class="card-header">settings</div>
+                <div class="card-body">
+                    <div class="form-label text-muted small">default product for new invoice items</div>
+                    @if (_defaultProduct) {
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-white flex-fill">{{ _defaultProduct.name }}</span>
+                            <button class="btn btn-sm text-primary p-0" (click)="clearDefaultProduct()" [disabled]="savingProduct()">
+                                <i>close</i>
+                            </button>
+                        </div>
+                    } @else {
+                        <search-input only="Product" (itemSelected)="selectDefaultProduct($event)"></search-input>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-9">
+            @if (!_projects.length) {
+                <empty-state icon="schedule" label="no audit pipelines configured"></empty-state>
+            } @else {
+                @for (project of _projects; track project.id) {
+                    <div class="card mb-3">
+                        <div class="card-header d-flex align-items-center gap-2" [nx]="project" context="audit">
+                            @if (project.company) {
+                                <avatar [object]="project.company"></avatar>
+                            } @else {
+                                <n class="text-primary">git</n>
+                            }
+                            <span class="fw-semibold">{{ project.project_name }}</span>
+                            <small class="text-muted">{{ project.namespace_with_path }}</small>
+                            @if (project.invoice_item) {
+                                <span class="badge bg-secondary"> <i class="me-1" style="font-size: 0.7rem">receipt_long</i>{{ project.invoice_item.name }} </span>
+                            }
+                            @if (project.linked_projects.length) {
+                                <div class="ms-auto d-flex align-items-center gap-1">
+                                    @for (p of project.linked_projects; track p.id) {
+                                        <a [routerLink]="['/projects', p.id]" [ngbTooltip]="p.name">
+                                            <n class="{{ p.has_chat ? 'text-success' : 'text-grey' }}">project</n>
+                                        </a>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        @if (project.var.noToken) {
+                            <div class="card-body text-warning small"><i>warning</i> no GitLab token found for {{ project.gitlab_url }}</div>
+                        } @else if (project.var.loading) {
+                            <div class="text-center py-3">
+                                <spinner [size]="24"></spinner>
+                            </div>
+                        } @else if (!project.schedules.length) {
+                            <div class="card-body text-muted small">no active NEXUS schedules</div>
+                        } @else {
+                            <ul class="list-group list-group-flush">
+                                @for (schedule of project.schedules; track schedule.id) {
+                                    <li class="list-group-item list-group-item-action d-flex align-items-center gap-3" [nx]="schedule" context="audit.schedule">
+                                        <i class="text-{{ schedule.active ? 'success' : 'muted' }}">schedule</i>
+                                        <div class="flex-fill">
+                                            <span class="text-white">{{ stageName(schedule.description) }}</span>
+                                            <small class="text-muted ms-2">{{ schedule.ref }}</small>
+                                        </div>
+                                        <span class="badge bg-secondary">{{ cronLabel(schedule.cron) }}</span>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    </div>
+}

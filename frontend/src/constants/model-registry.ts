@@ -29,6 +29,7 @@ import { File } from '@models/file/file.model';
 import { Focus } from '@models/focus/focus.model';
 import { Framework } from '@models/project/framework.model';
 import { FrameworkLatest } from '@models/project/framework-latest.model';
+import { GitlabAuditProject } from '@models/gitlab-audit/gitlab-audit-project.model';
 import { Invoice } from '@models/invoice/invoice.model';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { InvoiceReminder } from '@models/invoice/invoice-reminder.model';
@@ -39,7 +40,6 @@ import { MarketingInitiativeActivity } from '@models/marketing/marketing-initiat
 import { MarketingPerformanceMetric } from '@models/marketing/marketing-performance-metrics.model';
 import { MarketingProspect } from '@models/marketing/marketing.prospect.model';
 import { MarketingProspectActivity } from '@models/marketing/marketing-prospect-activity.model';
-import { MarketingProspectStats } from '@models/marketing/marketing.prospect.model';
 import { MarketingWorkflow } from '@models/marketing/marketing-workflow.model';
 import { Milestone } from '@models/milestones/milestone.model';
 import { Param } from '@models/param.model';
@@ -81,6 +81,7 @@ export const MODEL_REGISTRY: Record<string, any> = {
     'Focus': Focus,
     'Framework': Framework,
     'FrameworkLatest': FrameworkLatest,
+    'GitlabAuditProject': GitlabAuditProject,
     'Invoice': Invoice,
     'InvoiceItem': InvoiceItem,
     'InvoiceReminder': InvoiceReminder,
@@ -91,7 +92,6 @@ export const MODEL_REGISTRY: Record<string, any> = {
     'MarketingPerformanceMetric': MarketingPerformanceMetric,
     'MarketingProspect': MarketingProspect,
     'MarketingProspectActivity': MarketingProspectActivity,
-    'MarketingProspectStats': MarketingProspectStats,
     'MarketingWorkflow': MarketingWorkflow,
     'Milestone': Milestone,
     'Param': Param,

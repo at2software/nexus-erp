@@ -25,7 +25,7 @@ class CompanyContactController extends Controller {
     }
     public function store(Request $request) {
         $new = new CompanyContact;
-        $new->applyAndSaveRequest();
+        $new->applyAndSave($request);
         $new->fresh();
         $new->company->name;
         return $new;

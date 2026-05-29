@@ -43,9 +43,13 @@ class User extends BaseAuthenticatable {
     protected $with     = ['activeEmployment'];
     protected $appends  = ['icon', 'class', 'is_retired', 'name', 'path', 'gender'];
     protected $fillable = ['color', 'current_focus_id', 'current_focus_type', 'name', 'email', 'password', 'vcard', 'work_zip'];
-    protected $casts    = [
-        'revenue' => Permission::class.':financial',
-    ];
+
+    protected function casts(): array {
+        return [
+            'revenue' => Permission::class.':financial',
+        ];
+    }
+
     protected $access = ['admin' => '*', 'hr' => '*', 'project_manager' => 'ru', 'user' => 'ru'];
 
     public function getPredictionAccuracyData($startDate): array {

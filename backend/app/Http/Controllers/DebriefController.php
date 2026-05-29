@@ -2,6 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Debrief\CombinePositivesRequest;
+use App\Http\Requests\Debrief\CombineProblemsRequest;
+use App\Http\Requests\Debrief\DebriefProblemRequest;
+use App\Http\Requests\Debrief\DebriefRequest;
+use App\Http\Requests\Debrief\PositiveRequest;
+use App\Http\Requests\Debrief\ProblemRequest;
+use App\Http\Requests\Debrief\ProblemSolutionRequest;
+use App\Http\Requests\Debrief\SolutionRequest;
 use App\Models\DebriefPositive;
 use App\Models\DebriefProblem;
 use App\Models\DebriefProblemCategory;
@@ -11,7 +19,6 @@ use App\Models\Project;
 use App\Services\DebriefStatisticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class DebriefController extends Controller {
     public function __construct(
@@ -46,27 +53,16 @@ class DebriefController extends Controller {
         }
         return $query->paginate(50)->withQueryString();
     }
-    public function storeProblem(Request $request) {
-        $validated = $request->validate([
-            'title'                       => 'required|string|max:255',
-            'description'                 => 'nullable|string',
-            'debrief_problem_category_id' => 'required|exists:debrief_problem_categories,id',
-        ]);
-
+    public function storeProblem(ProblemRequest $request) {
+        $validated                       = $request->validated();
         $validated['created_by_user_id'] = $request->user()?->id;
         return DebriefProblem::create($validated)->load('category');
     }
     public function showProblem(DebriefProblem $problem) {
         return $problem->load(['category', 'solutions', 'createdBy']);
     }
-    public function updateProblem(Request $request, DebriefProblem $problem) {
-        $validated = $request->validate([
-            'title'                       => 'sometimes|string|max:255',
-            'description'                 => 'sometimes|nullable|string',
-            'debrief_problem_category_id' => 'sometimes|exists:debrief_problem_categories,id',
-        ]);
-
-        $problem->update($validated);
+    public function updateProblem(ProblemRequest $request, DebriefProblem $problem) {
+        $problem->update($request->validated());
         return $problem->load('category');
     }
     public function destroyProblem(DebriefProblem $problem) {
@@ -90,22 +86,13 @@ class DebriefController extends Controller {
         }
         return $query->paginate(50)->withQueryString();
     }
-    public function storeSolution(Request $request) {
-        $validated = $request->validate([
-            'title'       => 'required|string|max:255',
-            'description' => 'nullable|string',
-        ]);
-
+    public function storeSolution(SolutionRequest $request) {
+        $validated                       = $request->validated();
         $validated['created_by_user_id'] = $request->user()?->id;
         return DebriefSolution::create($validated);
     }
-    public function updateSolution(Request $request, DebriefSolution $solution) {
-        $validated = $request->validate([
-            'title'       => 'sometimes|string|max:255',
-            'description' => 'nullable|string',
-        ]);
-
-        $solution->update($validated);
+    public function updateSolution(SolutionRequest $request, DebriefSolution $solution) {
+        $solution->update($request->validated());
         return $solution;
     }
     public function destroySolution(DebriefSolution $solution) {
@@ -117,14 +104,8 @@ class DebriefController extends Controller {
     // PROBLEM-SOLUTION LINKS
     // #######################
 
-    public function storeProblemSolution(Request $request, DebriefProblem $problem) {
-        $validated = $request->validate([
-            'debrief_solution_id'        => 'required|exists:debrief_solutions,id',
-            'debrief_project_debrief_id' => 'nullable|exists:debrief_project_debriefs,id',
-            'effectiveness_rating'       => 'nullable|integer|min:1|max:5',
-            'notes'                      => 'nullable|string',
-        ]);
-
+    public function storeProblemSolution(ProblemSolutionRequest $request, DebriefProblem $problem) {
+        $validated                      = $request->validated();
         $validated['linked_by_user_id'] = $request->user()?->id;
 
         $problem->solutions()->attach($validated['debrief_solution_id'], [
@@ -138,13 +119,8 @@ class DebriefController extends Controller {
         $solution->incrementUsageCount();
         return $problem->load('solutions');
     }
-    public function updateProblemSolution(Request $request, DebriefProblem $problem, DebriefSolution $solution) {
-        $validated = $request->validate([
-            'effectiveness_rating' => 'nullable|integer|min:1|max:5',
-            'notes'                => 'nullable|string',
-        ]);
-
-        $problem->solutions()->updateExistingPivot($solution->id, $validated);
+    public function updateProblemSolution(ProblemSolutionRequest $request, DebriefProblem $problem, DebriefSolution $solution) {
+        $problem->solutions()->updateExistingPivot($solution->id, $request->validated());
 
         $solution->updateAverageEffectiveness();
         return $problem->load('solutions');
@@ -171,10 +147,8 @@ class DebriefController extends Controller {
     public function indexProjectDebriefs(Project $project) {
         return $project->debriefs()->with(['conductedBy', 'debriefedUser', 'problems.category', 'positives.category'])->latest()->get();
     }
-    public function storeDebrief(Request $request, Project $project) {
-        $validated = $request->validate([
-            'debriefed_user_id' => 'nullable|exists:users,id',
-        ]);
+    public function storeDebrief(DebriefRequest $request, Project $project) {
+        $validated = $request->validated();
 
         $debrief = DebriefProjectDebrief::create([
             'project_id'           => $project->id,
@@ -188,13 +162,8 @@ class DebriefController extends Controller {
         $debrief->delete();
         return response(null, 204);
     }
-    public function updateDebrief(Request $request, DebriefProjectDebrief $debrief) {
-        $validated = $request->validate([
-            'summary_notes'     => 'nullable|string',
-            'rating'            => 'nullable|integer|min:1|max:5',
-            'status'            => 'sometimes|in:draft,completed',
-            'debriefed_user_id' => 'nullable|exists:users,id',
-        ]);
+    public function updateDebrief(DebriefRequest $request, DebriefProjectDebrief $debrief) {
+        $validated = $request->validated();
 
         if (isset($validated['status']) && $validated['status'] === 'completed') {
             $debrief->markAsCompleted();
@@ -208,12 +177,8 @@ class DebriefController extends Controller {
     // PROBLEM-DEBRIEF LINKS
     // #####################
 
-    public function storeDebriefProblem(Request $request, DebriefProjectDebrief $debrief) {
-        $validated = $request->validate([
-            'debrief_problem_id' => 'required|exists:debrief_problems,id',
-            'severity'           => 'sometimes|in:low,medium,high,critical',
-            'context_notes'      => 'nullable|string',
-        ]);
+    public function storeDebriefProblem(DebriefProblemRequest $request, DebriefProjectDebrief $debrief) {
+        $validated = $request->validated();
 
         $exists = $debrief->problems()->where('debrief_problem_id', $validated['debrief_problem_id'])->exists();
         if ($exists) {
@@ -230,13 +195,8 @@ class DebriefController extends Controller {
         $problem->incrementUsageCount();
         return $debrief->load(['problems.category', 'positives.category']);
     }
-    public function updateDebriefProblem(Request $request, DebriefProjectDebrief $debrief, DebriefProblem $problem) {
-        $validated = $request->validate([
-            'severity'      => 'sometimes|in:low,medium,high,critical',
-            'context_notes' => 'nullable|string',
-        ]);
-
-        $debrief->problems()->updateExistingPivot($problem->id, $validated);
+    public function updateDebriefProblem(DebriefProblemRequest $request, DebriefProjectDebrief $debrief, DebriefProblem $problem) {
+        $debrief->problems()->updateExistingPivot($problem->id, $request->validated());
         return $debrief->load(['problems.category', 'positives.category']);
     }
     public function destroyDebriefProblem(DebriefProjectDebrief $debrief, DebriefProblem $problem) {
@@ -249,18 +209,14 @@ class DebriefController extends Controller {
     // POSITIVES
     // ###########
 
-    public function storePositive(Request $request, DebriefProjectDebrief $debrief) {
+    public function storePositive(PositiveRequest $request, DebriefProjectDebrief $debrief) {
         if ($request->filled('existing_id')) {
             $positive = DebriefPositive::findOrFail($request->existing_id);
             if (! $debrief->positives()->where('debrief_positives.id', $positive->id)->exists()) {
                 $debrief->positives()->attach($positive->id, ['reported_by_user_id' => $request->user()?->id]);
             }
         } else {
-            $validated = $request->validate([
-                'title'                       => 'required|string|max:255',
-                'description'                 => 'nullable|string',
-                'debrief_problem_category_id' => 'nullable|exists:debrief_problem_categories,id',
-            ]);
+            $validated                        = $request->validated();
             $validated['reported_by_user_id'] = $request->user()?->id;
             $positive                         = DebriefPositive::create($validated);
             $debrief->positives()->attach($positive->id, ['reported_by_user_id' => $request->user()?->id]);
@@ -277,14 +233,8 @@ class DebriefController extends Controller {
         }
         return $query->get();
     }
-    public function updatePositive(Request $request, DebriefPositive $positive) {
-        $validated = $request->validate([
-            'title'                       => 'sometimes|string|max:255',
-            'description'                 => 'nullable|string',
-            'debrief_problem_category_id' => 'nullable|exists:debrief_problem_categories,id',
-        ]);
-
-        $positive->update($validated);
+    public function updatePositive(PositiveRequest $request, DebriefPositive $positive) {
+        $positive->update($request->validated());
         return $positive->load('category');
     }
     public function destroyDebriefPositive(DebriefProjectDebrief $debrief, DebriefPositive $positive) {
@@ -331,13 +281,8 @@ class DebriefController extends Controller {
     public function showStatsCategoriesPositives(Request $request) {
         return $this->statisticsService->getCategoryBreakdownPositives($request->all());
     }
-    public function combineProblems(Request $request) {
-        $validated = $request->validate([
-            'keep_id'     => ['required', Rule::exists('debrief_problems', 'id')->whereNull('deleted_at')],
-            'merge_ids'   => 'required|array|min:1',
-            'merge_ids.*' => [Rule::exists('debrief_problems', 'id')->whereNull('deleted_at')],
-            'title'       => 'required|string|max:255',
-        ]);
+    public function combineProblems(CombineProblemsRequest $request) {
+        $validated = $request->validated();
 
         $keepId   = $validated['keep_id'];
         $mergeIds = array_values(array_filter($validated['merge_ids'], fn ($id) => $id !== $keepId));
@@ -365,12 +310,8 @@ class DebriefController extends Controller {
             return $keep->load('category');
         });
     }
-    public function combinePositives(Request $request) {
-        $validated = $request->validate([
-            'ids'   => 'required|array|min:2',
-            'ids.*' => [Rule::exists('debrief_positives', 'id')->whereNull('deleted_at')],
-            'title' => 'required|string|max:255',
-        ]);
+    public function combinePositives(CombinePositivesRequest $request) {
+        $validated = $request->validated();
         return DB::transaction(function () use ($validated) {
             $keepId   = $validated['ids'][0];
             $mergeIds = array_slice($validated['ids'], 1);
