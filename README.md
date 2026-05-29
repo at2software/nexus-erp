@@ -14,7 +14,7 @@ NEXUS combines CRM, project management, invoicing, time tracking, HR, marketing 
 |---|---|
 | **CRM** | Company and contact management, relationship mapping, revenue analytics |
 | **Projects** | Gantt planning, milestones, tasks, team assignments, budget tracking |
-| **Invoicing** | PDF generation, ZUGFeRD/Factur-X, recurring billing, cash flow |
+| **Invoicing** | PDF generation, ZUGFeRD/XRechnung, recurring billing, cash flow, FinTS bank balance |
 | **Time Tracking** | Focus sessions, break management, workload heatmaps, billable hours |
 | **HR** | Vacation, sick leave, travel expenses, team capacity analytics |
 | **Marketing** | Prospect pipeline, campaign management, Sankey funnel charts |
@@ -28,8 +28,8 @@ NEXUS combines CRM, project management, invoicing, time tracking, HR, marketing 
 
 | Layer | Technology |
 |---|---|
-| Frontend | Angular 19+, TypeScript, Bootstrap 5, RxJS |
-| Backend | Laravel 12, PHP 8.1+, Eloquent ORM |
+| Frontend | Angular 21+, TypeScript, Bootstrap 5, RxJS |
+| Backend | Laravel 13, PHP 8.3+, Eloquent ORM |
 | Database | MySQL / MariaDB |
 | Real-Time | Laravel Reverb (WebSockets) |
 | Auth | Token (simple) or Keycloak SSO |
