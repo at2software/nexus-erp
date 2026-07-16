@@ -1,13 +1,14 @@
 import { Router } from '@angular/router';
 import { ChangeDetectionStrategy, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
+import { Serializable } from '@models/serializable';
+
+type SearchResult = Serializable & { company_id?: string };
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'app-search',
     templateUrl: './search.component.html',
-    styleUrls: ['./search.component.scss'],
-    standalone: true,
     imports: [SearchInputComponent],
     host: {
         class: 'd-flex align-items-center',
@@ -36,14 +37,14 @@ export class SearchComponent {
         }
     }
 
-    onSelect(e: any) {
+    onSelect(e: SearchResult) {
         this.searchbox().blur();
         this.searchbox().empty();
         this.expanded.set(false);
         this.#router.navigate([this.#pathFor(e)]);
     }
 
-    #pathFor(o: any) {
+    #pathFor(o: SearchResult) {
         switch (o.class) {
             case 'Company': return '/customers/' + o.id;
             case 'CompanyContact': return '/customers/' + o.company_id;

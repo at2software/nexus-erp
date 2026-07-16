@@ -5,6 +5,7 @@ import { Model } from '@constants/type-discriminators';
 import { computed } from '@angular/core';
 import { NxGlobal } from '@app/nx/nx.global';
 import { nxInput } from '@constants/constants';
+import { NxAction } from '@app/nx/nx.actions';
 
 @Model('ExpenseCategory')
 export class ExpenseCategory extends Serializable {
@@ -15,7 +16,7 @@ export class ExpenseCategory extends Serializable {
     name: string = '';
     color: string | null = null;
 
-    actions = [
+    actions: NxAction[] = [
         {
             title: 'change name',
             interrupt: nxInput('New name'),

@@ -2,7 +2,6 @@ import { afterNextRender, Directive, ElementRef, inject, input, Renderer2 } from
 
 @Directive({
     selector: 'input[suffix],input[prefix]',
-    standalone: true,
 })
 export class AffixInputDirective {
     readonly prefix = input<string>();

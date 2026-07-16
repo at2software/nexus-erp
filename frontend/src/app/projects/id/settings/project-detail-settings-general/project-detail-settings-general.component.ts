@@ -4,29 +4,27 @@ import { FormsModule } from '@angular/forms';
 import { ProjectDetailGuard } from '@app/projects/project-details.guard';
 import { AutosaveDirective } from '@directives/autosave.directive';
 import { PermissionsDirective } from '@directives/permissions.directive';
-import { SmartLinkDirective } from '@directives/smart-link.directive';
 import { GlobalService } from '@models/global.service';
-import { NgbDate, NgbDatepickerModule, NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgbDate, NgbDatepickerModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { ProjectDefaultProductComponent } from '@app/projects/_shards/project-default-product/project-default-product.component';
+import { ParentProjectSelectorComponent } from '@app/projects/_shards/parent-project-selector/parent-project-selector.component';
 import { AffixInputDirective } from '@directives/affix-input.directive';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
-    standalone: true,
-    imports: [SmartLinkDirective, FormsModule, PermissionsDirective, AutosaveDirective, DatePipe, ProjectDefaultProductComponent, AffixInputDirective, NgbDatepickerModule, NgbDropdownModule, NgbTooltipModule],
+    imports: [FormsModule, PermissionsDirective, AutosaveDirective, DatePipe, ProjectDefaultProductComponent, ParentProjectSelectorComponent, AffixInputDirective, NgbDatepickerModule, NgbTooltipModule],
     selector: 'project-detail-settings-general',
     templateUrl: './project-detail-settings-general.component.html',
-    styleUrl: './project-detail-settings-general.component.scss',
 })
 export class ProjectDetailSettingsGeneralComponent {
     parent = inject(ProjectDetailGuard);
     global = inject(GlobalService);
     #inputModalService = inject(InputModalService);
 
-    onIndividualWageToggle($event: any) {
+    onIndividualWageToggle($event: Event) {
         const object = this.parent.object();
-        if ($event.target.checked) {
+        if (($event.target as HTMLInputElement).checked) {
             object.individual_wage = parseFloat(this.global.setting('INVOICE_HOURLY_WAGE'));
         } else {
             object.individual_wage = undefined;

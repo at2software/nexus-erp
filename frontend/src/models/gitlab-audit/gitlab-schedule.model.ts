@@ -1,9 +1,13 @@
 import { NxAction, NxActionType } from '@app/nx/nx.actions';
-import { INxContextMenu } from '@app/nx/nx.contextmenu.interface';
 import { NxContextMenu } from '@app/nx/nx.contextmenu';
+import { Serializable } from '@models/serializable';
+import { GitlabAuditService } from './gitlab-audit.service';
 
-export class GitlabSchedule implements INxContextMenu {
-    id!: number;
+export class GitlabSchedule extends Serializable {
+    static API_PATH = () => 'gitlab-audit';
+
+    SERVICE = GitlabAuditService;
+    
     description!: string;
     ref!: string;
     cron!: string;
@@ -23,8 +27,4 @@ export class GitlabSchedule implements INxContextMenu {
     ];
 
     var: any = {};
-
-    static fromApi(data: any): GitlabSchedule {
-        return Object.assign(new GitlabSchedule(), data);
-    }
 }

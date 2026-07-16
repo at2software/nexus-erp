@@ -13,18 +13,17 @@ import { tracked } from '@constants/tracked';
     templateUrl: './product-tree-list.component.html',
     styleUrls: ['./product-tree-list.component.scss'],
     host: { class: 'd-block' },
-    standalone: true,
     imports: [RouterModule, Nx, NgbTooltipModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProductTreeListComponent {
-    readonly groupIn = input.required<ProductGroup>({ alias: 'group' });
-    readonly group = tracked(this.groupIn);
+    readonly group = input.required<ProductGroup>();
+    readonly trackedGroup = tracked(this.group);
     showDeprecated = input<boolean>(true);
     depth = input<number>(0);
 
     expanded = signal(false);
-    readonly isCurrentGroup = computed(() => this.#routerUrl().includes(`/products/group/${this.group()?.id}`));
+    readonly isCurrentGroup = computed(() => this.#routerUrl().includes(`/products/group/${this.trackedGroup()?.id}`));
 
     readonly #router = inject(Router);
     readonly #routerUrl = toSignal(
@@ -49,7 +48,7 @@ export class ProductTreeListComponent {
 
     #shouldAutoExpand(): boolean {
         const url = this.#routerUrl();
-        const group = this.group();
+        const group = this.trackedGroup();
         return url.includes(`/products/group/${group?.id}`) || group?.products?.some(p => url.includes(`/products/${p.id}`)) || group?.child_groups?.some(g => this.#groupContainsActiveItem(g, url));
     }
 

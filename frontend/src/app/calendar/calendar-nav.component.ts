@@ -5,8 +5,6 @@ import { RouterModule } from '@angular/router';
 @Component({
     selector: 'calendar-nav',
     templateUrl: './calendar-nav.component.html',
-    styleUrls: ['./calendar-nav.component.scss'],
-    standalone: true,
     imports: [RouterModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

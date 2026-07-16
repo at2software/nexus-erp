@@ -3,7 +3,6 @@ import { Injectable, inject, signal } from '@angular/core';
 import { APP_BASE_HREF } from '@angular/common';
 import { environment } from 'src/environments/environment';
 import { User } from '@models/user/user.model';
-import { Dictionary } from '@constants/constants';
 import { Param } from '@models/param.model';
 import { ReplaySubject, Subject, firstValueFrom, map, tap } from 'rxjs';
 import { Encryption } from '@models/encryption/encryption.model';
@@ -19,8 +18,11 @@ import { Project } from './project/project.model';
 import { LeadSource } from './project/lead_source.model';
 import { ProjectState } from './project/project-state.model';
 import { NexusHttpService } from './http/http.nexus';
+import { Serializable } from './serializable';
 import type { NxAction } from '@app/nx/nx.actions';
 import type { INxContextMenu } from '@app/nx/nx.contextmenu.interface';
+import { Dictionary } from '@constants/constants';
+import { Dashboard, TableRelation, TableSchema, UserEnvironment } from '@models/api-response';
 
 /** DEV: override your own role_names for testing. Set to null to disable. */
 const DEV_ROLES: string[] | null = null; // e.g. ['user', 'invoicing']
@@ -33,7 +35,7 @@ interface NavigationItem {
 }
 
 @Injectable({ providedIn: 'root' })
-export class GlobalService extends NexusHttpService<any> {
+export class GlobalService extends NexusHttpService<Serializable> {
     // inject fields
     readonly #auth = inject(AuthenticationService);
     readonly #factory = inject(PluginInstanceFactory);
@@ -42,22 +44,23 @@ export class GlobalService extends NexusHttpService<any> {
 
     // public fields
     apiPath = '';
-    tables!: any[];
-    relations!: any[];
-    accessors: Record<string, Record<string, string>> = {};
+    tables!: TableSchema[];
+    relations!: TableRelation[];
+    accessors: Dictionary<Dictionary<string>> = {};
     user: User | undefined;
     team!: User[];
     teamAll!: User[];
     enum!: Dictionary;
     encryptions: Encryption[] = [];
-    dashboards!: Dictionary[];
-    settings: any;
-    lead_sources!: LeadSource[];
+    dashboards!: Dashboard[];
+     
+    settings!: Record<string, any>;
+    readonly lead_sources = signal<LeadSource[]>([]);
     project_states: ProjectState[] = [];
-    roles: any[] = [];
+    roles: unknown[] = [];
     euCountries!: string[];
-    selectedRootObject: any;
-    selectedSubObject: any;
+    selectedRootObject: unknown;
+    selectedSubObject: unknown;
 
     readonly loaded = signal(false);
     readonly encryptionsValid = signal(false);
@@ -71,9 +74,9 @@ export class GlobalService extends NexusHttpService<any> {
     #plugins: Dictionary = {};
     #locale: string = 'de';
 
-    readonly #onObjectSelected = new ReplaySubject<any>(1);
+    readonly #onObjectSelected = new ReplaySubject<unknown>(1);
     readonly onObjectSelected = this.#onObjectSelected.asObservable();
-    readonly #onRootObjectSelected = new ReplaySubject<any>(1);
+    readonly #onRootObjectSelected = new ReplaySubject<unknown>(1);
     readonly onRootObjectSelected = this.#onRootObjectSelected.asObservable();
     readonly #init = new ReplaySubject<void>(1);
     readonly init = this.#init.asObservable();
@@ -107,7 +110,7 @@ export class GlobalService extends NexusHttpService<any> {
 
     reload = () =>
         this.http().get(environment.envApi + 'users/environment').subscribe({
-            next: (_) => this.setUserEnvironment(_),
+            next: (_) => this.setUserEnvironment(_ as UserEnvironment),
             error: (_) => {
                 if (AuthenticationService.sysinfo?.method === 'token') {
                     deleteCookie('api_token');
@@ -133,18 +136,19 @@ export class GlobalService extends NexusHttpService<any> {
         );
     };
 
-    setUserEnvironment = async (env: any) => {
+    setUserEnvironment = async (env: UserEnvironment | undefined) => {
         if ((await this.#auth.isLoggedIn()) && (!env || !('user' in env))) {
             this.#router.navigate(['/environment404']);
             return;
         }
+        if (!env) return;
 
         this.user = User.fromJson(env.user);
         if (!environment.production && DEV_ROLES) this.user.role_names = DEV_ROLES;
-        const t: User[] = Object.values(env.team).map((data: any) => {
+        const t: User[] = Object.values(env.team).map((data) => {
             const newUser = User.fromJson(data);
             if (data.encryptions) {
-                newUser.encryptions = data.encryptions.map((_: any) => Encryption.fromJson(_));
+                newUser.encryptions = data.encryptions.map((_) => Encryption.fromJson(_));
             }
             return newUser;
         });
@@ -157,12 +161,12 @@ export class GlobalService extends NexusHttpService<any> {
         this.accessors = env.accessors || {};
         this.dashboards = env.dashboards;
         this.#plugins = env.plugins;
-        this.project_states = env.project_states.map((_: any) => ProjectState.fromJson(_));
-        this.lead_sources = env.lead_sources.map((_: any) => LeadSource.fromJson(_));
+        this.project_states = env.project_states.map((_) => ProjectState.fromJson(_));
+        this.lead_sources.set(env.lead_sources.map((_) => LeadSource.fromJson(_)));
         this.roles = env.roles || [];
         this.euCountries = env.eu_countries;
 
-        NxGlobal.ME_ID = env.settings.ME_ID;
+        NxGlobal.ME_ID = env.settings.ME_ID as string;
 
         this.user.encryptionInitialized.subscribe(() => {
             const nexus = Encryption.fromJson({ key: 'nexus' });
@@ -170,7 +174,7 @@ export class GlobalService extends NexusHttpService<any> {
             this.encryptions = [
                 nexus,
                 ...env.encryptions
-                    .map((_: Encryption) => Encryption.fromJson(_))
+                    .map((_) => Encryption.fromJson(_))
                     .filter((obj: Encryption) => {
                         if (!('value' in obj)) return false;
                         if (!obj.value) return false;
@@ -188,10 +192,10 @@ export class GlobalService extends NexusHttpService<any> {
         this.user.initRsaEncryption();
     };
 
-    getEnc = (key: string): any[] => this.encryptions.filter((_) => _.key == key).map((_) => _.value);
+    getEnc = (key: string): unknown[] => this.encryptions.filter((_) => _.key == key).map((_) => _.value);
     userFor = (id: string): User | undefined => this.teamAll?.filter((_) => _.id == id)[0] ?? undefined;
     hasPlugin = (key: string): boolean => key in this.#plugins;
-    Enum = (key: string): Enum => new Enum(this.enum[key]);
+    Enum = (key: string): Enum => new Enum(this.enum[key] as never);
     setting = (_: string) => (this.settings && _ in this.settings ? this.settings[_] : undefined);
     currencySymbol = () => this.setting('SYS_CURRENCY');
 
@@ -225,13 +229,13 @@ export class GlobalService extends NexusHttpService<any> {
             map((data) => {
                 let selected: T[] = [];
                 if (data && Array.isArray(data)) selected = data;
-                else if (data) selected = [data];
+                else if (data) selected = [data as T];
 
                 const sum = Array(sumKeys.length).fill(0);
                 if (selected.length && table().includes(selected[0])) {
                     for (const _ of selected) {
                         for (let i = 0; i < sumKeys.length; i++) {
-                            sum[i] += resolved((_ as any)[sumKeys[i]]);
+                            sum[i] += resolved((_ as Dictionary<unknown>)[sumKeys[i]]);
                         }
                     }
                     return [selected, ...sum];
@@ -244,10 +248,11 @@ export class GlobalService extends NexusHttpService<any> {
 
     forceSelectionUpdate = () => this.#onObjectSelected.next(this.selectedSubObject);
 
-    registerSelectedObject = (_: any, isRoot: boolean = true) => {
+    registerSelectedObject = (_: unknown, isRoot: boolean = true) => {
         if (_ && _.constructor === Array) {
-            if (_.length == 0) _ = null;
-            else if (_.length == 1) _ = _[0];
+            const selected = _ as unknown[];
+            if (selected.length == 0) _ = null;
+            else if (selected.length == 1) _ = selected[0];
         }
         if (isRoot) {
             this.#onRootObjectSelected.next(_);
@@ -260,7 +265,7 @@ export class GlobalService extends NexusHttpService<any> {
 
     currentRoot = () => this.selectedRootObject;
     currentProjectRoot = () => (this.selectedRootObject instanceof Project ? (this.selectedRootObject as Project) : null);
-    getAllowedSucceedingProjectStatesFor = (project: Project) => this.project_states.filter((_) => ProjectState.StateChangeWorkflow[project.state.id].contains(parseInt(_.id)));
+    getAllowedSucceedingProjectStatesFor = (project: Project) => this.project_states.filter((_) => ProjectState.StateChangeWorkflow['' + project.state.id].contains('' + _.id));
 
     #initializeNavigationItems() {
         const i18nDashboard = $localize`:@@i18n.common.dashboard:dashboard`;

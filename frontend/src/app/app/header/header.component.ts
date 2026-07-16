@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, AfterViewInit, Component, ElementRef, OnDestroy, Renderer2, inject, signal, viewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, DestroyRef, ElementRef, Renderer2, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged, fromEvent, map } from 'rxjs';
 import { ToolbarService } from '../toolbar/toolbar.service';
@@ -12,11 +12,10 @@ import { ToolbarComponent } from '../toolbar/toolbar.component';
     selector: 'app-header',
     templateUrl: './header.component.html',
     styleUrls: ['./header.component.scss'],
-    standalone: true,
     imports: [ToolbarComponent],
     host: { '[class.scrolled]': 'isScrolled()' },
 })
-export class HeaderComponent implements AfterViewInit, OnDestroy {
+export class HeaderComponent implements AfterViewInit {
     toolbar = viewChild<ElementRef>('toolbar');
     content = viewChild.required<ElementRef>('content');
     isScrolled = signal(false);
@@ -27,8 +26,11 @@ export class HeaderComponent implements AfterViewInit, OnDestroy {
     #re = inject(Renderer2);
     #authService = inject(AuthenticationService);
     #sidebarStateService = inject(ActivitySidebarStateService);
+    #destroyRef = inject(DestroyRef);
 
     constructor() {
+        this.#destroyRef.onDestroy(() => this.#toolbarService.unregister());
+
         fromEvent(document.querySelector('.app-scroll')!, 'scroll')
             .pipe(
                 debounceTime(50),
@@ -41,10 +43,6 @@ export class HeaderComponent implements AfterViewInit, OnDestroy {
 
     ngAfterViewInit(): void {
         this.#toolbarService.register(this);
-    }
-
-    ngOnDestroy(): void {
-        this.#toolbarService.unregister();
     }
 
     remove = (x: ElementRef) => this.#re.removeChild(this.toolbar()!.nativeElement, x.nativeElement);

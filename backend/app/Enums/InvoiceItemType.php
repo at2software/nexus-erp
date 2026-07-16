@@ -2,24 +2,27 @@
 
 namespace App\Enums;
 
-use BenSampo\Enum\Enum;
+enum InvoiceItemType: int {
+    case Default    = 0;
+    case Inactive   = 1;
+    case Optional   = 2;
+    case Paydown    = 10;
+    case Discount   = 11;
+    case Instalment = 12;
+    case Header     = 20;
+    case Daily      = 30;
+    case Weekly     = 31;
+    case Monthly    = 32;
+    case Quarterly  = 33;
+    case Yearly     = 34;
 
-final class InvoiceItemType extends Enum {
-    const Default               = 0;
-    const Inactive              = 1;
-    const Optional              = 2;
-    const Paydown               = 10;
-    const Discount              = 11;
-    const Instalment            = 12;
-    const Header                = 20;
-    const Daily                 = 30;
-    const Weekly                = 31;
-    const Monthly               = 32;
-    const Quarterly             = 33;
-    const Yearly                = 34;
-    const Repeating             = [self::Daily, self::Weekly, self::Monthly, self::Quarterly, self::Yearly];
-    const Total                 = [self::Default, self::Discount, self::Paydown];
-    const TotalRemaining        = [self::Default, self::Discount, self::Paydown, self::Instalment];
-    const ProjectTotal          = [self::Default, self::Discount];
-    const ProjectTotalRemaining = [self::Default, self::Discount, self::Paydown, self::Instalment];
+    public const array Repeating             = [self::Daily, self::Weekly, self::Monthly, self::Quarterly, self::Yearly];
+    public const array Total                 = [self::Default, self::Discount, self::Paydown];
+    public const array TotalRemaining        = [self::Default, self::Discount, self::Paydown, self::Instalment];
+    public const array ProjectTotal          = [self::Default, self::Discount];
+    public const array ProjectTotalRemaining = [self::Default, self::Discount, self::Paydown, self::Instalment];
+
+    public static function asArray(): array {
+        return array_column(self::cases(), 'value', 'name');
+    }
 }

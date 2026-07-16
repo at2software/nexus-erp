@@ -7,8 +7,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class InvoiceItemPrediction extends BaseModel {
     use HasFactory;
 
+    // Predictions show on the planning table alongside their item - touching it broadcasts
+    // the InvoiceItem (and its `predictions` relation) as 'updated' to other live viewers.
+    protected $touches = ['invoiceItem'];
+
     protected $fillable = ['user_id', 'invoice_item_id', 'qty', 'flags'];
-    protected $access   = ['admin' => '*', 'project_manager' => 'crud', 'user' => 'crud'];
 
     public function user() {
         return $this->belongsTo(User::class);

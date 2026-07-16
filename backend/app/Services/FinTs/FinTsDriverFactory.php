@@ -9,7 +9,7 @@ class FinTsDriverFactory {
      * 'external' → nemiah/php-fints (default, all banks, full PSD2)
      */
     public static function create(array $credentials): FinTsDriverInterface {
-        $driver = strtolower(env('FINTS_DRIVER', 'external'));
+        $driver = strtolower(config('services.fints.driver', 'external'));
 
         if ($driver === 'native') {
             return new NativeFinTsDriver($credentials);

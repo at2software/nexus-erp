@@ -1,4 +1,5 @@
 import { catchError, forkJoin, map, Observable, of, switchMap } from 'rxjs';
+import { Dictionary } from '@constants/constants';
 import { User } from '../user/user.model';
 import { PluginLink } from '../pluginLink/plugin-link.model';
 import { ChatPluginInstance } from './chat.plugin.instance';
@@ -7,8 +8,11 @@ import { Project } from '@models/project/project.model';
 import { Assignee } from '@models/assignee/assignee.model';
 import { markdown2html, shortcodeToEmoji } from '@constants/mattermost.constants';
 
+interface MattermostPost extends Dictionary { id?: string; user_id?: string; username?: string; create_at?: number; message?: string; type?: string; props?: Dictionary; metadata?: { reactions?: { emoji_name: string }[]; files?: { id: string; name: string; mime_type?: string; size?: number }[] }; }
+interface MattermostMember extends Dictionary { user_id: string; username?: string; nickname?: string; first_name?: string; last_name?: string; email?: string; }
+
 export class MattermostPlugin extends ChatPluginInstance {
-    posts: any[] = [];
+    posts: MattermostPost[] = [];
     channelName: string = 'mattermost';
     teamId: string = '';
 
@@ -50,7 +54,7 @@ export class MattermostPlugin extends ChatPluginInstance {
     getChannelId = (name: string) => this.get(`teams/${this.teamId}/channels/name/${name}`);
     getTeamId = () => this.get('teams/name/' + this.enc.value.team);
     index = () => this.get(`/posts?per_page=60`, {}, this.#toPost);
-    indexMembers = () => this.get(`/members?per_page=999`, {}, (_: any) => this.getRootInstance().addMember(_));
+    indexMembers = () => this.get(`/members?per_page=999`, {}, (_: unknown) => this.getRootInstance().addMember(_ as MattermostMember));
     indexTeamUsers = () => {
         // Only fetch team users on root instance
         if (this.baseInstance) {
@@ -59,21 +63,23 @@ export class MattermostPlugin extends ChatPluginInstance {
         }
         // Fetch all users in the team (for root instance)
         return this.get(`teams/${this.teamId}/members?per_page=200`).pipe(
-            switchMap((members: any[]) => {
-                if (!members || members.length === 0) return of([]);
+            switchMap((members) => {
+                const list = members as MattermostMember[];
+                if (!list || list.length === 0) return of([]);
 
                 // Use batch endpoint to fetch all user details in one request
-                const userIds = members.map((m) => m.user_id);
-                return this.post(`users/ids`, userIds).pipe(catchError(() => of([])));
+                const userIds = list.map((m) => m.user_id);
+                return this.post(`users/ids`, userIds as unknown as Dictionary).pipe(catchError(() => of([])));
             }),
-            map((users: any[]) => {
-                users.filter((u) => u).forEach((u) => this.addMember({ user_id: u.id, ...u }));
-                return users.filter((u) => u);
+            map((users) => {
+                const list = users as (MattermostMember & { id?: string })[];
+                list.filter((u) => u).forEach((u) => this.addMember({ ...u, user_id: u.id ?? u.user_id ?? '' }));
+                return list.filter((u) => u);
             }),
         );
     };
     showImage = (userId: string) => this.getRootInstance().getBlob(`users/${userId}/image`);
-    setChannelName = (data: any) => (this.channelName = data.display_name);
+    setChannelName = (data: unknown) => (this.channelName = (data as { display_name?: string })?.display_name ?? '');
     showChannel = () => this.get('');
     send = (message: string) => this.getRootInstance().post(`posts`, { channel_id: this.channelId, message: message });
 
@@ -89,7 +95,7 @@ export class MattermostPlugin extends ChatPluginInstance {
                             display_name: project.name,
                             type: 'O',
                         }).subscribe((response) => {
-                            const channelId = response.id;
+                            const channelId = (response as { id: string }).id;
                             this.addAssigneesToChannel(project.assignedUsers(), channelId);
                             resolve(channelId);
                         });
@@ -97,16 +103,16 @@ export class MattermostPlugin extends ChatPluginInstance {
                     }),
                 )
                 .subscribe((existingResponse) => {
-                    const channelId = existingResponse.id;
+                    const channelId = (existingResponse as { id: string }).id;
                     this.addAssigneesToChannel(project.assignees, channelId);
                     resolve(channelId);
                 });
         });
 
     // Get activity for comments tab
-    getActivityComments(_projectId: string = '', _maxInitialItems: number = 150, resolveUser?: (email?: string, username?: string, name?: string, pluginAttribute?: string) => any): Observable<any[]> {
-        return this.index().pipe(
-            switchMap((posts: any[]) => {
+    getActivityComments(_projectId: string = '', _maxInitialItems: number = 150, resolveUser?: (email?: string, username?: string, name?: string, pluginAttribute?: string) => unknown): Observable<Dictionary[]> {
+        return (this.index() as Observable<MattermostPost[]>).pipe(
+            switchMap((posts: MattermostPost[]) => {
                 if (!posts) return of([]);
                 const commentDataList = posts
                     .filter((post) => {
@@ -122,27 +128,14 @@ export class MattermostPlugin extends ChatPluginInstance {
                         // Check if this is a system/ephemeral message
                         const isSystemMessage = post.type === 'system_ephemeral' || post.type === 'system_add_to_channel' || post.type === 'system_remove_from_channel' || post.type?.startsWith('system_');
 
-                        // Don't use member - it's just a user object created from Mattermost data
-                        // Only use resolvedUser which properly looks up NEXUS users by X-NEXUS-MATTERMOST attribute
-                        const resolvedUser = resolveUser?.(undefined, userId, authorName, 'X-NEXUS-MATTERMOST');
-
-                        // If user is not resolved, try to get their display name from Mattermost API
-                        let displayName = authorName;
-                        if (!resolvedUser) {
-                            const member = this.getUser(userId);
-                            if (member?.name && member.name !== 'Unknown') {
-                                displayName = member.name;
-                            }
-                        }
-
                         // Aggregate reactions by emoji name
-                        const reactionsRaw: any[] = post.metadata?.reactions || [];
+                        const reactionsRaw = post.metadata?.reactions || [];
                         const reactionMap = new Map<string, number>();
                         reactionsRaw.forEach((r) => reactionMap.set(r.emoji_name, (reactionMap.get(r.emoji_name) ?? 0) + 1));
                         const reactions = Array.from(reactionMap.entries()).map(([name, count]) => ({ emoji: shortcodeToEmoji(name) || `:${name}:`, count }));
 
                         // Extract file attachments from post metadata
-                        const attachments = (post.metadata?.files || []).map((f: any) => ({
+                        const attachments = (post.metadata?.files || []).map((f) => ({
                             id: f.id,
                             name: f.name,
                             mimeType: f.mime_type || '',
@@ -153,9 +146,21 @@ export class MattermostPlugin extends ChatPluginInstance {
                         // Convert markdown to HTML
                         const messageHtml = markdown2html(post.message || '');
 
-                        const commentData: any = {
+                        const resolvedUser = resolveUser?.(undefined, userId, authorName, 'X-NEXUS-MATTERMOST') as (Dictionary<unknown> & { id?: string; icon?: string; iconBaseUrl?: string }) | undefined;
+
+                        // If user is not resolved, try to get their display name from Mattermost API
+                        let displayName = authorName;
+                        if (!resolvedUser) {
+                            const member = this.getUser(userId ?? '');
+                            const memberName = member?.getName();
+                            if (memberName && memberName !== 'Unknown') {
+                                displayName = memberName;
+                            }
+                        }
+
+                        const commentData: Dictionary = {
                             text: messageHtml,
-                            created_at: new Date(post.create_at),
+                            created_at: new Date(post.create_at ?? 0),
                             user: resolvedUser || { name: displayName },
                             user_id: resolvedUser?.id,
                             is_mini: isSystemMessage,
@@ -166,12 +171,8 @@ export class MattermostPlugin extends ChatPluginInstance {
 
                         // Copy icon properties from resolvedUser if available
                         if (resolvedUser) {
-                            if ((resolvedUser as any)._icon) {
-                                commentData._icon = (resolvedUser as any)._icon;
-                            }
-                            if ((resolvedUser as any).iconBaseUrl !== undefined) {
-                                commentData.iconBaseUrl = (resolvedUser as any).iconBaseUrl;
-                            }
+                            if (resolvedUser.icon) commentData['_icon'] = resolvedUser.icon;
+                            if (resolvedUser.iconBaseUrl !== undefined) commentData['iconBaseUrl'] = resolvedUser.iconBaseUrl;
                         }
                         return commentData;
                     });
@@ -181,22 +182,22 @@ export class MattermostPlugin extends ChatPluginInstance {
                 // Pre-fetch blob URLs for all attachments
                 return forkJoin(
                     commentDataList.map((commentData) => {
-                        const allAttachments = commentData.attachments || [];
+                        const allAttachments = (commentData['attachments'] as { isImage: boolean; id: string; [k: string]: unknown }[] | undefined) ?? [];
                         if (!allAttachments.length) return of(commentData);
                         return forkJoin(
-                            allAttachments.map((a: any) => {
-                                const path = a.isImage ? `files/${a.id}/preview` : `files/${a.id}`;
+                            allAttachments.map((a) => {
+                                const path = (a as { isImage: boolean; id: string }).isImage ? `files/${(a as { id: string }).id}/preview` : `files/${(a as { id: string }).id}`;
                                 return this.getRootInstance()
                                     .getBlob(path)
                                     .pipe(
-                                        map((blob: any) => (blob instanceof Blob ? URL.createObjectURL(blob) : blob)),
+                                        map((blob) => (blob instanceof Blob ? URL.createObjectURL(blob) : blob)),
                                         catchError(() => of(null)),
                                     );
                             }),
                         ).pipe(
-                            map((urls) => {
-                                (urls as any[]).forEach((url, i) => {
-                                    if (url) allAttachments[i].blobUrl = url;
+                            map((urls: (string | null | unknown)[]) => {
+                                urls.forEach((url, i) => {
+                                    if (url) (allAttachments[i] as Dictionary<unknown>)['blobUrl'] = url;
                                 });
                                 return commentData;
                             }),
@@ -212,19 +213,21 @@ export class MattermostPlugin extends ChatPluginInstance {
             this.getTeamId()
                 .pipe(catchError(() => this.handleError(reject)))
                 .subscribe((response) => {
-                    if (response && 'id' in response) {
-                        this.teamId = response.id;
+                    const r = response as Dictionary<unknown> | null;
+                    if (r && 'id' in r) {
+                        this.teamId = r['id'] as string;
                         // Fetch all team users for the modal
-                        this.indexTeamUsers().subscribe(() => resolve(), reject);
+                        this.indexTeamUsers().subscribe(() => resolve(), (e) => reject(e));
                     } else {
                         resolve();
                     }
                 });
         });
 
-    #toPost = (data: any): object => {
-        let m: any[] = Object.values(data.posts);
-        m = m.sort((a, b) => b.create_at - a.create_at); // Newest first
+    #toPost = (data: unknown): MattermostPost[] => {
+        const d = data as { posts: Dictionary<MattermostPost> };
+        let m: MattermostPost[] = Object.values(d.posts);
+        m = m.sort((a, b) => (b.create_at ?? 0) - (a.create_at ?? 0)); // Newest first
         return m;
     };
 }

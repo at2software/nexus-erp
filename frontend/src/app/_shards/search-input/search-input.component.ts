@@ -6,6 +6,8 @@ import { FormsModule } from '@angular/forms';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { SafePipe } from '@pipes/safe.pipe';
+import { Project } from '@models/project/project.model';
+import { CompanyContact } from '@models/company/company-contact.model';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -13,11 +15,16 @@ import { SafePipe } from '@pipes/safe.pipe';
     templateUrl: './search-input.component.html',
     styleUrls: ['./search-input.component.scss'],
     host: { class: 'd-flex border-0' },
-    standalone: true,
     imports: [FormsModule, ScrollbarComponent, NgbTooltipModule, SafePipe],
 })
 export class SearchInputComponent {
-    readonly itemSelected = output<any>();
+    // The emitted item is always a Serializable; its concrete class is whatever `only` resolves
+    // to at runtime (Company, Product, ...). Consumers narrow it themselves, typically via
+    // item.assert(SomeClass).
+    readonly itemSelected = output<Serializable>();
+
+    protected readonly Project = Project; 
+    protected readonly CompanyContact = CompanyContact; 
 
     query = model<string>('');
     only = input<string>('');
@@ -29,7 +36,7 @@ export class SearchInputComponent {
     protected readonly dropdown = viewChild<ScrollbarComponent>('dropdown');
 
     readonly currentIndex = signal(0);
-    readonly results = signal<any[]>([]);
+    readonly results = signal<Serializable[]>([]);
     readonly isLoading = signal(false);
     readonly hasSearched = signal(false);
 
@@ -153,10 +160,10 @@ export class SearchInputComponent {
         this.selected.set(undefined);
 
         this.#searchService.search(search, filters).subscribe({
-            next: (x: any) => {
+            next: (x) => {
                 if (this.#currentSearchTerm === search) {
                     this.currentIndex.set(0);
-                    this.results.set(Object.values(x).map((x: any) => REFLECTION(x)));
+                    this.results.set(Object.values(x).map((item) => REFLECTION<Serializable>(item)));
                     this.isLoading.set(false);
                 }
             },
@@ -167,7 +174,7 @@ export class SearchInputComponent {
         });
     }
 
-    selectItem(item: any, event?: Event) {
+    selectItem(item: Serializable, event?: Event) {
         event?.preventDefault();
         event?.stopPropagation();
         this.open(item);
@@ -181,9 +188,9 @@ export class SearchInputComponent {
         this.currentIndex.set(index);
     }
 
-    open(o: any) {
+    open(o: Serializable) {
         this.results.set([]);
-        this.query.set(o.name);
+        this.query.set(o.getName());
         this.selected.set(o);
         this.itemSelected.emit(o);
     }

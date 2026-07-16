@@ -1,82 +1,125 @@
-import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { forkJoin } from 'rxjs';
 
 import { GlobalService } from '@models/global.service';
 import { MilestoneService } from '@models/milestones/milestone.service';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { Milestone } from '@models/milestones/milestone.model';
 import { Project } from '@models/project/project.model';
-import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
 import { ProjectService } from '@models/project/project.service';
-import { Task } from '@models/tasks/task.model';
-import { TaskService } from '@models/tasks/task.service';
+import { UserService } from '@models/user/user.service';
 import { Toast } from '@shards/toast/toast';
-import { CustomGanttComponent, GanttRow } from '@app/projects/_shards/custom-gantt/custom-gantt.component';
 import { HrTeamService } from '../hr-team/hr-team.service';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { MilestonesGroup } from '@models/milestones/api.milestone-group';
+import { dayjs } from '@constants/dates';
+import { DailyWorkload, DailyWorkloadElement, WorkloadData } from '@models/api-response';
+import { ModalBaseService } from '@app/_modals/modal-base-service';
+import { ModalEditMilestoneComponent } from '@app/_modals/modal-edit-milestone/modal-edit-milestone.component';
+import { CapacityCalendarComponent, MilestoneReschedule } from '@app/profile/profile-milestones/capacity-calendar/capacity-calendar.component';
+import { ModalAddMilestoneComponent } from '@app/profile/profile-milestones/capacity-calendar/modal-add-milestone/modal-add-milestone.component';
+
+const HORIZON_MONTHS = 3;
 
 @Component({
     selector: 'hr-milestones',
     templateUrl: './hr-milestones.component.html',
     styleUrls: ['./hr-milestones.component.scss'],
-    standalone: true,
-    imports: [ToolbarComponent, CustomGanttComponent, NgbDropdownModule, SpinnerComponent],
+    imports: [ToolbarComponent, SpinnerComponent, CapacityCalendarComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HrMilestonesComponent {
     global = inject(GlobalService);
     #hrTeamService = inject(HrTeamService);
     #milestoneService = inject(MilestoneService);
+    #userService = inject(UserService);
     #projectService = inject(ProjectService);
-    #taskService = inject(TaskService);
-    #inputModalService = inject(InputModalService);
+    #modalService = inject(ModalBaseService);
 
-    protected readonly ganttComponent = viewChild(CustomGanttComponent);
+    rangeStart = signal(dayjs().startOf('day'));
+    rangeEnd = signal(dayjs().startOf('day').add(HORIZON_MONTHS, 'months'));
 
-    ganttRows = signal<GanttRow[]>([]);
-    milestoneProjectMap = signal(new Map<string, Project>());
-    currentViewMode = signal<string>(localStorage.getItem('hrMilestonesViewMode') || 'Week');
+    workloadData = signal<WorkloadData | null>(null);
+    projectGroups = signal<MilestonesGroup[]>([]);
+
     loading = signal(true);
     error = signal<string | null>(null);
 
-    #allMilestones: Milestone[] = [];
-    #projectGroups: any[] = [];
-
-    get workloadUser() {
-        return this.#hrTeamService.getUser();
-    }
+    readonly #allMilestones = computed(() => this.projectGroups().flatMap((g) => g.milestones));
+    /** Milestones with both dates set render as spanning bars on the calendar. */
+    readonly scheduledMilestones = computed(() => this.#allMilestones().filter((m) => m.started_at && m.due_at));
 
     constructor() {
-        this.#hrTeamService.onUserChange.pipe(takeUntilDestroyed()).subscribe(() => this.loadMilestones());
+        this.#hrTeamService.onUserChange.pipe(takeUntilDestroyed()).subscribe(() => this.#load());
     }
 
-    loadMilestones() {
+    onRangeShift(months: number): void {
+        this.rangeStart.update((d) => d.add(months, 'months'));
+        this.rangeEnd.update((d) => d.add(months, 'months'));
+        this.#load();
+    }
+
+    onRangeToday(): void {
+        this.rangeStart.set(dayjs().startOf('day'));
+        this.rangeEnd.set(dayjs().startOf('day').add(HORIZON_MONTHS, 'months'));
+        this.#load();
+    }
+
+    onEditMilestone(milestone: Milestone): void {
+        const projects = this.projectGroups().map((g) => g.project);
+        this.#modalService.open(ModalEditMilestoneComponent, milestone, milestone.project, projects).then(() => this.#load(true));
+    }
+
+    onMilestoneRescheduled({ milestone, started_at, due_at }: MilestoneReschedule): void {
+        milestone.update({ started_at, due_at }, true).subscribe({
+            next: () => this.#load(true),
+            error: () => Toast.error($localize`:@@i18n.planner.scheduleError:failed to schedule milestone`),
+        });
+    }
+
+    onAddMilestoneForDay(date: string): void {
+        const projects = this.projectGroups().map((g) => g.project);
+        this.#modalService.open(ModalAddMilestoneComponent, projects, date).then((result) => {
+            if (!result) return;
+            this.#projectService
+                .createMilestone(result.project.id, {
+                    name: result.name,
+                    workload_hours: result.workload_hours,
+                    started_at: result.started_at,
+                    due_at: result.due_at,
+                })
+                .subscribe({
+                    next: () => {
+                        Toast.success($localize`:@@i18n.milestone.created:milestone created`);
+                        this.#load(true);
+                    },
+                    error: () => Toast.error($localize`:@@i18n.milestone.createError:failed to create milestone`),
+                });
+        });
+    }
+
+    /** Refetches workload + milestones for the HR-viewed user. `silent` keeps the current UI visible instead of blanking it behind a spinner — used after in-place mutations (reschedule, edit, add). */
+    #load(silent = false): void {
+        const user = this.#hrTeamService.getUser();
         const userId = this.#hrTeamService.getUserId();
-        if (!userId) {
+        if (!user || !userId) {
             this.error.set('No user selected');
             this.loading.set(false);
             return;
         }
 
-        this.loading.set(true);
+        if (!silent) this.loading.set(true);
         this.error.set(null);
 
-        this.#milestoneService.indexUserMilestones(userId).subscribe({
-            next: (groups: any[]) => {
-                groups.forEach((_) => {
-                    _.project = Project.fromJson(_.project);
-                    _.project_tasks = _.project_tasks || [];
-                    _.milestones = _.milestones.map((item: any) => {
-                        const ms = Milestone.fromJson(item.milestone);
-                        ms.project = _.project;
-                        (ms as any).tasks = item.tasks || [];
-                        return ms;
-                    });
-                });
-                this.#projectGroups = groups;
-                this.#prepareMilestones(groups);
-                this.#prepareGanttRows();
+        const start = this.rangeStart().format('YYYY-MM-DD');
+        const end = this.rangeEnd().format('YYYY-MM-DD');
+
+        forkJoin([this.#userService.showDailyWorkload(user, start, end), this.#milestoneService.indexUserMilestones(userId)]).subscribe({
+            next: ([workload, groups]) => {
+                groups.forEach((g) => g.milestones.forEach((m) => (m.project ??= g.project)));
+                this.workloadData.set(this.#mapWorkload(workload));
+                this.projectGroups.set(groups);
                 this.loading.set(false);
             },
             error: () => {
@@ -86,80 +129,12 @@ export class HrMilestonesComponent {
         });
     }
 
-    onViewModeChange = (mode: string) => {
-        this.currentViewMode.set(mode);
-        localStorage.setItem('hrMilestonesViewMode', mode);
-    };
-
-    onAddMilestone(project: Project) {
-        this.#inputModalService.open($localize`:@@i18n.common.addMilestone:add milestone`).then((result) => {
-            if (!result?.text?.trim()) return;
-            this.#projectService.createMilestone(project.id, { name: result.text.trim() }).subscribe({
-                next: () => {
-                    Toast.success($localize`:@@i18n.milestone.created:milestone created`);
-                    this.loadMilestones();
-                },
-                error: () => Toast.error($localize`:@@i18n.milestone.createError:failed to create milestone`),
-            });
-        }).catch(() => undefined);
-    }
-
-    onAddTask(project: Project) {
-        this.#inputModalService.open($localize`:@@i18n.task.addTask:Add Task`).then((result) => {
-            if (!result?.text?.trim()) return;
-            this.#projectService.createTaskForProject(project.id, { name: result.text.trim(), parent_type: 'App\\Models\\Project', parent_id: project.id }).subscribe({
-                next: () => {
-                    Toast.success($localize`:@@i18n.task.created:Task created`);
-                    this.loadMilestones();
-                },
-                error: () => Toast.error($localize`:@@i18n.task.createError:Failed to create task`),
-            });
-        }).catch(() => undefined);
-    }
-
-    #prepareMilestones(groups: any[]) {
-        this.#allMilestones = [];
-        const map = new Map<string, Project>();
-
-        groups.forEach((group) => {
-            group.milestones?.forEach((milestone: Milestone) => {
-                map.set(milestone.id, group.project);
-                this.#allMilestones.push(milestone);
-            });
-        });
-
-        this.#allMilestones.sort((a, b) => {
-            const aId = String(a.project_id || '');
-            const bId = String(b.project_id || '');
-            return aId !== bId ? aId.localeCompare(bId) : String(a.id || '').localeCompare(String(b.id || ''));
-        });
-
-        this.milestoneProjectMap.set(map);
-    }
-
-    #prepareGanttRows() {
-        const rows: GanttRow[] = [];
-
-        this.#projectGroups.forEach((group) => {
-            const project = group.project;
-            rows.push({ type: 'header', data: project, project });
-
-            (group.project_tasks || []).forEach((task: any) => {
-                const t = Task.fromJson(task);
-                t.httpService = this.#taskService;
-                rows.push({ type: 'task', data: t, project });
-            });
-
-            (group.milestones || []).forEach((milestone: Milestone) => {
-                rows.push({ type: 'milestone', data: milestone, project });
-                ((milestone as any).tasks || []).forEach((task: any) => {
-                    const t = Task.fromJson(task);
-                    t.httpService = this.#taskService;
-                    rows.push({ type: 'task', data: t, project });
-                });
-            });
-        });
-
-        this.ganttRows.set(rows);
+    #mapWorkload(data: WorkloadData): WorkloadData {
+        const dailyWorkload: DailyWorkload[] = data.daily_workload.map((day) => ({
+            ...day,
+            elements: day.elements.map((el): DailyWorkloadElement => ({ ...el, project: el.project ? Project.fromJson(el.project) : undefined })),
+        }));
+        const unconfiguredMilestones = data.unconfigured_milestones.map((m) => Milestone.fromJson(m));
+        return { ...data, daily_workload: dailyWorkload, unconfigured_milestones: unconfiguredMilestones };
     }
 }

@@ -3,22 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Actions\UndoInvoiceAction;
-use App\Helpers\NLog;
 use App\Models\File;
 use App\Models\Invoice;
 use App\Models\Param;
 use App\Services\CashFlowService;
 use App\Services\InvoiceStatisticsService;
 use App\Services\LiquidityService;
-use App\Traits\ControllerHasPermissionsTrait;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 class InvoiceController extends Controller {
-    use ControllerHasPermissionsTrait;
-
     public function _index(Request $r) {
         $query = Invoice::select()->whereRequest()->withRequest();
         if (@$r->input('onlyUnpaid') == 'true') {
@@ -51,6 +48,9 @@ class InvoiceController extends Controller {
         return $invoice->load('company');
     }
     public function showPdf(Invoice $_) {
+        if (! Storage::exists($_->file_dir)) {
+            return response()->json(['error' => 'PDF not found'], 404);
+        }
         return File::stream($_->file_dir, $_->name);
     }
     public function update(Request $request, Invoice $invoice) {
@@ -73,34 +73,37 @@ class InvoiceController extends Controller {
         return (new UndoInvoiceAction)->execute($_);
     }
     public function sendMail(Invoice $_) {
-        if (env('NEXUS_DEBUG', false)) {
+        if (config('app.nexus_debug')) {
             return;
         }
         return $_->sendMail();
     }
     public function sendReminder(Invoice $_) {
-        if (env('NEXUS_DEBUG', false)) {
+        if (config('app.nexus_debug')) {
             return;
         }
         return $_->sendReminder();
     }
     public function sendToDatev(Invoice $_) {
-        if (env('NEXUS_DEBUG', false)) {
+        if (config('app.nexus_debug')) {
             return;
         }
         Invoice::disablePropagation();
-        if ($mailTo = Param::get('DATEV_MAIL_OUTGOING')->value) {
-            Mail::send([], [], fn ($message) => $message->to($mailTo)
-                ->subject($_->name)
-                ->text($_->name)
-                ->attach(Attachment::fromStorage($_->file_dir))
-            );
+        try {
+            if ($mailTo = Param::get('DATEV_MAIL_OUTGOING')->value) {
+                Mail::send([], [], fn ($message) => $message->to($mailTo)
+                    ->subject($_->name)
+                    ->text($_->name)
+                    ->attach(Attachment::fromStorage($_->file_dir))
+                );
 
-            $_->setFlag(Invoice::FLAG_SENT_TO_DATEV);
-            $_->save();
-            return $_;
+                $_->setFlag(Invoice::FLAG_SENT_TO_DATEV);
+                $_->save();
+                return $_;
+            }
+        } finally {
+            Invoice::enablePropagation();
         }
-        Invoice::enablePropagation();
     }
     public function showCashFlow() {
         return CashFlowService::getCashFlowData();

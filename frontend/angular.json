@@ -60,7 +60,13 @@
             "allowedCommonJsDependencies": [
               "base64-js",
               "js-sha256",
-              "moment"
+              "moment",
+              "leaflet",
+              "reflect-metadata",
+              "node-forge",
+              "pusher-js",
+              "exceljs",
+              "quill-delta"
             ],
             "scripts": [],
             "stylePreprocessorOptions": {
@@ -76,13 +82,13 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "8mb",
-                  "maximumError": "12mb"
+                  "maximumWarning": "7mb",
+                  "maximumError": "8mb"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "250kb",
-                  "maximumError": "500kb"
+                  "maximumWarning": "10kb",
+                  "maximumError": "12kb"
                 }
               ],
               "fileReplacements": [
@@ -91,7 +97,11 @@
                   "with": "src/environments/environment.prod.ts"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "optimization": true,
+              "aot": true,
+              "sourceMap": false,
+              "extractLicenses": true
             },
             "development": {
               "optimization": false,
@@ -106,18 +116,20 @@
               "namedChunks": true
             },
             "de": {
-              "optimization": false,
-              "extractLicenses": false,
-              "sourceMap": true,
+              "optimization": true,
+              "extractLicenses": true,
+              "sourceMap": false,
+              "aot": true,
               "namedChunks": true,
               "localize": [
                 "de"
               ]
             },
             "en": {
-              "optimization": false,
-              "extractLicenses": false,
-              "sourceMap": true,
+              "optimization": true,
+              "extractLicenses": true,
+              "sourceMap": false,
+              "aot": true,
               "namedChunks": true,
               "localize": [
                 "en"
@@ -155,7 +167,7 @@
         "test": {
           "builder": "@angular-builders/jest:run",
           "options": {
-            "configPath": "./jest.config.ts"
+            "config": "./jest.config.ts"
           }
         },
         "lint": {

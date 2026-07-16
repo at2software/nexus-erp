@@ -5,15 +5,16 @@ namespace App\Http\Controllers;
 use App\Exceptions\TanChallengeException;
 use App\Helpers\CaAwareFinTs;
 use App\Services\FinTs\FinTsDriverFactory;
+use App\Services\FinTs\FinTsDriverInterface;
 use App\Services\FinTs\FinTsTransaction;
 use App\Traits\HasVaultCredentials;
 use Fhp\Action\GetBalance;
 use Fhp\Action\GetSEPAAccounts;
 use Fhp\FinTs;
-use Fhp\Model\SEPAAccount;
 use Fhp\Model\FlickerTan\SvgRenderer;
 use Fhp\Model\FlickerTan\TanRequestChallengeFlicker;
 use Fhp\Model\NoPsd2TanMode;
+use Fhp\Model\SEPAAccount;
 use Fhp\Model\TanRequestChallengeImage;
 use Fhp\Options\Credentials;
 use Fhp\Options\FinTsOptions;
@@ -38,7 +39,6 @@ class PluginFintsController extends Controller {
             }
         }
     }
-
     public function vaultPrefix(): string {
         return 'FINTS';
     }
@@ -65,7 +65,7 @@ class PluginFintsController extends Controller {
         }
 
         // --- 2. Full PSD2 login ---
-        $challengeId = (string) Str::uuid();
+        $challengeId = (string)Str::uuid();
         $fints       = CaAwareFinTs::new($this->buildOptions(), $this->buildCredentials());
 
         $bpd      = $fints->getBpd();
@@ -138,10 +138,9 @@ class PluginFintsController extends Controller {
 
     // ---- private helpers ----
 
-    private function driver(): \App\Services\FinTs\FinTsDriverInterface {
+    private function driver(): FinTsDriverInterface {
         return FinTsDriverFactory::create($this->credentials ?? []);
     }
-
     private function buildOptions(): FinTsOptions {
         // On Windows (Laragon etc.) the php.ini curl.cainfo may point to a missing file.
         // Fall back to the CA bundle that ships with Composer so SSL verification still works.
@@ -154,18 +153,16 @@ class PluginFintsController extends Controller {
             }
         }
 
-        $options                 = new FinTsOptions();
+        $options                 = new FinTsOptions;
         $options->url            = $this->env('URL');
         $options->bankCode       = $this->env('BLZ');
         $options->productName    = 'NEXUS';
         $options->productVersion = '1.0';
         return $options;
     }
-
     private function buildCredentials(): Credentials {
-        return Credentials::create((string) $this->env('USERNAME'), (string) $this->env('PIN'));
+        return Credentials::create((string)$this->env('USERNAME'), (string)$this->env('PIN'));
     }
-
     private function loginNoPsd2(): FinTs {
         $fints = CaAwareFinTs::new($this->buildOptions(), $this->buildCredentials());
         $fints->selectTanMode(NoPsd2TanMode::ID);
@@ -175,7 +172,6 @@ class PluginFintsController extends Controller {
         }
         return $fints;
     }
-
     private function buildChallenge(DialogInitialization $login, FinTs $fints): array {
         $tanRequest = $login->getTanRequest();
         $challenge  = [
@@ -196,8 +192,8 @@ class PluginFintsController extends Controller {
                 $challenge['type'] = 'flickertan';
                 $challenge['svg']  = $svg->getImage();
             } catch (\InvalidArgumentException) {
-                $image             = new TanRequestChallengeImage($hhd);
-                $challenge['type'] = 'phototan';
+                $image              = new TanRequestChallengeImage($hhd);
+                $challenge['type']  = 'phototan';
                 $challenge['image'] = 'data:'.$image->getMimeType().';base64,'.base64_encode($image->getData());
             }
             return $challenge;

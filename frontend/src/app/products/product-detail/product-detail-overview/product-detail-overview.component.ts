@@ -4,6 +4,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { of } from 'rxjs';
 import { MoneyShortPipe } from '@pipes/mshort.pipe';
 import { LoadingPipe } from '@pipes/loading.pipe';
+import { MoneyPipe } from '@pipes/money.pipe';
 import { GlobalService } from '@models/global.service';
 import { ProductService } from '@models/product/product.service';
 import { Company } from '@models/company/company.model';
@@ -21,9 +22,7 @@ import { UlCompactComponent } from '@shards/ul-compact/ul-compact.component';
 @Component({
     selector: 'app-product-detail-overview',
     templateUrl: './product-detail-overview.component.html',
-    styleUrls: ['./product-detail-overview.component.scss'],
-    standalone: true,
-    imports: [AutosaveDirective, FormsModule, RteComponent, Nx, AvatarComponent, NgbDropdownModule, NgbTooltipModule, MoneyShortPipe, LoadingPipe, UlCompactComponent, CompactItemDirective],
+    imports: [AutosaveDirective, FormsModule, RteComponent, Nx, AvatarComponent, NgbDropdownModule, NgbTooltipModule, MoneyShortPipe, LoadingPipe, MoneyPipe, UlCompactComponent, CompactItemDirective],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProductDetailOverviewComponent {
@@ -42,13 +41,21 @@ export class ProductDetailOverviewComponent {
     readonly totalRevenue = computed<number | null>(() => this.#customersData.value()?.total_revenue ?? null);
     readonly totalCustomers = computed<number>(() => this.#customersData.value()?.total_customers ?? 0);
     readonly currentPriceSourceText = computed(() => {
-        switch (this.parent.object()?.time_based) {
+        switch (this.object()?.time_based) {
             case 0: return $localize`:@@i18n.common.individualInvoiceItem:individual invoice item`;
             case 1: return $localize`:@@i18n.common.hourly:hourly`;
             case 8: return $localize`:@@i18n.common.daily:daily`;
             default: return '';
         }
     });
+    readonly basePrice = computed(() => {
+        const product = this.object();
+        if (!product || product.time_based === 0) return 0;
+        let price = parseFloat(this.global.setting('INVOICE_HOURLY_WAGE'));
+        if (product.time_based === 8) price *= parseFloat(this.global.setting('INVOICE_HPD'));
+        return price;
+    });
+    readonly computedPrice = computed(() => this.basePrice() * (this.object()?.price_multiplier || 1));
 
     constructor() {
         effect(() => this.item.set(this.parent.object()?.getInvoiceItem()?.getClone()));

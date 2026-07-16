@@ -3,12 +3,14 @@ import { NgbTooltipModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap'
 import { Project } from '@models/project/project.model';
 import { Company } from '@models/company/company.model';
 import { BaseWidgetComponent, WidgetOptions } from '../base.widget.component';
-import { WidgetsModule } from '../widgets.module';
+
+import { WIDGET_SHARED } from '../widgets.shared';
 import { PermissionsDirective } from '@directives/permissions.directive';
 import { WidgetService } from '@models/widget.service';
 import { forkJoin } from 'rxjs';
 import { REFLECTION } from '@constants/constants';
 import { Router } from '@angular/router';
+import { ParamChartSeries } from '@models/api-response';
 
 type TInvoiceItem = Project | Company;
 interface TGroupedItem {
@@ -21,12 +23,11 @@ interface TGroupedItem {
     selector: 'widget-invoice-manager',
     templateUrl: './widget-invoice-manager.component.html',
     styleUrls: ['./widget-invoice-manager.component.scss', './../base.widget.component.scss'],
-    standalone: true,
-    imports: [NgbTooltipModule, NgbDropdownModule, WidgetsModule, PermissionsDirective],
+    imports: [NgbTooltipModule, NgbDropdownModule, ...WIDGET_SHARED, PermissionsDirective],
 })
 export class WidgetInvoiceManagerComponent extends BaseWidgetComponent {
     groupedData = signal<TGroupedItem[]>([]);
-    chartData = signal<any[]>([]);
+    chartData = signal<ParamChartSeries[]>([]);
     #widgetService = inject(WidgetService);
     #router = inject(Router);
 
@@ -36,29 +37,31 @@ export class WidgetInvoiceManagerComponent extends BaseWidgetComponent {
     });
 
     reload(): void {
-        if (!this.hasInvoicesExpenses) return;
+        if (!this.hasInvoicesExpenses()) return;
 
         const options = { ...this.getOptionsURI() };
         const chartOptions = { ...options };
         delete chartOptions['max-items'];
-        if (this.hasInvoicesModule) chartOptions['withChart'] = '1';
+        if (this.hasInvoicesModule()) chartOptions['withChart'] = '1';
 
         forkJoin({
             timebased: this.#widgetService.indexCashflow('PROJECTS_TIMEBASED', chartOptions, Project),
             support: this.#widgetService.indexCashflow('CUSTOMER_SUPPORT', chartOptions, Company),
-            prepared: this.#widgetService.indexCashflow('INVOICES_PREPARED', chartOptions, Object),
-        }).subscribe((responses: any) => {
-            const timebased = (responses.timebased.objects || []).map((p: Project) => { p.var.itemType = 'timebased'; return p; });
-            const support = (responses.support.objects || []).map((c: Company) => { c.var.itemType = 'support'; return c; });
+            prepared: this.#widgetService.indexCashflow('INVOICES_PREPARED', chartOptions, Company),
+        }).subscribe((responses) => {
+            const timebased = responses.timebased.objects.map((p) => { p.var.itemType = 'timebased'; return p; });
+            const support = responses.support.objects.map((c) => { c.var.itemType = 'support'; return c; });
             const prepared = (responses.prepared.objects || [])
-                .map((x: any) => {
+                .map((x) => {
                     const c = REFLECTION(x);
+                    if (!(c instanceof Company) && !(c instanceof Project)) return undefined;
                     c.var.itemType = 'prepared';
                     if (c instanceof Company) c.actions[0].action = () => c.navigateTo(`/customers/${c.id}/billing`);
                     if (c instanceof Project) c.actions[0].action = () => c.navigateTo(`/projects/${c.id}/invoicing`);
                     return c;
                 })
-                .filter((a: any) => this.#getAppliedValue(a) > 0);
+                .filter((a: TInvoiceItem | undefined): a is TInvoiceItem => !!a)
+                .filter((a: TInvoiceItem) => this.#getAppliedValue(a) > 0);
 
             const allItems = [...timebased, ...support, ...prepared].sort((a, b) => this.#getAppliedValue(b) - this.#getAppliedValue(a));
 
@@ -96,20 +99,20 @@ export class WidgetInvoiceManagerComponent extends BaseWidgetComponent {
             const defaultWage = this.global.setting('HR_HOURLY_WAGE') ?? 0;
             this.value.set(
                 timebased.reduce((sum: number, p: Project) => sum + (p.uninvoiced_hours || 0) * (p.target_wage || 0), 0) +
-                support.reduce((sum: number, c: Company) => sum + (c.foci_unbilled_sum_duration || 0) * ((c as any).individual_wage ?? defaultWage), 0) +
+                support.reduce((sum: number, c: Company) => sum + (c.foci_unbilled_sum_duration || 0) * ((c as Company & { individual_wage?: number }).individual_wage ?? defaultWage), 0) +
                 prepared.reduce((sum: number, item: TInvoiceItem) => sum + (item.net_remaining || 0), 0)
             );
 
             const chartSeries = [responses.timebased.history, responses.support.history, responses.prepared.history]
                 .filter(Boolean)
-                .map((h: any) => [h].flat()[0]);
-            if (chartSeries.length > 0) this.chartData.set(chartSeries);
+                .map((h) => [h].flat()[0]);
+            if (chartSeries.length > 0) this.chartData.set(chartSeries as ParamChartSeries[]);
         });
     }
 
     #getAppliedValue(item: TInvoiceItem): number {
         if (item.var.itemType === 'timebased' && item instanceof Project) return (item.uninvoiced_hours || 0) * (item.target_wage || 0);
-        if (item.var.itemType === 'support' && item instanceof Company) return (item.foci_unbilled_sum_duration || 0) * ((item as any).individual_wage ?? this.global.setting('HR_HOURLY_WAGE') ?? 0);
+        if (item.var.itemType === 'support' && item instanceof Company) return (item.foci_unbilled_sum_duration || 0) * ((item as Company & { individual_wage?: number }).individual_wage ?? this.global.setting('HR_HOURLY_WAGE') ?? 0);
         if (item.var.itemType === 'prepared') return item.net_remaining || 0;
         return 0;
     }

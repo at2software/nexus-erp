@@ -1,11 +1,16 @@
 import { SentinelOptionFieldType } from './sentinel-option-field-type.model';
 
+export interface SentinelOptionInstance {
+    key: string;
+    value?: string;
+}
+
 export interface SentinelOptionField {
     key: string;
     label?: string;
-    value?: any;
+    value?: string | boolean | number;
     type: SentinelOptionFieldType;
-    default?: any;
-    placeholder?: any;
-    enumValues?: { label: string; value: string }[]; // if type === Enum
+    default?: string | boolean | number;
+    placeholder?: string;
+    enumValues?: { label: string; value: string }[];
 }

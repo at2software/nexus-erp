@@ -1,8 +1,8 @@
-﻿import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { LiveSharingService } from '@models/live-sharing.service';
-import { Subject, throttleTime } from 'rxjs';
+import { Subject, fromEvent, throttleTime } from 'rxjs';
 import { MousePosition, MouseClick, WebSocketService } from 'src/services/websocket.service';
 import { Router } from '@angular/router';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
@@ -10,10 +10,9 @@ import { InputModalService } from '@app/_modals/modal-input/modal-input.componen
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'mouse-cursor-overlay',
-    standalone: true,
     imports: [],
     template: `
-        @for (cursor of cursors; track cursor.userId) {
+        @for (cursor of cursors(); track cursor.userId) {
             <div class="remote-cursor" [class.off-tab]="cursor.visible === false" [style.left.px]="getViewportX(cursor.x)" [style.top.px]="getViewportY(cursor.y)">
                 <svg width="24" height="24" viewBox="0 0 24 24" [attr.fill]="cursor.userColor">
                     <path d="M3 3L10.07 19.97L12.58 12.58L19.97 10.07L3 3Z" />
@@ -24,7 +23,7 @@ import { InputModalService } from '@app/_modals/modal-input/modal-input.componen
             </div>
         }
 
-        @for (click of clicks; track $index) {
+        @for (click of clicks(); track $index) {
             <div class="click-animation" [style.left.px]="getViewportX(click.x)" [style.top.px]="getViewportY(click.y)">
                 <div class="click-circle" [style.border-color]="click.userColor"></div>
             </div>
@@ -106,7 +105,7 @@ import { InputModalService } from '@app/_modals/modal-input/modal-input.componen
         `,
     ],
 })
-export class MouseCursorOverlayComponent implements OnInit, OnDestroy {
+export class MouseCursorOverlayComponent {
     #liveSharingService = inject(LiveSharingService);
     #wsService = inject(WebSocketService);
     #router = inject(Router);
@@ -114,19 +113,19 @@ export class MouseCursorOverlayComponent implements OnInit, OnDestroy {
     #destroyRef = inject(DestroyRef);
     #mouseMove$ = new Subject<{ x: number; y: number; event: MouseEvent }>();
 
-    cursors: MousePosition[] = [];
-    clicks: MouseClick[] = [];
+    cursors = signal<MousePosition[]>([]);
+    clicks = signal<MouseClick[]>([]);
     #isVisible = true;
     #visibilityChangeHandler = () => this.#onVisibilityChange();
     #scrollHandler = () => this.#updateCursorPositions();
 
-    ngOnInit() {
+    constructor() {
         this.#liveSharingService.mousePositionsOnCurrentUrl$.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe((positionsMap) => {
-            this.cursors = Array.from(positionsMap.values());
+            this.cursors.set(Array.from(positionsMap.values()));
         });
 
         this.#liveSharingService.mouseClicks$.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe((clicks) => {
-            this.clicks = clicks;
+            this.clicks.set(clicks);
         });
 
         this.#mouseMove$.pipe(throttleTime(100), takeUntilDestroyed(this.#destroyRef)).subscribe(({ x, y, event }: { x: number; y: number; event: MouseEvent }) => {
@@ -138,29 +137,38 @@ export class MouseCursorOverlayComponent implements OnInit, OnDestroy {
         window.addEventListener('blur', this.#visibilityChangeHandler);
         window.addEventListener('focus', this.#visibilityChangeHandler);
         window.addEventListener('scroll', this.#scrollHandler, true);
-    }
 
-    @HostListener('document:mousemove', ['$event'])
-    onMouseMove(event: MouseEvent) {
-        if (this.#liveSharingService.sharingEnabled$.value) {
-            this.#mouseMove$.next({ x: event.clientX, y: event.clientY, event });
-        }
-    }
+        this.#destroyRef.onDestroy(() => {
+            document.removeEventListener('visibilitychange', this.#visibilityChangeHandler);
+            window.removeEventListener('blur', this.#visibilityChangeHandler);
+            window.removeEventListener('focus', this.#visibilityChangeHandler);
+            window.removeEventListener('scroll', this.#scrollHandler, true);
+        });
 
-    @HostListener('document:click', ['$event'])
-    onClick(event: MouseEvent) {
-        if (this.#liveSharingService.sharingEnabled$.value) {
-            const scrollOffsets = this.#getScrollOffsets(event);
-            this.#liveSharingService.sendMouseClick(event.clientX + scrollOffsets.x, event.clientY + scrollOffsets.y);
-        }
-    }
+        fromEvent<MouseEvent>(document, 'mousemove')
+            .pipe(takeUntilDestroyed(this.#destroyRef))
+            .subscribe((event) => {
+                if (this.#liveSharingService.sharingEnabled$.value) {
+                    this.#mouseMove$.next({ x: event.clientX, y: event.clientY, event });
+                }
+            });
 
-    @HostListener('document:keydown', ['$event'])
-    onKeyDown(event: KeyboardEvent) {
-        if (!event.ctrlKey || event.key !== 'm' || !this.#liveSharingService.sharingEnabled$.value) return;
+        fromEvent<MouseEvent>(document, 'click')
+            .pipe(takeUntilDestroyed(this.#destroyRef))
+            .subscribe((event) => {
+                if (this.#liveSharingService.sharingEnabled$.value) {
+                    const scrollOffsets = this.#getScrollOffsets(event);
+                    this.#liveSharingService.sendMouseClick(event.clientX + scrollOffsets.x, event.clientY + scrollOffsets.y);
+                }
+            });
 
-        event.preventDefault();
-        this.#openQuickMessageModal();
+        fromEvent<KeyboardEvent>(document, 'keydown')
+            .pipe(takeUntilDestroyed(this.#destroyRef))
+            .subscribe((event) => {
+                if (!event.ctrlKey || event.key !== 'm' || !this.#liveSharingService.sharingEnabled$.value) return;
+                event.preventDefault();
+                this.#openQuickMessageModal();
+            });
     }
 
     #onVisibilityChange() {
@@ -233,13 +241,6 @@ export class MouseCursorOverlayComponent implements OnInit, OnDestroy {
     }
 
     #updateCursorPositions() {
-        this.cursors = [...this.cursors];
-    }
-
-    ngOnDestroy() {
-        document.removeEventListener('visibilitychange', this.#visibilityChangeHandler);
-        window.removeEventListener('blur', this.#visibilityChangeHandler);
-        window.removeEventListener('focus', this.#visibilityChangeHandler);
-        window.removeEventListener('scroll', this.#scrollHandler, true);
+        this.cursors.update((cursors) => [...cursors]);
     }
 }

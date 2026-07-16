@@ -1,4 +1,5 @@
 @let _progressBar = progressBar();
+@let _activityRoute = activityRoute();
 <div class="table-responsive">
     <table class="table table-hover table-sm mb-0">
         <thead>
@@ -14,9 +15,9 @@
         <tbody>
             @for (activity of sortedActivities(); track activity.id) {
                 <tr [class.table-active]="hoveredActivityId === activity.id" class="cursor-pointer"
-                    [routerLink]="activityRoute() ? [...activityRoute()!, activity.id] : null"
-                    [routerLinkActive]="activityRoute() ? 'table-active' : ''"
-                    (click)="activityRoute() ? null : activityClicked.emit(activity)">
+                    [routerLink]="_activityRoute ? [..._activityRoute, activity.id] : null"
+                    [routerLinkActive]="_activityRoute ? 'table-active' : ''"
+                    (click)="_activityRoute ? null : activityClicked.emit(activity)">
                     <td class="text-center text-truncate">{{ activity.day_offset }}</td>
                     <td class="text-center text-truncate">
                         @if (activity.has_external_dependency) {
@@ -50,7 +51,9 @@
                     </td>
                     <td class="text-center text-truncate">
                         @if (hasPerformanceMetrics(activity)) {
-                            @if (getFirstMetric(activity); as metric) {
+                            @if (getMetricWarning(activity); as warning) {
+                                <i class="text-danger" style="font-size: 1.2rem" [ngbTooltip]="warning" placement="left">warning</i>
+                            } @else if (getFirstMetric(activity); as metric) {
                                 <i [style.color]="metric.getIconColor()" style="font-size: 1.2rem" [ngbTooltip]="getMetricsTooltip(getPerformanceMetrics(activity))" placement="left">{{ metric.getIcon() }}</i>
                             }
                         }

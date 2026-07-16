@@ -1,26 +1,21 @@
 ﻿import { ChangeDetectionStrategy, Component, ElementRef, viewChild, effect, untracked, input } from '@angular/core';
-
 import { Color } from '@constants/Color';
-import * as d3 from 'd3';
-import moment from 'moment';
+import { TimeValuePoint } from '@models/api-response';
+import { interpolateRgb, scaleLinear, select } from 'd3';
+import { dayjs } from '@constants/dates';
 
-export interface MonthlyRevenue {
-    date: string; // Format: YYYY-MM
-    revenue: number;
-}
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'revenue-spiral-chart',
     templateUrl: './revenue-spiral-chart.component.html',
     styleUrls: ['./revenue-spiral-chart.component.scss'],
-    standalone: true,
     imports: [],
 })
 export class RevenueSpiralChartComponent {
     spiralContainer = viewChild<ElementRef<HTMLDivElement>>('spiralContainer');
 
-    data = input<MonthlyRevenue[] | undefined>(undefined);
+    data = input<TimeValuePoint[] | undefined>(undefined);
     height = input<number>(400);
     primaryColor = input<string>('#00ff99');
     smoothing = input<number>(0);
@@ -34,18 +29,18 @@ export class RevenueSpiralChartComponent {
         });
     }
 
-    getSmoothedData(): MonthlyRevenue[] {
+    getSmoothedData(): TimeValuePoint[] {
         const data = this.data();
         if (!data || this.smoothing() === 0) return data || [];
 
-        const smoothed: MonthlyRevenue[] = [];
+        const smoothed: TimeValuePoint[] = [];
         const smoothing = this.smoothing();
         for (let i = smoothing; i < data.length; i++) {
             const windowData = data.slice(i - smoothing, i + 1);
-            const avgRevenue = windowData.reduce((sum, d) => sum + d.revenue, 0) / windowData.length;
+            const avgRevenue = windowData.reduce((sum, d) => sum + d.value, 0) / windowData.length;
             smoothed.push({
-                date: data[i].date,
-                revenue: avgRevenue,
+                period: data[i].period,
+                value: avgRevenue,
             });
         }
         return smoothed;
@@ -65,37 +60,36 @@ export class RevenueSpiralChartComponent {
         const centerY = height / 2;
         const maxRadius = Math.min(width, height) / 2 - 40;
 
-        d3.select(container).selectAll('*').remove();
+        select(container).selectAll('*').remove();
 
-        const svg = d3.select(container).append('svg').attr('width', width).attr('height', height);
+        const svg = select(container).append('svg').attr('width', width).attr('height', height);
 
         const g = svg.append('g').attr('transform', `translate(${centerX},${centerY})`);
 
         // Sort data by date
-        const sortedData = [...displayData].sort((a, b) => moment(a.date, 'YYYY-MM').valueOf() - moment(b.date, 'YYYY-MM').valueOf());
+        const sortedData = [...displayData].sort((a, b) => dayjs(a.period, 'YYYY-MM').valueOf() - dayjs(b.period, 'YYYY-MM').valueOf());
 
         const dataLength = sortedData.length;
 
         // Calculate max revenue for scaling from ORIGINAL data (not smoothed)
         // This ensures consistent scaling regardless of smoothing
-        const maxRevenue = Math.max(...(this.data()?.map((d) => d.revenue) || []));
+        const maxRevenue = Math.max(...(this.data()?.map((d) => d.value) || []));
 
         // Color interpolator with hue rotation
         // Newest (t=1) = primary color
         // Oldest (t=0) = primary color rotated +90° and darkened
         const primaryColorObj = new Color(this.primaryColor());
         const hueRotatedDark = primaryColorObj.clone().spin(120).darken(20);
-        const colorInterpolator = d3.interpolateRgb(hueRotatedDark.toHexString(), this.primaryColor());
+        const colorInterpolator = interpolateRgb(hueRotatedDark.toHexString(), this.primaryColor());
 
         // Revenue scale - maps revenue directly to radius (max revenue = maxRadius)
-        const revenueScale = d3
-            .scaleLinear()
+        const revenueScale = scaleLinear()
             .domain([0, maxRevenue * 0.55])
             .range([maxRadius * 0.15, maxRadius]);
 
         // Create spiral coordinates
         const spiralPoints = sortedData.map((d, i) => {
-            const date = moment(d.date, 'YYYY-MM');
+            const date = dayjs(d.period, 'YYYY-MM');
 
             // Month determines angle (0 = Jan at top, clockwise)
             const month = date.month(); // 0-11
@@ -104,7 +98,7 @@ export class RevenueSpiralChartComponent {
             const angleInRadians = (angleInDegrees * Math.PI) / 180;
 
             // Revenue directly determines radius (absolute from center)
-            const radius = revenueScale(d.revenue);
+            const radius = revenueScale(d.value);
 
             // Time progress for color (0 = oldest, 1 = newest)
             const t = i / (dataLength - 1);
@@ -114,8 +108,8 @@ export class RevenueSpiralChartComponent {
                 angle: angleInRadians,
                 radius: radius,
                 color: colorInterpolator(t),
-                date: d.date,
-                revenue: d.revenue,
+                period: d.period,
+                value: d.value,
                 month: month,
                 year: date.year(),
                 t: t,
@@ -160,8 +154,8 @@ export class RevenueSpiralChartComponent {
             const curr = spiralPoints[i];
 
             // Check if months are consecutive
-            const prevDate = moment(prev.date, 'YYYY-MM');
-            const currDate = moment(curr.date, 'YYYY-MM');
+            const prevDate = dayjs(prev.period, 'YYYY-MM');
+            const currDate = dayjs(curr.period, 'YYYY-MM');
             const monthsDiff = currDate.diff(prevDate, 'months');
 
             // Only draw line if exactly 1 month apart
@@ -183,7 +177,7 @@ export class RevenueSpiralChartComponent {
             .attr('stroke-width', 0.5)
             .attr('opacity', 0.9)
             .append('title')
-            .text((d) => `${moment(d.date, 'YYYY-MM').format('MMM YYYY')}: ${d.revenue.toLocaleString()}`);
+            .text((d) => `${dayjs(d.period, 'YYYY-MM').format('MMM YYYY')}: ${d.value.toLocaleString()}`);
 
         // Add center point
         g.append('circle').attr('cx', 0).attr('cy', 0).attr('r', 4).attr('fill', hueRotatedDark.toHexString());

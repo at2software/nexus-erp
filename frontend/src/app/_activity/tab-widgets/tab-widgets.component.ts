@@ -11,13 +11,13 @@ import { NxGlobal } from '@app/nx/nx.global';
 import { GlobalService } from '@models/global.service';
 import { ActivatedRoute } from '@angular/router';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
+import { DashboardWidgetConfig } from '@models/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'activity-tab-widgets',
     templateUrl: './tab-widgets.component.html',
     styleUrls: ['./tab-widgets.component.scss'],
-    standalone: true,
     imports: [ActivityTabComponent, ScrollbarComponent, NgComponentOutlet, CdkDrag, CdkDropList, NgbTooltipModule],
 })
 export class TabWidgetsComponent {
@@ -40,8 +40,8 @@ export class TabWidgetsComponent {
             const tab = this.tab();
             if (isEditing) {
                 this.#usedWidgetKeys.clear();
-                this.#global.dashboards?.[this.#currentDashboard()]?.cols.forEach((col: any[]) =>
-                    col.forEach((widget: any) => this.#usedWidgetKeys.add(widget.widget))
+                this.#global.dashboards?.[this.#currentDashboard()]?.cols.forEach((col: DashboardWidgetConfig[]) =>
+                    col.forEach((widget) => this.#usedWidgetKeys.add(widget.widget))
                 );
                 this.allWidgets.set(WidgetFactory.availableWidgets());
                 tab.show();

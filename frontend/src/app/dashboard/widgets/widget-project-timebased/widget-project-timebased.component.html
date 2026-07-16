@@ -1,3 +1,4 @@
+@let _data = data();
 <div class="card card-chart mb-3">
     <div class="card-header gap-2">
         <i>schedule</i>
@@ -10,9 +11,9 @@
     <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
 
     @if (!getOptions()['chart-only']?.value) {
-        <ul-compact [badge]="badgeCount(data()) > 0 ? '' + badgeCount(data()) : undefined">
-            @for (_ of data(); track _.id; let i = $index) {
-                <li class="list-group-item d-flex text-nowrap" [nx]="_" [tables]="data()" [compact]="indexExceedsSettings(i)">
+        <ul-compact revealList [badge]="badgeCount(_data) > 0 ? '' + badgeCount(_data) : undefined">
+            @for (_ of _data; track _.id; let i = $index) {
+                <li class="list-group-item d-flex text-nowrap" [nx]="_" [tables]="_data" [compact]="indexExceedsSettings(i)">
                     <div>
                         <avatar [object]="_"></avatar>
                     </div>

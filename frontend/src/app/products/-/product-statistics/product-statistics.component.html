@@ -1,4 +1,7 @@
 @let _statistics = statistics();
+@let _topProducts = _statistics?.top_products;
+@let _fastestSellers = _statistics?.fastest_sellers;
+@let _mostRepurchased = _statistics?.most_repurchased;
 @let _rootGroups = rootGroups();
 @let _chartOption = chartOption();
 @let _selectedGroupsText = selectedGroupsText();
@@ -46,10 +49,10 @@
         <div class="vstack gap-3">
             <div class="card">
                 <div class="card-header" i18n="@@i18n.products.topProductsSold">top products by revenue</div>
-                @if (_statistics?.top_products?.length) {
+                @if (_topProducts?.length) {
                     <ul class="list-group list-group-flush">
-                        @for (product of _statistics.top_products; track product.id; let i = $index) {
-                            <li class="list-group-item d-flex align-items-center gap-2" [nx]="product" [tables]="_statistics.top_products">
+                        @for (product of _topProducts; track product.id; let i = $index) {
+                            <li class="list-group-item d-flex align-items-center gap-2" [nx]="product" [tables]="_topProducts">
                                 <span class="badge rounded-pill flex-shrink-0" [class]="i === 0 ? 'bg-warning text-dark' : i === 1 ? 'text-white' : i === 2 ? 'text-white' : 'bg-dark text-white'" [style.background-color]="i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : ''" ngbTooltip="Revenue rank based on total sales value" i18n-ngbTooltip="@@i18n.products.revenueRankTooltip">#{{ i + 1 }}</span>
                                 <span class="text-truncate">{{ product.name }}</span>
                                 <span class="ms-auto small text-muted" ngbTooltip="Total revenue generated from this product" i18n-ngbTooltip="@@i18n.products.totalRevenueTooltip">{{ product.total_revenue | money }}</span>
@@ -65,10 +68,10 @@
 
             <div class="card">
                 <div class="card-header" i18n="@@i18n.products.fastestSellers">fastest selling products</div>
-                @if (_statistics?.fastest_sellers?.length) {
+                @if (_fastestSellers?.length) {
                     <ul class="list-group list-group-flush">
-                        @for (product of _statistics.fastest_sellers; track product.id; let i = $index) {
-                            <li class="list-group-item d-flex align-items-center gap-2" [nx]="product" [tables]="_statistics.fastest_sellers">
+                        @for (product of _fastestSellers; track product.id; let i = $index) {
+                            <li class="list-group-item d-flex align-items-center gap-2" [nx]="product" [tables]="_fastestSellers">
                                 <span class="badge rounded-pill flex-shrink-0" [class]="i === 0 ? 'bg-warning text-dark' : i === 1 ? 'text-white' : i === 2 ? 'text-white' : 'bg-dark text-white'" [style.background-color]="i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : ''" ngbTooltip="Speed rank based on average days from item creation to invoice" i18n-ngbTooltip="@@i18n.products.speedRankTooltip">#{{ i + 1 }}</span>
                                 <span class="text-truncate">{{ product.name }}</span>
                                 <span class="ms-auto small text-muted" ngbTooltip="Average days between adding to invoice and invoice creation" i18n-ngbTooltip="@@i18n.products.salesSpeedTooltip">{{ product.average_sales_speed | number: '1.1-1' }}d</span>
@@ -84,10 +87,10 @@
 
             <div class="card">
                 <div class="card-header" i18n="@@i18n.products.mostRepurchased">most repurchased products</div>
-                @if (_statistics?.most_repurchased?.length) {
+                @if (_mostRepurchased?.length) {
                     <ul class="list-group list-group-flush">
-                        @for (product of _statistics.most_repurchased; track product.id; let i = $index) {
-                            <li class="list-group-item d-flex align-items-center gap-2" [nx]="product" [tables]="_statistics.most_repurchased">
+                        @for (product of _mostRepurchased; track product.id; let i = $index) {
+                            <li class="list-group-item d-flex align-items-center gap-2" [nx]="product" [tables]="_mostRepurchased">
                                 <span class="badge rounded-pill flex-shrink-0" [class]="i === 0 ? 'bg-warning text-dark' : i === 1 ? 'text-white' : i === 2 ? 'text-white' : 'bg-dark text-white'" [style.background-color]="i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : ''" ngbTooltip="Repurchase rank based on average purchases per customer" i18n-ngbTooltip="@@i18n.products.repurchaseRankTooltip">#{{ i + 1 }}</span>
                                 <span class="text-truncate">{{ product.name }}</span>
                                 <span class="ms-auto small text-muted" ngbTooltip="Average purchases per customer" i18n-ngbTooltip="@@i18n.products.repurchaseFrequencyTooltip">{{ product.average_repurchase_frequency }}×</span>

@@ -41,7 +41,7 @@ class PluginMattermostController extends PluginChatController {
         }
     }
     public static function buildWebhookProps(string $username = 'NEXUS', ?string $icon = null): array {
-        $icon = $icon ?? env('APP_URL').'/icons/project.jpg';
+        $icon = $icon ?? config('app.url').'/icons/project.jpg';
         return [
             'from_webhook'         => 'true',
             'webhook_display_name' => $username,
@@ -74,7 +74,7 @@ class PluginMattermostController extends PluginChatController {
         return $token;
     }
     public function getImageMarkdown(string $path, string $title = 'image'): string {
-        return '!['.$title.']('.env('API_URL').'../'.$path.')';
+        return '!['.$title.']('.config('app.api_url').'../'.$path.')';
     }
     public function loginAndGetToken(): string {
         if (! $this->client) {
@@ -108,7 +108,7 @@ class PluginMattermostController extends PluginChatController {
                 'from_webhook'         => 'true',
                 'webhook_display_name' => 'NEXUS',
                 'override_username'    => 'NEXUS',
-                'override_icon_url'    => env('APP_URL').'/assets/modules/logo.svg',
+                'override_icon_url'    => config('app.url').'/assets/modules/logo.svg',
             ];
         }
         return $this->post('posts', $payload);
@@ -215,7 +215,6 @@ class PluginMattermostController extends PluginChatController {
             $this->createPost($channelId, $message);
         }
     }
-
     public function getDirectChannelIdFor(string $userId): ?string {
         $me = $this->get('users/me');
         if (! $me || empty($me['id'])) {

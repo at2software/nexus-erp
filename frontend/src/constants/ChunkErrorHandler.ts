@@ -2,8 +2,8 @@ import { Injectable, ErrorHandler } from '@angular/core';
 
 @Injectable()
 export class ChunkErrorHandler implements ErrorHandler {
-    handleError(error: any) {
-        const errorMessage = error?.message || '';
+    handleError(error: unknown) {
+        const errorMessage = typeof error === 'object' && error && 'message' in error ? String((error as { message?: unknown }).message ?? '') : '';
         const isChunkError = errorMessage.includes('ChunkLoadError') || errorMessage.includes('Loading chunk') || errorMessage.includes('dynamically imported module') || errorMessage.includes('Laden fehlgeschlagen für das Modul');
 
         if (isChunkError) {

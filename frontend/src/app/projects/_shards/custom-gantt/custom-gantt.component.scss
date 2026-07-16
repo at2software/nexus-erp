@@ -141,6 +141,10 @@
             opacity: 0.5;
         }
 
+        &.disappearing {
+            animation: task-disappear 180ms ease-out 5s forwards;
+        }
+
         .task-checkbox {
             margin: 0;
             cursor: pointer;
@@ -152,6 +156,16 @@
         .task-name {
             white-space: nowrap;
         }
+    }
+}
+
+@keyframes task-disappear {
+    from {
+        opacity: 0.5;
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-2px);
     }
 }
 

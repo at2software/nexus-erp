@@ -1,19 +1,19 @@
-import { Toast } from './toast';
-import { Injectable, TemplateRef } from '@angular/core';
+import { Toast, ToastItem, ToastOptions } from './toast';
+import { Injectable, TemplateRef, signal } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class ToastService {
-    toasts: any[] = [];
+    readonly toasts = signal<ToastItem[]>([]);
 
     constructor() {
         Toast.service = this;
     }
 
-    show(textOrTpl: string | TemplateRef<any>, options: any = {}) {
-        this.toasts.push({ textOrTpl, ...Object.assign({ classname: 'bg-dark text-light', icon: 'check' }, options) });
+    show(textOrTpl: string | TemplateRef<unknown>, options: ToastOptions = {}) {
+        this.toasts.update((toasts) => [...toasts, { textOrTpl, ...Object.assign({ classname: 'bg-dark text-light', icon: 'check' }, options) }]);
     }
 
-    remove(toast: any) {
-        this.toasts = this.toasts.filter((t) => t !== toast);
+    remove(toast: ToastItem) {
+        this.toasts.update((toasts) => toasts.filter((t) => t !== toast));
     }
 }

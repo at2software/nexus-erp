@@ -15,7 +15,7 @@ class I18n implements CastsAttributes {
             $i18nRecords = $model->relationLoaded('i18n')
                 ? $model->getRelation('i18n')
                 : I18nModel::where([
-                    'parent_type' => get_class($model),
+                    'parent_type' => $model::class,
                     'parent_id'   => $model->getKey(),
                 ])->get();
 
@@ -46,7 +46,7 @@ class I18n implements CastsAttributes {
                 if (isset($variant['language']) && isset($variant['text'])) {
                     I18nModel::updateOrCreate(
                         [
-                            'parent_type' => get_class($model),
+                            'parent_type' => $model::class,
                             'parent_id'   => $model->getKey(),
                             'language'    => $variant['language'],
                             'formality'   => $variant['formality'] ?? 'formal',
@@ -71,7 +71,7 @@ class I18n implements CastsAttributes {
 
             // Check if this is the first localization (no existing i18n records)
             $existingI18n = I18nModel::where([
-                'parent_type' => get_class($model),
+                'parent_type' => $model::class,
                 'parent_id'   => $model->getKey(),
             ])->exists();
 
@@ -86,7 +86,7 @@ class I18n implements CastsAttributes {
 
                 foreach ($variants as $variant) {
                     I18nModel::create([
-                        'parent_type' => get_class($model),
+                        'parent_type' => $model::class,
                         'parent_id'   => $model->getKey(),
                         'language'    => $variant['language'],
                         'formality'   => $variant['formality'],
@@ -97,7 +97,7 @@ class I18n implements CastsAttributes {
                 // Update specific variant
                 I18nModel::updateOrCreate(
                     [
-                        'parent_type' => get_class($model),
+                        'parent_type' => $model::class,
                         'parent_id'   => $model->getKey(),
                         'language'    => $value['language'],
                         'formality'   => $value['formality'] ?? 'formal',
@@ -113,7 +113,7 @@ class I18n implements CastsAttributes {
         // Plain string value - if currently localized, remove all i18n records
         if ($model->exists && $model->getRawOriginal($key) === $this->markerValue) {
             I18nModel::where([
-                'parent_type' => get_class($model),
+                'parent_type' => $model::class,
                 'parent_id'   => $model->getKey(),
             ])->delete();
         }

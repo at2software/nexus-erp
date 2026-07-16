@@ -8,7 +8,6 @@ export interface ProbabilityCurvePoint {
 
 @Component({
     selector: 'project-invoicing-gauge',
-    standalone: true,
     imports: [NgxEchartsDirective],
     template: `<div echarts [options]="options()" style="height: 200px; margin-top: -55px;"></div>`,
     changeDetection: ChangeDetectionStrategy.OnPush,

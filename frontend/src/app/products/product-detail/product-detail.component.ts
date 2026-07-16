@@ -9,8 +9,6 @@ import { HotkeyDirective } from '@directives/hotkey.directive';
 @Component({
     selector: 'app-product-detail',
     templateUrl: './product-detail.component.html',
-    styleUrls: ['./product-detail.component.scss'],
-    standalone: true,
     imports: [HeaderComponent, HeaderLinkItemComponent, RouterModule, HotkeyDirective],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

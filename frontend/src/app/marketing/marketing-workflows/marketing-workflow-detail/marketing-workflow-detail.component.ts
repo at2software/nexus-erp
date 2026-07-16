@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -8,11 +8,13 @@ import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { MarketingService } from '@models/marketing/marketing.service';
 import { MarketingWorkflow } from '@models/marketing/marketing-workflow.model';
 import { MarketingActivity } from '@models/marketing/marketing-activity.model';
+import { MarketingPerformanceMetric } from '@models/marketing/marketing-performance-metrics.model';
 import { IActivityBase } from '@models/marketing/activity-base.interface';
 import { Nx } from '@app/nx/nx.directive';
 import { I18nTextareaComponent } from '@app/_shards/i18n-textarea/i18n-textarea.component';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { ActivityTableComponent } from '@app/marketing/shared/activity-table/activity-table.component';
+import { Dictionary } from '@constants/constants';
 
 // Expose MarketingActivity to template
 const ActivityStatsColors = MarketingActivity.STATS_COLORS;
@@ -22,15 +24,15 @@ const ActivityStatsColors = MarketingActivity.STATS_COLORS;
     selector: 'marketing-workflow-detail',
     templateUrl: './marketing-workflow-detail.component.html',
     styleUrl: './marketing-workflow-detail.component.scss',
-    standalone: true,
     imports: [NgTemplateOutlet, FormsModule, RouterModule, Nx, NgbTooltipModule, ActivityTableComponent, I18nTextareaComponent, ScrollbarComponent, EmptyStateComponent],
 })
-export class MarketingWorkflowDetailComponent implements OnInit {
+export class MarketingWorkflowDetailComponent {
     #marketingService = inject(MarketingService);
     #route = inject(ActivatedRoute);
     #router = inject(Router);
 
     selectedWorkflow = signal<MarketingWorkflow | null>(null);
+    availableMetrics = signal<MarketingPerformanceMetric[]>([]);
 
     // Expose colors to template
     readonly STATS_COLORS = ActivityStatsColors;
@@ -54,10 +56,10 @@ export class MarketingWorkflowDetailComponent implements OnInit {
                     this.loadWorkflow(workflowId);
                 }
             });
-    }
-
-    ngOnInit() {
-        this.#route.params.subscribe((params) => {
+        this.#marketingService.indexMetrics().subscribe((metrics: MarketingPerformanceMetric[]) => {
+            this.availableMetrics.set(metrics);
+        });
+        this.#route.params.pipe(takeUntilDestroyed()).subscribe((params) => {
             if (params['id']) {
                 this.loadWorkflow(params['id']);
             }
@@ -192,7 +194,7 @@ export class MarketingWorkflowDetailComponent implements OnInit {
     }
 
     getQuickActionIcon(qa: string): string {
-        const icons: Record<string, string> = { EMAIL: 'email', LINKEDIN: 'open_in_new', LINKEDIN_SEARCH: 'search', CALL: 'phone' };
+        const icons: Dictionary<string> = { EMAIL: 'email', LINKEDIN: 'open_in_new', LINKEDIN_SEARCH: 'search', CALL: 'phone' };
         return icons[qa] || '';
     }
 }

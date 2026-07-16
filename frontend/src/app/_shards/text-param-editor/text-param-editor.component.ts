@@ -1,10 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject, TemplateRef, viewChild, computed, effect, input, signal, untracked } from '@angular/core';
-import { AngularEditorConfig, AngularEditorModule, AngularEditorComponent } from '@kolkov/angular-editor';
-import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { afterNextRender, ChangeDetectionStrategy, Component, inject, Injector, TemplateRef, viewChild, computed, effect, input, signal, untracked } from '@angular/core';
+import { QuillEditorComponent, QuillModules } from 'ngx-quill';
+import type Quill from 'quill';
+import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { Param } from '@models/param.model';
 import { ParamService } from '@models/param.service';
-import { DEFAULT_RTE_CONFIG } from './default-rte-config';
-import { Dictionary } from '@constants/constants';
 import { personalized } from '@constants/personalized';
 import { Serializable } from '@models/serializable';
 import { MarketingService } from '@models/marketing/marketing.service';
@@ -13,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { SafePipe } from '@pipes/safe.pipe';
 import { PaymentPlanEditorComponent } from '@shards/payment-plan-editor/payment-plan-editor.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { Dictionary } from '@constants/constants';
 
 type ContentSegment = { type: 'html'; content: string } | { type: 'payment-plan' };
 interface I18nVariant {
@@ -26,27 +26,30 @@ interface I18nVariant {
     selector: 'text-param-editor',
     templateUrl: './text-param-editor.component.html',
     styleUrls: ['./text-param-editor.component.scss'],
-    standalone: true,
-    imports: [AngularEditorModule, FormsModule, SafePipe, PaymentPlanEditorComponent, SpinnerComponent],
+    imports: [QuillEditorComponent, FormsModule, SafePipe, PaymentPlanEditorComponent, SpinnerComponent],
 })
 export class TextParamEditorComponent {
 
     #modalService = inject(NgbModal);
     #paramService = inject(ParamService);
     #marketingService = inject(MarketingService);
+    #injector = inject(Injector);
 
     annotations = input<boolean>(false);
     key = input<string>('');
     object = input<Serializable | undefined>(undefined);
     fallback = input<boolean>(false);
-    config = input<AngularEditorConfig>(DEFAULT_RTE_CONFIG);
-    to = input<Dictionary | null>(null);
+    to = input<Dictionary<string> | object | null>(null);
     maxHeight = input<string | undefined>(undefined);
     locale = input<string | undefined>(undefined);
     previewLocale = input<string | undefined>(undefined);
 
-    readonly editor = viewChild<AngularEditorComponent>('editor');
-    readonly imageSelectionModal = viewChild<TemplateRef<any>>('imageSelectionModal');
+    readonly toolbarId = `text-param-editor-toolbar-${Math.random().toString(36).slice(2)}`;
+    readonly modules: QuillModules = { toolbar: { container: `#${this.toolbarId}` } };
+
+    readonly imageSelectionModal = viewChild<TemplateRef<unknown>>('imageSelectionModal');
+
+    #quill?: Quill;
 
     param = signal<Param | undefined>(undefined);
     images = signal<File[]>([]);
@@ -57,6 +60,12 @@ export class TextParamEditorComponent {
     currentFormality = signal('formal');
     i18nVariants = signal<I18nVariant[]>([]);
     editorValue = signal('');
+
+    // Quill registers its own (high-frequency) keystroke/selection listeners during construction.
+    // Deferring its creation into afterNextRender() — which Angular always runs outside the zone —
+    // keeps those listeners out of zone.js, so typing doesn't trigger a full-app change detection
+    // tick on every keystroke.
+    readonly editorReady = signal(false);
 
     readonly availableLocales = computed(() =>
         this.i18nVariants().map((v) => ({
@@ -87,7 +96,9 @@ export class TextParamEditorComponent {
     constructor() {
         effect(() => {
             const key = this.key();
-            untracked(() => this.#loadParam(key, this.object(), this.fallback()));
+            const object = this.object();
+            const fallback = this.fallback();
+            untracked(() => this.#loadParam(key, object, fallback));
         });
 
         effect(() => {
@@ -99,8 +110,6 @@ export class TextParamEditorComponent {
         });
     }
 
-    executeCommandFn?: (command: string, value?: any) => void;
-    
     #loadParam(key: string, object: Serializable | undefined, fallback: boolean) {
         if (!key) return;
         if (object?.params && key in object.params && object.params[key]) {
@@ -108,16 +117,16 @@ export class TextParamEditorComponent {
             return;
         }
         if (object) {
-            object.showParam(key, { fallback }).subscribe((data: any) => this.#assignJson(data));
+            object.showParam(key, { fallback }).subscribe((data) => this.#assignJson(data));
         } else {
-            this.#paramService.show(key, { fallback }).subscribe((data: any) => this.#assignJson(data));
+            this.#paramService.show(key, { fallback }).subscribe((data) => this.#assignJson(data));
         }
     }
 
     #applyLocale() {
         if (!this.isLocalized() || !this.i18nVariants().length) return;
 
-        const localeStr = this.previewLocale() || this.locale() || (this.to() as any)?.getLocale?.() || 'de-formal';
+        const localeStr = this.previewLocale() || this.locale() || (this.to() as { getLocale?: () => string } | null)?.getLocale?.() || 'de-formal';
         const [targetLang, targetFormality] = localeStr.split('-');
         const variants = this.i18nVariants();
 
@@ -129,7 +138,7 @@ export class TextParamEditorComponent {
         }
     }
 
-    #assignJson(json: any) {
+    #assignJson(json: unknown) {
         this.#assign(Param.fromJson(json));
     }
 
@@ -145,8 +154,10 @@ export class TextParamEditorComponent {
         }
     }
 
-    open(content: TemplateRef<any>) {
+    open(content: TemplateRef<unknown>) {
         this.editorValue.set(this.isLocalized() ? this.#getCurrentVariantText() : ((this.param()?.value as string) ?? ''));
+        this.editorReady.set(false);
+        afterNextRender(() => this.editorReady.set(true), { injector: this.#injector });
 
         this.#modalService.open(content, { size: 'lg' }).result.then(() => {
             this.#ensureObjectPath();
@@ -183,7 +194,8 @@ export class TextParamEditorComponent {
 
     #getDisplayValue(): string {
         const raw = this.isLocalized() ? this.#getCurrentVariantText() : ((this.param()?.value as string) ?? '');
-        return this.to() ? personalized(raw, this.to()!) : raw;
+        const to = this.to();
+        return to && typeof to === 'object' && !Array.isArray(to) ? personalized(raw, to as Dictionary<string>) : raw;
     }
 
     localize() {
@@ -239,38 +251,38 @@ export class TextParamEditorComponent {
         this.editorValue.set(this.#getCurrentVariantText());
     }
 
+    onEditorCreated(quill: Quill) {
+        this.#quill = quill;
+    }
+
     openImageSelection() {
         this.loadingImages.set(true);
         this.images.set([]);
         this.#modalService.open(this.imageSelectionModal()!, { size: 'lg' });
 
-        this.#marketingService.indexMarketingAssets('', '', '').subscribe((data: any) => {
-            this.images.set(data.filter((asset: File) => asset.mime?.startsWith('image/')));
+        this.#marketingService.indexMarketingAssets('', '', '').subscribe((data) => {
+            this.images.set(data.filter((asset) => asset.mime?.startsWith('image/')));
             this.loadingImages.set(false);
         });
     }
 
     selectImage(image: File) {
-        if (this.executeCommandFn) this.executeCommandFn('insertHTML', this.#buildImageHtml(image));
-        else this.editor()?.executeCommand('insertHTML', this.#buildImageHtml(image));
+        this.#insertImage(image);
         this.images.set([]);
     }
 
-    selectImageFromModal(image: File, modal: any) {
-        if (this.executeCommandFn) this.executeCommandFn('insertHTML', this.#buildImageHtml(image));
-        else this.editor()?.executeCommand('insertHTML', this.#buildImageHtml(image));
+    selectImageFromModal(image: File, modal: NgbActiveModal) {
+        this.#insertImage(image);
         modal.close('Image selected');
         this.images.set([]);
     }
 
-    #buildImageHtml(image: File): string {
+    #insertImage(image: File) {
+        if (!this.#quill) return;
         const url = image.preview_url || image.download_url;
-        return `<img src="${url}" alt="${image.name}" style="max-width: 100%; height: auto;" />`;
-    }
-
-    onCustomImageInsert(executeCommandFn: (command: string, value?: any) => void) {
-        this.executeCommandFn = executeCommandFn;
-        this.openImageSelection();
+        const range = this.#quill.getSelection() ?? { index: this.#quill.getLength(), length: 0 };
+        this.#quill.insertEmbed(range.index, 'image', url, 'user');
+        this.#quill.setSelection(range.index + 1, 0);
     }
 
     toggleExpanded() {

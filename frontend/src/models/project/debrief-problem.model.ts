@@ -5,7 +5,7 @@ import { DebriefSolution } from './debrief-solution.model';
 import { User } from '@models/user/user.model';
 import { signal, computed } from '@angular/core';
 import { Type } from 'class-transformer';
-import { tap } from 'rxjs';
+import { map } from 'rxjs';
 import { NxGlobal, TBroadcast } from '@app/nx/nx.global';
 import { Model } from '@constants/type-discriminators';
 import { DebriefProblemsActions } from './debrief-problem.actions';
@@ -26,22 +26,36 @@ export class DebriefProblem extends Serializable {
     _parent = signal<{id: string} | undefined>(undefined);
     debrief_project_debrief_id = computed(() => this._parent()?.id ?? '');
     severity: 'low' | 'medium' | 'high' | 'critical' | undefined = undefined;
+    category_name?: string;
+    category_color?: string;
 
     // Raw pivot data from Laravel
     pivot?: { severity?: string; context_notes?: string };
 
-    //severity = computed(() => this.snapshot()['pivot']?.severity as 'low' | 'medium' | 'high' | 'critical' | undefined);
     context_notes = computed(() => this.snapshot()['pivot']?.context_notes ?? '');
 
     @Type(()=>DebriefProblemCategory) category!: DebriefProblemCategory;
     @Type(()=>User) created_by?: User;
     @Type(()=>DebriefSolution) solutions: DebriefSolution[] = [];
 
+    override afterDeserialize(json: unknown): void {
+        super.afterDeserialize(json);
+        // severity usually arrives nested under the debrief-problem pivot; a few stats
+        // endpoints (e.g. category breakdown) flatten it to a top-level field instead.
+        const pivotSeverity = (json as { pivot?: { severity?: string } })?.pivot?.severity;
+        if (!this.severity && pivotSeverity) this.severity = pivotSeverity as DebriefProblem['severity'];
+    }
+
     override delete() {
         if (this.debrief_project_debrief_id()) {
             return NxGlobal.getService(DebriefService)
                 .detachProblem(this.debrief_project_debrief_id(), this.id)
-                .pipe(tap(() => NxGlobal.broadcast({ type: TBroadcast.Delete, data: this })));
+                .pipe(
+                    map(() => {
+                        NxGlobal.broadcast({ type: TBroadcast.Delete, data: this });
+                        return this;
+                    }),
+                );
         }
         return super.delete();
     }

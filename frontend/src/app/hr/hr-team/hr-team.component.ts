@@ -16,10 +16,8 @@ import { ListGroupItemContactComponent } from '@app/customers/_shards/list-group
 
 @Component({
     selector: 'hr-team',
-    standalone: true,
     imports: [RouterModule, Nx, ScrollbarComponent, ListGroupItemContactComponent, ToolbarComponent, NgbDropdownModule],
     templateUrl: './hr-team.component.html',
-    styleUrl: './hr-team.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HrTeamComponent {

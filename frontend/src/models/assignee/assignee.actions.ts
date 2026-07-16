@@ -23,8 +23,9 @@ export function getAssigneeActions(self: Assignee): NxAction[] {
             action: () => NxGlobal.service.put(`projects/${self.parent_id}`, { project_manager_id: self.assignee_id }).subscribe(() => {
                 const project = NxGlobal.getCurrentRoot();
                 if (project instanceof Project) {
-                    project.project_manager = self.getUser();
-                    project.project_manager_id = self.assignee_id;
+                    // patch() (not raw field assignment) bumps Serializable#state so signal-based
+                    // template consumers (e.g. tracked(project)) re-render under zoneless CD.
+                    project.patch({ project_manager: self.getUser(), project_manager_id: self.assignee_id });
                     project.projectManagerChanged.next();
                 }
             }),
@@ -45,7 +46,7 @@ export function getAssigneeActions(self: Assignee): NxAction[] {
             action: () => self.delete(),
             type: NxActionType.Destructive,
             hotkey: 'CTRL+DELETE',
-            roles: 'user',
+            on: () => (self.isUser() && self.assignee_id === NxGlobal.global.user?.id) || (NxGlobal.global.user?.hasRole('project_manager') ?? false),
         },
         {
             title: $localize`:@@i18n.companies.changeRoleTo:change role to...`,

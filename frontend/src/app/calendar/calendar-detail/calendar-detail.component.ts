@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, NgZone, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { fromEvent } from 'rxjs';
 import { NgbModal, NgbModalRef, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { CalendarEntry } from '@models/vcalendar/calendar-entry.model';
 import { RecurrenceType, VCalendarEvent, Weekday } from '@models/vcalendar/vcalendar-event.model';
@@ -25,7 +26,6 @@ interface EventSpan {
     selector: 'calendar-detail',
     templateUrl: './calendar-detail.component.html',
     styleUrls: ['./calendar-detail.component.scss'],
-    standalone: true,
     imports: [HeaderComponent, HeaderLinkItemComponent, ToolbarComponent, FormsModule, NgbTooltipModule, Nx],
 })
 export class CalendarDetailComponent {
@@ -46,23 +46,40 @@ export class CalendarDetailComponent {
     year: number = new Date().getFullYear();
     yearRange: number[] = [];
     calendar = signal<Date[][]>([]);
-    calendarEvents: CalendarEntry[][][] = [];
+    calendarEvents = signal<CalendarEntry[][][]>([]);
     eventSpans = signal<EventSpan[][]>([]);
-    weekEventCounts: number[] = [];
+    weekEventCounts = computed<number[]>(() =>
+        this.eventSpans().map((weekSpans) => {
+            const maxRow = weekSpans.reduce((max, span) => Math.max(max, span.row), -1);
+            return maxRow + 1; // +1 because rows are 0-indexed
+        }),
+    );
     hoveredEventId = signal('');
 
-    calendarEntries: CalendarEntry[] = [];
+    calendarEntries = signal<CalendarEntry[]>([]);
     calendarEntriesByDate = new Map<string, CalendarEntry[]>();
     #vCalendarService = inject(VCalendarService);
 
     confirmation = inject(ConfirmationService);
 
     constructor() {
+        const destroyRef = inject(DestroyRef);
+        inject(NgZone).runOutsideAngular(() => {
+            fromEvent<MouseEvent>(document, 'click')
+                .pipe(takeUntilDestroyed(destroyRef))
+                .subscribe((event) => {
+                    const popup = this.popup();
+                    const btn = this.popupButton();
+                    if (this.isPopupOpen() && popup && btn && !popup.nativeElement.contains(event.target) && !btn.nativeElement.contains(event.target)) {
+                        this.isPopupOpen.set(false);
+                    }
+                });
+        });
+
         this.generateLocalizedDaysAndMonths();
         NxGlobal.broadcast$.pipe(takeUntilDestroyed()).subscribe(({ type, data }) => {
             if (type === TBroadcast.Delete && data instanceof CalendarEntry) {
-                const index = this.calendarEntries.findIndex((e) => e.id === data.id);
-                if (index >= 0) this.calendarEntries.splice(index, 1);
+                this.calendarEntries.update((entries) => entries.filter((e) => e.id !== data.id));
                 this.groupEventsByDate();
                 this.setCalendarEntriesPerDate();
             }
@@ -167,18 +184,17 @@ export class CalendarDetailComponent {
     isThisMonth = (month: number): boolean => month === new Date().getMonth();
 
     parseVCalendarEvents(calendarEntries: CalendarEntry[]): void {
-        this.calendarEntries.push(
-            ...calendarEntries.map((calendarEntry) => {
-                calendarEntry.vcalendar_event = VCalendarEvent.extractEventData(calendarEntry.vcalendar);
-                return calendarEntry;
-            }),
-        );
+        const parsed = calendarEntries.map((calendarEntry) => {
+            calendarEntry.vcalendar_event = VCalendarEvent.extractEventData(calendarEntry.vcalendar);
+            return calendarEntry;
+        });
+        this.calendarEntries.update((entries) => [...entries, ...parsed]);
     }
 
     groupEventsByDate(): void {
         this.calendarEntriesByDate.clear();
 
-        for (const calendarEntry of this.calendarEntries) {
+        for (const calendarEntry of this.calendarEntries()) {
             if (calendarEntry && calendarEntry.vcalendar_event) {
                 const eventStartDate = calendarEntry.vcalendar_event.start_date;
                 const eventEndDate = calendarEntry.vcalendar_event.end_date ?? eventStartDate;
@@ -216,7 +232,7 @@ export class CalendarDetailComponent {
         }
     }
 
-    #handleWeeklyRecurrence(eventStartDate: Date, eventEndDate: Date, calendarEntry: any): void {
+    #handleWeeklyRecurrence(eventStartDate: Date, eventEndDate: Date, calendarEntry: CalendarEntry): void {
         const eventMonthDayStart = eventStartDate.toLocaleDateString('en-GB').split('/').reverse().join('-').substring(5, 10);
 
         const startDate = new Date(`${this.year}-${eventMonthDayStart}`);
@@ -249,7 +265,7 @@ export class CalendarDetailComponent {
         return dayDate + 7 > lastDayOfMonth;
     }
 
-    #handleMonthlyRecurrence(eventStartDate: Date, eventEndDate: Date, calendarEntry: any): void {
+    #handleMonthlyRecurrence(eventStartDate: Date, eventEndDate: Date, calendarEntry: CalendarEntry): void {
         const eventMonthDayStart = eventStartDate.toLocaleDateString('en-GB').split('/').reverse().join('-').substring(5, 10);
 
         if (calendarEntry.vcalendar_event.isWeekdayDependent && calendarEntry.vcalendar_event.byDayOccurence && calendarEntry.vcalendar_event.byDayWeekday) {
@@ -311,7 +327,7 @@ export class CalendarDetailComponent {
             });
         }
     }
-    #handleYearlyRecurrence(eventStartDate: Date, eventEndDate: Date, calendarEntry: any): void {
+    #handleYearlyRecurrence(eventStartDate: Date, eventEndDate: Date, calendarEntry: CalendarEntry): void {
         const eventMonthDayStart = eventStartDate.toLocaleDateString('en-GB').split('/').reverse().join('-').substring(5, 10);
         const eventMonthDayEnd = eventEndDate.toLocaleDateString('en-GB').split('/').reverse().join('-').substring(5, 10);
 
@@ -324,17 +340,18 @@ export class CalendarDetailComponent {
     }
 
     setCalendarEntriesPerDate() {
-        this.calendarEvents = this.calendar().map((week, weekIndex) => week.map((day, dayIndex) => this.getCalendarEntriesForDate(day, weekIndex * 7 + dayIndex)));
+        this.calendarEvents.set(this.calendar().map((week, weekIndex) => week.map((day, dayIndex) => this.getCalendarEntriesForDate(day, weekIndex * 7 + dayIndex))));
         this.calculateEventSpans();
     }
 
     calculateEventSpans() {
+        const calendarEvents = this.calendarEvents();
         const eventSpans = this.calendar().map((week, weekIndex) => {
             // Collect all unique events for this week
             const weekEvents = new Map<string, { entry: CalendarEntry; days: number[] }>();
 
             week.forEach((day, dayIndex) => {
-                const dayEvents = this.calendarEvents[weekIndex][dayIndex];
+                const dayEvents = calendarEvents[weekIndex][dayIndex];
                 dayEvents.forEach((event) => {
                     const eventId = event.vcalendar_event!.uid;
                     if (!weekEvents.has(eventId)) {
@@ -387,18 +404,13 @@ export class CalendarDetailComponent {
             return spans;
         });
 
-        // Calculate the maximum number of rows for each week
         this.eventSpans.set(eventSpans);
-        this.weekEventCounts = eventSpans.map((weekSpans) => {
-            const maxRow = weekSpans.reduce((max, span) => Math.max(max, span.row), -1);
-            return maxRow + 1; // +1 because rows are 0-indexed
-        });
     }
 
     getWeekHeight(weekIndex: number): string {
         const baseHeight = 80; // Base height for date number and padding
         const eventRowHeight = 24; // Height per event row (including gap)
-        const eventCount = this.weekEventCounts[weekIndex] || 0;
+        const eventCount = this.weekEventCounts()[weekIndex] || 0;
         const totalHeight = baseHeight + eventCount * eventRowHeight;
         return `${totalHeight}px`;
     }
@@ -409,10 +421,11 @@ export class CalendarDetailComponent {
         let totalHeight = headerHeight + marginTop;
 
         // Add heights of all previous weeks
+        const weekEventCounts = this.weekEventCounts();
         for (let i = 0; i < weekIndex; i++) {
             const baseHeight = 80;
             const eventRowHeight = 24;
-            const eventCount = this.weekEventCounts[i] || 0;
+            const eventCount = weekEventCounts[i] || 0;
             totalHeight += baseHeight + eventCount * eventRowHeight;
         }
         return `${totalHeight}px`;
@@ -471,15 +484,6 @@ export class CalendarDetailComponent {
             right: `0`,
         });
     }
-    @HostListener('document:click', ['$event'])
-    closePopup(event: Event) {
-        const popup = this.popup();
-        const btn = this.popupButton();
-        if (this.isPopupOpen() && popup && btn && !popup.nativeElement.contains(event.target) && !btn.nativeElement.contains(event.target)) {
-            this.isPopupOpen.set(false);
-        }
-    }
-
     addNewCalendarEntry($event: Event, date: Date) {
         $event.stopPropagation();
         const modalRef = this.#modalService.open(CalendarEntryModalComponent, { ariaLabelledBy: 'modal-basic-title' });
@@ -496,21 +500,21 @@ export class CalendarDetailComponent {
         modalRef.result.then((calendarEntry) => {
             if (calendarEntry.vcalendar == undefined) {
                 this.#vCalendarService.deleteEvent(calendarEntry).subscribe((_) => {
-                    const index = this.calendarEntries.findIndex((entry) => entry.id === calendarEntry.id);
-                    if (index >= 0) {
-                        this.calendarEntries.splice(index, 1);
-                    }
+                    this.calendarEntries.update((entries) => entries.filter((entry) => entry.id !== calendarEntry.id));
                     this.groupEventsByDate();
                     this.setCalendarEntriesPerDate();
                 });
             } else {
                 calendarEntry.save().subscribe((updatedCalendarEntry: CalendarEntry) => {
-                    const index = this.calendarEntries.findIndex((entry) => entry.id === updatedCalendarEntry.id);
-                    if (index !== -1) {
-                        this.calendarEntries[index] = updatedCalendarEntry;
-                    } else {
-                        this.calendarEntries.push(updatedCalendarEntry);
-                    }
+                    this.calendarEntries.update((entries) => {
+                        const index = entries.findIndex((entry) => entry.id === updatedCalendarEntry.id);
+                        if (index !== -1) {
+                            const next = [...entries];
+                            next[index] = updatedCalendarEntry;
+                            return next;
+                        }
+                        return [...entries, updatedCalendarEntry];
+                    });
                     this.groupEventsByDate();
                     this.setCalendarEntriesPerDate();
                 });

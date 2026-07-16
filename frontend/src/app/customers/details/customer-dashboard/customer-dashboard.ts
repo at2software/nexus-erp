@@ -30,11 +30,15 @@ import { NComponent } from '@shards/n/n.component';
 import { ProjectTeamPlanningComponent } from '@app/projects/_shards/project-team-planning/project-team-planning.component';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { SafePipe } from '@pipes/safe.pipe';
-import { PercentPipe } from '@angular/common';
+import { DecimalPipe, PercentPipe } from '@angular/common';
 import { MoneyPipe } from '@pipes/money.pipe';
 import { MediaPreviewComponent } from '@app/projects/id/project-media/media-preview/media-preview.component';
 import { CompanyLocaleSelectorComponent } from '@app/customers/_shards/company-locale-selector/company-locale-selector.component';
 import { CustomerPredictionBiasChartComponent } from '@app/customers/_shards/customer-prediction-bias-chart/customer-prediction-bias-chart.component';
+import { WorkloadTimelineChartComponent } from '@shards/workload-timeline-chart/workload-timeline-chart.component';
+import { Page } from '@models/http/http.nexus';
+import { Dictionary } from '@constants/constants';
+import { MlReliabilityDirective } from '@directives/ml-reliability.directive';
 
 const REMARKETING_INTERVALS: Record<number, string> = {
     0: $localize`:@@i18n.common.none:none`,
@@ -51,9 +55,7 @@ const REMARKETING_INTERVALS: Record<number, string> = {
 @Component({
     selector: 'customer-dashboard',
     templateUrl: './customer-dashboard.html',
-    styleUrls: ['./customer-dashboard.scss'],
-    standalone: true,
-    imports: [ToolbarComponent, ScrollbarComponent, ListGroupItemContactComponent, SearchInputComponent, NgbTooltipModule, NgbDropdownModule, FormsModule, RouterModule, CustomerQuickstatsComponent, MediaPreviewComponent, ProjectsTableComponent, InvoicesTable, EchartsRangeCardComponent, Nx, NComponent, ProjectTeamPlanningComponent, HotkeyDirective, SafePipe, PercentPipe, MoneyPipe, CompanyLocaleSelectorComponent, CustomerInitiativesComponent, CustomerPredictionBiasChartComponent],
+    imports: [ToolbarComponent, ScrollbarComponent, ListGroupItemContactComponent, SearchInputComponent, NgbTooltipModule, NgbDropdownModule, FormsModule, RouterModule, CustomerQuickstatsComponent, MediaPreviewComponent, ProjectsTableComponent, InvoicesTable, EchartsRangeCardComponent, Nx, NComponent, ProjectTeamPlanningComponent, HotkeyDirective, SafePipe, PercentPipe, DecimalPipe, MoneyPipe, CompanyLocaleSelectorComponent, CustomerInitiativesComponent, CustomerPredictionBiasChartComponent, WorkloadTimelineChartComponent, MlReliabilityDirective],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CustomerDashboard {
@@ -84,6 +86,16 @@ export class CustomerDashboard {
     forecastUp = computed(() => this.forecastRevenue() >= this.currentRevenue());
     forecastChange = computed(() => this.currentRevenue() > 0 ? (this.forecastRevenue() - this.currentRevenue()) / this.currentRevenue() : 0);
 
+    // ML predictions (Rubix ML) — additive to the linreg forecast above, never a replacement.
+    mlRevenue = computed(() => this.company().mlPredictedRevenue12m());
+    mlIntervalDays = computed(() => this.company().mlPredictedIntervalDays());
+    mlChurnProbability = computed(() => this.company().mlChurnProbability12m());
+    mlNextPurchaseAt = computed(() => this.company().mlPredictedNextPurchaseAt());
+    mlOverdueForContact = computed(() => this.company().mlOverdueForContact());
+    mlSupportHours = computed(() => this.company().mlPredictedSupportHours());
+    mlChurnHigh = computed(() => (this.mlChurnProbability() ?? 0) >= 0.5);
+    mlNeedsAttention = computed(() => this.mlOverdueForContact() || this.mlChurnHigh());
+
     constructor() {
         effect(() => {
             const company = this.company();
@@ -91,13 +103,13 @@ export class CustomerDashboard {
                 if (this.globalUserHasInvoicingRole) {
                     this.#invoiceService
                         .index({ company_id: company.id, onlyUnpaid: 'true' })
-                        .subscribe((x: any) => this.invoices.set(x.data));
+                        .subscribe((x: Invoice[] | Page<Invoice>) => this.invoices.set(Array.isArray(x) ? x : x.data));
                 }
                 if (company.default_product_id) {
                     this.#productService.show(company.default_product_id).subscribe((p: Product) => this.product.set(p));
                 }
-                this.quickContacts.set(company.employees.filter((u: any) => u.is_favorite));
-                this.assignees.set(company.assignees.filter((_: any) => _.assignee?.class == 'User'));
+                this.quickContacts.set(company.employees.filter((u) => u.is_favorite));
+                this.assignees.set(company.assignees.filter((_) => _.assignee?.class == 'User'));
                 this.canBeAssigned.set(
                     Object.values(this.#global.team)
                         .map((_) => Assignee.newU(_))
@@ -108,26 +120,28 @@ export class CustomerDashboard {
     }
 
     reload = () => this.#parent.reload();
-    getIntervalText = (_: any) => REMARKETING_INTERVALS[_];
-    getIntervalIcon = (_: any) => ({ 0: '--', 1: '1D', 4: '1W', 5: '2W', 2: '1M', 6: '2M', 7: '3M', 8: '6M', 3: '1Y' } as Record<number, string>)[_] || 'schedule';
+    getIntervalText = (_?: string | number) => REMARKETING_INTERVALS[+(_ ?? 0)];
+    getIntervalIcon = (_?: string | number) => ({ 0: '--', 1: '1D', 4: '1W', 5: '2W', 2: '1M', 6: '2M', 7: '3M', 8: '6M', 3: '1Y' } as Record<number, string>)[+(_ ?? 0)] || 'schedule';
 
     onAddProject = () => {
         this.#inputModalService.open('@@i18n.common.name').confirmed(({ text }) => {
-            this.#projectService.addProject(this.company().id, text).subscribe((x: any) => this.#router.navigate(['/projects/' + x.id]));
+            this.#projectService.addProject(this.company().id, text).subscribe((x) => this.#router.navigate(['/projects/' + x.id]));
         });
     };
 
-    onProductSelect = (_: Product) => {
+    onProductSelect = (selected: Serializable) => {
+        const product = selected.assert(Product);
+        if (!product) return;
         const company = this.company();
-        company.default_product_id = _.id;
-        this.product.set(_);
-        company.update({ default_product_id: _.id }).subscribe();
+        company.default_product_id = product.id;
+        this.product.set(product);
+        company.update({ default_product_id: product.id }).subscribe();
     };
 
     addUser = (x: VcardClass) => this.#assignmentService.addToCompany(this.company(), { id: x.id, class: 'user' }).subscribe(() => this.reload());
 
     onLeadSourceSelected = (_: Serializable) => {
         const company = this.company();
-        company.update({ source_type: 'App\\Models\\' + _.class, source_id: _.id }).subscribe((r: any) => company.setSource(r));
+        company.update({ source_type: 'App\\Models\\' + _.class, source_id: _.id }).subscribe((r) => company.setSource(r as unknown as Dictionary));
     };
 }

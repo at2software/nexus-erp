@@ -1,7 +1,10 @@
 // Maps GitHub/Mattermost emoji shortcodes to Unicode codepoints
 // Images served from GitHub CDN: https://github.githubassets.com/images/icons/emoji/unicode/CODEPOINT.png
+
+import { Dictionary } from "./constants";
+
 // Reference: https://gist.github.com/rxaviers/7360908
-const EMOJI_MAP: Record<string, string> = {
+const EMOJI_MAP: Dictionary<string> = {
     // Smileys
     grinning: '1f600',
     smiley: '1f603',
@@ -329,7 +332,7 @@ const EMOJI_MAP: Record<string, string> = {
 
 export const shortcodeToEmoji = (name: string): string => {
     const code = EMOJI_MAP[name];
-    return code ? String.fromCodePoint(...code.split('-').map((c) => parseInt(c, 16))) : '';
+    return code ? String.fromCodePoint(...code.split('-').map((c:any) => parseInt(c, 16))) : '';
 };
 
 export const markdown2html = (markdown: string) => {
@@ -339,7 +342,7 @@ export const markdown2html = (markdown: string) => {
     markdown = markdown.replace(/\[(.*?)\]\((.*?)\)/gs, '<a class="text-primary" href="$2" target="_blank">$1</a>');
     markdown = markdown.replace(/:([a-z0-9_+-]+):/g, (match, name) => {
         const code = EMOJI_MAP[name];
-        return code ? String.fromCodePoint(...code.split('-').map((c) => parseInt(c, 16))) : match;
+        return code ? String.fromCodePoint(...code.split('-').map((c:any) => parseInt(c, 16))) : match;
     });
     return markdown;
 };

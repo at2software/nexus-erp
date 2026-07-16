@@ -63,7 +63,7 @@ class UpdateVacationStatusCommand extends Command {
 
         $uniqueUsers = $affectedUsers->unique();
 
-        if ($uniqueUsers->count() > 0) {
+        if ($uniqueUsers->isNotEmpty()) {
             $this->info('Updated status for '.$uniqueUsers->count().' users: '.$uniqueUsers->join(', '));
             NLog::info('Vacation status update completed', ['affected_users' => $uniqueUsers->toArray()]);
         } else {

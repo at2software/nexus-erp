@@ -6,13 +6,11 @@ import { Dictionary, filtered } from '@constants/constants';
 import { getCookie, setCookie } from '@constants/cookies';
 import { Project } from '@models/project/project.model';
 
-type TFilter = Record<string, Project>;
+type TFilter = Dictionary<Project>;
 
 @Component({
     selector: 'project-state-filter',
     templateUrl: './project-state-filter.component.html',
-    styleUrls: ['./project-state-filter.component.scss'],
-    standalone: true,
     imports: [ProjectComponent, FormsModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

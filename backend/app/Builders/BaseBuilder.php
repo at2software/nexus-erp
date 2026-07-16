@@ -16,15 +16,23 @@ class BaseBuilder extends Builder {
         return Carbon::parse($max);
     }
     public function selectCluster($keyColumn, $valueColumn, $format = '%Y-%m') {
-        return $this->selectRaw("DATE_FORMAT($keyColumn, '$format') `key`, SUM($valueColumn) `value`");
+        $key   = $this->getQuery()->getGrammar()->wrap($keyColumn);
+        $value = $this->getQuery()->getGrammar()->wrap($valueColumn);
+        return $this->selectRaw("DATE_FORMAT($key, ?) `key`, SUM($value) `value`", [$this->safeFormat($format)]);
     }
     public function clusterBy($column = 'created_at', $format = '%Y-%m', $sumColumn = 'net', $key = 'month', $sumKey = 'sum'): BaseBuilder {
-        return $this->select(DB::raw("DATE_FORMAT($column, '$format') AS $key"), DB::raw("SUM($sumColumn) AS sum"))->groupBy($key);
+        $col         = $this->wrapColumnOrExpression($column);
+        $sum         = $this->getQuery()->getGrammar()->wrap($sumColumn);
+        $keyAlias    = $this->safeAlias($key);
+        $sumKeyAlias = $this->safeAlias($sumKey);
+        return $this->selectRaw("DATE_FORMAT($col, ?) AS $keyAlias, SUM($sum) AS $sumKeyAlias", [$this->safeFormat($format)])->groupBy($keyAlias);
     }
-    public function latestOfCluster(string $column = 'created_at', string $format = '%Y-%m-%d', $additionalWhere = '') {
-        $table = $this->getModel()->getTable();
+    public function latestOfCluster(string $column = 'created_at', string $format = '%Y-%m-%d'): BaseBuilder {
+        $g     = $this->getQuery()->getGrammar();
+        $col   = $g->wrap($column);
+        $table = $g->wrapTable($this->getModel()->getTable());
         return $this->getModel()->select(DB::raw('t.*'))
-            ->fromRaw("(SELECT *, DATE_FORMAT($column, '$format') AS day FROM $table $additionalWhere ORDER BY $column DESC) t")
+            ->fromRaw("(SELECT *, DATE_FORMAT($col, ?) AS day FROM $table ORDER BY $col DESC) t", [$this->safeFormat($format)])
             ->groupBy('t.day');
     }
     public function since(Carbon $date, string $column = 'created_at') {
@@ -52,10 +60,12 @@ class BaseBuilder extends Builder {
         return $this;
     }
     public function whereLike(string $column, string $like): static {
-        return $this->whereRaw("UPPER(`$column`) LIKE CONCAT('%', UPPER(?), '%')", [$like]);
+        $col = $this->getQuery()->getGrammar()->wrap($column);
+        return $this->whereRaw("UPPER($col) LIKE CONCAT('%', UPPER(?), '%')", [$like]);
     }
     public function whereFlag(int $flag, string $column = 'flags', $cmp = '='): BaseBuilder {
-        return $this->whereRaw("`$column` & $flag $cmp $flag");
+        $col = $this->getQuery()->getGrammar()->wrap($column);
+        return $this->whereRaw("$col & ? {$this->safeCmp($cmp)} ?", [$flag, $flag]);
     }
     public function toSqlWithBindings(): string {
         return vsprintf(str_replace('?', '%s', $this->toSql()), collect($this->getBindings())->map(function ($binding) {
@@ -68,32 +78,40 @@ class BaseBuilder extends Builder {
      * automatically tries to apply matching colum values from request as select clause
      */
     public function whereRequest() {
-        $tableName = $this->getModel()->getTable();
+        $allowedFilters = $this->getModel()->allowedFilters ?? [];
+
+        // Secure by default: skip filtering entirely when no allowlist is declared
+        if (! count($allowedFilters)) {
+            return $this;
+        }
+
+        $tableName   = $this->getModel()->getTable();
+        $columnTypes = $this->cachedColumnTypes($tableName);
         foreach (request()->all() as $colName => $value) {
-            if ($this->getModel()->getConnection()->getSchemaBuilder()->hasColumn($tableName, $colName)) {
-                $type = DB::getSchemaBuilder()->getColumnType($tableName, $colName);
-                switch ($type) {
-                    case 'boolean':
-                    case 'integer':
-                    case 'int':
-                    case 'tinyint':
-                        $array = explode(',', $value);
-                        $this->whereIn($colName, $array);
-                        break;
-                    case 'date':
-                    case 'datetime':
-                        $this->whereBetweenString($value, $colName);
-                        break;
-                    default:
-                        NLog::alert("unsupported column selector $type for column `$colName`");
-                }
+            if (! in_array($colName, $allowedFilters, true) || ! array_key_exists($colName, $columnTypes)) {
+                continue;
+            }
+            $type = $columnTypes[$colName];
+            switch ($type) {
+                case 'boolean':
+                case 'integer':
+                case 'int':
+                case 'tinyint':
+                    $this->whereIn($colName, explode(',', $value));
+                    break;
+                case 'date':
+                case 'datetime':
+                    $this->whereBetweenString($value, $colName);
+                    break;
+                default:
+                    NLog::alert("unsupported column selector $type for column `$colName`");
             }
         }
         return $this;
     }
 
     public function whereMorph($obj, $key = 'parent') {
-        return $this->where($key.'_type', get_class($obj))->where($key.'_id', $obj->id);
+        return $this->where($key.'_type', $obj::class)->where($key.'_id', $obj->id);
     }
     public function withRequest(): Builder {
         if (! ($w = request('with'))) {
@@ -143,10 +161,15 @@ class BaseBuilder extends Builder {
     public function pickLatest(?string $pivotTable = null, ?string $groupByColumn = null, string $orderColumn = 'id'): BaseBuilder {
         [$pivotTable, $groupByColumn] = $this->resolvePivotParams($pivotTable, $groupByColumn);
         $alias                        = $this->generateAlias($pivotTable);
-        return $this->whereRaw("$pivotTable.$orderColumn = (
-            SELECT MAX($alias.$orderColumn)
-            FROM $pivotTable AS $alias
-            WHERE $alias.$groupByColumn = $pivotTable.$groupByColumn
+        $g                            = $this->getQuery()->getGrammar();
+        $wTable                       = $g->wrapTable($pivotTable);
+        $wAlias                       = $g->wrapTable($alias);
+        $wOrder                       = $g->wrap($orderColumn);
+        $wGroup                       = $g->wrap($groupByColumn);
+        return $this->whereRaw("$wTable.$wOrder = (
+            SELECT MAX($wAlias.$wOrder)
+            FROM $wTable AS $wAlias
+            WHERE $wAlias.$wGroup = $wTable.$wGroup
         )");
     }
 
@@ -159,14 +182,20 @@ class BaseBuilder extends Builder {
      * @param string $polyColumn Base name of polymorphic columns (default: 'parent' for parent_id/parent_type)
      */
     public function pickLatestWithConditions(string $groupByColumn, ?string $polyClass = null, string $orderColumn = 'id', $polyColumn = 'parent'): BaseBuilder {
-        $table = $this->getModel()->getTable();
-        return $this
-            ->whereRaw("{$orderColumn} IN (
-                SELECT MAX({$orderColumn}) 
-                FROM {$table} AS sub 
-                WHERE sub.{$polyColumn}_type = ? 
-                AND sub.{$polyColumn}_id = {$table}.{$polyColumn}_id 
-                GROUP BY sub.{$groupByColumn}
+        $table      = $this->getModel()->getTable();
+        $g          = $this->getQuery()->getGrammar();
+        $wTable     = $g->wrapTable($table);
+        $wSub       = $g->wrapTable('sub');
+        $wOrder     = $g->wrap($orderColumn);
+        $wGroup     = $g->wrap($groupByColumn);
+        $wPolyId    = $g->wrap($polyColumn.'_id');
+        $wPolyType  = $g->wrap($polyColumn.'_type');
+        return $this->whereRaw("{$wOrder} IN (
+                SELECT MAX({$wOrder})
+                FROM {$wTable} AS {$wSub}
+                WHERE {$wSub}.{$wPolyType} = ?
+                AND {$wSub}.{$wPolyId} = {$wTable}.{$wPolyId}
+                GROUP BY {$wSub}.{$wGroup}
             )", [$polyClass]);
     }
 
@@ -180,10 +209,15 @@ class BaseBuilder extends Builder {
     public function pickOldest(?string $pivotTable = null, ?string $groupByColumn = null, string $orderColumn = 'id'): BaseBuilder {
         [$pivotTable, $groupByColumn] = $this->resolvePivotParams($pivotTable, $groupByColumn);
         $alias                        = $this->generateAlias($pivotTable);
-        return $this->whereRaw("$pivotTable.$orderColumn = (
-            SELECT MIN($alias.$orderColumn)
-            FROM $pivotTable AS $alias
-            WHERE $alias.$groupByColumn = $pivotTable.$groupByColumn
+        $g                            = $this->getQuery()->getGrammar();
+        $wTable                       = $g->wrapTable($pivotTable);
+        $wAlias                       = $g->wrapTable($alias);
+        $wOrder                       = $g->wrap($orderColumn);
+        $wGroup                       = $g->wrap($groupByColumn);
+        return $this->whereRaw("$wTable.$wOrder = (
+            SELECT MIN($wAlias.$wOrder)
+            FROM $wTable AS $wAlias
+            WHERE $wAlias.$wGroup = $wTable.$wGroup
         )");
     }
 
@@ -200,8 +234,7 @@ class BaseBuilder extends Builder {
 
         if (! $pivotTable) {
             // For models like ProjectState, try to detect pivot table name
-            $modelClass = get_class($this->getModel());
-            $modelName  = class_basename($modelClass);
+            $modelName = class_basename($this->getModel()::class);
 
             // Convert ProjectState -> project_state, then try common patterns
             $tableName = strtolower(preg_replace('/([a-z])([A-Z])/', '$1_$2', $modelName));
@@ -238,5 +271,45 @@ class BaseBuilder extends Builder {
     private function generateAlias(string $tableName): string {
         $parts = explode('_', $tableName);
         return implode('', array_map(fn ($part) => substr($part, 0, 1), $parts));
+    }
+
+    private function wrapColumnOrExpression(string $column): string {
+        // If the value contains spaces or parentheses it is a SQL expression — pass through as-is
+        if (preg_match('/[\s\(\)]/', $column)) {
+            return $column;
+        }
+        return $this->getQuery()->getGrammar()->wrap($column);
+    }
+    private function safeFormat(string $format): string {
+        if (! preg_match('/^[%a-zA-Z0-9\-:\/\. ]+$/', $format)) {
+            throw new \InvalidArgumentException("Invalid DATE_FORMAT string: {$format}");
+        }
+        return $format;
+    }
+    private function safeAlias(string $alias): string {
+        if (! preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $alias)) {
+            throw new \InvalidArgumentException("Invalid SQL alias: {$alias}");
+        }
+        return $alias;
+    }
+    private function safeCmp(string $cmp): string {
+        $allowed = ['=', '!=', '<>', '<', '>', '<=', '>='];
+        if (! in_array($cmp, $allowed, true)) {
+            throw new \InvalidArgumentException("Invalid comparison operator: {$cmp}");
+        }
+        return $cmp;
+    }
+
+    private static array $columnTypeCache = [];
+
+    private function cachedColumnTypes(string $tableName): array {
+        if (! isset(static::$columnTypeCache[$tableName])) {
+            $schema                              = $this->getModel()->getConnection()->getSchemaBuilder();
+            $columns                             = $schema->getColumnListing($tableName);
+            static::$columnTypeCache[$tableName] = collect($columns)
+                ->mapWithKeys(fn ($col) => [$col => $schema->getColumnType($tableName, $col)])
+                ->all();
+        }
+        return static::$columnTypeCache[$tableName];
     }
 }

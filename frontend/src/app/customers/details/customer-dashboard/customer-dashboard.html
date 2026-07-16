@@ -7,8 +7,15 @@
 @let _currentRevenue = currentRevenue();
 @let _forecastUp = forecastUp();
 @let _forecastChange = forecastChange();
+@let _mlRevenue = mlRevenue();
+@let _mlNextPurchaseAt = mlNextPurchaseAt();
+@let _mlChurnProbability = mlChurnProbability();
+@let _mlOverdueForContact = mlOverdueForContact();
+@let _mlSupportHours = mlSupportHours();
+@let _mlChurnHigh = mlChurnHigh();
+@let _mlNeedsAttention = mlNeedsAttention();
 <toolbar>
-    <button type="button" class="btn btn-primary" (click)="onAddProject()" ngbTooltip="CTRL+ALT+N" placement="bottom" hotkey="CTRL+ALT+N">
+    <button type="button" class="btn btn-primary" roles="project_manager|marketing" (click)="onAddProject()" ngbTooltip="CTRL+ALT+N" placement="bottom" hotkey="CTRL+ALT+N">
         <i>add</i>
         <span i18n="@@i18n.common.project">project</span>
     </button>
@@ -105,9 +112,30 @@
         </div>
 
         <div class="col-md-9">
-            @if (_hasInvoicingRole) {
             <div class="row">
-                <div class="col-lg-4">
+                <div class="col-8">
+                    <workload-timeline-chart [timeline]="_company.timeline_chart"></workload-timeline-chart>
+                    <media-preview [parent]="_company"></media-preview>
+                    @if (_company.base_projects && _company.base_projects.length > 0) {
+                    <div class="card mb-3">
+                        <div class="card-header" i18n="@@i18n.common.activeProjects">active projects</div>
+                        <projects-table [projects]="_company.base_projects"></projects-table>
+                    </div>
+                    } @if (_invoices.length > 0) {
+                    <div class="card mb-3">
+                        <div class="card-header" i18n="@@i18n.common.openInvoices">open invoices</div>
+                        <invoices-table [invoices]="_invoices"></invoices-table>
+                    </div>
+                    }
+                    <customer-initiatives [company]="_company"></customer-initiatives>
+                </div>
+                <div class="col-4">
+                    
+                    @if (_hasInvoicingRole) {
+                    <div class="card chart-card mb-3">
+                        <customer-quickstats [company]="_company"></customer-quickstats>
+                    </div>
+                    
                     <div class="card chart-card mb-3">
                         <div class="card-header hstack gap-2">
                             <span i18n="@@i18n.common.revenue">revenue</span>
@@ -124,6 +152,12 @@
                                         <span class="text-muted" i18n="@@i18n.common.forecast">forecast</span>
                                         <span class="ms-auto font-monospace">{{_forecastRevenue | money}}</span>
                                     </div>
+                                    @if (_mlRevenue !== undefined) {
+                                    <div class="hstack gap-3">
+                                        <span class="text-muted" i18n="@@i18n.customers.mlForecast">ML forecast</span>
+                                        <span class="ms-auto font-monospace">{{_mlRevenue | money}}</span>
+                                    </div>
+                                    }
                                     <div class="hstack gap-3 mt-1" style="border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 4px">
                                         <span class="text-muted">Δ</span>
                                         <span class="ms-auto font-monospace" [class.text-success]="_forecastUp" [class.text-danger]="!_forecastUp"> {{_forecastChange | percent:'1.0-0'}} </span>
@@ -134,39 +168,64 @@
                         </div>
                         <echarts-range-card keyPath="{{_company.getParamPath('INVOICE_REVENUE_12M')}}" [color]="['primary']"></echarts-range-card>
                     </div>
-                </div>
-                <div class="col-lg-4">
+
+                    <div class="card chart-card mb-3">
+                        <div class="card-header hstack gap-2">
+                            <n class="local-ai-icon">local_ai</n>
+                            <span i18n="@@i18n.customers.mlInsights" class="flex-fill text-truncate">ML insights</span>
+                            @if (_mlNeedsAttention) {
+                            <span class="badge bg-danger py-1 px-2" i18n="@@i18n.customers.attentionNeeded">attention needed</span>
+                            }
+                        </div>
+                        <ul class="list-group">
+                            <li class="list-group-item">
+                                <div class="hstack gap-2">
+                                    <div class="flex-fill text-muted" i18n="@@i18n.customers.mlRevenue12m">predicted revenue (12m)</div>
+                                    <div class="font-monospace" [mlReliability]="'customer_revenue'" placement="left">{{_mlRevenue !== undefined ? (_mlRevenue | money) : '—'}}</div>
+                                </div>
+                            </li>
+                            <li class="list-group-item">
+                                <div class="hstack gap-2">
+                                    <div class="flex-fill text-muted" i18n="@@i18n.customers.mlNextPurchase">predicted next purchase</div>
+                                    @if (_mlNextPurchaseAt) {
+                                    <div [class.text-danger]="_mlOverdueForContact" [class.text-primary]="!_mlOverdueForContact" [mlReliability]="'customer_interval'" placement="left">
+                                        {{_mlNextPurchaseAt.format('YYYY-MM-DD')}}
+                                        @if (_mlOverdueForContact) {
+                                        <i class="ms-1" ngbTooltip="predicted next purchase date is in the past — contact this customer" i18n-ngbTooltip="@@i18n.customers.contactNowTip">notification_important</i>
+                                        }
+                                    </div>
+                                    } @else {
+                                    <div>—</div>
+                                    }
+                                </div>
+                            </li>
+                            <li class="list-group-item">
+                                <div class="hstack gap-2">
+                                    <div class="flex-fill text-muted" i18n="@@i18n.customers.mlChurnRisk">churn risk (12m)</div>
+                                    @if (_mlChurnProbability !== undefined) {
+                                    <div [class.text-danger]="_mlChurnHigh" [class.text-primary]="!_mlChurnHigh" class="font-monospace" [mlReliability]="'customer_churn'" placement="left">{{_mlChurnProbability | percent:'1.0-0'}}</div>
+                                    } @else {
+                                    <div>—</div>
+                                    }
+                                </div>
+                            </li>
+                            <li class="list-group-item">
+                                <div class="hstack gap-2">
+                                    <div class="flex-fill text-muted" i18n="@@i18n.customers.mlSupportHours">predicted support (next quarter)</div>
+                                    <div class="font-monospace" [mlReliability]="'support_load'" placement="left">{{_mlSupportHours !== undefined ? (_mlSupportHours | number:'1.1-1') + 'h' : '—'}}</div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
                     <div class="card chart-card mb-3">
                         <div class="card-header hstack gap-2">
                             <span i18n="@@i18n.widget-prediction-bias" class="flex-fill text-truncate">prediction bias</span>
                         </div>
                         <customer-prediction-bias-chart [company]="_company"></customer-prediction-bias-chart>
                     </div>
-                </div>
-                <div class="col-lg-4">
-                    <div class="card chart-card mb-3">
-                        <customer-quickstats [company]="_company"></customer-quickstats>
-                    </div>
-                </div>
-            </div>
-            }
-            <div class="row">
-                <div class="col-8">
-                    <media-preview [parent]="_company"></media-preview>
-                    @if (_company.base_projects && _company.base_projects.length > 0) {
-                    <div class="card mb-3">
-                        <div class="card-header" i18n="@@i18n.common.activeProjects">active projects</div>
-                        <projects-table [projects]="_company.base_projects"></projects-table>
-                    </div>
-                    } @if (_invoices.length > 0) {
-                    <div class="card mb-3">
-                        <div class="card-header" i18n="@@i18n.common.openInvoices">open invoices</div>
-                        <invoices-table [invoices]="_invoices"></invoices-table>
-                    </div>
                     }
-                    <customer-initiatives [company]="_company"></customer-initiatives>
-                </div>
-                <div class="col-4">
+
                     <project-team-planning [entity]="_company"></project-team-planning>
                 </div>
             </div>

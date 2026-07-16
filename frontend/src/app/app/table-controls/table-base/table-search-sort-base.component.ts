@@ -1,3 +1,4 @@
+import { Dictionary } from '@constants/constants';
 import { SearchData } from '../search-data';
 import { SortData } from '../sort-data';
 import { SortMode } from '../sort-mode';
@@ -28,7 +29,7 @@ export abstract class TableSearchSortBase<T> {
     protected refreshItems(): void {
         this.sortedItems = this.getItems().filter((item) => {
             if (this.searchData.searchString) {
-                const itemAsAny = item as Record<string, any>;
+                const itemAsAny = item as Dictionary<unknown>;
                 const keyValue = itemAsAny[this.searchData.key];
                 const keyString = keyValue != null ? String(keyValue).toLowerCase() : '';
                 if (!keyString.includes(this.searchData.searchString.toLowerCase())) {
@@ -46,12 +47,14 @@ export abstract class TableSearchSortBase<T> {
 
         this.sortedItems = this.sortedItems
             .map((item) => {
-                const itemAsAny = item as Record<string, any>;
+                const itemAsAny = item as Dictionary<unknown>;
                 return { item, keyValue: itemAsAny[key] };
             })
             .sort((a, b) => {
-                if (a.keyValue < b.keyValue) return -sortOrder;
-                if (a.keyValue > b.keyValue) return sortOrder;
+                const av = a.keyValue as string | number;
+                const bv = b.keyValue as string | number;
+                if (av < bv) return -sortOrder;
+                if (av > bv) return sortOrder;
                 return 0;
             })
             .map((sortedItem) => sortedItem.item);

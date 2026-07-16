@@ -2,20 +2,19 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { Focus } from '@models/focus/focus.model';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { FormsModule } from '@angular/forms';
-import { Serializable } from '@models/serializable';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
+import { Dictionary } from '@constants/constants';
 
 @Component({
     selector: 'modal-edit-focus',
     templateUrl: './modal-edit-focus.component.html',
-    styleUrls: ['./modal-edit-focus.component.scss'],
-    standalone: true,
     imports: [SearchInputComponent, FormsModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ModalEditFocusComponent extends ModalBaseComponent<Focus> {
+
     private readonly project = viewChild.required(SearchInputComponent);
 
     readonly title = signal('Focus');
@@ -23,7 +22,7 @@ export class ModalEditFocusComponent extends ModalBaseComponent<Focus> {
     readonly commentText = signal('');
     readonly dateTimeText = signal('');
     readonly durationText = signal('');
-    readonly initialParent = computed(() => this.focus()?.parent as unknown as Serializable | undefined);
+    readonly initialParent = computed(() => this.focus()?.parent);
 
     #activeModal = inject(NgbActiveModal);
 
@@ -36,8 +35,8 @@ export class ModalEditFocusComponent extends ModalBaseComponent<Focus> {
 
     onSuccess() {
         const focus = this.focus();
-        const payload: any = {
-            started_at: moment(this.dateTimeText(), 'DD.MM.YYYY HH:mm').toISOString(true),
+        const payload: Dictionary = {
+            started_at: dayjs(this.dateTimeText(), 'DD.MM.YYYY HH:mm').format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
             duration: parseFloat(this.durationText()),
             comment: this.commentText(),
         };

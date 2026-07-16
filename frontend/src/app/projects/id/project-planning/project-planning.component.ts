@@ -1,3 +1,4 @@
+import { Dictionary } from '@constants/constants';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { InvoiceItemService } from '@models/invoice/invoice-item.service';
 import { ProjectService } from '@models/project/project.service';
@@ -12,24 +13,26 @@ import { moveInvoiceItems } from '@app/invoices/_shards/invoice-prepare/invoice-
 import { ProjectDetailGuard } from '@app/projects/project-details.guard';
 import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
-import { MantisTargetVersionSelectionComponent } from '@app/_modals/mantis-target-version-selection/mantis-target-version-selection.component';
-import { PluginLink } from '@models/pluginLink/plugin-link.model';
+import { ModalImportExtIssuesComponent, ExtIssueImportTracker } from '@app/_modals/modal-import-ext-issues/modal-import-ext-issues.component';
+import { PluginInstance } from '@models/http/plugin.instance';
+import { ITaskPlugin } from '@models/tasks/task.plugin.interface';
+import { Task } from '@models/tasks/task.model';
 import { DecimalPipe, PercentPipe } from '@angular/common';
 import { CdkTableModule } from '@angular/cdk/table';
 import { AutosaveDirective } from '@directives/autosave.directive';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
+import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { ProjectInfoComponent } from '@app/projects/_shards/project-info/project-info.component';
 import { ChartProgressComponent } from '@charts/chart-progress/chart-progress.component';
 import { Nx } from '@app/nx/nx.directive';
-import { AffixInputDirective } from '@directives/affix-input.directive';
 import { NComponent } from '@shards/n/n.component';
 import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
-import { FormsModule } from '@angular/forms';
 import { PermissionsDirective } from '@directives/permissions.directive';
 import { SafePipe } from '@pipes/safe.pipe';
 import { MediaPreviewComponent } from '../project-media/media-preview/media-preview.component';
+import type { PredictionEntry } from '@models/api-response';
 
 type DisplayFieldType = 'qty' | 'my_prediction';
 
@@ -38,8 +41,7 @@ type DisplayFieldType = 'qty' | 'my_prediction';
     selector: 'project-planning',
     templateUrl: './project-planning.component.html',
     styleUrls: ['./project-planning.component.scss'],
-    standalone: true,
-    imports: [DecimalPipe, PercentPipe, CdkTableModule, AutosaveDirective, ToolbarComponent, MediaPreviewComponent, EmptyStateComponent, ProjectInfoComponent, ChartProgressComponent, FormsModule, Nx, AffixInputDirective, NComponent, NgbTooltipModule, CdkTableModule, CdkDropList, CdkDrag, PermissionsDirective, NgbDropdownModule, SafePipe],
+    imports: [DecimalPipe, PercentPipe, CdkTableModule, AutosaveDirective, ToolbarComponent, MediaPreviewComponent, EmptyStateComponent, SpinnerComponent, ProjectInfoComponent, ChartProgressComponent, Nx, NComponent, NgbTooltipModule, CdkTableModule, CdkDropList, CdkDrag, PermissionsDirective, NgbDropdownModule, SafePipe],
 })
 export class ProjectPlanningComponent {
     #invoiceItemService = inject(InvoiceItemService);
@@ -53,24 +55,30 @@ export class ProjectPlanningComponent {
 
     displayField!: DisplayFieldType;
     project = this.parent.object();
-    predictions: any[] = [];
-    predictionTotal: number = 0;
-    product: Product | undefined = undefined;
+    predictions = signal<PredictionEntry[]>([]);
+    predictionTotal = signal(0);
+    product = signal<Product | undefined>(undefined);
     showPredictions = signal(false);
-    
+    items = signal<InvoiceItem[]>([]);
+    loading = signal(true);
+
     isRunning = computed(() => this.displayField == 'qty');
-    sumForMy = computed(() => this.parent.object().invoice_items.reduce((a, b) => a + (b.my_prediction ?? 0), 0));
-    sumForQty = computed(() => this.parent.object().invoice_items.reduce((a, b) => a + b.qty, 0));
+    sumForMy = computed(() => this.items().reduce((a, b) => a + (b.my_prediction ?? 0), 0));
+    sumForQty = computed(() => this.items().reduce((a, b) => a + b.qty, 0));
+
+    loadItems = () =>
+        this.#invoiceItemService
+            .indexEstimationItems(this.project)
+            .subscribe((response) => { this.items.set(response); this.loading.set(false); });
+
+    onItemResolved = () => this.items.update(arr => [...arr]);
 
     constructor() {
         effect(() => {
-            const object = this.project;
-            this.#invoiceItemService
-                .getInvoiceItems(object, { append: 'my_prediction', with: 'predictions' })
-                .subscribe((response) => object.invoice_items = response);
-            if (object.product_id) {
-                this.#productService.show(object.product_id!).subscribe((p: Product) => {
-                    this.product = p;
+            this.loadItems();
+            if (this.project.product_id) {
+                this.#productService.show(this.project.product_id!).subscribe((p: Product) => {
+                    this.product.set(p);
                 });
             }
             this.updatePredictions();
@@ -78,15 +86,15 @@ export class ProjectPlanningComponent {
     }
 
     predictionForUser = (p: InvoiceItem, u: User): number | undefined => p.predictions.find((_) => _.user_id == u.id)?.qty ?? undefined;
-    sumFor = (u: User) => this.parent.object().invoice_items.reduce((a, b) => a + (b.predictions.find((_) => _.user_id == u.id)?.qty ?? 0), 0);
+    sumFor = (u: User) => this.items().reduce((a, b) => a + (b.predictions.find((_) => _.user_id == u.id)?.qty ?? 0), 0);
 
     updatePredictions = () => {
-        this.#projectService.predictionStats(this.project).subscribe((x: any) => {
-            this.predictionTotal = x.total;
-            const predictions = 'predictions' in x ? x.predictions : [];
-            predictions.sort((_: any) => _.id);
-            predictions.forEach((_: any) => (_.user = User.fromJson(_.user)));
-            this.predictions = predictions;
+        this.#projectService.predictionStats(this.project).subscribe((response) => {
+            this.predictionTotal.set(response.total);
+            const predictions: PredictionEntry[] = 'predictions' in response ? (response.predictions ?? []) : [];
+            predictions.sort((_) => _.id);
+            predictions.forEach((_) => (_.user = User.fromJson(_['user'])));
+            this.predictions.set(predictions);
         });
     };
 
@@ -100,31 +108,53 @@ export class ProjectPlanningComponent {
     variance_wt = (p: InvoiceItem) => (p.predictions.length ? this.variance(p) / this.mean(p) : 0);
     variance_color = (p: InvoiceItem) => Color.fromHsl(120 - 40 * Math.log10(this.variance(p)), 100, 60).toHexString();
     variance_wt_color = (p: InvoiceItem) => Color.fromHsl(120 - 240 * this.variance_wt(p), 100, 60).toHexString();
-    getMantisPlugins = () => this.project.plugin_links.filter((_) => _.type === 'mantis');
 
-    deletePredictions = (item: InvoiceItem) => item.deletePrediction().subscribe(() => this.updatePredictions());
+    readonly taskTrackers = computed(
+        () =>
+            (this.project.plugin_links ?? [])
+                .map((link) => ({ link, instance: this.factory.instanceFor(link) as (PluginInstance & ITaskPlugin) | undefined }))
+                .filter((_): _ is ExtIssueImportTracker => !!_.instance && 'ITaskPluginProperty' in _.instance),
+    );
 
-    onNewHeader = () =>
-        this.#input.open('title', true).confirmed(({ text, more }) => {
+    deletePredictions = (item: InvoiceItem) => item.deletePrediction().subscribe(() => {
+        this.items.update(arr => [...arr]);
+        this.updatePredictions();
+    });
+
+    onNewHeader = () => {
+        const title = $localize`:@@i18n.project.newHeaderTitle:New section header`;
+        const infoMessage = $localize`:@@i18n.project.newHeaderInfo:Headers group the items below them. Enter a title for the new section.`;
+        this.#input.open(title, true, infoMessage).confirmed(({ text, more }) => {
             this.#newItem({ text: text, type: 20 });
             if (more) this.onNewHeader();
         });
+    };
     onNewItem = () => {
+        const title = $localize`:@@i18n.project.newItemTitle:New item`;
         const infoMessage = $localize`:@@i18n.project.newItemDefaultProductInfo:All items created here are assigned to the default product (see project settings).`;
-        this.#input.open('title', true, infoMessage).confirmed(({ text, more }) => {
-            this.#newItem({ text: text, type: 0, product_source_id: this.product!.id });
+        this.#input.open(title, true, infoMessage).confirmed(({ text, more }) => {
+            this.#newItem({ text: text, type: 0, product_source_id: this.product()!.id });
             if (more) this.onNewItem();
         });
     };
-    onImportFromMantis(link: PluginLink) {
-        this.#modal.open(MantisTargetVersionSelectionComponent, this.factory.instanceFor(link));
+    onImportFromTracker(tracker: ExtIssueImportTracker) {
+        const existingIssueIds = new Set(
+            this.items()
+                .filter((_) => _.ext_issue_id && String(_.ext_issue_plugin_link_id) === String(tracker.link.id))
+                .map((_) => String(_.ext_issue_id)),
+        );
+        this.#modal.open(ModalImportExtIssuesComponent, tracker, existingIssueIds).then((tasks) => {
+            if (tasks?.length) this.#importTasks(tracker, tasks);
+        });
     }
-    onDrop = (e: any) => {
-        const order = moveInvoiceItems(this.parent.object().invoice_items, e.previousIndex, e.currentIndex);
+    onDrop = (e: import('@angular/cdk/drag-drop').CdkDragDrop<InvoiceItem[]>) => {
+        const current = this.items();
+        const order = moveInvoiceItems(current, e.previousIndex, e.currentIndex);
+        this.items.set([...current]);
         this.#invoiceItemService.reorder(order).subscribe();
     };
     onUseAllPredictionsForUser(user: User) {
-        this.parent.object().invoice_items.forEach((item) => this.onPredictionAccept(item, user));
+        this.items().forEach((item) => this.onPredictionAccept(item, user));
     }
     onPredictionAccept(item: InvoiceItem, user: User) {
         const pred = this.predictionForUser(item, user)!;
@@ -133,21 +163,33 @@ export class ProjectPlanningComponent {
     onAcceptPrediction(item: InvoiceItem, value: number) {
         item.update({ qty: value }).subscribe(() => {
             item.qty = value!;
+            this.items.update(arr => [...arr]);
         });
     }
 
-    #newItem = (additional: any) => {
+    #importTasks = (tracker: ExtIssueImportTracker, tasks: Task[]) => {
+        const current = this.items();
+        let pos = current.length ? Math.max(...current.map((_) => _.position)) + 1 : 0;
+        tasks.forEach((task) => {
+            this.#newItem({ text: task.name, type: 0, product_source_id: this.product()!.id, ext_issue_plugin_link_id: String(tracker.link.id), ext_issue_id: task.id, position: pos++ });
+        });
+    };
+
+    #newItem = (additional: Dictionary) => {
         const hUnit = this.#global.setting('INVOICE_HOUR_UNIT');
         const dUnit = this.#global.setting('INVOICE_DAY_UNIT');
-        const wage: number = parseFloat(this.#global.setting('INVOICE_HOURLY_WAGE'));
-        const hpd: number = parseFloat(this.#global.setting('INVOICE_HPD'));
-        if (this.product) {
-            const item = this.product?.getInvoiceItem() ?? {};
+        const wage: number = parseFloat(this.#global.setting('INVOICE_HOURLY_WAGE') ?? '0');
+        const hpd: number = parseFloat(this.#global.setting('INVOICE_HPD') ?? '0');
+        const product = this.product();
+        if (product) {
+            const item = product?.getInvoiceItem() ?? {};
             if (item) {
-                const pos = this.project.invoice_items.length ? Math.max(...this.project.invoice_items.map((_) => _.position)) + 1 : 0;
-                let modifiers: Record<string, any> = { project_id: this.project.id, qty: 0, position: pos };
-                if (this.product.time_based == 1) modifiers = Object.assign(modifiers, { unit_name: hUnit, price: wage });
-                if (this.product.time_based == hpd) modifiers = Object.assign(modifiers, { unit_name: dUnit, price: wage * hpd });
+                const current = this.items();
+                const pos = current.length ? Math.max(...current.map((_) => _.position)) + 1 : 0;
+                const multiplier = product.price_multiplier || 1;
+                let modifiers: Dictionary<any> = { project_id: this.project.id, qty: 0, position: pos };
+                if (product.time_based == 1) modifiers = Object.assign(modifiers, { unit_name: hUnit, price: wage * multiplier });
+                if (product.time_based == hpd) modifiers = Object.assign(modifiers, { unit_name: dUnit, price: wage * hpd * multiplier });
                 modifiers = Object.assign(modifiers, additional);
                 modifiers['product_id'] = null;
                 modifiers['invoice_item_predictions'] = null;
@@ -157,13 +199,16 @@ export class ProjectPlanningComponent {
                 if (company?.getParam('INVOICE_DISCOUNT')) {
                     modifiers['discount'] = parseFloat(company.getParam('INVOICE_DISCOUNT') ?? '0');
                 }
-                if (company?.isVatExcempt()) {
+                // Hourly/daily products always follow the customer's applicable VAT rate; manual-price products only get zeroed when the customer is VAT-exempt.
+                if (product.time_based > 0) {
+                    if (company) modifiers['vat_rate'] = company.vatRate();
+                } else if (company?.isVatExcempt()) {
                     modifiers['vat_rate'] = 0;
                 }
 
                 const item = InvoiceItem.fromJson(modifiers);
                 item.store(item.toPayload(['my_prediction'])).subscribe((_) => {
-                    this.project.invoice_items.push(item);
+                    this.items.update(arr => [...arr, item]);
                 });
             }
         }

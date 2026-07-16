@@ -14,7 +14,6 @@ interface Suggestion {
     selector: 'variable-autocomplete',
     templateUrl: './variable-autocomplete.component.html',
     styleUrl: './variable-autocomplete.component.scss',
-    standalone: true,
     imports: [ScrollbarComponent, FormsModule],
 })
 export class VariableAutocompleteComponent {
@@ -40,7 +39,8 @@ export class VariableAutocompleteComponent {
     onInput(event: Event) {
         const target = event.target as HTMLInputElement | HTMLTextAreaElement;
         this.#cursorPosition = target.selectionStart ?? 0;
-        const value = this.option().value || '';
+        const optionValue = this.option().value;
+        const value = typeof optionValue === 'string' ? optionValue : '';
         const beforeCursor = value.substring(0, this.#cursorPosition);
         const lastOpen = beforeCursor.lastIndexOf('{{');
 
@@ -76,7 +76,8 @@ export class VariableAutocompleteComponent {
 
     selectResult(result: Suggestion) {
         const option = this.option();
-        const value = option.value || '';
+        const optionValue = option.value;
+        const value = typeof optionValue === 'string' ? optionValue : '';
         const beforeCursor = value.substring(0, this.#cursorPosition);
         const afterCursor = value.substring(this.#cursorPosition);
         const lastOpen = beforeCursor.lastIndexOf('{{');
@@ -115,24 +116,24 @@ export class VariableAutocompleteComponent {
         let tableName = usedVar.table;
         for (let i = 1; i < parts.length; i++) {
             const prefix = parts[i];
-            const table = this.#tables.find((t: any) => t.name === tableName);
-            const relationship = this.#relationshipMap.find((r: any) => r.table === tableName);
+            const table = this.#tables.find((t) => t.name === tableName);
+            const relationship = this.#relationshipMap.find((r) => r.table === tableName);
             if (!table) return [];
 
+            const _filterAndMap = (array: string[], type: string) => array
+                .filter((v) => v !== null && v.toLowerCase().startsWith(prefix.toLowerCase()))
+                .map((name) => ({ name, type }));
+                
             if (i === parts.length - 1) {
                 return [
-                    ...(table.columns?.map((c: any) => c.Field) ?? []).filter((c: any) => c.startsWith(prefix)).map((c: any) => ({ name: c, type: 'column' })),
-                    ...Object.keys(this.#accessorMap[tableName] ?? {})
-                        .filter((a: any) => a.startsWith(prefix))
-                        .map((a: any) => ({ name: a, type: 'accessor' })),
-                    ...Object.keys(relationship?.relations ?? {})
-                        .filter((r: any) => r.startsWith(prefix))
-                        .map((r: any) => ({ name: r, type: 'relation' })),
+                    ..._filterAndMap(table.columns.map((c) => c.Field), 'column'),
+                    ..._filterAndMap(Object.keys(this.#accessorMap[tableName] ?? {}), 'accessor'),
+                    ..._filterAndMap(Object.keys(relationship?.relations ?? {}), 'relation'),
                 ];
             }
             const nextRelation = relationship?.relations?.[prefix];
             if (!nextRelation) return [];
-            tableName = nextRelation.model?.toLowerCase();
+            tableName = nextRelation.model?.toLowerCase() ?? '';
         }
         return [];
     }

@@ -1,14 +1,15 @@
 import { Injectable } from '@angular/core';
 import { Param } from '@models/param.model';
-import moment from 'moment';
 import { NexusHttpService } from './http/http.nexus';
+import { Dictionary } from '@constants/constants';
+import { ParamChartSeries } from './api-response';
 
 @Injectable({ providedIn: 'root' })
 export class ParamService extends NexusHttpService<Param> {
     public apiPath = '';
-    public TYPE = () => Param;
+    override readonly model = Param;
 
-    show = (key: string, data: any = {}) => this.get(`${key}`, data);
-    update = (key: string, data: any) => this.put(`${key}`, data);
-    history = (key: string, since: number = moment().startOf('day').subtract(14, 'days').unix(), cluster: string = 'day') => this.aget<any>(key + '/history', { since: since, cluster: cluster }, Object);
+    show = (key: string, data: Dictionary = {}) => this.get(`${key}`, data, Param);
+    update = (key: string, data: object) => this.put(`${key}`, data);
+    history = (keys: string, since: number, cluster: string = 'day') => this.aget<ParamChartSeries>(keys + '/history', { since: since, cluster: cluster });
 }

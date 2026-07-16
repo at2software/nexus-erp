@@ -58,7 +58,6 @@ class GitPushWebhookJob implements ShouldQueue {
 
         $this->checkVulnScan();
     }
-
     private function checkVulnScan(): void {
         $link = $this->links->first();
         if (! $link) {

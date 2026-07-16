@@ -1,6 +1,6 @@
-@let _parent = parent();
+@let _parent = trackedParent();
 @if (_parent) {
-    <div class="card mb-3" [dnd]="_parent.apiPathWithId() + '/media'" (dndUploaded)="_parent.refresh().subscribe()">
+    <div class="card mb-3" [dnd]="_parent.apiPathWithId() + '/media'" (dndUploaded)="onUploaded()">
         <div class="card-header" i18n="@@i18n.common.media">media</div>
         @if (_parent.files.length) {
             <ul class="list-group">

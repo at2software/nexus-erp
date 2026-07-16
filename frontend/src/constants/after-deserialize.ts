@@ -25,9 +25,9 @@ export function AfterDeserialize(): MethodDecorator {
 /**
  * Collects all @AfterDeserialize methods walking up the prototype chain (parent-first).
  */
-export function getAfterDeserializeMethods(proto: any): string[] {
+export function getAfterDeserializeMethods(proto: object): string[] {
     const chain: string[][] = [];
-    let current = proto;
+    let current: object | null = proto;
     while (current && current !== Object.prototype) {
         const own: string[] | undefined = Reflect.getOwnMetadata(AFTER_DESERIALIZE_KEY, current);
         if (own) chain.unshift(own);

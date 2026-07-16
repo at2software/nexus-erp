@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -13,6 +13,7 @@ import { GuidedTourComponent } from '@shards/guided-tour/guided-tour.component';
 import { Observable } from 'rxjs';
 import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { Dictionary } from '@constants/constants';
 
 interface AssetCategory {
     name: string;
@@ -26,15 +27,14 @@ interface AssetCategory {
     selector: 'marketing-assets',
     templateUrl: './marketing-assets.component.html',
     styleUrls: ['./marketing-assets.component.scss'],
-    standalone: true,
     imports: [DatePipe, FormsModule, NgbDropdownModule, NgbTooltipModule, NgbTypeaheadModule, DndDirective, Nx, TextParamEditorComponent, EmptyStateComponent, GuidedTourComponent, SpinnerComponent],
 })
-export class MarketingAssetsComponent implements OnInit {
+export class MarketingAssetsComponent {
     #marketingService = inject(MarketingService);
     #route = inject(ActivatedRoute);
 
-    assets: File[] = [];
-    categories: AssetCategory[] = [];
+    assets = signal<File[]>([]);
+    categories = signal<AssetCategory[]>([]);
     loading = signal(true);
     selectedCategory = 'Brand Assets';
     searchQuery = '';
@@ -53,7 +53,7 @@ export class MarketingAssetsComponent implements OnInit {
         { name: 'Documents', icon: 'description', color: 'dark', count: 0 },
     ];
 
-    ngOnInit() {
+    constructor() {
         // Check for category parameter from route
         const category = this.#route.snapshot.paramMap.get('category');
         if (category) {
@@ -67,8 +67,8 @@ export class MarketingAssetsComponent implements OnInit {
     loadAssets() {
         this.loading.set(true);
         this.#marketingService.indexMarketingAssets(this.selectedCategory, this.searchQuery, this.searchTags).subscribe({
-            next: (data: any) => {
-                this.assets = data;
+            next: (data) => {
+                this.assets.set(data);
                 this.loadCategoryCounts();
                 this.updateAllTags();
                 this.loading.set(false);
@@ -79,16 +79,18 @@ export class MarketingAssetsComponent implements OnInit {
 
     loadCategoryCounts() {
         // Fetch all assets without category filter to get accurate counts
-        this.#marketingService.indexMarketingAssets('', '', '').subscribe((allAssets: any) => {
-            this.categories = this.categories.map((category) => ({
-                ...category,
-                count: allAssets.filter((asset: File) => asset.category === category.name).length,
-            }));
+        this.#marketingService.indexMarketingAssets('', '', '').subscribe((allAssets) => {
+            this.categories.update((categories) =>
+                categories.map((category) => ({
+                    ...category,
+                    count: allAssets.filter((asset: File) => asset.category === category.name).length,
+                })),
+            );
         });
     }
 
     initializeCategories() {
-        this.categories = [...this.defaultCategories];
+        this.categories.set([...this.defaultCategories]);
     }
 
     onFilesUploaded() {
@@ -98,7 +100,7 @@ export class MarketingAssetsComponent implements OnInit {
 
     categorizeFile(file: File): string {
         const extension = file.name.split('.').pop()?.toLowerCase();
-        const type = (file as any).type?.toLowerCase() || '';
+        const type = file.mime.toLowerCase() || '';
 
         if (type.startsWith('image/')) {
             if (['jpg', 'jpeg', 'png', 'svg'].includes(extension || '')) {
@@ -124,12 +126,17 @@ export class MarketingAssetsComponent implements OnInit {
 
     updateAllTags() {
         const tagSet = new Set<string>();
-        this.assets.forEach((asset) => {
+        this.assets().forEach((asset) => {
             if (asset.tags) {
                 asset.tags.forEach((tag) => tagSet.add(tag));
             }
         });
         this.allTags = Array.from(tagSet).sort();
+    }
+
+    #setAssetTags(asset: File, newTags: string[]) {
+        asset.tags = newTags;
+        this.assets.update((assets) => [...assets]);
     }
 
     addTagToAsset(asset: File, tag: string) {
@@ -139,7 +146,7 @@ export class MarketingAssetsComponent implements OnInit {
         if (!currentTags.includes(tag.trim())) {
             const newTags = [...currentTags, tag.trim()];
             this.#marketingService.updateMarketingAssetTags(asset.id, newTags).subscribe(() => {
-                asset.tags = newTags;
+                this.#setAssetTags(asset, newTags);
                 this.updateAllTags();
             });
         }
@@ -150,7 +157,7 @@ export class MarketingAssetsComponent implements OnInit {
 
         const newTags = asset.tags.filter((tag) => tag !== tagToRemove);
         this.#marketingService.updateMarketingAssetTags(asset.id, newTags).subscribe(() => {
-            asset.tags = newTags;
+            this.#setAssetTags(asset, newTags);
             this.updateAllTags();
         });
     }
@@ -189,7 +196,7 @@ export class MarketingAssetsComponent implements OnInit {
     }
 
     getCategoryParamKey(categoryName: string): string {
-        const keyMap: Record<string, string> = {
+        const keyMap: Dictionary<string> = {
             'Brand Assets': 'params/MARKETING_BRAND_ASSETS_DESC',
             'Social Media': 'params/MARKETING_SOCIAL_MEDIA_DESC',
             'Email Templates': 'params/MARKETING_EMAIL_TEMPLATES_DESC',

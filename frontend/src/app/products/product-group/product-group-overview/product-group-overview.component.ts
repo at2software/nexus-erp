@@ -18,8 +18,6 @@ import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 @Component({
     selector: 'app-product-group-overview',
     templateUrl: './product-group-overview.component.html',
-    styleUrls: ['./product-group-overview.component.scss'],
-    standalone: true,
     imports: [AutosaveDirective, FormsModule, ColorPickerDirective, RteComponent, AvatarComponent, Nx, AvatarComponent, NgbTooltipModule, MoneyShortPipe, LoadingPipe],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

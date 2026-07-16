@@ -1,6 +1,6 @@
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { GlobalService } from '@models/global.service';
 import { Vacation } from '@models/vacation/vacation.model';
 import { VacationService } from '@models/vacation/vacation.service';
@@ -9,8 +9,6 @@ import { LoadingPipe } from '@pipes/loading.pipe';
 @Component({
     selector: 'profile-vacation-widget',
     templateUrl: './profile-vacation-widget.component.html',
-    styleUrls: ['./profile-vacation-widget.component.scss'],
-    standalone: true,
     imports: [LoadingPipe, DecimalPipe],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -40,5 +38,5 @@ export class ProfileVacationWidgetComponent {
         });
     }
 
-    getWorkingHoursPerDay = () => this.global.user?.getHpwArray().map((_, k) => [moment.weekdaysMin()[(k + 1) % 7], _]);
+    getWorkingHoursPerDay = () => this.global.user?.getHpwArray().map((_, k) => [dayjs().day((k + 1) % 7).format('dd'), _]);
 }

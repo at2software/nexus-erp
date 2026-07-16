@@ -20,7 +20,6 @@ import { SafePipe } from '@pipes/safe.pipe';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'project-detail-quote',
     templateUrl: './project-detail-quote.component.html',
-    standalone: true,
     imports: [ToolbarComponent, ScrollbarComponent, TextParamEditorComponent, InvoicePrepare, NgbDropdownModule, SafePipe],
 })
 export class ProjectDetailQuoteComponent {

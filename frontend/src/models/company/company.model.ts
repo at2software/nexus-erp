@@ -1,3 +1,4 @@
+import { Dictionary } from '@constants/constants';
 import { CompanyService } from '@models/company/company.service';
 import { CompanyContact } from './company-contact.model';
 import { Project } from '../project/project.model';
@@ -15,24 +16,17 @@ import { environment } from 'src/environments/environment';
 import { IHasFoci } from '@models/focus/hasFoci.interface';
 import { User } from '@models/user/user.model';
 import { LeadSource } from '@models/project/lead_source.model';
-import { Type } from 'class-transformer';
-import moment from 'moment';
+import { Transform, Type } from 'class-transformer';
+import { dayjs, Dayjs } from '@constants/dates';
 import { IHasAssignees } from '@interfaces/hasAssignees.interface';
 import { ConnectionProjects } from './connection-projects.model';
 import { getCompanyActions } from './company.actions';
 import { IHasMarker } from '@enums/marker';
 import { Model } from '@constants/type-discriminators';
 import { computed } from '@angular/core';
+import type { BillingConsideration, ProjectTimelineEntry } from '@models/api-response';
 
 const RemarketingIntervals = { 1: 1, 4: 7, 5: 14, 2: 30, 6: 60, 7: 90, 8: 180, 3: 360 } as Record<number, number>;
-export interface TBillingConsideration {
-    type: 'warning' | 'error';
-    label: string;
-    tooltip: string;
-    project_id?: string;
-    uninvoiced_hours?: number;
-    invoice_item_id?: string;
-}
 
 @Model('Company')
 export class Company extends VcardClass implements HasInvoiceItems, IHasFiles, IHasFoci, IHasAssignees, IHasMarker {
@@ -69,18 +63,42 @@ export class Company extends VcardClass implements HasInvoiceItems, IHasFiles, I
     foci_unbilled_sum_duration?: number;
     invoices_last12m_sum_net?: number;
     total_time?: number;
+    // Read-only projections attached by stats endpoints (remarketing, customer-stats). Not DB columns, so payloadFor() never sends them back.
+    revenue_12?: number;
+    revenue_last_1_year: number = 0;
+    revenue_total: number = 0;
+    earliest_invoice?: { created_at: string };
     remarketing_interval?: number;
+    remarketing_due_at?: string;
     desicion_duration?: number;
-    billing_considerations?: TBillingConsideration[];
+    billing_considerations?: BillingConsideration[];
     quote_acceptance_rate?: number | null;
     avg_payment_days?: number | null;
+    debrief_problem_count?: number;
+    debrief_positive_count?: number;
+    timeline_chart?: ProjectTimelineEntry[] = [];
+    // Read-only projections attached by the churn-risk widget endpoint (companies/churn-risk).
+    // Not DB columns, so payloadFor() never sends them back. Precomputed on the backend
+    // (Company::getMlChurnProbability12mAttribute() & co.) rather than derived from `params`,
+    // since the params dict isn't loaded on this lightweight listing.
+    ml_churn_probability_12m?: number;
+    // Date-only string (Y-m-d) — see Company::getMlPredictedNextPurchaseDateAttribute() on the
+    // backend. Deliberately not the same key as the Carbon-typed accessor, to avoid the
+    // toArray()/UTC date-shift pitfall (see frontend/CLAUDE.md's date-range note).
+    ml_predicted_next_purchase_date?: string;
+    ml_overdue_for_contact?: boolean;
+    // Read-only projection appended by GET_CASHFLOW_CUSTOMER_SUPPORT (widget-customer-support) —
+    // same "not a DB column, precomputed accessor, params dict not loaded" reasoning as
+    // ml_churn_probability_12m above. Use the mlPredictedSupportHours() computed on the
+    // single-company detail view instead, where `params` IS loaded.
+    ml_predicted_support_hours?: number;
     marker: number | null = null;
-    source?: CompanyContact | User | LeadSource;
+    @Transform(({ value }) => Company.toSource(value), { toClassOnly: true }) source?: CompanyContact | User | LeadSource;
 
     hasTimeBudget!: () => boolean;
     frontendUrl = (): string => `/customers/${this.id}`;
     companyId = (): string => this.id;
-    lastUpdateDuration = () => moment().diff(moment(this.updated_at), 'days');
+    lastUpdateDuration = () => dayjs().diff(dayjs(this.updated_at), 'days');
     isVatExcempt = computed(() => (this.snapshot().vat_id?.length ?? 0) > 0);
     vatRate = computed(() => this.isVatExcempt() || !this.isEuropeanCountry() ? 0 : NxGlobal.global.user!.getFloatParam('VAT_RATE', 19)!);
     remarketingDays = computed(() => RemarketingIntervals[this.snapshot().remarketing_interval] ?? 0);    
@@ -103,6 +121,31 @@ export class Company extends VcardClass implements HasInvoiceItems, IHasFiles, I
         return days === 0 ? 0 : this.lastUpdateDuration() / days;
     });
 
+    // ML predictions (Rubix ML) — stored as per-company FloatParams by
+    // cron:refresh-customer-predictions, read the same way as STATS_LINREG_FORECAST_12M.
+    // Additive to the existing linreg forecast; never replaces it.
+    mlPredictedRevenue12m = computed((): number | undefined => this.getFloatParam('ML_PREDICTED_REVENUE_12M'));
+    mlPredictedIntervalDays = computed((): number | undefined => this.getFloatParam('ML_PREDICTED_INTERVAL_DAYS'));
+    mlChurnProbability12m = computed((): number | undefined => this.getFloatParam('ML_CHURN_PROBABILITY_12M'));
+    /** Predicted support hours over the next quarter (support-load forecast). */
+    mlPredictedSupportHours = computed((): number | undefined => this.getFloatParam('ML_PREDICTED_SUPPORT_HOURS'));
+
+    /** Predicted next-purchase date = latest invoice date + predicted interval (Model B). */
+    mlPredictedNextPurchaseAt = computed((): Dayjs | undefined => {
+        const interval = this.mlPredictedIntervalDays();
+        if (interval === undefined) return undefined;
+        const last = this.invoices
+            .map((i) => dayjs(i.created_at))
+            .sort((a, b) => b.valueOf() - a.valueOf())[0];
+        return last ? last.add(Math.round(interval), 'day') : undefined;
+    });
+
+    /** True once the predicted next-purchase date is in the past — "contact now". */
+    mlOverdueForContact = computed((): boolean => {
+        const next = this.mlPredictedNextPurchaseAt();
+        return next !== undefined && next.isBefore(dayjs());
+    });
+
     doubleClickAction: number = 0;
     actions = getCompanyActions(this);
 
@@ -119,11 +162,17 @@ export class Company extends VcardClass implements HasInvoiceItems, IHasFiles, I
 
     setParent = (_: Serializable) => console.error('setParent() not allowed for companies');
 
-    setSource(_?: any) {
-        if (!_) return;
-        if (_.class === 'CompanyContact') this.source = CompanyContact.fromJson(_);
-        if (_.class === 'User') this.source = User.fromJson(_);
-        if (_.class === 'LeadSource') this.source = LeadSource.fromJson(_);
+    static toSource(_?: Dictionary): CompanyContact | User | LeadSource | undefined {
+        if (!_) return undefined;
+        if (_.class === 'CompanyContact') return CompanyContact.fromJson(_);
+        if (_.class === 'User') return User.fromJson(_);
+        if (_.class === 'LeadSource') return LeadSource.fromJson(_);
+        return undefined;
+    }
+
+    setSource(_?: Dictionary) {
+        const source = Company.toSource(_);
+        if (source) this.source = source;
     }
 
     importImprint = () => NxGlobal.getService<CompanyService>(CompanyService).importImprint(this);

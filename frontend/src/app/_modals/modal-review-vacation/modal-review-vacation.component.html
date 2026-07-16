@@ -1,0 +1,100 @@
+@let _grant = grant();
+<div class="modal d-block" tabindex="-1" #modal>
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header hstack gap-2">
+                @if (vacation.user) {
+                    <div class="avatar d-flex">
+                        <img class="avatar-img avatar-md" src="{{ vacation.user.icon }}" alt="User avatar" />
+                    </div>
+                }
+                <div class="flex-fill">
+                    <div class="modal-title" i18n="@@i18n.common.timeOffRequest">time off request</div>
+                    @if (vacation.user) {
+                        <small class="text-muted">{{ vacation.user.getName() }}</small>
+                    }
+                </div>
+                <span class="badge bg-dark">{{ absHours() }}h</span>
+                <i [ngbTooltip]="vacation.getStateTooltip()" [class]="vacation.getStateClass()">{{ vacation.getStateIcon() }}</i>
+            </div>
+
+            <div class="modal-body">
+                <ul class="list-group mb-3">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span i18n="@@i18n.common.period">period</span>
+                        <span>{{ vacation.started_at | date: 'dd.MM.yyyy' }} - {{ vacation.ended_at | date: 'dd.MM.yyyy' }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span i18n="@@i18n.common.duration">duration</span>
+                        <span>
+                            {{ absHours() }}h
+                            @if (vacation.user) {
+                                <span class="text-muted">({{ absDays() | number: '1.0-1' }} <span i18n="@@i18n.common.days">days</span>)</span>
+                            }
+                        </span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span i18n="@@i18n.common.status">status</span>
+                        <span [class]="vacation.getStateClass()">{{ vacation.getStateTooltip() }}</span>
+                    </li>
+                    @if (vacation.comment) {
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span i18n="@@i18n.common.comment">comment</span>
+                            <span class="text-end">{{ vacation.comment }}</span>
+                        </li>
+                    }
+                    @if (vacation.approved_at) {
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span i18n="@@i18n.vacation.approvedAt">approved at</span>
+                            <span>{{ vacation.approved_at | date: 'dd.MM.yyyy HH:mm' }}</span>
+                        </li>
+                    }
+                    @if (vacation.approved_by) {
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span i18n="@@i18n.vacation.approvedBy">approved by</span>
+                            <span>{{ vacation.approved_by.getName() }}</span>
+                        </li>
+                    }
+                </ul>
+
+                @if (_grant) {
+                    <div class="card">
+                        <div class="card-header" i18n="@@i18n.common.leaveAllowance">leave allowance</div>
+                        <ul class="list-group">
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span i18n="@@i18n.vacation.currentBalance">current balance</span>
+                                <span class="text-nowrap">{{ _grant.remainingHours() | number: '1.0-1' }}h</span>
+                            </li>
+                            @if (isOpen()) {
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span i18n="@@i18n.vacation.balanceIfApproved">balance if approved</span>
+                                    <span class="text-nowrap" [class.text-danger]="remainingAfterApproval() < 0">{{ remainingAfterApproval() | number: '1.0-1' }}h</span>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                @if (canDecide() && showDeclineReason()) {
+                    <div class="mt-3">
+                        <label class="form-label" i18n="@@i18n.confirm.pleaseSpecifyAReason">please specify a reason</label>
+                        <textarea class="form-control" rows="2" [(ngModel)]="declineReason"></textarea>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn" (click)="decline()" data-bs-dismiss="modal" i18n="@@i18n.common.close">close</button>
+                @if (canWithdraw()) {
+                    <button type="button" class="btn btn-outline-danger" (click)="onWithdraw()" i18n="@@i18n.vacation.withdraw">withdraw</button>
+                }
+                @if (canDecide()) {
+                    <button type="button" class="btn btn-outline-danger" (click)="onDecline()" i18n="@@i18n.common.reject">reject</button>
+                    @if (!showDeclineReason()) {
+                        <button type="button" class="btn btn-success" (click)="onApprove()" hotkey="CTRL+ENTER" i18n="@@i18n.common.approve">approve</button>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>

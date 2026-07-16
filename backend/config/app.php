@@ -132,6 +132,10 @@ return [
 
     'team_monitor_api_key' => env('TEAM_MONITOR_API_KEY', ''),
 
+    'api_url'     => env('API_URL', env('APP_URL', 'http://localhost')),
+    'reverb_key'  => env('REVERB_APP_KEY', 'nexus-key'),
+    'nexus_debug' => (bool)env('NEXUS_DEBUG', false),
+
     'cipher' => 'AES-256-CBC',
 
     /*

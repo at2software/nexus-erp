@@ -1,0 +1,37 @@
+@let _data = data();
+<div class="card card-chart mb-3">
+    <div class="card-header gap-2">
+        <n class="local-ai-icon" [mlReliability]="'customer_churn'">local_ai</n>
+        <span class="flex-fill text-truncate" i18n="@@i18n.widget-customer-churn">customer churn</span>
+        <span class="badge badge-dark">{{ value() ?? (value() | loading) }}</span>
+    </div>
+
+    <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+
+    <ul-compact revealList [badge]="badgeCount(_data) > 0 ? '' + badgeCount(_data) : undefined">
+        @for (_ of _data; track _.id; let i = $index) {
+            @let overdue = (_.ml_overdue_for_contact ?? false);
+            @let churn_danger = (_.ml_churn_probability_12m ?? 0) >= 0.5 ? true : false;
+            <li 
+                class="list-group-item d-flex text-nowrap" 
+                [nx]="_" [tables]="_data" 
+                [compact]="!overdue && !churn_danger">
+                <div>
+                    <avatar [object]="_"></avatar>
+                </div>
+                <div class="flex-fill ms-3 text-truncate">
+                    <div class="d-flex text-truncate">
+                        <div class="flex-fill text-truncate">{{ _.getName() }}</div>
+                        <div class="text-nowrap" [class.text-danger]="(_.ml_churn_probability_12m ?? 0) >= 0.5" [class.text-primary]="(_.ml_churn_probability_12m ?? 0) < 0.5">{{ _.ml_churn_probability_12m | percent: '1.0-0' }}</div>
+                    </div>
+                    @if (_.ml_overdue_for_contact) {
+                        <div class="text-muted text-truncate small">
+                            <span i18n="@@i18n.customers.mlNextPurchase">predicted next purchase</span>: {{ _.ml_predicted_next_purchase_date }}
+                            <i class="ms-1 text-danger" ngbTooltip="predicted next purchase date is in the past — contact this customer" i18n-ngbTooltip="@@i18n.customers.contactNowTip">notification_important</i>
+                        </div>
+                    }
+                </div>
+            </li>
+        }
+    </ul-compact>
+</div>

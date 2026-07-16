@@ -12,15 +12,10 @@ import { TabTasksBaseComponent } from '../tab-tasks-base.component';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'tab-tasks-marketing-activities',
     templateUrl: './tab-tasks-marketing-activities.component.html',
-    standalone: true,
     imports: [Nx, NComponent, NgbTooltipModule, RouterModule, DatePipe],
 })
 export class TabTasksMarketingActivitiesComponent extends TabTasksBaseComponent {
     activities = signal<MarketingProspectActivity[]>([]);
-
-    readonly #collapsed = signal<Set<string>>(new Set());
-    toggle = (key: string) => this.#collapsed.update(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
-    isCollapsed = (key: string) => this.#collapsed().has(key);
 
     #service = inject(MarketingService);
 

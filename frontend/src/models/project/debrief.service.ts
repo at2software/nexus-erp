@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { NexusHttpService } from '@models/http/http.nexus';
+import { NexusHttpService, Page } from '@models/http/http.nexus';
+import { Dictionary } from '@constants/constants';
 import { DebriefProblemCategory } from './debrief-problem-category.model';
 import { DebriefProblem } from './debrief-problem.model';
 import { DebriefSolution } from './debrief-solution.model';
@@ -8,84 +9,35 @@ import { DebriefProjectDebrief } from './debrief-project-debrief.model';
 import { DebriefPositive } from './debrief-positive.model';
 import { Company } from '@models/company/company.model';
 import { Project } from './project.model';
+import { DebriefStats, CategoryBreakdown, CategoryBreakdownPositives, TrendData, DebriefStatsResponse } from '@models/api-response';
 
-export interface DebriefStats {
-    total_debriefs: number;
-    completed_debriefs: number;
-    draft_debriefs: number;
-    total_problems_recorded: number;
-    avg_problems_per_debrief: number;
-    avg_solution_effectiveness: number;
-    total_unique_problems: number;
-    total_unique_solutions: number;
-}
-
-export interface CategoryBreakdown {
-    category_id: string;
-    category_name: string;
-    category_color: string;
-    category_icon: string;
-    total_problems: number;
-    severity_counts: { low: number; medium: number; high: number; critical: number };
-    weighted_score: number;
-    problems?: { id: string; title: string; severity?: string; usage_count?: number; projects?: { id: string; name: string; icon: string }[] }[];
-}
-
-export interface TopSolution {
-    id: string;
-    title: string;
-    avg_effectiveness: number;
-    usage_count: number;
-}
-
-export interface CategoryBreakdownPositives {
-    category_id: string;
-    category_name: string;
-    category_color: string;
-    category_icon: string;
-    total_positives: number;
-}
-
-export interface TrendData {
-    month: string;
-    debriefs_count: number;
-    problems_count: number;
-}
+export type DebriefStatsResult = DebriefStatsResponse<DebriefProblem, DebriefSolution, DebriefPositive, Company>;
 
 @Injectable({ providedIn: 'root' })
 export class DebriefService extends NexusHttpService<DebriefProjectDebrief> {
     public apiPath = 'debriefs';
-    public TYPE = () => DebriefProjectDebrief;
+    override readonly model = DebriefProjectDebrief;
 
     // Categories
-    indexCategories = (): Observable<DebriefProblemCategory[]> => this.aget('debriefs/categories', {}, DebriefProblemCategory);
+    indexCategories = () => this.aget('debriefs/categories', {}, DebriefProblemCategory);
 
     // Problems
-    indexProblems = (filters?: any): Observable<DebriefProblem[]> => this.paginate('debriefs/problems', filters);
-
-    searchProblems = (q: string, categoryId?: string): Observable<DebriefProblem[]> => this.aget('debriefs/problems', categoryId ? { q, category_id: categoryId, limit: 20 } : { q, limit: 20 }, DebriefProblem);
-
-    storeProblem = (data: Partial<DebriefProblem>): Observable<DebriefProblem> => this.post('debriefs/problems', data, DebriefProblem);
-
-    showProblem = (id: string): Observable<DebriefProblem> => this.get(`debriefs/problems/${id}`, {});
-
-    updateProblem = (id: string, data: Partial<DebriefProblem>): Observable<DebriefProblem> => this.put(`debriefs/problems/${id}`, data, DebriefProblem);
-
-    destroyProblem = (id: string): Observable<void> => this.delete(`debriefs/problems/${id}`);
+    indexProblems = (filters?: Dictionary) => this.paginate('debriefs/problems', filters, DebriefProblem);
+    searchProblems = (q: string, categoryId?: string) => this.aget('debriefs/problems', categoryId ? { q, category_id: categoryId, limit: 20 } : { q, limit: 20 }, DebriefProblem);
+    storeProblem = (data: Partial<DebriefProblem>) => this.post('debriefs/problems', data, DebriefProblem);
+    showProblem = (id: string) => this.get(`debriefs/problems/${id}`, {});
+    updateProblem = (id: string, data: Partial<DebriefProblem>) => this.put(`debriefs/problems/${id}`, data, DebriefProblem);
+    destroyProblem = (id: string) => this.delete(`debriefs/problems/${id}`);
 
     // Solutions
-    indexSolutions = (filters?: any): Observable<DebriefSolution[]> => this.paginate('debriefs/solutions', filters);
-
-    searchSolutions = (q: string): Observable<DebriefSolution[]> => this.aget('debriefs/solutions', { q, limit: 20 }, DebriefSolution);
-
-    storeSolution = (data: Partial<DebriefSolution>): Observable<DebriefSolution> => this.post('debriefs/solutions', data, DebriefSolution);
-
-    updateSolution = (id: string, data: Partial<DebriefSolution>): Observable<DebriefSolution> => this.put(`debriefs/solutions/${id}`, data, DebriefSolution);
-
-    destroySolution = (id: string): Observable<void> => this.delete(`debriefs/solutions/${id}`);
+    indexSolutions = (filters?: Dictionary) => this.paginate('debriefs/solutions', filters, DebriefSolution);
+    searchSolutions = (q: string) => this.aget('debriefs/solutions', { q, limit: 20 }, DebriefSolution);
+    storeSolution = (data: Partial<DebriefSolution>) => this.post('debriefs/solutions', data, DebriefSolution);
+    updateSolution = (id: string, data: Partial<DebriefSolution>) => this.put(`debriefs/solutions/${id}`, data, DebriefSolution);
+    destroySolution = (id: string) => this.delete(`debriefs/solutions/${id}`);
 
     // Problem-Solution Links
-    linkSolution = (problemId: string, solutionId: string, debriefId?: string, rating?: number): Observable<DebriefProblem> =>
+    linkSolution = (problemId: string, solutionId: string, debriefId?: string, rating?: number) =>
         this.post(
             `debriefs/problems/${problemId}/solutions`,
             {
@@ -96,8 +48,7 @@ export class DebriefService extends NexusHttpService<DebriefProjectDebrief> {
             DebriefProblem,
         );
 
-    rateSolution = (problemId: string, solutionId: string, rating: number, notes?: string): Observable<DebriefProblem> =>
-        this.put(
+    rateSolution = (problemId: string, solutionId: string, rating: number, notes?: string) => this.put(
             `debriefs/problems/${problemId}/solutions/${solutionId}`,
             {
                 effectiveness_rating: rating,
@@ -106,21 +57,17 @@ export class DebriefService extends NexusHttpService<DebriefProjectDebrief> {
             DebriefProblem,
         );
 
-    unlinkSolution = (problemId: string, solutionId: string): Observable<void> => this.delete(`debriefs/problems/${problemId}/solutions/${solutionId}`);
+    unlinkSolution = (problemId: string, solutionId: string) => this.delete(`debriefs/problems/${problemId}/solutions/${solutionId}`);
 
     // Project Debriefs
-    indexDebriefs = (filters?: any): Observable<DebriefProjectDebrief[]> => this.paginate('debriefs', filters);
-
-    indexProjectDebriefs = (projectId: string): Observable<DebriefProjectDebrief[]> => this.aget(`projects/${projectId}/debriefs`, {}, DebriefProjectDebrief);
-
-    createProjectDebrief = (projectId: string): Observable<DebriefProjectDebrief> => this.post(`projects/${projectId}/debriefs`, {}, DebriefProjectDebrief);
-
-    updateDebrief = (id: string, data: Partial<DebriefProjectDebrief>): Observable<DebriefProjectDebrief> => this.put(`debriefs/${id}`, data, DebriefProjectDebrief);
-
-    deleteDebrief = (id: string): Observable<void> => this.delete(`debriefs/${id}`);
+    indexDebriefs = (filters?: Dictionary) => this.paginate('debriefs', filters);
+    indexProjectDebriefs = (projectId: string) => this.aget(`projects/${projectId}/debriefs`, {}, DebriefProjectDebrief);
+    createProjectDebrief = (projectId: string) => this.post(`projects/${projectId}/debriefs`, {}, DebriefProjectDebrief);
+    updateDebrief = (id: string, data: Partial<DebriefProjectDebrief>) => this.put(`debriefs/${id}`, data, DebriefProjectDebrief);
+    deleteDebrief = (id: string) => this.delete(`debriefs/${id}`);
 
     // Problem-Debrief Links
-    attachProblem = (debriefId: string, problemId: string, severity?: string, contextNotes?: string): Observable<DebriefProjectDebrief> =>
+    attachProblem = (debriefId: string, problemId: string, severity?: string, contextNotes?: string) =>
         this.post(
             `debriefs/${debriefId}/problems`,
             {
@@ -131,7 +78,7 @@ export class DebriefService extends NexusHttpService<DebriefProjectDebrief> {
             DebriefProjectDebrief,
         );
 
-    updateProblemSeverity = (debriefId: string, problemId: string, severity: string, contextNotes?: string): Observable<DebriefProjectDebrief> =>
+    updateProblemSeverity = (debriefId: string, problemId: string, severity: string, contextNotes?: string) =>
         this.put(
             `debriefs/${debriefId}/problems/${problemId}`,
             {
@@ -141,68 +88,42 @@ export class DebriefService extends NexusHttpService<DebriefProjectDebrief> {
             DebriefProjectDebrief,
         );
 
-    detachProblem = (debriefId: string, problemId: string): Observable<void> => this.delete(`debriefs/${debriefId}/problems/${problemId}`);
-
-    detachPositive = (debriefId: string, positiveId: string): Observable<void> => this.delete(`debriefs/${debriefId}/positives/${positiveId}`);
+    detachProblem = (debriefId: string, problemId: string) => this.delete(`debriefs/${debriefId}/problems/${problemId}`);
+    detachPositive = (debriefId: string, positiveId: string) => this.delete(`debriefs/${debriefId}/positives/${positiveId}`);
 
     // Positives
-    searchPositives = (q: string): Observable<DebriefPositive[]> => this.aget('debriefs/positives/search', { q }, DebriefPositive);
-
-    storePositive = (debriefId: string, data: Partial<DebriefPositive>): Observable<DebriefPositive> => this.post(`debriefs/${debriefId}/positives`, data, DebriefPositive);
-
-    updatePositive = (id: string, data: Partial<DebriefPositive>): Observable<DebriefPositive> => this.put(`debriefs/positives/${id}`, data, DebriefPositive);
-
-    destroyPositive = (id: string): Observable<void> => this.delete(`debriefs/positives/${id}`);
+    searchPositives = (q: string) => this.aget('debriefs/positives/search', { q }, DebriefPositive);
+    storePositive = (debriefId: string, data: Partial<DebriefPositive>) => this.post(`debriefs/${debriefId}/positives`, data, DebriefPositive);
+    updatePositive = (id: string, data: Partial<DebriefPositive>) => this.put(`debriefs/positives/${id}`, data, DebriefPositive);
+    destroyPositive = (id: string) => this.delete(`debriefs/positives/${id}`);
 
     // Analytics
-    getStatsAggregated = (filters?: any): Observable<DebriefStats> => this.get('debriefs/stats/aggregated', filters) as Observable<DebriefStats>;
+    getStatsAggregated = (filters?: Dictionary) => this.get<DebriefStats>('debriefs/stats/aggregated', filters);
+    getStatsCategories = (filters?: Dictionary) => this.aget<CategoryBreakdown>('debriefs/stats/categories', filters);
+    getStatsTopProblems = (limit?: number, filters?: Dictionary) => this.aget<DebriefProblem>('debriefs/stats/top-problems', { limit, ...filters });
 
-    getStatsCategories = (filters?: any): Observable<CategoryBreakdown[]> => this.aget('debriefs/stats/categories', filters) as Observable<CategoryBreakdown[]>;
+    getStatsTopSolutions = (limit?: number) => this.aget<DebriefSolution>('debriefs/stats/top-solutions', { limit });
 
-    getStatsTopProblems = (limit?: number, filters?: any): Observable<DebriefProblem[]> =>
-        (this.aget('debriefs/stats/top-problems', { limit, ...filters }) as Observable<any[]>).pipe(
-            map((items) =>
-                items.map((raw) => {
-                    const p = DebriefProblem.fromJson({ id: raw.id, title: raw.title, usage_count: raw.usage_count });
-                    p.var.category_name = raw.category;
-                    p.var.category_color = raw.category_color;
-                    return p;
-                }),
-            ),
-        );
+    getStatsTopPositives = (limit?: number, filters?: Dictionary) => this.aget<DebriefPositive>('debriefs/stats/top-positives', { limit, ...filters });
 
-    getStatsTopSolutions = (limit?: number): Observable<TopSolution[]> => this.aget('debriefs/stats/top-solutions', { limit }) as Observable<TopSolution[]>;
+    getStatsCategoriesPositives = (filters?: Dictionary) => this.aget<CategoryBreakdownPositives>('debriefs/stats/categories-positives', filters);
+    getStatsTrends = (months?: number) => this.aget<TrendData>('debriefs/stats/trends', { months });
+    combineProblems = (keepId: string, mergeIds: string[], title: string) => this.post('debriefs/problems/combine', { keep_id: keepId, merge_ids: mergeIds, title });
+    combinePositives = (ids: string[], title: string) => this.post('debriefs/positives/combine', { ids, title });
+    getStatsTopCustomers = (type: 'worst' | 'best', limit?: number, filters?: Dictionary) => this.aget<Company>(`debriefs/stats/top-customers-${type}`, { limit, ...filters }, Company);
 
-    getStatsTopPositives = (limit?: number, filters?: any): Observable<DebriefPositive[]> =>
-        (this.aget('debriefs/stats/top-positives', { limit, ...filters }) as Observable<any[]>).pipe(
-            map((items) =>
-                items.map((raw) => {
-                    const p = DebriefPositive.fromJson({ id: raw.id, title: raw.title });
-                    p.var.category_name = raw.category;
-                    p.var.category_color = raw.category_color;
-                    p.var.count = raw.count;
-                    p.var.projects = (raw.projects || []).map((proj: any) => Project.fromJson(proj));
-                    return p;
-                }),
-            ),
-        );
-
-    getStatsCategoriesPositives = (filters?: any): Observable<CategoryBreakdownPositives[]> => this.aget('debriefs/stats/categories-positives', filters) as Observable<CategoryBreakdownPositives[]>;
-
-    getStatsTrends = (months?: number): Observable<TrendData[]> => this.aget('debriefs/stats/trends', { months }) as Observable<TrendData[]>;
-
-    combineProblems = (keepId: string, mergeIds: string[], title: string): Observable<void> => this.post('debriefs/problems/combine', { keep_id: keepId, merge_ids: mergeIds, title }) as Observable<void>;
-
-    combinePositives = (ids: string[], title: string): Observable<void> => this.post('debriefs/positives/combine', { ids, title }) as Observable<void>;
-
-    getStatsTopCustomers = (type: 'worst' | 'best', limit?: number, filters?: any): Observable<Company[]> =>
-        (this.aget(`debriefs/stats/top-customers-${type}`, { limit, ...filters }) as Observable<any[]>).pipe(
-            map((items) =>
-                items.map((raw) => {
-                    const c = Company.fromJson(raw);
-                    c.var.count = raw.count;
-                    return c;
-                }),
-            ),
+    getStats = (include?: string[], filters?: Dictionary, limit?: number, months?: number): Observable<DebriefStatsResult> =>
+        (this.get<DebriefStatsResponse>('debriefs/stats', { include: include?.join(','), limit, months, ...filters })).pipe(
+            map((raw) => ({
+                aggregated: raw.aggregated,
+                categories: raw.categories,
+                categories_positives: raw.categories_positives,
+                trends: raw.trends,
+                top_problems: raw.top_problems?.map((item) => DebriefProblem.fromJson(item)),
+                top_solutions: raw.top_solutions?.map((item) => DebriefSolution.fromJson(item)),
+                top_positives: raw.top_positives?.map((item) => DebriefPositive.fromJson(item)),
+                top_customers_worst: raw.top_customers_worst?.map((item) => Company.fromJson(item)),
+                top_customers_best: raw.top_customers_best?.map((item) => Company.fromJson(item)),
+            })),
         );
 }

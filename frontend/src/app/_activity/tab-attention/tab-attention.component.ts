@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { timer } from 'rxjs';
+import { debounceTime, filter } from 'rxjs/operators';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
@@ -14,26 +14,41 @@ import { GlobalService } from '@models/global.service';
 import { WidgetService } from '@models/widget.service';
 import { MoneyShortPipe } from '@pipes/mshort.pipe';
 import { SafePipe } from '@pipes/safe.pipe';
+import { WebSocketService } from 'src/services/websocket.service';
+import type { Serializable } from '@models/serializable';
+import { Comment } from '@models/comment/comment.model';
+import { Invoice } from '@models/invoice/invoice.model';
+import { Company } from '@models/company/company.model';
+import { Project } from '@models/project/project.model';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'activity-tab-attention',
     templateUrl: './tab-attention.component.html',
     styleUrls: ['./tab-attention.component.scss'],
-    standalone: true,
     imports: [ActivityTabComponent, ScrollbarComponent, Nx, NComponent, AvatarComponent, DatePipe, NgbTooltipModule, MoneyShortPipe, PermissionsDirective, SafePipe],
 })
 export class TabAttentionComponent {
     #widgetService = inject(WidgetService);
     #globalInit = inject(GlobalService).init;
+    #ws = inject(WebSocketService);
     #knownItemCount = 0;
     #initialized = false;
     #untilDestroyed = takeUntilDestroyed();
 
+    // frontend `class` names of the models surfaced in this feed
+    #watchedClasses = new Set(['Comment', 'Invoice', 'Company', 'Project']);
+
     readonly componentType = TabAttentionComponent;
     readonly tabComponent = viewChild.required(ActivityTabComponent);
 
-    newItems = signal<any[]>([]);
+    
+    protected readonly Comment = Comment;
+    protected readonly Invoice = Invoice;
+    protected readonly Company = Company;
+    protected readonly Project = Project;
+
+    newItems = signal<Serializable[]>([]);
     groupedItems = computed(() => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -42,7 +57,7 @@ export class TabAttentionComponent {
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayTime = yesterday.getTime();
 
-        const groups: Record<string, any[]> = {};
+        const groups: Record<string, Serializable[]> = {};
         for (const item of this.newItems()) {
             const itemDate = new Date(item.created_at);
             itemDate.setHours(0, 0, 0, 0);
@@ -76,7 +91,17 @@ export class TabAttentionComponent {
             });
         });
         this.#globalInit.subscribe(() => {
-            timer(0, 60000).pipe(this.#untilDestroyed).subscribe(() => this.reload());
+            this.reload();
+            // refresh only when a watched type is created or deleted - 'updated' now also
+            // fires on every $touches cascade (e.g. an invoice item save touching its project)
+            // and would reload this feed far too often for no visible change.
+            this.#ws.dataChanged$
+                .pipe(
+                    filter((payload) => this.#watchedClasses.has(payload.class) && (payload.event === 'created' || payload.event === 'deleted')),
+                    debounceTime(500),
+                    this.#untilDestroyed,
+                )
+                .subscribe(() => this.reload());
         });
     }
 

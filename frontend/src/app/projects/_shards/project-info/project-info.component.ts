@@ -13,14 +13,15 @@ import { EchartsComponent } from '@charts/echarts-wrapper/echarts-wrapper.compon
 import { Color } from '@constants/Color';
 import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS, ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
 import { ProjectState } from '@models/project/project-state.model';
+import { NComponent } from '@shards/n/n.component';
+import { MlReliabilityDirective } from '@directives/ml-reliability.directive';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'project-info',
     templateUrl: './project-info.component.html',
     styleUrls: ['./project-info.component.scss'],
-    standalone: true,
-    imports: [PermissionsDirective, RouterModule, ChartProgressComponent, NgbTooltipModule, MoneyPipe, EchartsComponent, DecimalPipe, DatePipe],
+    imports: [PermissionsDirective, RouterModule, ChartProgressComponent, NgbTooltipModule, MoneyPipe, EchartsComponent, DecimalPipe, DatePipe, NComponent, MlReliabilityDirective],
 })
 export class ProjectInfoComponent {
     project = input.required<Project>();
@@ -41,7 +42,8 @@ export class ProjectInfoComponent {
         const dangerColor = Color.fromVar('danger').toHexString();
         const workShares = p.var.workshares || [];
 
-        const baseData = workShares.map((u: any) => ({
+        type WorkShare = { val: number; name: string; color: string };
+        const baseData = (workShares as WorkShare[]).map((u) => ({
             value: u.val,
             name: u.name,
             itemStyle: { color: u.color, ...ECHARTS_DONUT_ITEM_STYLE },
@@ -60,7 +62,7 @@ export class ProjectInfoComponent {
                 tooltip: {
                     trigger: 'item',
                     ...ECHARTS_DEFAULT_TOOLTIP_OPTIONS,
-                    formatter: (params: any) => `${params.name}: ${params.value.toFixed(1)}h`,
+                    formatter: (params: { name: string; value: number }) => `${params.name}: ${params.value.toFixed(1)}h`,
                 },
                 graphic: [{ type: 'text', left: 'center', top: 'center', style: { text: centerText, fill: centerColor, fontSize: 20, fontFamily: 'BrunoAce' } }],
                 series: [

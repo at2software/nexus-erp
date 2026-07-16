@@ -9,7 +9,6 @@ import { VcardComponent } from '@app/customers/_shards/vcard/vcard.component';
 @Component({
     selector: 'profile-vcard',
     templateUrl: './profile-vcard.component.html',
-    standalone: true,
     imports: [ScrollbarComponent, VcardComponent, NgbTooltipModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

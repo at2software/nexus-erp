@@ -11,10 +11,9 @@ class ProductGroup extends BaseModel {
     use HasFactory;
     use PrecomputedTrait;
 
-    protected $fillable = ['name', 'color', 'product_group_id', 'created_at', 'updated_at'];
+    protected $fillable = ['name', 'symbol', 'color', 'quote', 'product_group_id', 'created_at', 'updated_at'];
     protected $touches  = ['parent_group'];
     protected $appends  = ['class', 'icon', 'path'];
-    protected $access   = ['admin' => '*', 'project_manager' => 'r', 'user' => 'r'];
 
     protected function casts(): array {
         return [
@@ -50,6 +49,22 @@ class ProductGroup extends BaseModel {
             $descendants = $descendants->merge($child->getAllDescendantIds());
         }
         return $descendants;
+    }
+
+    public static function buildRootGroupMap(): \Illuminate\Support\Collection {
+        $groups = self::query()->select('id', 'product_group_id', 'name', 'color')->get()->keyBy('id');
+        return $groups->map(function ($group) use ($groups) {
+            $current = $group;
+            $visited = [];
+            while ($current->product_group_id && $groups->has($current->product_group_id)) {
+                if (isset($visited[$current->id])) {
+                    break;
+                }
+                $visited[$current->id] = true;
+                $current               = $groups->get($current->product_group_id);
+            }
+            return $current;
+        });
     }
 
     // API

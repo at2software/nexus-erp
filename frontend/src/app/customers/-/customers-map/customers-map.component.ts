@@ -1,39 +1,32 @@
-﻿import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, afterNextRender, inject, signal, viewChild } from '@angular/core';
+import { Dictionary } from '@constants/constants';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, inject, signal, viewChild } from '@angular/core';
 import { CompanyService } from '@models/company/company.service';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import * as L from 'leaflet';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
-
-interface CustomerLocation {
-    id: string;
-    name: string;
-    lat: number;
-    lng: number;
-    path: string;
-    pinSize: 'small' | 'medium' | 'large';
-    pinColor: 'grey' | 'red' | 'orange' | 'yellow' | 'green';
-}
+import { CustomerLocation } from '@models/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'customers-map',
     templateUrl: './customers-map.component.html',
     styleUrls: ['./customers-map.component.scss'],
-    standalone: true,
     imports: [ToolbarComponent, SpinnerComponent],
 })
-export class CustomersMapComponent implements OnDestroy {
+export class CustomersMapComponent {
     private readonly mapContainer = viewChild.required<ElementRef<HTMLElement>>('mapContainer');
 
     #companyService = inject(CompanyService);
+    #destroyRef = inject(DestroyRef);
 
     #map?: L.Map;
     #markers: L.Marker[] = [];
-    customers: CustomerLocation[] = [];
+    customers = signal<CustomerLocation[]>([]);
     loading = signal(true);
 
     constructor() {
-        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        // standard leaflet/webpack workaround: `_getIconUrl` is a private internal method not in the public typings
+        delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
         L.Icon.Default.mergeOptions({
             iconRetinaUrl: 'assets/leaflet/marker-icon-2x.png',
             iconUrl: 'assets/leaflet/marker-icon.png',
@@ -41,17 +34,14 @@ export class CustomersMapComponent implements OnDestroy {
         });
         this.#loadCustomers();
         afterNextRender(() => this.#initializeMap());
-    }
-
-    ngOnDestroy(): void {
-        this.#map?.remove();
+        this.#destroyRef.onDestroy(() => this.#map?.remove());
     }
 
     #loadCustomers(): void {
         this.loading.set(true);
         this.#companyService.getWithCoordinates().subscribe(
-            (response: any) => {
-                this.customers = response as CustomerLocation[];
+            (response) => {
+                this.customers.set(response);
                 this.loading.set(false);
                 if (this.#map) {
                     this.#addMarkersToMap();
@@ -80,7 +70,7 @@ export class CustomersMapComponent implements OnDestroy {
         }).addTo(this.#map);
 
         // Add markers if customers are already loaded
-        if (this.customers.length > 0) {
+        if (this.customers().length > 0) {
             this.#addMarkersToMap();
         }
     }
@@ -93,7 +83,7 @@ export class CustomersMapComponent implements OnDestroy {
         this.#markers = [];
 
         // Add markers for each customer
-        this.customers.forEach((customer) => {
+        this.customers().forEach((customer) => {
             // Validate coordinates before creating marker
             if (customer.lat && customer.lng && !isNaN(customer.lat) && !isNaN(customer.lng) && isFinite(customer.lat) && isFinite(customer.lng)) {
                 // Create custom icon based on pin properties
@@ -134,7 +124,7 @@ export class CustomersMapComponent implements OnDestroy {
     }
 
     #createCustomIcon(size: string, color: string): L.Icon {
-        const sizes: Record<string, [number, number]> = {
+        const sizes: Dictionary<[number, number]> = {
             small: [12, 19],
             medium: [18, 29],
             large: [24, 38],

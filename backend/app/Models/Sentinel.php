@@ -3,12 +3,12 @@
 namespace App\Models;
 
 use App\Enums\SentinelTriggerType;
-use App\Http\Middleware\Auth;
 use App\Jobs\ChatSendMessageJob;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class Sentinel extends BaseModel {
@@ -16,8 +16,10 @@ class Sentinel extends BaseModel {
 
     protected $fillable = ['name', 'trigger', 'table_name', 'trigger_variable', 'condition', 'result', 'user_id'];
     protected $appends  = ['subscribers'];
-    protected $access   = ['admin' => '*', 'project_manager' => '*', 'user' => '*'];
 
+    protected function casts(): array {
+        return ['trigger' => SentinelTriggerType::class];
+    }
     public function getSubscribersAttribute() {
         return $this->subscribers()->get();
     }
@@ -28,7 +30,7 @@ class Sentinel extends BaseModel {
         return $this->belongsTo(User::class);
     }
     public static function Store() {
-        $user = Auth::User();
+        $user = Auth::user();
         $new  = new Sentinel([
             'name'       => 'new sentinel',
             'table_name' => 'users',

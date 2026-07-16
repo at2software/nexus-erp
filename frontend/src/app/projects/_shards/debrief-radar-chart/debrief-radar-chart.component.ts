@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, effect, input, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, effect, input, viewChild } from '@angular/core';
+import { Dictionary } from '@constants/constants';
 
-import { CategoryBreakdown } from '@models/project/debrief.service';
+import { CategoryBreakdown } from '@models/api-response';
 
 @Component({
     selector: 'debrief-radar-chart',
-    standalone: true,
     imports: [],
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: ` <canvas #canvas class="w-100" [style.height]="height()"></canvas> `,
@@ -23,21 +23,21 @@ export class DebriefRadarChartComponent {
 
     protected readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
 
-    readonly #severityColors: Record<string, string> = {
+    readonly #severityColors: Dictionary<string> = {
         low: '#888888',
         medium: '#0A8BC9',
         high: '#FF6700',
         critical: '#F9001D',
     };
 
-    readonly #severityRadius: Record<string, number> = {
+    readonly #severityRadius: Dictionary<number> = {
         critical: 0.3,
         high: 0.5,
         medium: 0.7,
         low: 0.9,
     };
 
-    readonly #defaultCategories = ['Customer', 'Process', 'Technical', 'Planning'];
+    readonly #defaultCategories: string[] = ['Customer', 'Process', 'Technical', 'Planning'];
 
     constructor() {
         effect((onCleanup) => {

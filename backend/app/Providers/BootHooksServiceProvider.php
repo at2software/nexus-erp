@@ -2,24 +2,15 @@
 
 namespace App\Providers;
 
-use App\Http\Controllers\Controller;
 use App\Models\BaseModel;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\ServiceProvider;
 
 class BootHooksServiceProvider extends ServiceProvider {
     public function register(): void {
-        $this->resolve(Controller::class, '__boot');
-    }
-    protected function resolve($class, $prefix) {
-        $this->app->resolving($class, function ($controller, $app) use ($prefix) {
-            $methods = get_class_methods($controller);
-            foreach ($methods as $method) {
-                if (str_starts_with($method, $prefix)) {
-                    $controller->$method();
-                }
-            }
-        });
+        // The controller-level crud_role/$access permission layer has been retired
+        // in favour of explicit route role middleware (see routes/api.php). Model
+        // boot hooks remain unaffected; see boot() below.
     }
     public function boot(): void {
         Validator::extend('poly_exists', function ($attribute, $value, $parameters, $validator) {

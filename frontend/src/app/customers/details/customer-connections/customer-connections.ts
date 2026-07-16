@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { CompanyService } from '@models/company/company.service';
 import { Connection } from '@models/company/connection.model';
 import { Company } from '@models/company/company.model';
+import { Serializable } from '@models/serializable';
 import { CustomerDetailGuard } from '@app/customers/customers.details.guard';
 import { NetworkChart } from '@shards/network-chart/network-chart.component';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
@@ -16,7 +17,6 @@ import { AvatarComponent } from '@shards/avatar/avatar.component';
     selector: 'customer-connections',
     templateUrl: './customer-connections.html',
     styleUrls: ['./customer-connections.scss'],
-    standalone: true,
     imports: [ScrollbarComponent, NgbPopoverModule, SearchInputComponent, Nx, AvatarComponent, NetworkChart],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -51,9 +51,11 @@ export class CustomerConnections {
         this.chart().updateData();
     }
 
-    onCompanySelect(_: Company) {
+    onCompanySelect(_: Serializable) {
+        const company = _.assert(Company);
+        if (!company) return;
         const myCompany = this.myCompany();
-        Connection.fromJson({ company1_id: myCompany.id, company2_id: _.id })
+        Connection.fromJson({ company1_id: myCompany.id, company2_id: company.id })
             .store()
             .subscribe((_) => {
                 const n = Connection.fromJson(_);
@@ -63,11 +65,10 @@ export class CustomerConnections {
             });
     }
 
-    createNewCompany(searchInput: any) {
-        if (!searchInput.query) return;
-        this.#companyService.create(searchInput.query).subscribe((company: any) => {
-            this.onCompanySelect(Company.fromJson(company));
-        });
+    createNewCompany(searchInput: SearchInputComponent | undefined) {
+        const query = searchInput?.query();
+        if (!query) return;
+        this.#companyService.create(query).subscribe((company) => this.onCompanySelect(company));
     }
 
     onNodeSelected(companyId: string | null) {

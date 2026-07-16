@@ -1,3 +1,4 @@
+import { Dictionary } from '@constants/constants';
 import { Serializable } from '../serializable';
 import { MarketingService } from './marketing.service';
 import { Type } from 'class-transformer';
@@ -5,6 +6,7 @@ import { tap } from 'rxjs';
 import { MarketingProspect } from './marketing.prospect.model';
 import { MarketingInitiativeActivity } from './marketing-initiative-activity.model';
 import { Model } from '@constants/type-discriminators';
+import { NxAction } from '@app/nx/nx.actions';
 
 @Model('MarketingProspectActivity')
 export class MarketingProspectActivity extends Serializable {
@@ -43,11 +45,11 @@ export class MarketingProspectActivity extends Serializable {
     }
 
     doubleClickAction = 0;
-    actions = [
+    actions: NxAction[] = [
         {
             title: $localize`:@@i18n.common.view:view`,
             action: () => {
-                const context = (this as any).__nxContext;
+                const context = (this as Dictionary<unknown>).__nxContext as { router?: { navigate: (cmds: unknown[]) => void } } | undefined;
                 if (context?.router) {
                     context.router.navigate(['/marketing/prospects', this.marketing_prospect_id]);
                 } else if (typeof window !== 'undefined') {
@@ -59,19 +61,19 @@ export class MarketingProspectActivity extends Serializable {
             title: $localize`:@@i18n.common.reopen:reopen`,
             on: () => this.status !== 'pending',
             group: true,
-            action: () => this.update({ status: 'pending' }).pipe(tap((r: any) => this.status = r.status ?? 'pending')),
+            action: () => this.update({ status: 'pending' }).pipe(tap((r) => this.status = r.status ?? 'pending')),
         },
         {
             title: $localize`:@@i18n.marketing.mark_as_completed:mark as completed`,
             on: () => this.status === 'pending',
             group: true,
-            action: () => this.update({ status: 'completed' }).pipe(tap((r: any) => this.status = r.status ?? 'completed')),
+            action: () => this.update({ status: 'completed' }).pipe(tap((r) => this.status = r.status ?? 'completed')),
         },
         {
             title: $localize`:@@i18n.marketing.bump:bump`,
             on: () => this.status === 'pending' || this.status === 'overdue',
             group: true,
-            action: () => this.httpService.post(`${MarketingProspectActivity.API_PATH()}/${this.id}/bump`, {}).pipe(tap((r: any) => this.bumps = r.bumps ?? this.bumps + 1)),
+            action: () => this.httpService.post(`${MarketingProspectActivity.API_PATH()}/${this.id}/bump`, {}).pipe(tap((r) => this.bumps = (r as { bumps?: number })?.bumps ?? this.bumps + 1)),
         },
         // {
         //     title: $localize`:@@i18n.common.edit:edit`,
@@ -102,27 +104,27 @@ export class MarketingProspectActivity extends Serializable {
                 {
                     title: $localize`:@@i18n.marketing.mark_as_completed:mark as completed`,
                     group: true,
-                    action: () => this.update({ status: 'completed' }).pipe(tap((r: any) => this.status = r.status ?? 'completed')),
+                    action: () => this.update({ status: 'completed' }).pipe(tap((r) => this.status = r.status ?? 'completed')),
                 },
                 {
                     title: $localize`:@@i18n.tasks.reopen:reopen`,
                     group: true,
-                    action: () => this.update({ status: 'pending' }).pipe(tap((r: any) => this.status = r.status ?? 'pending')),
+                    action: () => this.update({ status: 'pending' }).pipe(tap((r) => this.status = r.status ?? 'pending')),
                 },
                 {
                     title: $localize`:@@i18n.marketing.skip_activity:skip activity`,
                     group: true,
-                    action: () => this.update({ status: 'skipped' }).pipe(tap((r: any) => this.status = r.status ?? 'skipped')),
+                    action: () => this.update({ status: 'skipped' }).pipe(tap((r) => this.status = r.status ?? 'skipped')),
                 },
                 {
                     title: $localize`:@@i18n.common.overdue:overdue`,
                     group: true,
-                    action: () => this.update({ status: 'overdue' }).pipe(tap((r: any) => this.status = r.status ?? 'overdue')),
+                    action: () => this.update({ status: 'overdue' }).pipe(tap((r) => this.status = r.status ?? 'overdue')),
                 },
                 {
                     title: $localize`:@@i18n.marketing.failed:failed`,
                     group: true,
-                    action: () => this.update({ status: 'failed' }).pipe(tap((r: any) => this.status = r.status ?? 'failed')),
+                    action: () => this.update({ status: 'failed' }).pipe(tap((r) => this.status = r.status ?? 'failed')),
                 },
             ],
         },

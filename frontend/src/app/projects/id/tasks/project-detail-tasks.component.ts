@@ -18,7 +18,6 @@ import { CompactItemDirective } from '@shards/ul-compact/CompactItemDirective';
     selector: 'project-detail-tasks',
     templateUrl: './project-detail-tasks.component.html',
     styleUrls: ['./project-detail-tasks.component.scss'],
-    standalone: true,
     imports: [NgTemplateOutlet, FormsModule, UlCompactComponent, CompactItemDirective, Nx, NComponent, NgbTooltipModule],
 })
 export class ProjectDetailTasksComponent {
@@ -43,7 +42,7 @@ export class ProjectDetailTasksComponent {
         });
     }
 
-    onCreate = (event: any) => {
+    onCreate = (event: Event) => {
         event.stopPropagation();
         event.preventDefault();
         const service = this.newTask.httpService;
@@ -58,8 +57,8 @@ export class ProjectDetailTasksComponent {
         const sub = this.instances().map((_) => _.indexTasks());
         forkJoin(sub).subscribe((tasks) => this.tasks.set(tasks.flat()));
     };
-    hideIcon = ($e: any) => {
-        $e.target.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HgAGgwJ/lK3Q6wAAAABJRU5ErkJggg==';
+    hideIcon = ($e: Event) => {
+        ($e.target as HTMLImageElement).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HgAGgwJ/lK3Q6wAAAABJRU5ErkJggg==';
     };
     colorFor = (_: Task) => (_?.user_name?.length ? Color.uniqueColorFromString(_.user_name) : '#333333');
 }

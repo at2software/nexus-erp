@@ -7,8 +7,6 @@ import { GlobalService } from '@models/global.service';
 @Component({
     selector: 'customers-nav',
     templateUrl: './customers-nav.component.html',
-    styleUrls: ['./customers-nav.component.scss'],
-    standalone: true,
     imports: [RouterModule, HeaderComponent, HeaderRouteNavComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

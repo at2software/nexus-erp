@@ -10,7 +10,7 @@
                         @let isSelected = selectedCategories().has(cat.name);
                         <li class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-2 category-item"
                             [class.active]="isSelected"
-                            (click)="toggleCategory(cat.name)">
+                            tabindex="0" (click)="toggleCategory(cat.name)" (keyup.enter)="toggleCategory(cat.name)">
                             <span class="category-dot flex-shrink-0" [style.background-color]="cat.color"></span>
                             <span class="flex-fill text-truncate">{{ cat.name }}</span>
                             <span class="text-end text-monospace ms-2 flex-shrink-0" [class.text-muted]="!isSelected">{{ cat.total | money }}</span>

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -20,6 +20,8 @@ import { Color } from '@constants/Color';
 import { ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
 import { ActivityTableComponent } from '@app/marketing/shared/activity-table/activity-table.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import type { EChartsOption } from 'echarts';
+import { ActivityStatsMap, InitiativeTimelineEntry } from '@models/api-response';
 
 const ActivityStatsColors = MarketingActivity.STATS_COLORS;
 
@@ -38,18 +40,12 @@ export class MarketingInitiativeDetailComponent {
 
     readonly STATS_COLORS = ActivityStatsColors;
 
-    initiative?: MarketingInitiative;
+    initiative = signal<MarketingInitiative | undefined>(undefined);
     isLoading = signal(true);
-    chartOptions: any = null;
-    donutChartOptions: any = null;
+    chartOptions = signal<EChartsOption | null>(null);
+    donutChartOptions = signal<EChartsOption | null>(null);
 
-    // Cached computed values (recomputed when initiative changes)
-    get isSubscribed(): boolean {
-        return this.initiative?.users?.some((u) => u.id === NxGlobal.global.user?.id) ?? false;
-    }
-    get allMetrics(): MarketingPerformanceMetric[] {
-        return this.initiative?.performance_metrics || [];
-    }
+    readonly isSubscribed = computed(() => this.initiative()?.users?.some((u) => u.id === NxGlobal.global.user?.id) ?? false);
 
     // Channel assignment
     showChannelModal = signal(false);
@@ -59,12 +55,12 @@ export class MarketingInitiativeDetailComponent {
 
     // Workflow selection
     showWorkflowModal = signal(false);
-    availableWorkflows: MarketingWorkflow[] = [];
+    availableWorkflows = signal<MarketingWorkflow[]>([]);
     selectedWorkflowId: string = '';
 
     // Metric selection
     showMetricModal = signal(false);
-    availableMetrics: MarketingPerformanceMetric[] = [];
+    availableMetrics = signal<MarketingPerformanceMetric[]>([]);
     selectedMetricId: string = '';
     metricTargetValue?: number;
 
@@ -88,18 +84,18 @@ export class MarketingInitiativeDetailComponent {
     }
 
     loadLeadSources() {
-        this.availableLeadSources = NxGlobal.global.lead_sources;
+        this.availableLeadSources = NxGlobal.global.lead_sources();
     }
 
     loadWorkflows() {
         this.#marketingService.indexWorkflows().subscribe((workflows: MarketingWorkflow[]) => {
-            this.availableWorkflows = workflows;
+            this.availableWorkflows.set(workflows);
         });
     }
 
     loadMetrics() {
         this.#marketingService.indexMetrics().subscribe((metrics: MarketingPerformanceMetric[]) => {
-            this.availableMetrics = metrics;
+            this.availableMetrics.set(metrics);
         });
     }
 
@@ -107,7 +103,7 @@ export class MarketingInitiativeDetailComponent {
         this.isLoading.set(true);
         this.#marketingService.showInitiative(id).subscribe({
             next: (initiative: MarketingInitiative) => {
-                this.initiative = initiative;
+                this.initiative.set(initiative);
                 this.isLoading.set(false);
                 this.#loadInitiativeStats(id);
                 if (!this.#route.firstChild && initiative.initiative_activities?.length) {
@@ -119,33 +115,36 @@ export class MarketingInitiativeDetailComponent {
     }
 
     #loadInitiativeStats(id: string) {
-        this.#marketingService.showInitiativeStats(id).subscribe((stats: any) => {
+        this.#marketingService.showInitiativeStats(id).subscribe((stats) => {
             this.#buildChart(stats.timeline);
             const actStats = stats.activities ?? stats.activity_stats ?? stats.initiative_activities ?? stats.per_activity;
-            if (actStats && this.initiative?.initiative_activities) {
+            if (actStats && this.initiative()?.initiative_activities) {
                 this.#applyActivityStats(actStats);
             }
         });
     }
 
-    #buildChart(timeline: any[]) {
+    #buildChart(timeline: InitiativeTimelineEntry[]) {
         if (!timeline || timeline.length === 0) {
-            this.chartOptions = null;
-            this.donutChartOptions = null;
+            this.chartOptions.set(null);
+            this.donutChartOptions.set(null);
             return;
         }
 
         const primaryColor = '#00c9a7';
         const totalData = timeline.map((t) => [t.timestamp, (t.new || 0) + (t.engaged || 0) + (t.unresponsive || 0) + (t.converted || 0)]);
 
-        this.chartOptions = {
+        this.chartOptions.set({
             chart: { height: 90 },
             backgroundColor: 'transparent',
             animation: false,
             grid: { left: 5, right: 5, top: 0, bottom: 0 },
             xAxis: { type: 'time', show: false },
             yAxis: { type: 'value', show: false, min: 0 },
-            tooltip: { trigger: 'axis', formatter: (params: any[]) => new Date(params[0]?.value[0]).toLocaleDateString() + ': ' + params[0]?.value[1] },
+            tooltip: { trigger: 'axis', formatter: (rawParams: unknown) => {
+                const params = rawParams as { value: [number, number] }[];
+                return new Date(params[0]?.value[0]).toLocaleDateString() + ': ' + params[0]?.value[1];
+            } },
             series: [
                 {
                     name: 'Prospects',
@@ -170,7 +169,7 @@ export class MarketingInitiativeDetailComponent {
                     },
                 },
             ],
-        };
+        });
 
         const latest = timeline[timeline.length - 1];
         const totalNew = latest.new || 0;
@@ -179,11 +178,14 @@ export class MarketingInitiativeDetailComponent {
         const totalConverted = latest.converted || 0;
         const total = totalNew + totalEngaged + totalUnresponsive + totalConverted;
 
-        this.donutChartOptions = {
+        this.donutChartOptions.set({
             chart: { height: 100, width: 100 },
             backgroundColor: 'transparent',
             animation: false,
-            tooltip: { trigger: 'item', formatter: (p: any) => `${p.name}: ${p.value} (${total > 0 ? ((p.value / total) * 100).toFixed(1) : 0}%)` },
+            tooltip: { trigger: 'item', formatter: (rawParams: unknown) => {
+                const p = rawParams as { name: string; value: number };
+                return `${p.name}: ${p.value} (${total > 0 ? ((p.value / total) * 100).toFixed(1) : 0}%)`;
+            } },
             series: [
                 {
                     type: 'pie',
@@ -197,36 +199,39 @@ export class MarketingInitiativeDetailComponent {
                     label: { show: false },
                 },
             ],
-        };
+        });
     }
 
-    #applyActivityStats(activityStats: any) {
-        const isArray = Array.isArray(activityStats);
-        for (const activity of this.initiative!.initiative_activities!) {
-            const s = isArray ? activityStats.find((a: any) => String(a.id) === String(activity.id)) : activityStats[activity.id];
+    #applyActivityStats(activityStats: ActivityStatsMap) {
+        const initiative = this.initiative()!;
+        for (const activity of initiative.initiative_activities!) {
+            const s = Array.isArray(activityStats) ? activityStats.find((a) => String(a.id) === String(activity.id)) : activityStats[activity.id];
             if (s) activity.stats = s;
         }
-        this.initiative!.initiative_activities = [...this.initiative!.initiative_activities!];
+        initiative.initiative_activities = [...initiative.initiative_activities!];
+        this.initiative.update((current) => Object.assign(Object.create(Object.getPrototypeOf(current)), current));
         this.#cd.markForCheck();
     }
 
     subscribe() {
-        if (!this.initiative || !NxGlobal.global.user) return;
+        const initiative = this.initiative();
+        if (!initiative || !NxGlobal.global.user) return;
 
-        this.#marketingService.subscribeToInitiative(this.initiative.id, NxGlobal.global.user.id).subscribe(() => {
-            if (this.initiative) {
-                this.loadInitiative(this.initiative.id);
+        this.#marketingService.subscribeToInitiative(initiative.id, NxGlobal.global.user.id).subscribe(() => {
+            if (this.initiative()) {
+                this.loadInitiative(initiative.id);
             }
         });
     }
 
     unsubscribe() {
-        if (!this.initiative || !NxGlobal.global.user) return;
+        const initiative = this.initiative();
+        if (!initiative || !NxGlobal.global.user) return;
         if (!confirm('Unsubscribe from this initiative?')) return;
 
-        this.#marketingService.unsubscribeFromInitiative(this.initiative.id, NxGlobal.global.user.id.toString()).subscribe(() => {
-            if (this.initiative) {
-                this.loadInitiative(this.initiative.id);
+        this.#marketingService.unsubscribeFromInitiative(initiative.id, NxGlobal.global.user.id.toString()).subscribe(() => {
+            if (this.initiative()) {
+                this.loadInitiative(initiative.id);
             }
         });
     }
@@ -245,12 +250,13 @@ export class MarketingInitiativeDetailComponent {
     }
 
     removeChannel(channelId: number) {
-        if (!this.initiative) return;
+        const initiative = this.initiative();
+        if (!initiative) return;
         if (!confirm('Remove this channel from the initiative?')) return;
 
-        this.#marketingService.removeInitiativeChannel(this.initiative.id, channelId).subscribe(() => {
-            if (this.initiative) {
-                this.loadInitiative(this.initiative.id.toString());
+        this.#marketingService.removeInitiativeChannel(initiative.id, channelId).subscribe(() => {
+            if (this.initiative()) {
+                this.loadInitiative(initiative.id.toString());
             }
         });
     }
@@ -263,11 +269,12 @@ export class MarketingInitiativeDetailComponent {
 
     // Channel Management
     assignChannel() {
-        if (!this.initiative || !this.selectedChannelId) return;
+        const initiative = this.initiative();
+        if (!initiative || !this.selectedChannelId) return;
 
-        this.#marketingService.assignInitiativeChannel(this.initiative.id, parseInt(this.selectedChannelId), this.isPrimaryChannel()).subscribe(() => {
-            if (this.initiative) {
-                this.loadInitiative(this.initiative.id.toString());
+        this.#marketingService.assignInitiativeChannel(initiative.id, parseInt(this.selectedChannelId), this.isPrimaryChannel()).subscribe(() => {
+            if (this.initiative()) {
+                this.loadInitiative(initiative.id.toString());
             }
             this.resetChannelForm();
         });
@@ -281,17 +288,23 @@ export class MarketingInitiativeDetailComponent {
 
     // Workflow Management
     attachWorkflow() {
-        if (!this.initiative || !this.selectedWorkflowId) return;
+        const initiative = this.initiative();
+        if (!initiative || !this.selectedWorkflowId) return;
 
         this.#marketingService
-            .attachWorkflowToInitiative(this.initiative.id, {
+            .attachWorkflowToInitiative(initiative.id, {
                 marketing_workflow_id: this.selectedWorkflowId,
                 is_active: true,
             })
-            .subscribe((workflows: any) => {
-                if (this.initiative) {
-                    this.initiative.workflows = workflows;
-                }
+            // TODO(types): endpoint returns the initiative's full workflow list, but the service
+            // method is typed via `post(..., MarketingWorkflow)` (single item) since it deserializes
+            // per-item either way; cast once here rather than changing the shared post() overloads.
+            .subscribe((workflows) => {
+                this.initiative.update((current) => {
+                    if (!current) return current;
+                    current.workflows = workflows as unknown as MarketingWorkflow[];
+                    return Object.assign(Object.create(Object.getPrototypeOf(current)), current);
+                });
                 this.resetWorkflowForm();
             });
     }
@@ -303,24 +316,27 @@ export class MarketingInitiativeDetailComponent {
 
     // Metric Management
     attachMetric() {
-        if (!this.initiative || !this.selectedMetricId) return;
+        const initiative = this.initiative();
+        if (!initiative || !this.selectedMetricId) return;
 
         this.#marketingService
-            .attachMetricToInitiative(this.initiative.id, {
+            .attachMetricToInitiative(initiative.id, {
                 metric_id: this.selectedMetricId,
                 target_value: this.metricTargetValue,
             })
-            .pipe(map(() => this.availableMetrics.find((m) => m.id === this.selectedMetricId)!))
+            .pipe(map(() => this.availableMetrics().find((m) => m.id === this.selectedMetricId)!))
             .subscribe((metric: MarketingPerformanceMetric) => {
-                if (this.initiative && metric) {
+                if (metric) {
                     metric.pivot = {
                         target_value: this.metricTargetValue,
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString(),
                     };
-                    const metrics = this.initiative.performance_metrics || [];
-                    metrics.push(metric);
-                    this.initiative.performance_metrics = metrics;
+                    this.initiative.update((current) => {
+                        if (!current) return current;
+                        current.performance_metrics = [...(current.performance_metrics || []), metric];
+                        return Object.assign(Object.create(Object.getPrototypeOf(current)), current);
+                    });
                 }
                 this.resetMetricForm();
             });

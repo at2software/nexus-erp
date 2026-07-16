@@ -10,11 +10,14 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('webhooks:add-missing')->everyTenMinutes();
+// Must run before cron:cashflow / cron:monthly-stats, which consume the
+// projects.lead_probability it (re)computes — same-time-due commands run in
+// registration order (Laravel scheduler), so this stays first among :daily().
+Schedule::command('cron:update-lead-probability')->daily();
 Schedule::command('cron:standing-orders')->daily();
 Schedule::command('cron:cashflow')->daily();
 Schedule::command('cron:fetch-bank-balance')->daily();
 Schedule::command('cron:add-company-news-comments')->daily();
-Schedule::command('cron:update-lead-probability')->daily();
 Schedule::command('cron:support-regression')->monthly();
 Schedule::command('cron:linear-regression-forecast')->monthly();
 Schedule::command('cron:monthly-stats')->monthly();
@@ -28,6 +31,9 @@ Schedule::command('git:fetch-latest-framework-versions')->daily();
 Schedule::command('cron:uptime-monitor')->everyFiveMinutes();
 Schedule::command('cron:check-project-work-thresholds')->hourly();
 Schedule::command('chat:clean-pipeline-posts')->daily();
+Schedule::command('ml:train-all')->weekly();
+Schedule::command('cron:check-project-overrun-predictions')->daily();
+Schedule::command('cron:refresh-customer-predictions')->daily();
 
 foreach (['00:00', '08:00', '12:00', '17:00'] as $time) {
     Schedule::call(function () use ($time) {

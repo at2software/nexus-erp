@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgbDateAdapter, NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { NgbDateCarbonAdapter } from '@directives/ngb-date.adapter';
 import { UserEmployment } from '@models/user/user-employment.model';
@@ -12,9 +12,7 @@ import { HotkeyDirective } from '@directives/hotkey.directive';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'modal-new-employment',
     templateUrl: './modal-new-employment.component.html',
-    styleUrls: ['./modal-new-employment.component.scss'],
     providers: [{ provide: NgbDateAdapter, useClass: NgbDateCarbonAdapter }],
-    standalone: true,
     imports: [FormsModule, NgbDatepickerModule, HotkeyDirective],
 })
 export class ModalNewEmploymentComponent extends ModalBaseComponent<UserEmployment> {
@@ -26,8 +24,8 @@ export class ModalNewEmploymentComponent extends ModalBaseComponent<UserEmployme
     user!: User;
     start: string = '';
 
-    init(...args: any): void {
-        this.user = args[0];
+    init(user: User): void {
+        this.user = user;
     }
     onSuccess() {
         const e = UserEmployment.fromJson({});
@@ -43,7 +41,7 @@ export class ModalNewEmploymentComponent extends ModalBaseComponent<UserEmployme
         e.su = 0;
         e.is_time_based = this.TIME_BASED_TYPES.includes(this.type);
         e.started_at = this.start;
-        e.is_active = moment(this.start, 'YYYY-MM-DD').diff(moment(), 'seconds') < 0;
+        e.is_active = dayjs(this.start, 'YYYY-MM-DD').diff(dayjs(), 'seconds') < 0;
         return e;
     }
 }

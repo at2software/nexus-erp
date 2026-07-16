@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal, viewChild, effect, computed } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
@@ -8,7 +8,7 @@ import { ProjectDetailGuard } from '@app/projects/project-details.guard';
 import { Assignee } from '@models/assignee/assignee.model';
 import { AssignmentService } from '@models/assignee/assignment.service';
 import { CompanyContact } from '@models/company/company-contact.model';
-import { TBillingConsideration } from '@models/company/company.model';
+import { BillingConsideration } from '@models/api-response';
 import { GlobalService } from '@models/global.service';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { ProjectService } from '@models/project/project.service';
@@ -21,15 +21,17 @@ import { Invoice } from '@models/invoice/invoice.model';
 import { InvoicePrepareWrapper } from '@app/invoices/_shards/invoice-prepare-wrapper/invoice-prepare-wrapper';
 import { ToastService } from '@shards/toast/toast.service';
 import { ProbabilityCurvePoint } from './project-invoicing-gauge.component';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
 import { ModalEditInvoiceItemComponent } from '@app/_modals/modal-edit-invoice-item/modal-edit-invoice-item.component';
 import { ModalInvoiceDiscountComponent } from '@app/_modals/modal-invoice-discount/modal-invoice-discount.component';
 import { ModalInvoiceAddInstalmentComponent } from '@app/_modals/modal-invoice-add-instalment/modal-invoice-add-instalment.component';
 import { SafePipe } from '@pipes/safe.pipe';
 import { MoneyPipe } from '@pipes/money.pipe';
-import { forkJoin } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { QuoteAcceptancePrediction, QuoteAcceptanceSuggestion } from '@models/api-response';
+import { MlReliabilityDirective } from '@directives/ml-reliability.directive';
 
 export enum TInvoicing {
     Quote,
@@ -41,8 +43,7 @@ export enum TInvoicing {
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'project-detail-quote',
-    standalone: true,
-    imports: [FormsModule, DatePipe, DecimalPipe, ToolbarComponent, InvoicePrepareWrapper, NComponent, NgbTooltipModule, NgbDropdownModule, SafePipe, MoneyPipe],
+    imports: [FormsModule, DatePipe, DecimalPipe, PercentPipe, ToolbarComponent, InvoicePrepareWrapper, NComponent, NgbTooltipModule, NgbDropdownModule, SafePipe, MoneyPipe, MlReliabilityDirective],
     templateUrl: './project-invoicing.component.html',
     styleUrl: './project-invoicing.component.scss',
 })
@@ -63,7 +64,8 @@ export class ProjectInvoicingComponent {
     quoteDescriptions = signal<string[]>([]);
     invoicedUntil?: string = undefined;
     isCreatingInvoice = signal(false);
-    currentBillingConsiderations = signal<TBillingConsideration[]>([]);
+    currentBillingConsiderations = signal<BillingConsideration[]>([]);
+    quoteAcceptancePrediction = signal<QuoteAcceptancePrediction | null>(null);
     budgetCurve: ProbabilityCurvePoint[] = [];
     timeMult: number = 1;
     project = this.#parent.object();
@@ -82,6 +84,7 @@ export class ProjectInvoicingComponent {
         return parts.join(', ');
     });
     hasDownpaymentItems = computed((): boolean => this.#parent.object().invoice_items.some((x: InvoiceItem) => x.stage === 2 && !x.invoice_id) ?? false);
+    hasSupportItems = computed((): boolean => this.#parent.object().invoice_items.some((x: InvoiceItem) => x.stage === 1 && !x.invoice_id) ?? false);
     finalItems = computed((): InvoiceItem[] => this.#parent.object().invoice_items.filter((x: InvoiceItem) => x.stage === 0 && !x.invoice_id) ?? []);
     invoicedDownpayments = computed((): number => this.#parent.object().invoiced_downpayments ?? 0);
     pendingDownpayments = computed((): number => this.#parent.object().invoice_items?.filter((x: InvoiceItem) => x.stage === 2 && !x.invoice_id)?.reduce((sum: number, x: InvoiceItem) => sum + (x.net || 0), 0) ?? 0);
@@ -90,6 +93,20 @@ export class ProjectInvoicingComponent {
     invoicingProgress = computed((): number => {
         const net = this.#parent.object().net ?? 0;
         return net > 0 ? Math.min(1, this.invoicedTotal() / net) : 0;
+    });
+    // The [mlReliability] tooltip already surfaces the full reliability summary, but the
+    // card itself must stay hidden entirely if a later retrain ever degrades the model
+    // below the "beats baseline" bar — showing a probability nobody should trust would be
+    // worse than showing nothing. GlobalService.setting() is the same raw param source
+    // MlReliabilityDirective reads from.
+    quoteAcceptanceReliable = computed((): boolean => {
+        const raw = this.#global.setting('ML_RELIABILITY_PROJECT_QUOTE_ACCEPTANCE');
+        if (!raw) return false;
+        try {
+            return JSON.parse(raw as string).bucket !== 'low';
+        } catch {
+            return false;
+        }
     });
 
     private readonly invoicingContent = viewChild(InvoicePrepareWrapper);
@@ -114,6 +131,21 @@ export class ProjectInvoicingComponent {
             });
             this.invoicedUntil = '';
         });
+
+        // Separate effect (not the one above): fetching this on every tab switch (not
+        // just when the project itself changes) is intentional, but it must only run
+        // for the quote view — the other tabs have no use for an acceptance prediction.
+        effect(() => {
+            const object = this.#parent.object();
+            const type = this.invoicingType();
+            if (type !== TInvoicing.Quote) {
+                this.quoteAcceptancePrediction.set(null);
+                return;
+            }
+            this.#projectService.showQuoteAcceptancePrediction(object)
+                .pipe(catchError(() => of(null)))
+                .subscribe((prediction) => this.quoteAcceptancePrediction.set(prediction));
+        });
     }
 
     #updateTimeMult() {
@@ -121,7 +153,7 @@ export class ProjectInvoicingComponent {
         if (!this.#timeCurve.length || !project.started_at) return;
         const maxY = Math.max(...this.#timeCurve.map((p) => p.y));
         if (maxY === 0) return;
-        const days = moment().diff(moment(project.started_at), 'days');
+        const days = dayjs().diff(dayjs(project.started_at), 'days');
         const timeY = this.#findYBelowThreshold(this.#timeCurve, days) ?? this.#timeCurve[0].y;
         this.timeMult = timeY / maxY;
     }
@@ -168,7 +200,7 @@ export class ProjectInvoicingComponent {
         }
     }
 
-    onConsiderationsChanged = (considerations: TBillingConsideration[]) => {
+    onConsiderationsChanged = (considerations: BillingConsideration[]) => {
         setTimeout(() => this.currentBillingConsiderations.set(considerations));
     };
 
@@ -178,16 +210,23 @@ export class ProjectInvoicingComponent {
     }
 
     prepareInvoice() {
-        this.#projectService.moveRegularItemsToCustomer(this.#parent.object()).subscribe((_) => {
+        const moveToCustomer = this.invoicingType() === TInvoicing.SupportInvoice
+            ? this.#projectService.moveSupportToCustomer(this.#parent.object())
+            : this.#projectService.moveRegularItemsToCustomer(this.#parent.object());
+
+        moveToCustomer.subscribe((_) => {
             this.#router.navigate(['/customers/' + this.#parent.object().company_id + '/billing']);
         });
     }
-    makeInvoice = () => {
+    makeDraftInvoice = () => this.makeInvoice(true);
+    makeInvoice = (draft = false) => {
         const project = this.#parent.object();
         this.isCreatingInvoice.set(true);
         this.invoicingContent()?.table()?.clear();
         const callback = () => {
             this.isCreatingInvoice.set(false);
+            // A draft is just a downloaded preview — no number is consumed and no invoice exists to navigate to.
+            if (draft) return;
             this.#global.reloadInvoiceNumber().subscribe(() => {
                 this.#gotoCompanyInvoices();
             });
@@ -201,7 +240,7 @@ export class ProjectInvoicingComponent {
             case 1:
             case 2:
             case 3:
-                return this.#projectService.makeInvoice(project, type, callback);
+                return this.#projectService.makeInvoice(project, type, callback, draft);
         }
     };
     #gotoCompanyInvoices = () => this.#router.navigate(['customers/' + this.#parent.object().company.id + '/invoices']);
@@ -227,6 +266,29 @@ export class ProjectInvoicingComponent {
         if (!project.company?.employees) return [];
         return project.company.employees.filter((e) => !e.is_retired);
     };
+
+    /** One fixed localized template per feature+direction — mirrors the backend's "structured data only, no hardcoded sentences" rule (App\ML\ProjectQuoteWhatIf). */
+    suggestionText(s: QuoteAcceptanceSuggestion): string {
+        const to = Math.round(s.to);
+        const from = Math.round(s.from);
+        const points = (s.to - s.from).toFixed(0);
+        switch (s.feature) {
+            case 'item_count':
+                return s.to > s.from
+                    ? $localize`:@@i18n.projects.quoteSuggestion.moreItems:split into ${to} items (currently ${from})`
+                    : $localize`:@@i18n.projects.quoteSuggestion.fewerItems:combine into ${to} items (currently ${from})`;
+            case 'net':
+                return s.to > s.from
+                    ? $localize`:@@i18n.projects.quoteSuggestion.higherNet:increase the quote value`
+                    : $localize`:@@i18n.projects.quoteSuggestion.lowerNet:lower the quote value`;
+            case 'discount_pct':
+                return $localize`:@@i18n.projects.quoteSuggestion.discount:offer ${points} more discount`;
+            case 'prefix_length':
+                return s.from <= 0
+                    ? $localize`:@@i18n.projects.quoteSuggestion.addIntro:write a personalized introduction`
+                    : $localize`:@@i18n.projects.quoteSuggestion.longerIntro:write a longer introduction`;
+        }
+    }
 
     warningMissingContact = () => !this.#parent.object()?.personalized?.firstName;
     adresseeName = () => {
@@ -312,15 +374,12 @@ export class ProjectInvoicingComponent {
         const newItem = InvoiceItem.fromJson({ type });
         const project = this.#parent.object();
         ModalBaseService.open(ModalEditInvoiceItemComponent, newItem, project.company, $localize`:@@i18n.common.add:add`)
-            .then((result: any) => {
+            .then((result) => {
                 if (result?.item) {
                     const item = InvoiceItem.fromJson(result.item);
                     item.type = type;
                     this.#storeProjectItem(item, stage);
                 }
-            })
-            .catch(() => {
-                /* noop */
             });
     }
 
@@ -345,7 +404,7 @@ export class ProjectInvoicingComponent {
     onCreateDownpaymentInstalmentItem() {
         const project = this.#parent.object();
         ModalBaseService.open(ModalInvoiceAddInstalmentComponent, project, { defaultText: $localize`:@@i18n.common.downpayment:downpayment`, })
-            .then((item: InvoiceItem) => {
+            .then((item) => {
                 if (!item) return;
 
                 const amount = Math.abs(Number(item.price) || 0);
@@ -390,8 +449,7 @@ export class ProjectInvoicingComponent {
                 payload0.position = this.#getNextPositionForStage(0);
 
                 forkJoin([stage2Item.store(payload2), stage0Item.store(payload0)]).subscribe(() => this.#parent.reload());
-            })
-            .catch(() => { /* noop */ });
+            });
     }
 
     #openNewHeaderItem(stage: number, switchToQuote = false) {
@@ -406,9 +464,6 @@ export class ProjectInvoicingComponent {
                     price: 0,
                 });
                 this.#storeProjectItem(item, stage, switchToQuote);
-            })
-            .catch(() => {
-                /* noop */
             });
     }
 
@@ -416,7 +471,7 @@ export class ProjectInvoicingComponent {
         const project = this.#parent.object();
         const basePrice = project?.net ?? 0;
         ModalBaseService.open(ModalInvoiceDiscountComponent, $localize`:@@i18n.common.addDiscount:add discount`, basePrice)
-            .then((result: any) => {
+            .then((result) => {
                 if (!result) return;
                 const item = InvoiceItem.fromJson({
                     type: InvoiceItemType.Discount,
@@ -426,9 +481,6 @@ export class ProjectInvoicingComponent {
                     unit_name: result.unit,
                 });
                 this.#storeProjectItem(item, stage, switchToQuote);
-            })
-            .catch(() => {
-                /* noop */
             });
     }
 }

@@ -69,7 +69,7 @@ class FinTsBankService {
         '59050101' => ['name' => 'Sparkasse Dortmund',             'url' => 'https://www.sparkasse-dortmund.de/fints'],
         '70050000' => ['name' => 'Stadtsparkasse München',         'url' => 'https://www.sskm.de/fints'],
         '73350000' => ['name' => 'Sparkasse Nürnberg',             'url' => 'https://www.sparkasse-nuernberg.de/fints'],
-        '80550101' => ['name' => 'Ostsächsische Sparkasse Dresden','url' => 'https://www.oss.de/fints'],
+        '80550101' => ['name' => 'Ostsächsische Sparkasse Dresden', 'url' => 'https://www.oss.de/fints'],
 
     ];
 

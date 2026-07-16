@@ -22,8 +22,8 @@ class GenerateProjectQuoteAction {
             $project->company
         );
 
-        $content  = $this->buildContent($project, $items, $footer, $discounts, $lang);
-        $template = str_replace('[content]', $content, $template);
+        $content       = $this->buildContent($project, $items, $footer, $discounts, $lang);
+        $template      = str_replace('[content]', $content, $template);
         $projectHeader = '<table style="width:100%;border-collapse:collapse;margin:0;padding:0;"><tr>'
             .'<td style="font-weight:bold;white-space:nowrap;vertical-align:top;padding:0 4px 0 0;">'.__('pdf.project', [], $lang).': </td>'
             .'<td style="vertical-align:top;padding:0;">'.$project->name.'</td>'
@@ -66,7 +66,7 @@ class GenerateProjectQuoteAction {
         $headerPct = $isDe ? '%' : '%';
         $headerDue = $isDe ? 'Fälligkeit' : 'Due';
         $headerAmt = $isDe ? 'Betrag (netto)' : 'Amount (net)';
-        $net       = $project->net;
+        $net       = $project->netUnmasked();
 
         $rows = '';
         foreach ($steps as $step) {

@@ -28,7 +28,7 @@ class AddCompanyNewsComments extends Command {
      * Execute the console command.
      */
     public function handle() {
-        $companies      = Company::whereNotNull('commercial_register')->whereNot('is_deprecated', true)->get();
+        $companies       = Company::whereNotNull('commercial_register')->whereNot('is_deprecated', true)->get();
         $handelsRegister = app(HandelsRegister::class);
         $bundesanzeiger  = app(Bundesanzeiger::class);
 

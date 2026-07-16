@@ -9,7 +9,6 @@ import { Subject } from 'rxjs';
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: '',
-    standalone: true,
 })
 export abstract class ContinuousScrollComponent {
     #scrollSubject = new Subject();

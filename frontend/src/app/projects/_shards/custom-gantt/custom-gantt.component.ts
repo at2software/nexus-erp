@@ -1,9 +1,12 @@
-import { ChangeDetectionStrategy, Component, ElementRef, AfterViewInit, inject, HostListener, input, output, computed, signal, effect, untracked, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, NgZone, AfterViewInit, Injector, afterNextRender, inject, input, output, computed, signal, effect, untracked, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { fromEvent } from 'rxjs';
 import { Router } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { NgbDropdown, NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { Milestone } from '@models/milestones/milestone.model';
 import { Project } from '@models/project/project.model';
+import { Task } from '@models/tasks/task.model';
 import { User } from '@models/user/user.model';
 import { UserService } from '@models/user/user.service';
 import { NxService } from '@app/nx/nx.service';
@@ -12,14 +15,13 @@ import { MilestoneService } from '@models/milestones/milestone.service';
 import { Toast } from '@shards/toast/toast';
 import { environment } from 'src/environments/environment';
 import { Color } from '@constants/Color';
+import { storageGet, storageSet } from '@constants/storage';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 
-export interface GanttRow {
-    type: 'header' | 'milestone' | 'task';
-    data: any;
-    project?: Project;
-    milestone?: Milestone;
-}
+export type GanttRow =
+    | { type: 'header'; data: Project; project: Project; milestone?: Milestone }
+    | { type: 'milestone'; data: Milestone; project?: Project; milestone?: Milestone }
+    | { type: 'task'; data: Task; project?: Project; milestone?: Milestone };
 
 interface TimelineUnit {
     date: Date;
@@ -61,7 +63,6 @@ interface Dependency {
     selector: 'custom-gantt',
     templateUrl: './custom-gantt.component.html',
     styleUrls: ['./custom-gantt.component.scss'],
-    standalone: true,
     imports: [DecimalPipe, NgbDropdownModule, Nx, NgbTooltipModule, ToolbarComponent],
     host: { class: 'custom-gantt-host' },
 })
@@ -85,7 +86,7 @@ export class CustomGanttComponent implements AfterViewInit {
     timelineGroups = signal<TimelineGroup[]>([]);
     renderedMilestones = signal<RenderedMilestone[]>([]);
     dependencies = signal<Dependency[]>([]);
-    hideCompleted = signal(localStorage.getItem('gantt.hideCompleted') === 'true');
+    hideCompleted = signal(storageGet('gantt.hideCompleted', false));
     drawingDependency = signal(false);
     dependencyFromMilestone = signal<Milestone | null>(null);
     dependencyToMilestone = signal<Milestone | null>(null);
@@ -107,8 +108,6 @@ export class CustomGanttComponent implements AfterViewInit {
     #timelineGroups: TimelineGroup[] = [];
     #renderedMilestones: RenderedMilestone[] = [];
     #deps: Dependency[] = [];
-    #dragDuration = 0;
-
     #timelineStart = new Date();
     #timelineEnd = new Date();
     #xOffset = 0;
@@ -123,8 +122,8 @@ export class CustomGanttComponent implements AfterViewInit {
     #resizeEndDate: Date | null = null;
     #hasMoved = false;
     #dependencyHasMoved = false;
-    #completingTasks = new Set<string>();
-    #disappearingTasks = new Set<string>();
+    #completingTasks = signal<Set<string>>(new Set());
+    #disappearingTasks = signal<Set<string>>(new Set());
     #workloadMap = new Map<string, DailyWorkload>();
     #cachedTodayX = 0;
     #initialized = false;
@@ -136,6 +135,9 @@ export class CustomGanttComponent implements AfterViewInit {
     #nxService = inject(NxService);
     #milestoneService = inject(MilestoneService);
     #userService = inject(UserService);
+    #destroyRef = inject(DestroyRef);
+    #ngZone = inject(NgZone);
+    #injector = inject(Injector);
 
     visibleRows = computed(() => {
         const filtered = this.rows().filter((row) => !(row.type === 'task' && row.data.state === 1));
@@ -164,7 +166,9 @@ export class CustomGanttComponent implements AfterViewInit {
             untracked(() => {
                 this.#calculateTimeline();
                 this.#render();
-                if (this.#initialized) setTimeout(() => this.scrollToCurrentDate(), 100);
+                if (this.#initialized) {
+                    afterNextRender(() => this.scrollToCurrentDate(), { injector: this.#injector });
+                }
             });
         });
 
@@ -177,15 +181,21 @@ export class CustomGanttComponent implements AfterViewInit {
     ngAfterViewInit() {
         this.#render();
         this.#updateViewportBounds();
-        setTimeout(() => {
-            const host = this.#elementRef.nativeElement;
-            const currentScroll = host.scrollLeft;
-            host.scrollLeft = currentScroll + 1;
-            host.scrollLeft = currentScroll;
+        afterNextRender(() => {
+            this.#forceRepaint();
             this.#updateViewportBounds();
             this.scrollToCurrentDate();
             this.#initialized = true;
-        }, 100);
+        }, { injector: this.#injector });
+
+        this.#ngZone.runOutsideAngular(() => {
+            fromEvent<Event>(this.#elementRef.nativeElement, 'scroll')
+                .pipe(takeUntilDestroyed(this.#destroyRef))
+                .subscribe((event) => {
+                    this.scrollY.set((event.target as HTMLElement).scrollTop || 0);
+                    this.#updateViewportBounds();
+                });
+        });
     }
 
     #loadWorkloadData() {
@@ -197,9 +207,10 @@ export class CustomGanttComponent implements AfterViewInit {
         const end = new Date(this.#timelineEnd);
         end.setMonth(end.getMonth() + 1);
 
-        this.#userService.showDailyWorkload(user, start.toISOString().split('T')[0], end.toISOString().split('T')[0]).subscribe((data: any) => {
+        this.#userService.showDailyWorkload(user, start.toISOString().split('T')[0], end.toISOString().split('T')[0]).subscribe((data) => {
+            const workloadData = data as { daily_workload?: DailyWorkload[] };
             this.#workloadMap.clear();
-            data.daily_workload?.forEach((day: DailyWorkload) => this.#workloadMap.set(day.date, day));
+            workloadData.daily_workload?.forEach((day) => this.#workloadMap.set(day.date, day));
             this.#applyWorkloadToTimeline();
         });
     }
@@ -646,8 +657,9 @@ export class CustomGanttComponent implements AfterViewInit {
     #extractDependencies() {
         this.#deps = [];
         this.#renderedMilestones.forEach((rm) => {
-            rm.milestone.dependees?.forEach((dependee: any) => {
-                const dependeeId = typeof dependee === 'object' && dependee.id ? dependee.id : dependee;
+            rm.milestone.dependees?.forEach((dependee) => {
+                const dep = dependee as Milestone | number;
+                const dependeeId = typeof dep === 'object' && dep.id ? dep.id : dep;
                 const fromMilestone = this.#renderedMilestones.find((r) => String(r.milestone.id) === String(dependeeId));
                 if (fromMilestone) this.#deps.push({ from: fromMilestone.milestone, to: rm.milestone });
             });
@@ -727,9 +739,6 @@ export class CustomGanttComponent implements AfterViewInit {
             }
         });
 
-        this.#dragDuration = rendered.milestone.due_at
-            ? Math.floor((new Date(rendered.milestone.due_at).getTime() - new Date(rendered.milestone.started_at!).getTime()) / (1000 * 60 * 60 * 24))
-            : 0;
     }
 
     onBackgroundMouseDown(event: MouseEvent) {
@@ -753,12 +762,14 @@ export class CustomGanttComponent implements AfterViewInit {
         const minY = Math.min(start.y, end.y);
         const maxY = Math.max(start.y, end.y);
 
-        Array.from(this.svgContainer().nativeElement.querySelectorAll('.milestone-bar')).forEach((element: any) => {
-            if (!element.nx) return;
-            const rendered = this.#renderedMilestones.find((rm) => rm.milestone.id === (element.nx.nx() as Milestone).id);
+        type NxElement = Element & { nx?: Nx };
+        Array.from(this.svgContainer().nativeElement.querySelectorAll('.milestone-bar')).forEach((element) => {
+            const el = element as NxElement;
+            if (!el.nx) return;
+            const rendered = this.#renderedMilestones.find((rm) => rm.milestone.id === (el.nx!.nx() as Milestone).id);
             if (!rendered) return;
             const intersects = !(rendered.x + rendered.width < minX || rendered.x > maxX || rendered.y + 40 < minY || rendered.y + 8 > maxY);
-            if (intersects) this.#nxService.select(element.nx);
+            if (intersects) this.#nxService.select(el.nx);
         });
     }
 
@@ -896,7 +907,6 @@ export class CustomGanttComponent implements AfterViewInit {
             }
             this.#draggingMilestone = null;
             this.#dragStartDate = null;
-            this.#dragDuration = 0;
             this.#dragOriginalDates.clear();
         }
 
@@ -921,7 +931,7 @@ export class CustomGanttComponent implements AfterViewInit {
             return;
         }
 
-        const dependeeIds = milestone.dependees.map((dep: any) => (typeof dep === 'object' && dep.id ? Number(dep.id) : Number(dep)));
+        const dependeeIds = milestone.dependees.map((dep) => { const d = dep as Milestone | number; return typeof d === 'object' && d.id ? Number(d.id) : Number(d); });
         this.#milestoneService.removeDependencies(Number(milestone.id), dependeeIds).subscribe({
             next: () => {
                 milestone.dependees = [];
@@ -936,7 +946,7 @@ export class CustomGanttComponent implements AfterViewInit {
     #createDependency(from: Milestone, to: Milestone) {
         if (from.id === to.id) { Toast.error($localize`:@@i18n.milestone.cannotDependOnSelf:Cannot create dependency to the same milestone`); return; }
         if (from.project_id !== to.project_id) { Toast.error($localize`:@@i18n.milestone.dependencySameProject:Dependencies can only be created between milestones of the same project`); return; }
-        if (from.dependees?.some((id: any) => String(id) === String(to.id))) { Toast.error($localize`:@@i18n.milestone.dependencyExists:This dependency already exists`); return; }
+        if (from.dependees?.some((id) => String(id as Milestone | number) === String(to.id))) { Toast.error($localize`:@@i18n.milestone.dependencyExists:This dependency already exists`); return; }
 
         this.#milestoneService.addDependency(Number(from.id), Number(to.id)).subscribe({
             next: () => {
@@ -1028,28 +1038,25 @@ export class CustomGanttComponent implements AfterViewInit {
     navigateToProject = (project: Project) => this.#router.navigate(['/projects', project.id, 'milestones']);
 
     onDropdownOpenChange() {
-        setTimeout(() => {
-            const host = this.#elementRef.nativeElement;
-            const s = host.scrollLeft;
-            host.scrollLeft = s + 1;
-            host.scrollLeft = s;
-        }, 0);
+        afterNextRender(() => this.#forceRepaint(), { injector: this.#injector });
     }
 
     toggleHideCompleted() {
         this.hideCompleted.update((v) => !v);
-        localStorage.setItem('gantt.hideCompleted', this.hideCompleted().toString());
+        storageSet('gantt.hideCompleted', this.hideCompleted());
         this.#render();
     }
 
-    onAddMilestoneClick(project: Project, dropdown: NgbDropdown) {
+    onAddMilestoneClick(project: Project, dropdown: NgbDropdown, event: MouseEvent) {
+        event.stopPropagation();
         this.addMilestone.emit(project);
-        setTimeout(() => dropdown.close(), 0);
+        dropdown.close();
     }
 
-    onAddTaskClick(project: Project, dropdown: NgbDropdown) {
+    onAddTaskClick(project: Project, dropdown: NgbDropdown, event: MouseEvent) {
+        event.stopPropagation();
         this.addTask.emit(project);
-        setTimeout(() => dropdown.close(), 0);
+        dropdown.close();
     }
 
     getProjectDurationBar(project: Project): { x: number; width: number; label: string } | null {
@@ -1222,24 +1229,20 @@ export class CustomGanttComponent implements AfterViewInit {
 
     isMilestoneOverdue = (milestone: Milestone) => this.#isMilestoneOverdue(milestone);
 
-    onTaskCheckboxChange(task: any, event: Event) {
+    onTaskCheckboxChange(task: Task, event: Event) {
         const checked = (event.target as HTMLInputElement).checked;
         if (checked) {
             task.httpService?.close(task).subscribe({
                 next: () => {
                     task.state = 1;
-                    this.#completingTasks.add(task.id);
-                    setTimeout(() => {
-                        if (this.#completingTasks.has(task.id)) {
-                            this.#disappearingTasks.add(task.id);
-                            this.#completingTasks.delete(task.id);
-                        }
-                    }, 5000);
+                    this.#setTaskState(this.#disappearingTasks, task.id, false);
+                    this.#setTaskState(this.#completingTasks, task.id, true);
                 },
                 error: () => Toast.error($localize`:@@i18n.task.closeError:Failed to close task`),
             });
         } else {
-            this.#completingTasks.delete(task.id);
+            this.#setTaskState(this.#completingTasks, task.id, false);
+            this.#setTaskState(this.#disappearingTasks, task.id, false);
             task.httpService?.reopen(task).subscribe({
                 next: () => (task.state = 0),
                 error: () => Toast.error($localize`:@@i18n.task.reopenError:Failed to reopen task`),
@@ -1247,7 +1250,15 @@ export class CustomGanttComponent implements AfterViewInit {
         }
     }
 
-    onTaskContextMenu(event: MouseEvent, task: any) {
+    onTaskLabelAnimationEnd(taskId: string, event: AnimationEvent) {
+        if (event.animationName !== 'task-disappear' || !this.#completingTasks().has(taskId)) {
+            return;
+        }
+        this.#setTaskState(this.#completingTasks, taskId, false);
+        this.#setTaskState(this.#disappearingTasks, taskId, true);
+    }
+
+    onTaskContextMenu(event: MouseEvent, task: Task) {
         event.preventDefault();
         event.stopPropagation();
 
@@ -1268,13 +1279,28 @@ export class CustomGanttComponent implements AfterViewInit {
         this.#nxService.onRightClick(mockNxObject as any, event);
     }
 
-    isTaskDisappearing = (taskId: string) => this.#disappearingTasks.has(taskId);
-    isTaskCompleting = (taskId: string) => this.#completingTasks.has(taskId);
+    isTaskDisappearing = (taskId: string) => this.#disappearingTasks().has(taskId);
+    isTaskCompleting = (taskId: string) => this.#completingTasks().has(taskId);
 
-    @HostListener('scroll', ['$event'])
-    onScroll(event: Event) {
-        this.scrollY.set((event.target as HTMLElement).scrollTop || 0);
-        this.#updateViewportBounds();
+    #setTaskState(target: ReturnType<typeof signal<Set<string>>>, taskId: string, enabled: boolean) {
+        target.update((current) => {
+            const next = new Set(current);
+            if (enabled) {
+                next.add(taskId);
+            } else {
+                next.delete(taskId);
+            }
+            return next;
+        });
+    }
+
+    #forceRepaint() {
+        requestAnimationFrame(() => {
+            const host = this.#elementRef.nativeElement;
+            const scrollLeft = host.scrollLeft;
+            host.scrollLeft = scrollLeft + 1;
+            host.scrollLeft = scrollLeft;
+        });
     }
 
     scrollToCurrentDate() {

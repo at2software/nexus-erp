@@ -1,4 +1,6 @@
 @let _isLoading = isLoading();
+@let _stats = stats();
+@let _initiatives = initiatives();
 
 <div class="row" col-slider>
     <!-- Left: Initiatives list -->
@@ -15,19 +17,19 @@
             <div class="d-flex gap-1 p-2 border-bottom" data-tour="initiatives-filter">
                 <span class="badge cursor-pointer py-1 px-2" [class.bg-primary]="statusFilter === ''" [class.bg-dark]="statusFilter !== ''" (click)="filterByStatus('')" tabindex="0" (keydown.enter)="filterByStatus('')" i18n-ngbTooltip="@@i18n.marketing.total_initiatives" ngbTooltip="all">
                     <i style="font-size: 0.8rem; vertical-align: middle">filter_alt</i>
-                    <span class="ms-1 notranslate">{{ stats.total }}</span>
+                    <span class="ms-1 notranslate">{{ _stats.total }}</span>
                 </span>
                 <span class="badge cursor-pointer py-1 px-2" [class.bg-primary]="statusFilter === 'active'" [class.bg-dark]="statusFilter !== 'active'" (click)="filterByStatus('active')" tabindex="0" (keydown.enter)="filterByStatus('active')" i18n-ngbTooltip="@@i18n.common.active" ngbTooltip="active">
                     <i style="font-size: 0.8rem; vertical-align: middle">play_circle</i>
-                    <span class="ms-1 notranslate">{{ stats.active }}</span>
+                    <span class="ms-1 notranslate">{{ _stats.active }}</span>
                 </span>
                 <span class="badge cursor-pointer py-1 px-2" [class.bg-warning]="statusFilter === 'paused'" [class.bg-dark]="statusFilter !== 'paused'" (click)="filterByStatus('paused')" tabindex="0" (keydown.enter)="filterByStatus('paused')" i18n-ngbTooltip="@@i18n.marketing.paused" ngbTooltip="paused">
                     <i style="font-size: 0.8rem; vertical-align: middle">pause_circle</i>
-                    <span class="ms-1 notranslate">{{ stats.paused }}</span>
+                    <span class="ms-1 notranslate">{{ _stats.paused }}</span>
                 </span>
                 <span class="badge cursor-pointer py-1 px-2" [class.bg-success]="statusFilter === 'completed'" [class.bg-dark]="statusFilter !== 'completed'" (click)="filterByStatus('completed')" tabindex="0" (keydown.enter)="filterByStatus('completed')" i18n-ngbTooltip="@@i18n.common.completed" ngbTooltip="completed">
                     <i style="font-size: 0.8rem; vertical-align: middle">check_circle</i>
-                    <span class="ms-1 notranslate">{{ stats.completed }}</span>
+                    <span class="ms-1 notranslate">{{ _stats.completed }}</span>
                 </span>
             </div>
 
@@ -37,16 +39,16 @@
                 </div>
             }
 
-            @if (!_isLoading && initiatives.length === 0) {
+            @if (!_isLoading && _initiatives.length === 0) {
                 <empty-state [card]="false" class="marketing" i18n-title="@@i18n.marketing.no_initiatives_found" title="no initiatives yet">
                     <p class="text-muted small" i18n="@@i18n.marketing.create_first_initiative">Create your first marketing initiative to get started.</p>
                 </empty-state>
             }
 
-            @if (!_isLoading && initiatives.length > 0) {
+            @if (!_isLoading && _initiatives.length > 0) {
                 <ul class="list-group list-group-flush">
-                    @for (initiative of initiatives; track initiative.id) {
-                        <li [nx]="initiative" [tables]="initiatives" class="list-group-item list-group-item-action" routerLinkActive="active" [routerLinkActiveOptions]="{exact: false}" [routerLink]="['/marketing/initiatives', initiative.id]">
+                    @for (initiative of _initiatives; track initiative.id) {
+                        <li [nx]="initiative" [tables]="_initiatives" class="list-group-item list-group-item-action" routerLinkActive="active" [routerLinkActiveOptions]="{exact: false}" [routerLink]="['/marketing/initiatives', initiative.id]">
                             <div class="d-flex justify-content-between align-items-center gap-2">
                                 <div class="text-truncate text-white">{{ initiative.name }}</div>
                                 <span class="badge bg-dark rounded-pill">{{ initiative.prospects_count || 0 }}</span>

@@ -10,7 +10,6 @@ import { ModalBaseComponent } from '@app/_modals/modal-base.component';
     selector: 'mantis-user-selection',
     templateUrl: './mantis-user-selection.component.html',
     styleUrls: ['./mantis-user-selection.component.scss'],
-    standalone: true,
     imports: [FormsModule],
 })
 export class MantisUserSelectionComponent extends ModalBaseComponent<string> {

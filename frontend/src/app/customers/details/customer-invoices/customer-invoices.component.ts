@@ -10,8 +10,6 @@ import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 @Component({
     selector: 'customer-invoices',
     templateUrl: './customer-invoices.component.html',
-    styleUrls: ['./customer-invoices.component.scss'],
-    standalone: true,
     imports: [ScrollbarComponent, CustomerPaymentDetailsComponent, InvoicesTable, EmptyStateComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

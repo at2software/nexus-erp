@@ -4,7 +4,6 @@ import { ChangeDetectionStrategy, Component, ElementRef, AfterViewInit, inject }
     selector: 'n',
     templateUrl: './n.component.html',
     styleUrls: ['./n.component.scss'],
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NComponent implements AfterViewInit {

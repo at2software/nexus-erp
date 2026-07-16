@@ -7,8 +7,6 @@ import { HrVacationComponent } from '@app/hr/hr-vacation/hr-vacation.component';
 @Component({
     selector: 'app-profile-vacation',
     templateUrl: './profile-vacation.component.html',
-    styleUrls: ['./profile-vacation.component.scss'],
-    standalone: true,
     imports: [ProfileVacationWidgetComponent, HrVacationComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

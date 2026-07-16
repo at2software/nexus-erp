@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { tracked } from '@constants/tracked';
 import { ProjectDetailGuard } from '@app/projects/project-details.guard';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
@@ -12,7 +12,6 @@ import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
     selector: 'project-detail-settings-plugin-links',
     templateUrl: './project-detail-settings-plugin-links.component.html',
     styleUrls: ['./project-detail-settings-plugin-links.component.scss'],
-    standalone: true,
     imports: [NgbTooltipModule, Nx, NComponent, EmptyStateComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -22,7 +21,5 @@ export class ProjectDetailSettingsPluginLinksComponent {
     readonly object = tracked(this.parent.object);
     factory = inject(PluginInstanceFactory);
 
-    get pluginLinks(): PluginLink[] {
-        return this.parent.object()?.plugin_links || [];
-    }
+    readonly pluginLinks = computed<PluginLink[]>(() => this.parent.object()?.plugin_links || []);
 }

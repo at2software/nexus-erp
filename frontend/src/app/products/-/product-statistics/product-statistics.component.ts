@@ -14,7 +14,11 @@ import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { ProductService } from '@models/product/product.service';
 import { Product } from '@models/product/product.model';
 import { MoneyPipe } from '@pipes/money.pipe';
-import moment from 'moment';
+import { dayjs, Dayjs } from '@constants/dates';
+import type { EChartsOption } from 'echarts';
+import { Dictionary } from '@constants/constants';
+import { ProductStatistics, ProductStatisticsTimelineEntry, ChartAxisTooltipParam } from '@models/api-response';
+import { ProductGroup } from '@models/product/product-group.model';
 
 echarts.use([TitleComponent, TooltipComponent, LegendComponent, GridComponent, BarChart, CanvasRenderer]);
 
@@ -22,29 +26,29 @@ echarts.use([TitleComponent, TooltipComponent, LegendComponent, GridComponent, B
     selector: 'product-statistics',
     templateUrl: './product-statistics.component.html',
     styleUrls: ['./product-statistics.component.scss'],
-    standalone: true,
     imports: [DecimalPipe, FormsModule, NgbTooltipModule, NgbDropdownModule, NgxDaterangepickerMd, NgxEchartsDirective, Nx, ToolbarComponent, MoneyPipe],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProductStatisticsComponent {
     readonly #productService = inject(ProductService);
 
-    readonly statistics = signal<any>(null);
-    readonly rootGroups = signal<any[]>([]);
-    readonly selectedRootGroups = signal<any[]>([]);
-    readonly period = signal<{ startDate: any; endDate: any } | undefined>({
-        startDate: moment().subtract(3, 'year'),
-        endDate: moment(),
+    readonly statistics = signal<ProductStatistics | null>(null);
+    readonly rootGroups = signal<ProductGroup[]>([]);
+    readonly selectedRootGroups = signal<ProductGroup[]>([]);
+    readonly period = signal<{ startDate: Dayjs; endDate: Dayjs } | undefined>({
+        startDate: dayjs().subtract(3, 'year'),
+        endDate: dayjs(),
     });
 
-    readonly chartOption = signal<any>({
+    readonly chartOption = signal<EChartsOption>({
         tooltip: {
             trigger: 'axis',
             axisPointer: { type: 'cross' },
             ...ECHARTS_DEFAULT_TOOLTIP_OPTIONS,
-            formatter: (params: any) => {
-                let result = `<div style="text-align: center;"><strong>${params[0].axisValue}</strong></div>`;
-                params.forEach((param: any) => {
+            formatter: (params) => {
+                const items = params as ChartAxisTooltipParam[];
+                let result = `<div style="text-align: center;"><strong>${items[0].axisValue}</strong></div>`;
+                items.forEach((param) => {
                     const value = param.value || 0;
                     result += `<div style="display: flex; justify-content: space-between; align-items: center; margin: 2px 0; gap: 0.5rem;">`;
                     result += `<span style="display: flex; align-items: center;">`;
@@ -67,13 +71,13 @@ export class ProductStatisticsComponent {
         series: [],
     });
 
-    readonly ranges: any = {
-        'This year': [moment().startOf('year'), moment().endOf('year')],
-        'Last year': [moment().subtract(1, 'year').startOf('year'), moment().subtract(1, 'year').endOf('year')],
-        'Last 3 years': [moment().subtract(3, 'year'), moment()],
-        'Last 5 years': [moment().subtract(5, 'year'), moment()],
-        All: [moment('2000-01-01'), moment()],
-    };
+    readonly ranges = {
+        'This year': [dayjs().startOf('year'), dayjs().endOf('year')],
+        'Last year': [dayjs().subtract(1, 'year').startOf('year'), dayjs().subtract(1, 'year').endOf('year')],
+        'Last 3 years': [dayjs().subtract(3, 'year'), dayjs()],
+        'Last 5 years': [dayjs().subtract(5, 'year'), dayjs()],
+        All: [dayjs('2000-01-01'), dayjs()],
+    } satisfies Record<string, [Dayjs, Dayjs]>;
 
     readonly selectedGroupsText = computed(() => {
         const selected = this.selectedRootGroups();
@@ -89,16 +93,16 @@ export class ProductStatisticsComponent {
     });
 
     constructor() {
-        this.#productService.getRootGroups().subscribe(groups => {
+        this.#productService.getRootGroups().subscribe((groups) => {
             this.rootGroups.set(groups);
-            this.selectedRootGroups.set(groups.filter((g: any) => g.is_active));
+            this.selectedRootGroups.set(groups.filter((g) => g.is_active));
             this.#loadStatistics();
         });
     }
 
     readonly onDateRangeChanged = () => this.#loadStatistics();
 
-    readonly toggleRootGroup = (group: any) => {
+    readonly toggleRootGroup = (group: ProductGroup) => {
         this.selectedRootGroups.update(groups => {
             const index = groups.findIndex(g => g.id === group.id);
             return index > -1 ? groups.filter((_, i) => i !== index) : [...groups, group];
@@ -106,7 +110,7 @@ export class ProductStatisticsComponent {
         this.#loadStatistics();
     };
 
-    readonly isRootGroupSelected = (group: any) => this.selectedRootGroups().some(g => g.id === group.id);
+    readonly isRootGroupSelected = (group: ProductGroup) => this.selectedRootGroups().some(g => g.id === group.id);
 
     #loadStatistics() {
         if (!this.rootGroups().length || !this.selectedRootGroups().length) {
@@ -114,18 +118,18 @@ export class ProductStatisticsComponent {
             return;
         }
         const p = this.period();
-        const filters: any = {};
+        const filters: Dictionary = {};
         if (p?.startDate) filters.dateStart = p.startDate.format('YYYY-MM-DD');
         if (p?.endDate) filters.dateEnd = p.endDate.format('YYYY-MM-DD');
         filters.rootGroupIds = this.selectedRootGroups().map(g => g.id);
 
-        this.#productService.showStatistics(filters).subscribe((data: any) => {
-            const toProducts = (arr: any) => Array.isArray(arr) ? arr.map((item: any) => Product.fromJson(item)) : [];
+        this.#productService.showStatistics(filters).subscribe((data: Dictionary) => {
+            const toProducts = (arr: unknown) => Array.isArray(arr) ? arr.map((item) => Product.fromJson(item)) : [];
             this.statistics.set({
                 top_products: toProducts(data.top_products),
                 fastest_sellers: toProducts(data.fastest_sellers),
                 most_repurchased: toProducts(data.most_repurchased),
-                timeline: data.timeline || {},
+                timeline: (data.timeline as Record<string, ProductStatisticsTimelineEntry[]>) || {},
             });
             this.#updateChart();
         });
@@ -138,16 +142,16 @@ export class ProductStatisticsComponent {
         const timelineData = stats.timeline;
         const months = Object.keys(timelineData).sort();
 
-        const groups = new Map<any, any>();
+        const groups = new Map<number, { id: number; name: string; color: string }>();
         months.forEach(month => {
-            timelineData[month].forEach((item: any) => {
+            timelineData[month].forEach((item) => {
                 if (!groups.has(item.group_id)) {
                     groups.set(item.group_id, { id: item.group_id, name: item.group_name, color: item.group_color || '#007bff' });
                 }
             });
         });
 
-        const series: any[] = [];
+        const series: NonNullable<EChartsOption['series']> = [];
         groups.forEach((group, groupId) => {
             series.push({
                 name: group.name,
@@ -156,8 +160,8 @@ export class ProductStatisticsComponent {
                 emphasis: { focus: 'series' },
                 itemStyle: { color: group.color },
                 data: months.map(month => {
-                    const groupData = timelineData[month].find((item: any) => item.group_id === groupId);
-                    return Math.max(0, groupData ? parseFloat(groupData.total_net) : 0);
+                    const groupData = timelineData[month].find((item) => item.group_id === groupId);
+                    return Math.max(0, groupData ? parseFloat(String(groupData.total_net)) : 0);
                 }),
             });
         });
@@ -165,7 +169,7 @@ export class ProductStatisticsComponent {
         this.chartOption.update(opt => ({
             ...opt,
             legend: { ...opt.legend, data: Array.from(groups.values()).map(g => g.name) },
-            xAxis: { ...opt.xAxis, data: months.map(m => moment(m + '-01').format('MMM YYYY')) },
+            xAxis: { ...opt.xAxis, data: months.map(m => dayjs(m + '-01').format('MMM YYYY')) },
             series,
         }));
     }

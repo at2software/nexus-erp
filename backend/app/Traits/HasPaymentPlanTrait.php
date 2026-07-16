@@ -44,7 +44,7 @@ trait HasPaymentPlanTrait {
             return null;
         }
 
-        $net = $this->net ?? 0;
+        $net = $this->netUnmasked();
         foreach ($tiers as $tier) {
             $threshold = $tier['threshold'] ?? null;
             if ($threshold === null || $net < $threshold) {

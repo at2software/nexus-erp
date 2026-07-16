@@ -5,7 +5,7 @@ import { User } from '../user/user.model';
 import { PluginInstance } from '../http/plugin.instance';
 import { getAssigneeActions } from './assignee.actions';
 import { TypeFromClass, Model } from '@constants/type-discriminators';
-import { computed } from '@angular/core';
+import { computed, Type } from '@angular/core';
 
 export const I18N_REMOVE_FROM_TEAM = $localize`:@@i18n.project.removeFromTeam:remove from team`;
 
@@ -47,16 +47,16 @@ export class Assignee extends Serializable {
     }
 
     // Generic plugin integration - delegates to assignee
-    canLinkTo = <T extends PluginInstance>(pluginType: new(...args: any[]) => T): boolean => {
+    canLinkTo = <T extends PluginInstance>(pluginType: Type<T>): boolean => {
         return this.assignee?.canLinkToInstance(pluginType) ?? false;
     };
 
-    linkTo = <T extends PluginInstance, S extends PluginInstance = T>(pluginType: new(...args: any[]) => T, subPluginType?: new(...args: any[]) => S) => {
+    linkTo = <T extends PluginInstance, S extends PluginInstance = T>(pluginType: Type<T>, subPluginType?: Type<S>) => {
         this.assignee?.linkToInstance(pluginType, subPluginType);
     };
 
-    getLinkablePlugins = () => (this.assignee as any)?.getLinkableRootInstances?.() ?? [];
-    linkToPlugin = (instance: any) => (this.assignee as any)?.linkToPlugin?.(instance);
+    getLinkablePlugins = () => (this.assignee as { getLinkableRootInstances?: () => PluginInstance[] })?.getLinkableRootInstances?.() ?? [];
+    linkToPlugin = (instance: PluginInstance) => (this.assignee as { linkToPlugin?: (i: PluginInstance) => void })?.linkToPlugin?.(instance);
 
     static newU = (u: User) => Assignee.fromJson({ assignee: u, user_id: u.id });
     static newC = (u: CompanyContact) => Assignee.fromJson({ assignee: u, company_contact_id: u.id });

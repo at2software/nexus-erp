@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { MarketingService } from '@models/marketing/marketing.service';
@@ -6,7 +6,7 @@ import { MarketingPerformanceMetric } from '@models/marketing/marketing-performa
 import { MarketingActivity } from '@models/marketing/marketing-activity.model';
 import { Nx, ActionEmitterType } from '@app/nx/nx.directive';
 import { NxActionType } from '@app/nx/nx.actions';
-import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { GuidedTourComponent } from '@shards/guided-tour/guided-tour.component';
 import { ColorPickerDirective } from 'ngx-color-picker';
@@ -18,14 +18,13 @@ const ActivityStatsColors = MarketingActivity.STATS_COLORS;
     selector: 'marketing-metrics',
     templateUrl: './marketing-metrics.component.html',
     styleUrls: ['./marketing-metrics.component.scss'],
-    standalone: true,
-    imports: [FormsModule, Nx, NgbTooltipModule, EmptyStateComponent, GuidedTourComponent, ColorPickerDirective],
+    imports: [FormsModule, Nx, NgbTooltipModule, NgbDropdownModule, EmptyStateComponent, GuidedTourComponent, ColorPickerDirective],
 })
-export class MarketingMetricsComponent implements OnInit {
+export class MarketingMetricsComponent {
     #marketingService = inject(MarketingService);
     #cdr = inject(ChangeDetectorRef);
 
-    metrics: MarketingPerformanceMetric[] = [];
+    metrics = signal<MarketingPerformanceMetric[]>([]);
     filteredMetrics: MarketingPerformanceMetric[] = [];
     selectedMetric: MarketingPerformanceMetric | null = null;
 
@@ -35,7 +34,8 @@ export class MarketingMetricsComponent implements OnInit {
     typeFilter = '';
 
     showMetricModal = signal(false);
-    editingMetric: MarketingPerformanceMetric | null = null;
+    hoveredRelatedMetricId = signal<string | undefined>(undefined);
+    editingMetric = signal<MarketingPerformanceMetric | null>(null);
     metricForm = {
         name: '',
         description: undefined as string | undefined,
@@ -43,9 +43,11 @@ export class MarketingMetricsComponent implements OnInit {
         target_value: undefined as number | undefined,
         kpi_icon: '',
         kpi_color: '',
+        related_metric_id: undefined as string | undefined,
     };
 
-    iconSearch = '';
+    iconSearch = signal('');
+    relatedMetricSearch = signal('');
 
     readonly editNxContext = { openEdit: (m: MarketingPerformanceMetric) => this.openEditModal(m) };
 
@@ -86,19 +88,39 @@ export class MarketingMetricsComponent implements OnInit {
         'label', 'location_on', 'public', 'language', 'translate', 'cloud', 'rocket_launch', 'auto_awesome', 'hub', 'network_check',
     ];
 
-    get filteredIcons(): string[] {
-        return this.iconSearch
-            ? this.MATERIAL_ICONS.filter((i) => i.includes(this.iconSearch.toLowerCase()))
+    readonly filteredIcons = computed<string[]>(() => {
+        const search = this.iconSearch();
+        return search
+            ? this.MATERIAL_ICONS.filter((i) => i.includes(search.toLowerCase()))
             : this.MATERIAL_ICONS;
+    });
+
+    readonly relatedMetricOptions = computed<MarketingPerformanceMetric[]>(() => {
+        const editingId = this.editingMetric()?.id;
+        const search = this.relatedMetricSearch().toLowerCase();
+        return this.metrics().filter((m) =>
+            m.metric_type !== 'percentage' && m.id !== editingId
+        ).filter((m) =>
+            !search || m.name.toLowerCase().includes(search)
+        );
+    });
+
+    getRelatedMetric(): MarketingPerformanceMetric | undefined {
+        return this.metrics().find((m) => m.id === this.metricForm.related_metric_id);
     }
 
-    ngOnInit() {
+    getMetricById(id: string | undefined): MarketingPerformanceMetric | undefined {
+        if (!id) return undefined;
+        return this.metrics().find((m) => m.id === id);
+    }
+
+    constructor() {
         this.loadMetrics();
     }
 
     loadMetrics() {
         this.#marketingService.indexMetrics().subscribe((metrics: MarketingPerformanceMetric[]) => {
-            this.metrics = metrics;
+            this.metrics.set(metrics);
             this.applyFilters();
             this.calculateStats();
             this.#cdr.markForCheck();
@@ -106,7 +128,7 @@ export class MarketingMetricsComponent implements OnInit {
     }
 
     applyFilters() {
-        this.filteredMetrics = this.metrics.filter((metric) => !this.typeFilter || metric.metric_type === this.typeFilter);
+        this.filteredMetrics = this.metrics().filter((metric) => !this.typeFilter || metric.metric_type === this.typeFilter);
     }
 
     filterByType(type: string) {
@@ -115,13 +137,14 @@ export class MarketingMetricsComponent implements OnInit {
     }
 
     calculateStats() {
-        this.stats.total = this.metrics.length;
+        const metrics = this.metrics();
+        this.stats.total = metrics.length;
         this.stats.byType = {
-            counter: this.metrics.filter((m) => m.metric_type === 'counter').length,
-            percentage: this.metrics.filter((m) => m.metric_type === 'percentage').length,
-            conversion: this.metrics.filter((m) => m.metric_type === 'conversion').length,
-            currency: this.metrics.filter((m) => m.metric_type === 'currency').length,
-            duration: this.metrics.filter((m) => m.metric_type === 'duration').length,
+            counter: metrics.filter((m) => m.metric_type === 'counter').length,
+            percentage: metrics.filter((m) => m.metric_type === 'percentage').length,
+            conversion: metrics.filter((m) => m.metric_type === 'conversion').length,
+            currency: metrics.filter((m) => m.metric_type === 'currency').length,
+            duration: metrics.filter((m) => m.metric_type === 'duration').length,
         };
     }
 
@@ -130,14 +153,15 @@ export class MarketingMetricsComponent implements OnInit {
     }
 
     openCreateModal() {
-        this.editingMetric = null;
-        this.metricForm = { name: '', description: undefined, metric_type: 'counter', target_value: undefined, kpi_icon: '', kpi_color: '' };
-        this.iconSearch = '';
+        this.editingMetric.set(null);
+        this.metricForm = { name: '', description: undefined, metric_type: 'counter', target_value: undefined, kpi_icon: '', kpi_color: '', related_metric_id: undefined };
+        this.iconSearch.set('');
+        this.relatedMetricSearch.set('');
         this.showMetricModal.set(true);
     }
 
     openEditModal(metric: MarketingPerformanceMetric) {
-        this.editingMetric = metric;
+        this.editingMetric.set(metric);
         this.metricForm = {
             name: metric.name,
             description: metric.description,
@@ -145,8 +169,10 @@ export class MarketingMetricsComponent implements OnInit {
             target_value: metric.target_value,
             kpi_icon: metric.kpi_icon ?? '',
             kpi_color: metric.kpi_color ?? '',
+            related_metric_id: metric.related_metric_id,
         };
-        this.iconSearch = '';
+        this.iconSearch.set('');
+        this.relatedMetricSearch.set('');
         this.showMetricModal.set(true);
         this.#cdr.markForCheck();
     }
@@ -161,12 +187,13 @@ export class MarketingMetricsComponent implements OnInit {
             target_value: this.metricForm.target_value,
             kpi_icon: this.metricForm.kpi_icon || null,
             kpi_color: this.metricForm.kpi_color || null,
+            related_metric_id: this.metricForm.metric_type === 'percentage' ? (this.metricForm.related_metric_id ?? null) : null,
         };
 
-        if (this.editingMetric) {
-            this.#marketingService.updateMetric(this.editingMetric.id!, metricData).subscribe((updated: MarketingPerformanceMetric) => {
-                const index = this.metrics.findIndex((m) => m.id === updated.id);
-                if (index !== -1) this.metrics[index] = updated;
+        const editingMetric = this.editingMetric();
+        if (editingMetric) {
+            this.#marketingService.updateMetric(editingMetric.id!, metricData).subscribe((updated: MarketingPerformanceMetric) => {
+                this.metrics.update((metrics) => metrics.map((m) => (m.id === updated.id ? updated : m)));
                 if (this.selectedMetric?.id === updated.id) this.selectedMetric = updated;
                 this.applyFilters();
                 this.calculateStats();
@@ -175,7 +202,7 @@ export class MarketingMetricsComponent implements OnInit {
             });
         } else {
             this.#marketingService.storeMetric(metricData).subscribe((metric: MarketingPerformanceMetric) => {
-                this.metrics.push(metric);
+                this.metrics.update((metrics) => [...metrics, metric]);
                 this.applyFilters();
                 this.calculateStats();
                 this.resetForm();
@@ -188,7 +215,7 @@ export class MarketingMetricsComponent implements OnInit {
         if (!confirm(`Delete metric "${metric.name}"? This will remove it from all initiatives and activities.`)) return;
 
         this.#marketingService.destroyMetric(metric.id!).subscribe(() => {
-            this.metrics = this.metrics.filter((m) => m.id !== metric.id);
+            this.metrics.update((metrics) => metrics.filter((m) => m.id !== metric.id));
             if (this.selectedMetric?.id === metric.id) this.selectedMetric = null;
             this.applyFilters();
             this.calculateStats();
@@ -200,16 +227,17 @@ export class MarketingMetricsComponent implements OnInit {
         const actionType = typeof event.action.type === 'function' ? event.action.type() : event.action.type;
         if (actionType === NxActionType.Destructive) {
             const deleted = event.object.nx() as MarketingPerformanceMetric;
-            this.metrics = this.metrics.filter((m) => m.id !== deleted.id);
+            this.metrics.update((metrics) => metrics.filter((m) => m.id !== deleted.id));
             this.calculateStats();
         }
         this.#cdr.markForCheck();
     }
 
     resetForm() {
-        this.metricForm = { name: '', description: undefined, metric_type: 'counter', target_value: undefined, kpi_icon: '', kpi_color: '' };
-        this.iconSearch = '';
-        this.editingMetric = null;
+        this.metricForm = { name: '', description: undefined, metric_type: 'counter', target_value: undefined, kpi_icon: '', kpi_color: '', related_metric_id: undefined };
+        this.iconSearch.set('');
+        this.relatedMetricSearch.set('');
+        this.editingMetric.set(null);
         this.showMetricModal.set(false);
     }
 

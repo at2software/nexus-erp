@@ -1,32 +1,33 @@
+import { Dictionary } from '@constants/constants';
 import { Injectable, inject } from '@angular/core';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { ReplaySubject, map } from 'rxjs';
 import { ParamService } from '@models/param.service';
 
 @Injectable({ providedIn: 'root' })
 export class PersistentStatsService {
     paramService = inject(ParamService);
-    stats: Record<string, ReplaySubject<any>> = {};
+    stats: Dictionary<ReplaySubject<unknown>> = {};
 
-    static startOfStats = () => moment().startOf('month').subtract(36, 'month');
-    statsFor = (key: string, offset: 'none' | 'month' | 'year' = 'none', cluster: string = 'month'): ReplaySubject<any> => {
+    static startOfStats = () => dayjs().startOf('month').subtract(36, 'month');
+    statsFor = (key: string, offset: 'none' | 'month' | 'year' = 'none', cluster: string = 'month'): ReplaySubject<unknown> => {
         const rpl = key + '-' + offset;
         let since = PersistentStatsService.startOfStats();
         if (offset != 'none') {
             since = since.subtract(1, offset);
         }
         if (!(rpl in this.stats)) {
-            this.stats[rpl] = new ReplaySubject<any>(1);
+            this.stats[rpl] = new ReplaySubject<unknown>(1);
             let obs = this.paramService.history(key, since.unix(), cluster);
             if (offset != 'none') {
                 obs = obs.pipe(
-                    map((result: any) => {
-                        result['data'] = result['data']
-                            .map((_: any) => {
-                                _.x = moment(_.x).add(1, offset).format('YYYY-MM-DD');
-                                return _;
-                            })
-                            .filter((_: any) => moment(_.x) < moment());
+                    map((result) => {
+                        result.data = result.data
+                            .map((_) => ({
+                                ..._,
+                                x: dayjs(_.x).add(1, offset).format('YYYY-MM-DD')
+                            }))
+                            .filter((_) => dayjs(_.x).isBefore(dayjs()));
                         return result;
                     }),
                 );

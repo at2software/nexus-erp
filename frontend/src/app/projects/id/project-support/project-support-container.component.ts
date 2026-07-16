@@ -5,8 +5,7 @@ import { ProjectSupportComponent } from './project-support.component';
 
 @Component({
     selector: 'project-support-container',
-    template: '@if (guard.object()) {<project-support [parent]="guard.object()"></project-support>}',
-    standalone: true,
+    template: '@if (guard.object()) {<project-support [parent]="guard.object()" (parentReloadRequested)="guard.reload()"></project-support>}',
     imports: [ProjectSupportComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

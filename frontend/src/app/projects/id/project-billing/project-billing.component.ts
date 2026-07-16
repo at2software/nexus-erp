@@ -5,10 +5,11 @@ import { Focus } from '@models/focus/focus.model';
 import { FocusService } from '@models/focus/focus.service';
 import { User } from '@models/user/user.model';
 import { Product } from '@models/product/product.model';
+import { Serializable } from '@models/serializable';
 import { InvoiceItemService } from '@models/invoice/invoice-item.service';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { Company } from '@models/company/company.model';
-import moment from 'moment';
+import { Dayjs, dayjsMin, dayjsMax } from '@constants/dates';
 import { ProductService } from '@models/product/product.service';
 import { DATESPAN_RANGE } from '@constants/dateSpanRange';
 import { StartEnd } from '@constants/constants';
@@ -24,7 +25,6 @@ import { SearchInputComponent } from '@shards/search-input/search-input.componen
 import { NComponent } from '@shards/n/n.component';
 import { MoneyPipe } from '@pipes/money.pipe';
 import { Nx } from '@app/nx/nx.directive';
-import { NComponent } from '@shards/n/n.component';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { ProjectComponent } from '@shards/project/project.component';
 import { SafePipe } from '@pipes/safe.pipe';
@@ -36,29 +36,28 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
     templateUrl: './project-billing.component.html',
     styleUrls: ['./project-billing.component.scss'],
     providers: [{ provide: NgbDateAdapter, useClass: NgbDateUnixAdapter }],
-    standalone: true,
     imports: [EmptyStateComponent, DatePipe, DecimalPipe, FormsModule, NgxDaterangepickerMd, CdkTableModule, SearchInputComponent, NgbDatepickerModule, NComponent, RouterModule, MoneyPipe, Nx, NComponent, AvatarComponent, ProjectComponent, SafePipe],
 })
 export class ProjectBillingComponent {
-    #global = inject(GlobalService);
-    #productService = inject(ProductService);
-    #focusService = inject(FocusService);
+    #global             = inject(GlobalService);
+    #productService     = inject(ProductService);
+    #focusService       = inject(FocusService);
     #invoiceItemService = inject(InvoiceItemService);
-    #router = inject(Router);
+    #router             = inject(Router);
 
     parent = input.required<Project | Company>();
     protected readonly descField = viewChild<ElementRef>('desc');
 
-    readonly ranges: any = DATESPAN_RANGE;
+    readonly ranges: typeof DATESPAN_RANGE = DATESPAN_RANGE;
     readonly fociColumns = ['user_id', 'started_at', 'duration', 'comment'];
 
-    span = signal<StartEnd | undefined>(undefined);
-    selectionSum = signal(0);
+    span                 = signal<StartEnd | undefined>(undefined);
+    selectionSum         = signal(0);
     selectionDescription = signal('');
-    selectionProduct = signal<Product | undefined>(undefined);
-    selection = signal<any[]>([]);
-    items = signal<InvoiceItem[]>([]);
-    allFoci = signal<Focus[]>([]);
+    selectionProduct     = signal<Product | undefined>(undefined);
+    selection            = signal<Focus[]>([]);
+    items                = signal<InvoiceItem[]>([]);
+    allFoci              = signal<Focus[]>([]);
 
     isProject = computed(() => this.parent() instanceof Project);
     company = computed((): Company => (this.isProject() ? (this.parent() as Project).company : (this.parent() as Company)));
@@ -90,28 +89,32 @@ export class ProjectBillingComponent {
 
     #reloadItems() {
         this.items.set([]);
-        this.#invoiceItemService.getSupportItems(this.parent()).subscribe((data) => this.items.set(data.filter((x: any) => x.type == 0)));
+        this.#invoiceItemService.getSupportItems(this.parent()).subscribe((data) => this.items.set(data.filter((x) => x.type == 0)));
     }
 
-    #onSelection(_: any) {
+    #onSelection(_: unknown) {
         const selected = [_].flat();
-        const sel = selected.length && selected[0] instanceof Focus ? selected : [];
+        const sel = selected.length && selected[0] instanceof Focus ? (selected as Focus[]) : [];
         this.selection.set(sel);
         this.selectionSum.set(sel.reduce((b: number, a: Focus) => a.duration + b, 0));
         sel.forEach((s: Focus) => {
-            if ((s.comment ?? '').length) this.selectionDescription.set(s.comment!);
+            if (s.comment?.length) {
+                this.selectionDescription.set(s.comment);
+            }
         });
-        this.descField()?.nativeElement.focus();
+        if (sel.length) this.descField()?.nativeElement.focus();
     }
 
     readonly userIconFor = (user_id: string) => User.iconPathFor(user_id);
 
-    onProductSelect(_: Product) {
-        this.selectionProduct.set(_);
+    onProductSelect(selected: Serializable) {
+        const product = selected.assert(Product);
+        if (!product) return;
+        this.selectionProduct.set(product);
         const parent = this.parent();
         if (parent instanceof Project) {
-            parent.product_id = _.id;
-            parent.update({ product_id: _.id }).subscribe();
+            parent.product_id = product.id;
+            parent.update({ product_id: product.id }).subscribe();
         }
         this.descField()?.nativeElement.focus();
     }
@@ -121,12 +124,12 @@ export class ProjectBillingComponent {
     }
 
     onCreateNewItem() {
-        let min: moment.Moment | undefined;
-        let max: moment.Moment | undefined;
+        let min: Dayjs | undefined;
+        let max: Dayjs | undefined;
         const selectedIds = this.selection().map((_) => {
-            const created = _.momentCreated();
-            min = min ? moment.min(created, min) : created;
-            max = max ? moment.max(created, max) : created;
+            const created = _.createdAt();
+            min = min ? dayjsMin(created, min) : created;
+            max = max ? dayjsMax(created, max) : created;
             return _.id;
         });
         this.selection.set([]);

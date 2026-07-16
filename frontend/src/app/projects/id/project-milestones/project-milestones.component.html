@@ -47,7 +47,7 @@
         }
         @if (!isLoading() && project.milestones.length) {
             <div class="flex-grow-1 overflow-hidden d-flex">
-                <custom-gantt class="flex-fill" [rows]="ganttRows" [viewMode]="currentViewMode" (addMilestone)="onAddButton()" (addTask)="onAddTask($event)" [showProjectHeaders]="false"> </custom-gantt>
+                <custom-gantt class="flex-fill" [rows]="ganttRows()" [viewMode]="currentViewMode" (addMilestone)="onAddButton()" (addTask)="onAddTask($event)" [showProjectHeaders]="false"> </custom-gantt>
             </div>
         }
         @if (!isLoading() && !project.milestones.length) {

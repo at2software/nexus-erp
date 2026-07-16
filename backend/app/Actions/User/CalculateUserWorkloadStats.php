@@ -2,28 +2,26 @@
 
 namespace App\Actions\User;
 
+use App\Enums\VacationState;
 use App\Models\User;
+use Illuminate\Support\Collection;
 
 class CalculateUserWorkloadStats {
     public function execute(User $user, array $workData, array $holidays): array {
         $hpwArray = $user->getHpwArray();
 
-        $vacationDays  = [];
-        $vacationStart = $workData['vacation_start'] ?? collect();
-        $vacationEnd   = $workData['vacation_end'] ?? collect();
+        $vacations = ($workData['vacation_start'] ?? collect())
+            ->concat($workData['vacation_end'] ?? collect())
+            ->unique('id');
 
-        foreach (array_merge($vacationStart->toArray(), $vacationEnd->toArray()) as $vacation) {
-            $start = new \DateTime($vacation['started_at']);
-            $end   = new \DateTime($vacation['ended_at']);
-            while ($start <= $end) {
-                $vacationDays[] = $start->format('Y-m-d');
-                $start->modify('+1 day');
-            }
-        }
-        $vacationDays = array_unique($vacationDays);
+        $vacationDays = $this->expandVacationDays($vacations->where('state', VacationState::Approved));
+        $sickDays     = $this->expandVacationDays($vacations->where('state', VacationState::Sick));
 
         $data     = $workData['data'] ?? collect();
-        $startDay = strtotime($data->first()->key ?? now()->subDays(28)->format('Y-m-d'));
+        // Average runs from the earliest tracked day up to (and including) yesterday only:
+        // today is deliberately excluded so the value does not drift as hours are booked
+        // during the day, and today's required hours never count toward the ratio.
+        $startDay = strtotime($data->min('key') ?? now()->subDays(28)->format('Y-m-d'));
         $endDay   = strtotime('yesterday midnight');
 
         $cday         = $startDay;
@@ -33,7 +31,7 @@ class CalculateUserWorkloadStats {
         while ($cday <= $endDay) {
             $dayString      = date('Y-m-d', $cday);
             $duration       = $workMap->get($dayString)?->value ?? 0;
-            $workloadData[] = $this->calculateDayWorkload($user, $cday, $duration, $holidays, $vacationDays, $hpwArray);
+            $workloadData[] = $this->calculateDayWorkload($cday, $duration, $holidays, $vacationDays, $sickDays, $hpwArray);
             $cday           = strtotime('+1 day', $cday);
         }
 
@@ -60,19 +58,24 @@ class CalculateUserWorkloadStats {
             'averageClass' => $averageClass,
         ];
     }
-    private function calculateDayWorkload(User $user, int $day, float $duration, array $holidays, array $vacationDays, array $hpwArray): array {
+    private function calculateDayWorkload(int $day, float $duration, array $holidays, array $vacationDays, array $sickDays, array $hpwArray): array {
         $class     = 'work-bar-default';
         $dayString = date('Y-m-d', $day);
         $dayOfWeek = (int)date('N', $day);
 
         $req = $hpwArray[($dayOfWeek - 1) % 7] ?? 0;
 
-        $isVacation = in_array($dayString, $vacationDays) ||
-                      in_array($dayString, $holidays) ||
-                      $dayOfWeek >= 6;
-
-        if ($isVacation) {
+        if ($dayOfWeek >= 6) {
+            $class = 'work-bar-weekend';
+            $req   = 0;
+        } elseif (in_array($dayString, $holidays)) {
             $class = 'work-bar-holiday';
+            $req   = 0;
+        } elseif (in_array($dayString, $sickDays)) {
+            $class = 'work-bar-sick';
+            $req   = 0;
+        } elseif (in_array($dayString, $vacationDays)) {
+            $class = 'work-bar-vacation';
             $req   = 0;
         } elseif ($req > 0 && $duration < (0.95 * $req)) {
             $class = 'work-bar-danger';
@@ -84,5 +87,26 @@ class CalculateUserWorkloadStats {
             'class'    => $class,
             'required' => $req,
         ];
+    }
+
+    /**
+     * Expand a collection of vacations into a unique list of local Y-m-d day strings.
+     * Reads the Carbon attributes directly (app timezone) instead of serialized UTC
+     * strings, which would otherwise shift each day one day earlier.
+     */
+    private function expandVacationDays(Collection $vacations): array {
+        $days = [];
+        foreach ($vacations as $vacation) {
+            if (! $vacation->started_at || ! $vacation->ended_at) {
+                continue;
+            }
+            $cursor = $vacation->started_at->copy()->startOfDay();
+            $end    = $vacation->ended_at->copy()->startOfDay();
+            while ($cursor <= $end) {
+                $days[] = $cursor->format('Y-m-d');
+                $cursor->addDay();
+            }
+        }
+        return array_values(array_unique($days));
     }
 }

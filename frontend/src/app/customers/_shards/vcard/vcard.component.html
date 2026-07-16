@@ -55,7 +55,6 @@
                                 <a class="dropdown-item capitalize" (click)="addRow('BDAY:1982-01-01')" tabindex="0" (keydown.enter)="addRow('BDAY:1982-01-01')" i18n="@@i18n.common.birthday">birthday</a>
                             }
                         </li>
-                        <!-- <li><a class="dropdown-item capitalize" *ngIf="_isCompanyContact || _isUser" (click)="addRow('ROLE:')" tabindex="0" (keydown.enter)="addRow('ROLE:')" i18n="@@i18n.common.role">role</a></li> -->
                         <li>
                             @if (_isCompany || _isContact || _isProspect) {
                                 <a class="dropdown-item capitalize" (click)="addRow('URL;type=' + _type + ':')" (keyup.enter)="addRow('URL;type=' + _type + ':')" tabindex="0" i18n="@@i18n.common.url">URL</a>
@@ -180,8 +179,8 @@
                                     </div>
                                 </div>
                                 @if (hasGeoForAddress(i); as geoRow) {
-                                    <div class="flex-shrink-0 d-flex align-items-start" style="width: 200px; height: 220px">
-                                        <div #mapContainer class="map-container" style="width: 100%; height: 220px" [attr.data-map-id]="'map-' + i" [attr.data-lat]="geoRow.vals[0]" [attr.data-lon]="geoRow.vals[1]"></div>
+                                    <div class="flex-shrink-0" style="width: 200px">
+                                        <div #mapContainer class="map-container h-100" style="width: 100%" [attr.data-map-id]="'map-' + i" [attr.data-lat]="geoRow.vals[0]" [attr.data-lon]="geoRow.vals[1]"></div>
                                     </div>
                                 }
                             </li>
@@ -240,29 +239,21 @@
                         }
 
                         @case ('EMAIL') {
-                            <li [nx]="row" (singleActionResolved)="singleActionResolved($event)" [class]="liClass" [class.accent-danger]="needsWarning(row)" [attr.title]="needsWarning(row) || null">
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i ngbTooltip="email" i18n-ngbTooltip="@@i18n.common.email">mail</i>
-                                    </span>
-                                    @for (val of row.vals; track j; let j = $index) {
-                                        <input (blur)="updateVcard()" type="text" class="form-control" placeholder="{{ row.key }}" [attr.aria-label]="row.key" [(ngModel)]="card.rows[i].vals[j]" />
-                                    }
-                                </div>
-                            </li>
+                            <ng-template #emailHeader>
+                                <span class="input-group-text">
+                                    <i ngbTooltip="email" i18n-ngbTooltip="@@i18n.common.email">mail</i>
+                                </span>
+                            </ng-template>
+                            <ng-container *ngTemplateOutlet="fieldRow; context: { row: row, header: emailHeader, dClass: false }"></ng-container>
                         }
                         @case ('TEL') {
-                            <li [nx]="row" (singleActionResolved)="singleActionResolved($event)" [class]="liClass" [class.accent-danger]="needsWarning(row)" [attr.title]="needsWarning(row) || null" [class.d-none]="isEmergencyTelForRelated(row)">
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i ngbTooltip="telephone" i18n-ngbTooltip="@@i18n.common.telephone">call</i>
-                                    </span>
-                                    <ng-container *ngTemplateOutlet="telTypeDropdown; context: { row: row }"></ng-container>
-                                    @for (val of row.vals; track j; let j = $index) {
-                                        <input (blur)="updateVcard()" type="text" class="form-control" placeholder="{{ row.key }}" [attr.aria-label]="row.key" [(ngModel)]="card.rows[i].vals[j]" />
-                                    }
-                                </div>
-                            </li>
+                            <ng-template #telHeader>
+                                <span class="input-group-text">
+                                    <i ngbTooltip="telephone" i18n-ngbTooltip="@@i18n.common.telephone">call</i>
+                                </span>
+                                <ng-container *ngTemplateOutlet="telTypeDropdown; context: { row: row }"></ng-container>
+                            </ng-template>
+                            <ng-container *ngTemplateOutlet="fieldRow; context: { row: row, header: telHeader, dClass: isEmergencyTelForRelated(row) }"></ng-container>
                         }
                         @case ('RELATED') {
                             <li [nx]="row" (singleActionResolved)="singleActionResolved($event)" [class]="liClass" [class.accent-danger]="needsWarning(row)" [attr.title]="needsWarning(row) || null">
@@ -279,16 +270,12 @@
                             </li>
                         }
                         @case ('BDAY') {
-                            <li [nx]="row" (singleActionResolved)="singleActionResolved($event)" [class]="liClass" [class.accent-danger]="needsWarning(row)" [attr.title]="needsWarning(row) || null">
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i ngbTooltip="birthday" i18n-ngbTooltip="@@i18n.common.birthday">cake</i>
-                                    </span>
-                                    @for (val of row.vals; track j; let j = $index) {
-                                        <input (blur)="updateVcard()" type="text" class="form-control" placeholder="{{ row.key }}" [attr.aria-label]="row.key" [(ngModel)]="card.rows[i].vals[j]" />
-                                    }
-                                </div>
-                            </li>
+                            <ng-template #bdayHeader>
+                                <span class="input-group-text">
+                                    <i ngbTooltip="birthday" i18n-ngbTooltip="@@i18n.common.birthday">cake</i>
+                                </span>
+                            </ng-template>
+                            <ng-container *ngTemplateOutlet="fieldRow; context: { row: row, header: bdayHeader, dClass: false }"></ng-container>
                         }
                         @case ('X-LANG') {
                             <li [class]="liClass">
@@ -319,38 +306,50 @@
                             </li>
                         }
                         @case ('TITLE') {
-                            <li [nx]="row" (singleActionResolved)="singleActionResolved($event)" [class]="liClass" [class.accent-danger]="needsWarning(row)" [attr.title]="needsWarning(row) || null">
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i ngbTooltip="position" i18n-ngbTooltip="@@i18n.common.position">school</i>
-                                    </span>
-                                    @for (val of row.vals; track j; let j = $index) {
-                                        <input (blur)="updateVcard()" type="text" class="form-control" placeholder="{{ row.key }}" [attr.aria-label]="row.key" [(ngModel)]="card.rows[i].vals[j]" />
-                                    }
-                                </div>
-                            </li>
+                            <ng-template #titleFieldHeader>
+                                <span class="input-group-text">
+                                    <i ngbTooltip="position" i18n-ngbTooltip="@@i18n.common.position">school</i>
+                                </span>
+                            </ng-template>
+                            <ng-container *ngTemplateOutlet="fieldRow; context: { row: row, header: titleFieldHeader, dClass: false }"></ng-container>
                         }
                         @case ('ORG') {
-                            <li [nx]="row" (singleActionResolved)="singleActionResolved($event)" [class]="liClass" [class.accent-danger]="needsWarning(row)" [attr.title]="needsWarning(row) || null" [class.d-none]="_isCompany">
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i ngbTooltip="organization" i18n-ngbTooltip="@@i18n.common.organization">domain</i>
-                                    </span>
-                                    @for (val of row.vals; track j; let j = $index) {
-                                        <input (blur)="updateVcard()" type="text" class="form-control" placeholder="{{ row.key }}" [attr.aria-label]="row.key" [(ngModel)]="card.rows[i].vals[j]" />
-                                    }
-                                </div>
-                            </li>
+                            <ng-template #orgHeader>
+                                <span class="input-group-text">
+                                    <i ngbTooltip="organization" i18n-ngbTooltip="@@i18n.common.organization">domain</i>
+                                </span>
+                            </ng-template>
+                            <ng-container *ngTemplateOutlet="fieldRow; context: { row: row, header: orgHeader, dClass: _isCompany }"></ng-container>
+                        }
+                        @case ('X-NEXUS-GIT') {
+                            <ng-template #gitHeader>
+                                <span class="input-group-text col-desc">
+                                    <n class="text-blue" ngbTooltip="git" i18n-ngbTooltip="@@i18n.common.git">git</n>
+                                </span>
+                            </ng-template>
+                            <ng-container *ngTemplateOutlet="fieldRow; context: { row: row, header: gitHeader, dClass: _isCompany }"></ng-container>
+                        }
+                        @case ('X-NEXUS-MANTISBT') {
+                            <ng-template #mantisHeader>
+                                <span class="input-group-text col-desc">
+                                    <n class="text-blue" ngbTooltip="mantis" i18n-ngbTooltip="@@i18n.common.mantis">mantis</n>
+                                </span>
+                            </ng-template>
+                            <ng-container *ngTemplateOutlet="fieldRow; context: { row: row, header: mantisHeader, dClass: _isCompany }"></ng-container>
+                        }
+                        @case ('X-NEXUS-MATTERMOST') {
+                            <ng-template #mattermostHeader>
+                                <span class="input-group-text col-desc">
+                                    <n class="text-blue" ngbTooltip="mattermost" i18n-ngbTooltip="@@i18n.common.mattermost">mattermost</n>
+                                </span>
+                            </ng-template>
+                            <ng-container *ngTemplateOutlet="fieldRow; context: { row: row, header: mattermostHeader, dClass: _isCompany }"></ng-container>
                         }
                         @default {
-                            <li [nx]="row" (singleActionResolved)="singleActionResolved($event)" [class]="liClass" [class.accent-danger]="needsWarning(row)" [attr.title]="needsWarning(row) || null" [class.d-none]="_isCompany && row.key === 'ORG'">
-                                <div class="input-group">
-                                    <span class="input-group-text col-desc">{{ row.key }}</span>
-                                    @for (val of row.vals; track j; let j = $index) {
-                                        <input (blur)="updateVcard()" type="text" class="form-control" placeholder="{{ row.key }}" [attr.aria-label]="row.key" [(ngModel)]="card.rows[i].vals[j]" />
-                                    }
-                                </div>
-                            </li>
+                            <ng-template #defaultHeader>
+                                <span class="input-group-text col-desc">{{ row.key }}</span>
+                            </ng-template>
+                            <ng-container *ngTemplateOutlet="fieldRow; context: { row: row, header: defaultHeader, dClass: _isCompany && row.key === 'ORG' }"></ng-container>
                         }
                     }
                 }
@@ -358,6 +357,17 @@
         }
     </div>
 }
+
+<ng-template #fieldRow let-row="row" let-header="header" let-dClass="dClass">
+    <li [nx]="row" (singleActionResolved)="singleActionResolved($event)" [class]="liClass" [class.accent-danger]="needsWarning(row)" [attr.title]="needsWarning(row) || null" [class.d-none]="dClass">
+        <div class="input-group">
+            <ng-container *ngTemplateOutlet="header"></ng-container>
+            @for (val of row.vals; track j; let j = $index) {
+                <input (blur)="updateVcard()" type="text" class="form-control" placeholder="{{ row.key }}" [attr.aria-label]="row.key" [(ngModel)]="row.vals[j]" />
+            }
+        </div>
+    </li>
+</ng-template>
 
 <ng-template #title let-object="object" let-icon="icon">
     <i>{{ icon }}</i>

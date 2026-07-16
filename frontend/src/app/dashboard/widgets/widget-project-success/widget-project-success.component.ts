@@ -1,14 +1,13 @@
 ﻿import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { BaseWidgetComponent } from '../base.widget.component';
-import { WidgetsModule } from '../widgets.module';
+import { WIDGET_SHARED } from '../widgets.shared';
 import { PermissionsDirective } from '@directives/permissions.directive';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'widget-project-success',
     templateUrl: './widget-project-success.component.html',
-    styleUrls: ['./widget-project-success.component.scss', './../base.widget.component.scss'],
-    standalone: true,
-    imports: [WidgetsModule, PermissionsDirective],
+    styleUrls: ['./../base.widget.component.scss'],
+    imports: [...WIDGET_SHARED, PermissionsDirective],
 })
 export class WidgetProjectSuccessComponent extends BaseWidgetComponent {}

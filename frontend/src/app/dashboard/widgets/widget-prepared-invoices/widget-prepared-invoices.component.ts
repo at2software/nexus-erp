@@ -4,16 +4,15 @@ import { WidgetService } from '@models/widget.service';
 import { BaseWidgetComponent, WidgetOptions } from '../base.widget.component';
 import { Project } from '@models/project/project.model';
 import { REFLECTION } from '@constants/constants';
-import { WidgetsModule } from '../widgets.module';
+import { WIDGET_SHARED } from '../widgets.shared';
 import { PermissionsDirective } from '@directives/permissions.directive';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'widget-prepared-invoices',
     templateUrl: './widget-prepared-invoices.component.html',
-    styleUrls: ['./widget-prepared-invoices.component.scss', './../base.widget.component.scss'],
-    standalone: true,
-    imports: [WidgetsModule, PermissionsDirective],
+    styleUrls: ['./../base.widget.component.scss'],
+    imports: [...WIDGET_SHARED, PermissionsDirective],
 })
 export class WidgetPreparedInvoicesComponent extends BaseWidgetComponent {
     data = signal<(Company | Project)[]>([]);
@@ -22,8 +21,8 @@ export class WidgetPreparedInvoicesComponent extends BaseWidgetComponent {
     defaultOptions = () => ({ ...WidgetOptions.maxItems, ...WidgetOptions.chartOnly });
 
     reload(): void {
-        if (!this.hasInvoicesExpenses) return;
-        this.#widgetService.preparedInvoices(this.getOptionsURI()).subscribe((_: any) => {
+        if (!this.hasInvoicesExpenses()) return;
+        this.#widgetService.preparedInvoices(this.getOptionsURI()).subscribe((_) => {
             const data = Object.values(_)
                 .map((x) => {
                     const c = REFLECTION(x);
@@ -31,6 +30,7 @@ export class WidgetPreparedInvoicesComponent extends BaseWidgetComponent {
                     if (c instanceof Project) c.actions[0].action = () => c.navigateTo(`/projects/${c.id}/invoicing`);
                     return c;
                 })
+                .filter((a): a is Company | Project => a instanceof Company || a instanceof Project)
                 .sort((a, b) => this.#getAppliedNet(b) - this.#getAppliedNet(a))
                 .filter((a) => this.#getAppliedNet(a) > 0);
             this.data.set(data);
@@ -44,4 +44,6 @@ export class WidgetPreparedInvoicesComponent extends BaseWidgetComponent {
 
     getAppliedNet = (_: Company | Project) => this.#getAppliedNet(_);
     asProject = (_: Company | Project) => _ as Project;
+
+    exceedsMaxItems = (i: number): boolean => i >= ((this.options()['max-items']?.value as number) ?? 0);
 }

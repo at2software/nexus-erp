@@ -1,0 +1,73 @@
+@if (trackers().length === 0) {
+    <div class="text-center text-muted py-4" i18n="@@i18n.issues.noTrackersLinked">no issue trackers linked to this project</div>
+} @else {
+    <div class="hstack gap-2 mb-3">
+        @if (trackers().length > 1) {
+            <div ngbDropdown class="d-inline-block">
+                <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle-simple" ngbDropdownToggle>
+                    <n>{{ activeTracker()?.instance?.icon() }}</n>
+                    <span class="ms-1">{{ activeTracker()?.link?.name || activeTracker()?.instance?.getName() }}</span>
+                </button>
+                <div ngbDropdownMenu>
+                    @for (t of trackers(); track t.link.id) {
+                        <button type="button" ngbDropdownItem [class.active]="activeLinkId() === '' + t.link.id" (click)="setActiveTracker('' + t.link.id)">
+                            <n>{{ t.instance.icon() }}</n>
+                            <span class="ms-1">{{ t.link.name || t.instance.getName() }}</span>
+                        </button>
+                    }
+                </div>
+            </div>
+        } @else if (activeTracker()) {
+            <div class="input-group-text">
+                <n>{{ activeTracker()?.instance?.icon() }}</n>
+                <span class="ms-1">{{ activeTracker()?.link?.name || activeTracker()?.instance?.getName() }}</span>
+            </div>
+        }
+        <input type="text" class="form-control" [ngModel]="searchTerm()" (ngModelChange)="onSearchTermChange($event)" placeholder="search issues..." i18n-placeholder="@@i18n.issues.searchIssues" />
+        <button
+            type="button"
+            class="btn btn-sm"
+            [class.btn-primary]="hideCompleted()"
+            [class.btn-outline-primary]="!hideCompleted()"
+            (click)="onHideCompletedChange(!hideCompleted())"
+            ngbTooltip="hide completed issues"
+            i18n-ngbTooltip="@@i18n.issues.hideCompleted"
+        >
+            <i>{{ hideCompleted() ? 'visibility_off' : 'visibility' }}</i>
+        </button>
+    </div>
+
+    @if (activeTracker() && !canConnect(activeTracker()!)) {
+        <div class="card card-body text-warning mb-3" i18n="@@i18n.issues.noCredentials">no credentials for this tracker</div>
+    }
+
+    <div style="max-height: 360px; overflow-y: auto" class="position-relative" (scroll)="onScroll($event)">
+        <spinner [size]="36" [centered]="true" [visible]="loading() || searching()"></spinner>
+        @if (!loading() && !searching() && filteredIssues().length === 0) {
+            <div class="text-center text-muted py-4" i18n="@@i18n.issues.noIssuesFound">no issues found</div>
+        }
+        @for (task of filteredIssues(); track task.id) {
+            <div class="card mb-2" [class.border-primary]="isSelected(task)" (click)="selectIssue(task)" tabindex="0" (keydown.enter)="selectIssue(task)" role="button">
+                <div class="card-body hstack gap-2 py-1 align-items-center justify-content-between">
+                    <n>{{ activeTracker()?.instance?.icon() }}</n>
+                    <div class="flex-grow-1 text-truncate">
+                        <span class="text-truncate">{{ task.name }}</span>
+                    </div>
+                    <div class="ms-3 text-nowrap">
+                        @if (task.state === 1) {
+                            <i class="text-success" ngbTooltip="completed" i18n-ngbTooltip="@@i18n.common.completed">check_circle</i>
+                        } @else {
+                            <i class="text-muted" ngbTooltip="open" i18n-ngbTooltip="@@i18n.common.open">radio_button_unchecked</i>
+                        }
+                        @if (isSelected(task)) {
+                            <i class="text-primary ms-2">check</i>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+        @if (loadingMore() && !loading()) {
+            <spinner [size]="24" [centered]="true" [visible]="true"></spinner>
+        }
+    </div>
+}

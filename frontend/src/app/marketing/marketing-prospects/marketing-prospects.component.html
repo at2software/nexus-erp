@@ -106,7 +106,7 @@
                 @if (!_isLoading && _prospects.length > 0) {
                     <ul class="list-group list-group-flush">
                         @for (prospect of _filteredProspects; track prospect.id) {
-                            <li class="list-group-item" [class.router-active]="selectedProspectId() === prospect.id" [nx]="prospect" [tables]="_filteredProspects" (actionsResolved)="actionsResolved()" (click)="navigateToProspect($event, prospect)" (keydown.enter)="navigateToProspect($any($event), prospect)" tabindex="0">
+                            <li class="list-group-item" [class.router-active]="selectedProspectId() === prospect.id" [nx]="prospect" [tables]="_filteredProspects" (actionsResolved)="actionsResolved()" (click)="navigateToProspect($event, prospect)" (keydown.enter)="navigateToProspect($event, prospect)" tabindex="0">
                                 <div class="hstack gap-2">
                                     <i [class]="'status-icon flex-shrink-0 ' + prospect.statusTextClass()">{{ prospect.statusIcon() }}</i>
                                     <div class="prospect-info">

@@ -2,9 +2,11 @@
 
 namespace App\Enums;
 
-use BenSampo\Enum\Enum;
+enum InvoiceVatHandling: int {
+    case Net   = 0;
+    case Gross = 1;
 
-final class InvoiceVatHandling extends Enum {
-    const Net   = 0;
-    const Gross = 1;
+    public static function asArray(): array {
+        return array_column(self::cases(), 'value', 'name');
+    }
 }

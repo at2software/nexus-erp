@@ -65,7 +65,7 @@ class CleanPipelineChatPosts extends Command {
                 if ($createAt >= $windowMs && $createAt < $cutoffMs) {
                     $type = $post['props']['nexus_type'] ?? null;
 
-                    if (in_array($type, ['git_pipeline', 'git_security'])) {
+                    if (in_array($type, ['git_pipeline', 'git_security']) && ($post['reply_count'] ?? 0) == 0) {
                         $controller->deletePost($postId);
                         $deleted++;
                     }

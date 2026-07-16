@@ -1,9 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ModalBaseComponent } from '../modal-base.component';
 import { InvoiceItemService } from '@models/invoice/invoice-item.service';
 import { InvoiceItemType, REPEATING_TYPES } from '@enums/invoice-item.type';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { Company } from '@models/company/company.model';
+import { Product } from '@models/product/product.model';
 
 const TYPE_LABELS: Record<number, string> = {
     [InvoiceItemType.Daily]: 'daily',
@@ -16,35 +18,34 @@ const TYPE_LABELS: Record<number, string> = {
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'modal-create-audit-invoice-item',
-    standalone: true,
     imports: [FormsModule, SpinnerComponent],
     templateUrl: './modal-create-audit-invoice-item.component.html',
 })
-export class ModalCreateAuditInvoiceItemComponent extends ModalBaseComponent<any> {
-    company?: any;
+export class ModalCreateAuditInvoiceItemComponent extends ModalBaseComponent<null> {
+    company?: Company;
     saving = signal(false);
 
-    name = '';
-    price = 0;
-    unit_name = 'month';
-    type = InvoiceItemType.Monthly;
-    next_recurrence_at = new Date().toISOString().slice(0, 10);
+    name = signal('');
+    price = signal(0);
+    unit_name = signal('month');
+    type = signal(InvoiceItemType.Monthly);
+    next_recurrence_at = signal(new Date().toISOString().slice(0, 10));
 
     readonly typeOptions = REPEATING_TYPES.map((t) => ({ value: t, label: TYPE_LABELS[t] }));
 
     #service = inject(InvoiceItemService);
 
-    init(company: any, product?: any) {
+    init(company: Company, product?: Product) {
         this.company = company;
         if (product) {
             const item = product.invoice_items?.[0];
             if (item) {
-                this.name = item.name || product.name || '';
-                this.price = item.net ?? item.price ?? 0;
-                this.unit_name = item.unit_name || 'month';
-                if (REPEATING_TYPES.includes(item.type)) this.type = item.type;
+                this.name.set(item.text || product.name || '');
+                this.price.set(item.net ?? item.price ?? 0);
+                this.unit_name.set(item.unit_name || 'month');
+                if ((REPEATING_TYPES as readonly InvoiceItemType[]).includes(item.type)) this.type.set(item.type);
             } else {
-                this.name = product.name || '';
+                this.name.set(product.name || '');
             }
         }
     }
@@ -53,22 +54,20 @@ export class ModalCreateAuditInvoiceItemComponent extends ModalBaseComponent<any
         return null;
     }
 
-    get canSave() {
-        return this.name.trim() && this.price > 0 && this.next_recurrence_at;
-    }
+    readonly canSave = computed(() => !!this.name().trim() && this.price() > 0 && !!this.next_recurrence_at());
 
     save() {
-        if (!this.canSave) return;
+        if (!this.canSave()) return;
         this.saving.set(true);
         this.#service
             .store({
-                name: this.name,
-                price: this.price,
-                unit_name: this.unit_name,
-                type: this.type,
-                next_recurrence_at: this.next_recurrence_at,
+                name: this.name(),
+                price: this.price(),
+                unit_name: this.unit_name(),
+                type: this.type(),
+                next_recurrence_at: this.next_recurrence_at(),
                 company_id: this.company?.id,
-            } as any)
+            })
             .subscribe({
                 next: () => {
                     this.saving.set(false);

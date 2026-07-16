@@ -8,7 +8,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
     selector: 'hr-stats',
-    standalone: true,
     imports: [RouterModule, AvatarComponent],
     templateUrl: './hr-stats.component.html',
     styleUrl: './hr-stats.component.scss',

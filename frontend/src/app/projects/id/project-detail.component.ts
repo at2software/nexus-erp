@@ -19,12 +19,11 @@ import { HeaderRouteNavComponent } from '@app/app/header/header-route-nav/header
     selector: 'project-detail',
     templateUrl: './project-detail.component.html',
     styleUrls: ['./project-detail.component.scss'],
-    standalone: true,
     imports: [HeaderComponent, ProjectComponent, HeaderRouteNavComponent, RouterModule, ActivityTabComponent, TabCommentsComponent, ActivityProjectsComponent, ProjectComponent, NgbDropdownModule, SmartLinkDirective],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectDetailComponent {
-    
+
     #router = inject(Router);
     #projectService = inject(ProjectService);
     global = inject(GlobalService);
@@ -33,8 +32,8 @@ export class ProjectDetailComponent {
     readonly object = tracked(this.parent.object);
     route = inject(ActivatedRoute);
 
-    dataIntensity: any[] = [];
-    dataPie: any[] = [];
+    dataIntensity: unknown[] = [];
+    dataPie: unknown[] = [];
     dataPieMax: number = 0;
     dataPieWage: string = '';
 
@@ -42,13 +41,12 @@ export class ProjectDetailComponent {
 
     setParent = (_?: Project) => this.parent.object().update({ project_id: _ ? _.id : null }).subscribe();
 
-    setState = (event: any, requestedState: any) => {
+    setState = (event: Event, requestedState: string) => {
         event.preventDefault();
         event.stopPropagation();
-        const newState = parseInt(requestedState);
         const object = this.parent.object();
-        object.update({ state: newState }).subscribe(() => {
-            if ([3, 9].contains(newState)) {
+        object.update({ state: requestedState }).subscribe(() => {
+            if (['3', '9'].contains('' + requestedState)) {
                 this.#router.navigate(['/projects/' + object.id + '/invoicing']);
             }
         });
@@ -60,5 +58,5 @@ export class ProjectDetailComponent {
             this.#router.navigate(['/customers/' + object.company_id + '/billing']);
         });
     }
-    isStateAllowed = (_: ProjectState) => ProjectState.StateChangeWorkflow[this.parent.object().state.id].contains(parseInt(_.id));
+    isStateAllowed = (_: ProjectState) => ProjectState.StateChangeWorkflow['' + this.parent.object().state.id].contains('' + _.id);
 }

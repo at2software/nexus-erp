@@ -2,38 +2,15 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { NexusHttpService } from '../http/http.nexus';
 import { UptimeMonitor } from './uptime-monitor.model';
-export interface UptimeCheckDay {
-    day: string;
-    up_count: number;
-    down_count: number;
-    degraded_count: number;
-    total: number;
-}
 import { Dictionary } from '@constants/constants';
-
+import { UptimeCheckDay } from '@models/api-response';
 @Injectable({ providedIn: 'root' })
 export class UptimeMonitorService extends NexusHttpService<UptimeMonitor> {
     public apiPath = 'uptime_monitors';
-    public TYPE = () => UptimeMonitor;
-
-    index = (filters?: Dictionary): Observable<UptimeMonitor[]> => {
-        return this.aget(this.apiPath, filters, UptimeMonitor);
-    };
-
-    show = (id: string): Observable<UptimeMonitor> => {
-        return this.get(`${this.apiPath}/${id}`, {}, UptimeMonitor);
-    };
+    override readonly model = UptimeMonitor;
 
     store = (data: Partial<UptimeMonitor>): Observable<UptimeMonitor> => {
         return this.post(this.apiPath, data, UptimeMonitor);
-    };
-
-    update = (id: string, data: Partial<UptimeMonitor>): Observable<UptimeMonitor> => {
-        return this.put(`${this.apiPath}/${id}`, data, UptimeMonitor);
-    };
-
-    destroy = (id: string): Observable<any> => {
-        return this.delete(`${this.apiPath}/${id}`);
     };
 
     indexChecks = (monitor: UptimeMonitor, days: number = 30): Observable<UptimeCheckDay[]> => {
@@ -48,7 +25,7 @@ export class UptimeMonitorService extends NexusHttpService<UptimeMonitor> {
         return this.post(`${this.apiPath}/${monitor.id}/test`, { with_notification: withNotification });
     };
 
-    updateRecipient = (monitor: UptimeMonitor, userId: string, preferences: any): Observable<any> => {
+    updateRecipient = (monitor: UptimeMonitor, userId: string, preferences: Dictionary): Observable<any> => {
         return this.put(`${this.apiPath}/${monitor.id}/recipients/${userId}`, preferences);
     };
 }

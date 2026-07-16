@@ -16,16 +16,16 @@ class RecalculateInvoiceStats extends Command {
         $this->info('Updating global stats...');
         $action->execute();
 
-        $companies = Company::all();
-        $this->info("Updating {$companies->count()} companies...");
+        $total = Company::count();
+        $this->info("Updating {$total} companies...");
 
-        $bar = $this->output->createProgressBar($companies->count());
+        $bar = $this->output->createProgressBar($total);
         $bar->start();
 
-        foreach ($companies as $company) {
+        Company::cursor()->each(function (Company $company) use ($action, $bar) {
             $action->execute($company);
             $bar->advance();
-        }
+        });
 
         $bar->finish();
         $this->newLine();

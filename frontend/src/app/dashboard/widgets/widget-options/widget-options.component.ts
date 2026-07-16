@@ -13,7 +13,6 @@ export enum OptionType {
     templateUrl: './widget-options.component.html',
     styleUrls: ['./widget-options.component.scss'],
     host: { class: 'edit mb-0' },
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class WidgetOptionsComponent {
@@ -24,5 +23,8 @@ export class WidgetOptionsComponent {
 
     #modal = inject(ModalBaseService);
 
-    onOptionsClicked = () => this.#modal.open(ModalEditWidgetOptionsComponent, this.options(), this.updated);
+    onOptionsClicked = () => {
+        const options = this.options();
+        if (options) this.#modal.open(ModalEditWidgetOptionsComponent, options, this.updated);
+    };
 }

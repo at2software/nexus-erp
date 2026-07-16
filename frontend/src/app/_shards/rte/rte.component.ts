@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, inject, input, TemplateRef } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
+import { afterNextRender, ChangeDetectionStrategy, Component, inject, Injector, input, signal, TemplateRef } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { Serializable } from '@models/serializable';
 import { DEFAULT_RTE_CONFIG } from '../text-param-editor/default-rte-config';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
-import { AngularEditorModule } from '@kolkov/angular-editor';
+import { QuillEditorComponent, QuillModules } from 'ngx-quill';
+import type Quill from 'quill';
 import { FormsModule } from '@angular/forms';
 import { SafePipe } from '@pipes/safe.pipe';
 import { HotkeyDirective } from '@directives/hotkey.directive';
@@ -14,8 +14,7 @@ import { HotkeyDirective } from '@directives/hotkey.directive';
     selector: 'rte',
     templateUrl: './rte.component.html',
     styleUrls: ['./rte.component.scss'],
-    standalone: true,
-    imports: [EmptyStateComponent, AngularEditorModule, FormsModule, SafePipe, HotkeyDirective],
+    imports: [EmptyStateComponent, QuillEditorComponent, FormsModule, SafePipe, HotkeyDirective],
 })
 export class RteComponent {
     object = input.required<Serializable>();
@@ -23,32 +22,37 @@ export class RteComponent {
     config = input(DEFAULT_RTE_CONFIG);
     compact = input(false);
 
-    get binding() {
-        return (this.object() as any)[this.key()];
+    readonly toolbarId = `rte-toolbar-${Math.random().toString(36).slice(2)}`;
+    readonly modules: QuillModules = { toolbar: { container: `#${this.toolbarId}` } };
+
+    get binding(): string {
+        return Reflect.get(this.object(), this.key());
     }
-    set binding(v: any) {
-        (this.object() as any)[this.key()] = v;
+    set binding(v: string) {
+        Reflect.set(this.object(), this.key(), v);
     }
 
-    #doc = inject(DOCUMENT);
     modalService = inject(NgbModal);
+    #injector = inject(Injector);
+    #quill?: Quill;
 
-    open(content: TemplateRef<any>) {
+    // Quill registers its own (high-frequency) keystroke/selection listeners during construction.
+    // Deferring its creation into afterNextRender() — which Angular always runs outside the zone —
+    // keeps those listeners out of zone.js, so typing doesn't trigger a full-app change detection
+    // tick on every keystroke.
+    readonly editorReady = signal(false);
+
+    open(content: TemplateRef<unknown>) {
+        this.editorReady.set(false);
         const ref = this.modalService.open(content, { size: 'lg' });
-        ref.shown.subscribe(() => this.#focusEditorEnd());
+        afterNextRender(() => this.editorReady.set(true), { injector: this.#injector });
         ref.result.then(() => this.object().update().subscribe());
     }
 
-    #focusEditorEnd() {
-        const el = this.#doc.querySelector<HTMLElement>('.angular-editor-textarea');
-        if (!el) return;
-        el.focus();
-        const range = this.#doc.createRange();
-        range.selectNodeContents(el);
-        range.collapse(false);
-        const sel = this.#doc.getSelection();
-        sel?.removeAllRanges();
-        sel?.addRange(range);
+    onEditorCreated(quill: Quill) {
+        this.#quill = quill;
+        quill.setSelection(quill.getLength(), 0);
+        quill.focus();
     }
 
     onKeyDown(event: KeyboardEvent) {
@@ -59,18 +63,11 @@ export class RteComponent {
     }
 
     insertCurrentDate() {
+        if (!this.#quill) return;
         const d = new Date();
         const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        const sel = this.#doc.getSelection();
-        if (!sel?.rangeCount) return;
-        const range = sel.getRangeAt(0);
-        range.deleteContents();
-        const node = this.#doc.createTextNode(dateStr);
-        range.insertNode(node);
-        range.setStartAfter(node);
-        range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
-        node.parentElement?.dispatchEvent(new Event('input', { bubbles: true }));
+        const range = this.#quill.getSelection() ?? { index: this.#quill.getLength(), length: 0 };
+        this.#quill.insertText(range.index, dateStr, 'user');
+        this.#quill.setSelection(range.index + dateStr.length, 0);
     }
 }

@@ -11,7 +11,6 @@ return new class extends Migration {
             $table->string('kpi_color')->nullable()->after('kpi_icon');
         });
     }
-
     public function down(): void {
         Schema::table('marketing_performance_metrics', function (Blueprint $table) {
             $table->dropColumn(['kpi_icon', 'kpi_color']);

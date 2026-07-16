@@ -1,10 +1,11 @@
 @let _compact = compact();
+@let _config = config();
 
-<div class="preview p-3" [class.compact]="_compact && !binding?.length">
-    @if (!binding?.length && !_compact) {
+<div class="preview p-3" [class.compact]="_compact && !binding.length">
+    @if (!binding.length && !_compact) {
         <empty-state (click)="open(content)" class="description" [card]="false" i18n-title="@@i18n.info.noDescriptionYet" title="no description yet"></empty-state>
     }
-    @if (!binding?.length && _compact) {
+    @if (!binding.length && _compact) {
         <span class="badge text-warning compact-warning" (click)="open(content)" (keyup.enter)="open(content)" tabindex="0" i18n="@@i18n.info.noDescriptionYet">no description yet</span>
     }
     <button class="btn btn-fancy btn-fancy-te" (click)="open(content)"><i>edit</i></button>
@@ -12,14 +13,35 @@
 </div>
 
 <ng-template #content let-modal>
-    <div class="modal-body" (keydown)="onKeyDown($event)">
-        <angular-editor [config]="config()" [(ngModel)]="binding">
-            <ng-template #customButtons>
-                <span class="angular-editor-toolbar-set">
-                    <button class="angular-editor-button" (mousedown)="$event.preventDefault(); insertCurrentDate()" title="Insert current date (Ctrl+D)"><i>today</i></button>
-                </span>
-            </ng-template>
-        </angular-editor>
+    <div class="modal-body" tabindex="-1" (keydown)="onKeyDown($event)">
+        <div [id]="toolbarId" class="rte-toolbar">
+            <span class="ql-formats">
+                <button class="ql-bold" type="button"><i>format_bold</i></button>
+                <button class="ql-italic" type="button"><i>format_italic</i></button>
+                <button class="ql-underline" type="button"><i>format_underline</i></button>
+            </span>
+            <span class="ql-formats">
+                <button class="ql-blockquote" type="button"><i>format_quote</i></button>
+                <select class="ql-header">
+                    <option value="3">H</option>
+                    <option selected></option>
+                </select>
+            </span>
+            <span class="ql-formats">
+                <button class="ql-list" value="ordered" type="button"><i>format_list_numbered</i></button>
+                <button class="ql-list" value="bullet" type="button"><i>format_list_bulleted</i></button>
+            </span>
+            <span class="ql-formats">
+                <button class="ql-link" type="button"><i>link</i></button>
+                <button class="ql-clean" type="button"><i>format_clear</i></button>
+            </span>
+            <span class="ql-formats">
+                <button type="button" (mousedown)="$event.preventDefault(); insertCurrentDate()" title="Insert current date (Ctrl+D)"><i>today</i></button>
+            </span>
+        </div>
+        @if (editorReady()) {
+            <quill-editor [(ngModel)]="binding" [modules]="modules" [placeholder]="_config.placeholder" [styles]="{ height: _config.height, minHeight: _config.minHeight }" [debounceTime]="300" (onEditorCreated)="onEditorCreated($event)"></quill-editor>
+        }
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-primary" hotkey="CTRL+ENTER" (click)="modal.close('Save click')" i18n="@@i18n.common.save">save</button>

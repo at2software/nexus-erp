@@ -9,8 +9,6 @@ import { InputModalService } from '@app/_modals/modal-input/modal-input.componen
 @Component({
     selector: 'settings-projects-leads',
     templateUrl: './settings-projects-leads.component.html',
-    styleUrls: ['./settings-projects-leads.component.scss'],
-    standalone: true,
     imports: [EmptyStateComponent, Nx],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -23,7 +21,7 @@ export class SettingsProjectsLeadsComponent {
     onNewSource() {
         this.#input.open('Please enter the name of the new source').then((response) => {
             if (response) {
-                this.#leadSourceService.store(response.text).subscribe((_) => this.global.lead_sources.push(LeadSource.fromJson(_)));
+                this.#leadSourceService.store(response.text).subscribe((_) => this.global.lead_sources.update((sources) => [...sources, LeadSource.fromJson(_)]));
             }
         });
     }

@@ -6,7 +6,6 @@ import { MoneyPipe } from '@pipes/money.pipe';
     selector: 'saldo-chart',
     templateUrl: './saldo-chart.component.html',
     styleUrls: ['./saldo-chart.component.scss'],
-    standalone: true,
     imports: [MoneyPipe, DecimalPipe],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

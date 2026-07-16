@@ -1,6 +1,12 @@
 import { ALL_TRIGGERS, MODEL_BASED_TRIGGERS, ObserverTrigger } from '@enums/observer-trigger';
 import { SentinelOptionFieldType } from './sentinel-option-field-type.model';
-import { SentinelOptionField } from './sentinel-condition-option-field.model';
+import { SentinelOptionField, SentinelOptionInstance } from './sentinel-condition-option-field.model';
+
+export interface SentinelConditionInstance {
+    key: string;
+    inverted?: boolean;
+    options?: SentinelOptionInstance[];
+}
 
 const WEEKDAYS: { label: string; value: string }[] = [
     { label: 'Sunday', value: '0' },

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Company } from '@models/company/company.model';
 import { CompanyService } from '@models/company/company.service';
 import { AMTSGERICHTE } from '../amtsgerichte.data';
@@ -12,11 +12,9 @@ import { NgbTypeaheadModule } from '@ng-bootstrap/ng-bootstrap';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'customers-maintenance-commercial-register',
     templateUrl: './customers-maintenance-commercial-register.component.html',
-    styleUrls: ['./customers-maintenance-commercial-register.component.scss'],
-    standalone: true,
     imports: [Nx, AvatarComponent, FormsModule, NgbTypeaheadModule],
 })
-export class CustomersMaintenanceCommercialRegisterComponent implements OnInit {
+export class CustomersMaintenanceCommercialRegisterComponent {
     companies = signal<Company[]>([]);
 
     amtsgerichte: string[] = [
@@ -30,7 +28,7 @@ export class CustomersMaintenanceCommercialRegisterComponent implements OnInit {
 
     #companyService = inject(CompanyService);
 
-    ngOnInit() {
+    constructor() {
         this.#companyService.maintenanceCommercialRegister().subscribe((reply) => {
             reply.forEach((_) => (_.var.parts = ['HRB', '', '']));
             this.companies.set(reply);
@@ -44,6 +42,6 @@ export class CustomersMaintenanceCommercialRegisterComponent implements OnInit {
     search: OperatorFunction<string, readonly string[]> = (text$: Observable<string>) =>
         text$.pipe(
             debounceTime(200),
-            map((x: any) => (x === '' ? [] : this.amtsgerichte!.filter((v) => v.toLowerCase().match(x.toLowerCase())))),
+            map((x: string) => (x === '' ? [] : this.amtsgerichte!.filter((v) => v.toLowerCase().match(x.toLowerCase())))),
         );
 }

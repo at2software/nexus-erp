@@ -1,5 +1,7 @@
+import { DataLabelFormatterContext } from '@models/api-response';
+
 export const InvoiceDetailChartOptions = {
-    series: [],
+    series: [] as { name: string; data: number[][]; color: string }[],
     chart: {
         height: 150,
         type: 'scatter',
@@ -7,7 +9,7 @@ export const InvoiceDetailChartOptions = {
     },
     dataLabels: {
         enabled: true,
-        formatter: (val: any, { seriesIndex, _dataPointIndex, w }: any) => w.config.series[seriesIndex].name,
+        formatter: (_val: number, { seriesIndex, w }: DataLabelFormatterContext) => w.config.series[seriesIndex].name,
     },
     tooltip: {
         shared: false,
@@ -17,5 +19,5 @@ export const InvoiceDetailChartOptions = {
     },
     grid: { padding: { left: 50, right: 50 } },
     yaxis: { tickAmount: 1, min: 0, max: 5 },
-    xaxis: { type: 'datetime' },
+    xaxis: { type: 'datetime', min: undefined as number | undefined, max: undefined as number | undefined },
 };

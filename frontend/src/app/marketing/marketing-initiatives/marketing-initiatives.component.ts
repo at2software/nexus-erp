@@ -14,7 +14,6 @@ import { SpinnerComponent } from '@shards/spinner/spinner.component';
     selector: 'marketing-initiatives',
     templateUrl: './marketing-initiatives.component.html',
     styleUrls: ['./marketing-initiatives.component.scss'],
-    standalone: true,
     imports: [FormsModule, RouterModule, Nx, NgbTooltipModule, EmptyStateComponent, GuidedTourComponent, SpinnerComponent],
 })
 export class MarketingInitiativesComponent {
@@ -22,8 +21,8 @@ export class MarketingInitiativesComponent {
     #router = inject(Router);
     #route = inject(ActivatedRoute);
 
-    initiatives: MarketingInitiative[] = [];
-    allInitiatives: MarketingInitiative[] = [];
+    initiatives = signal<MarketingInitiative[]>([]);
+    allInitiatives = signal<MarketingInitiative[]>([]);
     isLoading = signal<boolean>(false);
     showCreateModal = signal(false);
     showRootOnly = true;
@@ -37,12 +36,12 @@ export class MarketingInitiativesComponent {
         status: 'active',
     };
 
-    stats = {
+    stats = signal({
         total: 0,
         active: 0,
         paused: 0,
         completed: 0,
-    };
+    });
 
     constructor() {
         this.loadInitiatives();
@@ -50,20 +49,21 @@ export class MarketingInitiativesComponent {
 
     loadInitiatives() {
         this.isLoading.set(true);
-        this.#marketingService.indexInitiatives({}).subscribe((response: any) => {
-            this.allInitiatives = response.data || response;
+        this.#marketingService.indexInitiatives().subscribe((response) => {
+            this.allInitiatives.set(response.data);
             this.#applyFilters();
-            this.#calculateStats(this.allInitiatives);
+            this.#calculateStats(this.allInitiatives());
             this.isLoading.set(false);
 
-            if (!this.#route.firstChild?.snapshot.params['id'] && this.initiatives.length > 0) {
-                this.#router.navigate(['/marketing/initiatives', this.initiatives[0].id]);
+            const initiatives = this.initiatives();
+            if (!this.#route.firstChild?.snapshot.params['id'] && initiatives.length > 0) {
+                this.#router.navigate(['/marketing/initiatives', initiatives[0].id]);
             }
         });
     }
 
     #applyFilters() {
-        let filtered = this.allInitiatives;
+        let filtered = this.allInitiatives();
         if (this.searchTerm) {
             const term = this.searchTerm.toLowerCase();
             filtered = filtered.filter((i) => i.name?.toLowerCase().includes(term) || i.description?.toLowerCase().includes(term));
@@ -74,17 +74,17 @@ export class MarketingInitiativesComponent {
         if (this.showRootOnly) {
             filtered = filtered.filter((i) => !i.parent_id);
         }
-        filtered.sort((a, b) => (b.prospects_count || 0) - (a.prospects_count || 0));
-        this.initiatives = filtered;
+        filtered = [...filtered].sort((a, b) => (b.prospects_count || 0) - (a.prospects_count || 0));
+        this.initiatives.set(filtered);
     }
 
     createInitiative() {
         if (!this.newInitiative.name) return;
-        this.#marketingService.storeInitiative(this.newInitiative as any).subscribe((initiative: MarketingInitiative) => {
-            this.initiatives.unshift(initiative);
-            this.allInitiatives.unshift(initiative);
+        this.#marketingService.storeInitiative(this.newInitiative).subscribe((initiative: MarketingInitiative) => {
+            this.initiatives.update((arr) => [initiative, ...arr]);
+            this.allInitiatives.update((arr) => [initiative, ...arr]);
             this.resetCreateForm();
-            this.#calculateStats(this.allInitiatives);
+            this.#calculateStats(this.allInitiatives());
         });
     }
 
@@ -99,12 +99,12 @@ export class MarketingInitiativesComponent {
     }
 
     #calculateStats(allInitiatives?: MarketingInitiative[]) {
-        const initiatives = allInitiatives || this.initiatives;
-        this.stats = {
+        const initiatives = allInitiatives || this.initiatives();
+        this.stats.set({
             total: initiatives.length,
             active: initiatives.filter((i) => i.status === 'active').length,
             paused: initiatives.filter((i) => i.status === 'paused').length,
             completed: initiatives.filter((i) => i.status === 'completed').length,
-        };
+        });
     }
 }

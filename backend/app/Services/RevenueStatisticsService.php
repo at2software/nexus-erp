@@ -13,11 +13,23 @@ class RevenueStatisticsService {
         $current = now()->startOfYear();
         $last    = now()->startOfYear()->subYear(1);
         return [
-            'expenses' => Param::get('CASHFLOW_ANNUAL_EXPENSES')->value,
-            'revenue'  => Invoice::whereBetween('created_at', [$current, now()])->sum('net'),
-            'current'  => Invoice::whereBetween('created_at', [$current, now()])->clusterBy()->get()->map(fn ($_) => $_->only(['month', 'sum'])),
-            'last'     => Invoice::whereBetween('created_at', [$last, $current])->clusterBy('DATE_ADD(created_at, INTERVAL 1 YEAR)')->get()->map(fn ($_) => $_->only(['month', 'sum'])),
+            'expenses'  => Param::get('CASHFLOW_ANNUAL_EXPENSES')->value,
+            'revenue'   => Invoice::whereBetween('created_at', [$current, now()])->sum('net'),
+            'current'   => Invoice::whereBetween('created_at', [$current, now()])->clusterBy()->get()->map(fn ($_) => $_->only(['month', 'sum'])),
+            'last'      => Invoice::whereBetween('created_at', [$last, $current])->clusterBy('DATE_ADD(created_at, INTERVAL 1 YEAR)')->get()->map(fn ($_) => $_->only(['month', 'sum'])),
+            'revenue12' => self::getRevenue12MByMonth($current),
         ];
+    }
+
+    // Latest INVOICE_REVENUE_12M (rolling 12-month revenue) snapshot per month of the current year.
+    private static function getRevenue12MByMonth($since) {
+        return Param::get('INVOICE_REVENUE_12M')->history()
+            ?->whereBetween('created_at', [$since, now()])
+            ->orderBy('created_at')
+            ->get(['created_at', 'value'])
+            ->groupBy(fn ($_) => $_->created_at->format('Y-m'))
+            ->map(fn ($group, $month) => ['month' => $month, 'sum' => (float)$group->last()->value])
+            ->values() ?? collect();
     }
     public static function getSvBData(): array {
         $svbQuery = fn ($query) => $query->select(
@@ -28,7 +40,7 @@ class RevenueStatisticsService {
             ->whereIn('type', InvoiceItemType::Total)
             ->groupBy('year')->orderBy('year')->get()
             ->filter(fn ($_) => $_->year !== '0000')
-            ->map(fn ($_) => ['year' => $_->year, 'sum' => intval($_->sum)])->values();
+            ->map(fn ($_) => ['period' => $_->year, 'value' => intval($_->sum)])->values();
         return [
             'budget'  => $svbQuery(InvoiceItem::whereHas('project', fn ($p) => $p->where('is_time_based', false)->whereRunningOrFinishedSuccessfull())),
             'support' => $svbQuery(InvoiceItem::whereHas('project', fn ($p) => $p->where('is_time_based', true)->whereRunningOrFinishedSuccessfull())),

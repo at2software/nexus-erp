@@ -16,8 +16,6 @@ interface InstalmentModalOptions {
 @Component({
     selector: 'modal-invoice-add-instalment',
     templateUrl: './modal-invoice-add-instalment.component.html',
-    styleUrls: ['./modal-invoice-add-instalment.component.scss'],
-    standalone: true,
     imports: [FormsModule, HotkeyDirective],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -29,14 +27,6 @@ export class ModalInvoiceAddInstalmentComponent extends ModalBaseComponent<Invoi
     percentage = 30;
 
     global = inject(GlobalService);
-
-    get basePrice(): number {
-        return this.displayBasePrice;
-    }
-
-    set basePrice(value: number) {
-        this.displayBasePrice = value;
-    }
 
     init(_: Project | Invoice, options?: InstalmentModalOptions): void {
         this.parent = _;

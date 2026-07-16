@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
 import { NComponent } from '@shards/n/n.component';
 import { Product } from '@models/product/product.model';
+import { Serializable } from '@models/serializable';
 import { ProductService } from '@models/product/product.service';
 import { Project } from '@models/project/project.model';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
@@ -9,10 +10,8 @@ import { SearchInputComponent } from '@shards/search-input/search-input.componen
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'project-default-product',
-    standalone: true,
     imports: [SearchInputComponent, NComponent, NgbTooltipModule],
     templateUrl: './project-default-product.component.html',
-    styleUrls: ['./project-default-product.component.scss'],
 })
 export class ProjectDefaultProductComponent {
     project = input.required<Project>();
@@ -30,10 +29,12 @@ export class ProjectDefaultProductComponent {
         });
     }
 
-    onProductSelect(_: Product) {
+    onProductSelect(selected: Serializable) {
+        const product = selected.assert(Product);
+        if (!product) return;
         const project = this.project();
-        project.product_id = _.id;
-        this.product.set(_);
+        project.product_id = product.id;
+        this.product.set(product);
         project.update().subscribe();
     }
 }

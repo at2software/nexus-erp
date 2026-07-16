@@ -2,8 +2,8 @@
 
 namespace App\Casts;
 
-use App\Http\Middleware\Auth;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class PrecomputedAuth extends Precomputed {
     public function __construct(protected ?string $role = 'financial') {}

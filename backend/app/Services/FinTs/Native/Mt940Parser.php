@@ -80,7 +80,7 @@ class Mt940Parser {
         }
 
         // Credit/debit indicator: C, D, RC, RD
-        $storno = false;
+        $storno      = false;
         $creditDebit = FinTsTransaction::CD_CREDIT;
         if (substr($value, $pos, 2) === 'RC') {
             $creditDebit = FinTsTransaction::CD_CREDIT;
@@ -109,8 +109,8 @@ class Mt940Parser {
         if (! preg_match('/^([\d,]+)/', substr($value, $pos), $amtMatch)) {
             return null;
         }
-        $amount = (float) str_replace(',', '.', $amtMatch[1]);
-        $pos   += strlen($amtMatch[1]);
+        $amount = (float)str_replace(',', '.', $amtMatch[1]);
+        $pos += strlen($amtMatch[1]);
 
         // Parse booking date
         $bookingDate = self::parseDate($bookDateStr ?? $valueDateStr, $bookDateStr === null);
@@ -135,7 +135,7 @@ class Mt940Parser {
         $pattern   = '/\?(\d{2})([^?]*)/';
         preg_match_all($pattern, $value, $matches, PREG_SET_ORDER);
         foreach ($matches as $m) {
-            $subfields[(int) $m[1]] = $m[2];
+            $subfields[(int)$m[1]] = $m[2];
         }
 
         // Purpose: concatenate ?20 through ?29
@@ -153,7 +153,7 @@ class Mt940Parser {
         }
 
         // Counterparty name: ?32 + optional ?33
-        $name = trim(($subfields[32] ?? '') . ($subfields[33] ?? ''));
+        $name = trim(($subfields[32] ?? '').($subfields[33] ?? ''));
 
         return ['purpose' => $purpose, 'name' => $name];
     }
@@ -171,9 +171,9 @@ class Mt940Parser {
         }
         $tags = $m[0];
         foreach ($tags as $i => [$tag, $pos]) {
-            $key        = substr($tag, 0, 4);
-            $valueStart = $pos + 5; // length of "XXXX+"
-            $valueEnd   = isset($tags[$i + 1]) ? $tags[$i + 1][1] : strlen($purpose);
+            $key          = substr($tag, 0, 4);
+            $valueStart   = $pos + 5; // length of "XXXX+"
+            $valueEnd     = isset($tags[$i + 1]) ? $tags[$i + 1][1] : strlen($purpose);
             $fields[$key] = substr($purpose, $valueStart, $valueEnd - $valueStart);
         }
         return $fields;
@@ -202,18 +202,19 @@ class Mt940Parser {
     private static function parseDate(string $dateStr, bool $isYymmdd): ?\DateTime {
         try {
             if ($isYymmdd && strlen($dateStr) === 6) {
-                $year = (int) ('20' . substr($dateStr, 0, 2));
-                $mon  = (int) substr($dateStr, 2, 2);
-                $day  = (int) substr($dateStr, 4, 2);
+                $year = (int)('20'.substr($dateStr, 0, 2));
+                $mon  = (int)substr($dateStr, 2, 2);
+                $day  = (int)substr($dateStr, 4, 2);
                 return new \DateTime(sprintf('%04d-%02d-%02d', $year, $mon, $day));
             }
             if (! $isYymmdd && strlen($dateStr) === 4) {
-                $mon  = (int) substr($dateStr, 0, 2);
-                $day  = (int) substr($dateStr, 2, 2);
-                $year = (int) date('Y');
+                $mon  = (int)substr($dateStr, 0, 2);
+                $day  = (int)substr($dateStr, 2, 2);
+                $year = (int)date('Y');
                 return new \DateTime(sprintf('%04d-%02d-%02d', $year, $mon, $day));
             }
-        } catch (\Throwable) {}
+        } catch (\Throwable) {
+        }
         return null;
     }
 }

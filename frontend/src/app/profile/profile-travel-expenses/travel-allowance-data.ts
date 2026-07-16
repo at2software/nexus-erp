@@ -1,12 +1,7 @@
 // German Travel Allowance Data for 2025
 // Based on ARVVwV 2025 (Allgemeine Verwaltungsvorschrift über die Neufestsetzung der Auslandstage- und Auslandsübernachtungsgelder)
 
-export interface TravelAllowanceRates {
-    country: string;
-    kleinePauschale: number; // Small allowance (arrival/departure day)
-    grossePauschale: number; // Large allowance (full 24-hour day)
-    uebernachtung: number; // Accommodation allowance
-}
+import { TravelAllowanceRates } from '@models/api-response';
 
 // Travel allowance rates for 2025 (amounts in EUR)
 // Source: BMF "Steuerliche Behandlung von Reisekosten und Reisekostenvergütungen bei betrieblich und beruflich veranlassten Auslandsreisen ab 1. Januar 2025"

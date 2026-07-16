@@ -7,8 +7,6 @@ import { HrFocusTableComponent } from '../hr-focus-table/hr-focus-table.componen
 @Component({
     selector: 'hr-foci',
     templateUrl: './hr-foci.component.html',
-    styleUrls: ['./hr-foci.component.scss'],
-    standalone: true,
     imports: [HrFocusTableComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

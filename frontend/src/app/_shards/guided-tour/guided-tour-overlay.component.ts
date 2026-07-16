@@ -1,15 +1,16 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, inject, OnDestroy, OnInit } from '@angular/core';
-import { AsyncPipe } from '@angular/common';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, NgZone, computed, inject } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { GuidedSlide, GuidedTourService } from './guided-tour.service';
-import { Subscription } from 'rxjs';
+import { fromEvent } from 'rxjs';
+import { Dictionary } from '@constants/constants';
 
 interface OverlayPanels {
-    top: Record<string, string>;
-    bottom: Record<string, string>;
-    left: Record<string, string>;
-    right: Record<string, string>;
-    ring: Record<string, string>;
-    card: Record<string, string>;
+    top: Dictionary<string>;
+    bottom: Dictionary<string>;
+    left: Dictionary<string>;
+    right: Dictionary<string>;
+    ring: Dictionary<string>;
+    card: Dictionary<string>;
     /** True when the focused element is too wide/tall for side placement — card is centered instead */
     cardCentered: boolean;
 }
@@ -25,35 +26,23 @@ const WIDE_THRESHOLD = 0.5;
     selector: 'guided-tour-overlay',
     templateUrl: './guided-tour-overlay.component.html',
     styleUrls: ['./guided-tour-overlay.component.scss'],
-    standalone: true,
-    imports: [AsyncPipe],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class GuidedTourOverlayComponent implements OnInit, OnDestroy {
+export class GuidedTourOverlayComponent {
     #service = inject(GuidedTourService);
     #cdr = inject(ChangeDetectorRef);
-    #sub?: Subscription;
+    #destroyRef = inject(DestroyRef);
+    #ngZone = inject(NgZone);
 
     currentSlide: GuidedSlide | null = null;
     panels: OverlayPanels | null = null;
     disableChecked = false;
 
-    get queueLength$() {
-        return this.#service.queueLength$;
-    }
-    get sessionTotal$() {
-        return this.#service.sessionTotal$;
-    }
-    get sessionDone$() {
-        return this.#service.sessionDone$;
-    }
+    readonly queueLength = toSignal(this.#service.queueLength$, { initialValue: 0 });
+    readonly slideIndicators = computed(() => Array(this.queueLength()).fill(0));
 
-    get slideIndicators(): number[] {
-        return Array(this.#service.queueLength$.value).fill(0);
-    }
-
-    ngOnInit(): void {
-        this.#sub = this.#service.currentSlide$.subscribe((slide) => {
+    constructor() {
+        this.#service.currentSlide$.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe((slide) => {
             this.currentSlide = slide;
             if (slide) {
                 requestAnimationFrame(() => {
@@ -65,18 +54,17 @@ export class GuidedTourOverlayComponent implements OnInit, OnDestroy {
             }
             this.#cdr.markForCheck();
         });
-    }
 
-    ngOnDestroy(): void {
-        this.#sub?.unsubscribe();
-    }
-
-    @HostListener('window:resize')
-    onResize(): void {
-        if (this.currentSlide) {
-            this.panels = this.#computePanels(this.currentSlide);
-            this.#cdr.markForCheck();
-        }
+        this.#ngZone.runOutsideAngular(() => {
+            fromEvent(window, 'resize')
+                .pipe(takeUntilDestroyed(this.#destroyRef))
+                .subscribe(() => {
+                    if (this.currentSlide) {
+                        this.panels = this.#computePanels(this.currentSlide);
+                        this.#cdr.markForCheck();
+                    }
+                });
+        });
     }
 
     onNext(): void {
@@ -89,7 +77,8 @@ export class GuidedTourOverlayComponent implements OnInit, OnDestroy {
 
     #resolveElement(slide: GuidedSlide): Element | null {
         if (slide.focusElement) {
-            const el = (slide.focusElement as any).nativeElement ?? slide.focusElement;
+            const focusElement = slide.focusElement;
+            const el = focusElement instanceof ElementRef ? focusElement.nativeElement : focusElement;
             if (el instanceof Element) return el;
         }
         if (slide.focusSelector) return document.querySelector(slide.focusSelector);
@@ -121,8 +110,8 @@ export class GuidedTourOverlayComponent implements OnInit, OnDestroy {
         };
     }
 
-    #computeCardPosition(r: DOMRect, sw: number, sh: number): { style: Record<string, string>; centered: boolean } {
-        const style: Record<string, string> = { maxWidth: `${CARD_WIDTH}px` };
+    #computeCardPosition(r: DOMRect, sw: number, sh: number): { style: Dictionary<string>; centered: boolean } {
+        const style: Dictionary<string> = { maxWidth: `${CARD_WIDTH}px` };
         const cx = r.left + r.width / 2;
         const cy = r.top + r.height / 2;
         const isWide = r.width > sw * WIDE_THRESHOLD;

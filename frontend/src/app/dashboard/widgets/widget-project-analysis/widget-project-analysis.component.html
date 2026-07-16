@@ -11,7 +11,7 @@
 
     @if (!project()) {
         @if (runningProjects().length) {
-            <ul class="list-group">
+            <ul revealList class="list-group">
                 @for (p of runningProjects(); track p.id) {
                     <li class="list-group-item d-flex align-items-center gap-2 cursor-pointer" (click)="selectProject(p)" (keyup.enter)="selectProject(p)" tabindex="0">
                         <span class="flex-fill text-truncate">{{ p.name }}</span>
@@ -32,20 +32,20 @@
             </div>
         }
 
-        <ul class="list-group">
-            @if (!p.is_internal && hasInvoicesModule) {
+        <ul revealList class="list-group">
+            @if (!p.is_internal && hasInvoicesModule()) {
                 <li class="list-group-item hstack gap-2">
                     <div class="flex-fill" i18n="@@i18n.common.totalBudget">total budget</div>
                     <div>{{ p.net | money }}</div>
                 </li>
             }
-            @if (p.is_time_based && hasInvoicesModule) {
+            @if (p.is_time_based && hasInvoicesModule()) {
                 <li class="list-group-item hstack gap-2">
                     <div class="flex-fill" i18n="@@i18n.common.last12Months">last 12 months</div>
                     <div>{{ p.revenue_last_12 | money }}</div>
                 </li>
             }
-            @if (!p.is_internal && !p.is_time_based && !p.state.isPrepared() && hasInvoicesModule) {
+            @if (!p.is_internal && !p.is_time_based && !p.state.isPrepared() && hasInvoicesModule()) {
                 <li class="list-group-item hstack gap-2">
                     <div class="flex-fill" i18n="@@i18n.common.remaining">remaining</div>
                     <div>{{ p.net_remaining | money }}</div>
@@ -98,7 +98,7 @@
                     <div>{{ p.finished_at | date }}</div>
                 </li>
             }
-            @if (p.is_time_based && !p.is_internal && hasInvoicesValues) {
+            @if (p.is_time_based && !p.is_internal && hasInvoicesValues()) {
                 <li class="list-group-item hstack gap-2 cursor-pointer text-primary" [routerLink]="['/projects', p.id, 'invoicing']">
                     <div class="flex-fill" i18n="@@i18n.common.unbilledFoci">unbilled foci</div>
                     <div>{{ p.uninvoiced_hours | number: '1.1-1' }}h</div>

@@ -3,7 +3,7 @@ import { Assignee, I18N_REMOVE_FROM_TEAM } from '@models/assignee/assignee.model
 import { Project } from '@models/project/project.model';
 import { User } from '@models/user/user.model';
 import { UserService } from '@models/user/user.service';
-import moment, { Moment } from 'moment';
+import { dayjs, Dayjs } from '@constants/dates';
 import { ActionEmitterType } from '@app/nx/nx.directive';
 import { Color } from '@constants/Color';
 import { ProjectState } from '@models/project/project-state.model';
@@ -42,15 +42,14 @@ interface TData {
     timeline_leaves: TBlock[];
 }
 
-const D_START = moment().startOf('day');
-const D_END = D_START.clone().add(60, 'days').endOf('day');
+const D_START = dayjs().startOf('day');
+const D_END = D_START.add(60, 'days').endOf('day');
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'hr-workload',
     templateUrl: './hr-workload.component.html',
     styleUrls: ['./hr-workload.component.scss'],
-    standalone: true,
     imports: [NgTemplateOutlet, NgbTooltipModule, Nx, AvatarComponent, ProjectComponent, FormsModule, PermissionsDirective, RouterModule, EmptyStateComponent],
 })
 export class HrWorkloadComponent {
@@ -89,22 +88,23 @@ export class HrWorkloadComponent {
         const getLink = (_: TWeekly) => (_.type === 'Project' ? `/projects/${_.id}` : _.type === 'Company' ? `/customers/${_.id}` : undefined);
         this.isError.set(false);
         this.#userService.showProjectLoad(user).subscribe({
-            next: (response: any) => {
+            next: (response: TData | undefined) => {
                 if (!response?.subscriptions) return;
-                const data = response as TData;
-                const ensureFunction = (obj: any, key: string) => {
-                    if (typeof obj[key] !== 'function') {
-                        const value = obj[key];
-                        obj[key] = () => value;
+                const data = response;
+                const ensureFunction = (obj: object, key: string) => {
+                    const record = obj as Record<string, unknown>;
+                    if (typeof record[key] !== 'function') {
+                        const value = record[key];
+                        record[key] = () => value;
                     }
                 };
                 data.user = User.fromJson(data.user);
                 data.subscriptions = data.subscriptions.map((x) => {
-                    const r = REFLECTION(x)
+                    const r = REFLECTION(x) as IHasFoci
                     ensureFunction(r, 'getName');
                     ensureFunction(r, 'hasTimeBudget');
                     ensureFunction(r, 'is')
-                    return r
+                    return r;
                 });
                 data.timeline_planned.forEach((_) => (_.link = getLink(_)));
                 this.data.set(data);
@@ -116,7 +116,7 @@ export class HrWorkloadComponent {
             },
         });
         for (const i in this.monthLabels) {
-            const month = D_START.clone().add(i, 'months').startOf('month').add(1, 'month');
+            const month = D_START.add(Number(i), 'months').startOf('month').add(1, 'month');
             this.monthLabels[i].label = month.format('MMM');
             this.monthLabels[i].percent = this.offsetFor(month);
         }
@@ -132,9 +132,9 @@ export class HrWorkloadComponent {
         _.update().subscribe();
     };
 
-    offsetFor = (date: Moment) => date.diff(D_START, 'seconds') / D_END.diff(D_START, 'seconds');
-    isProject = (_: any) => _ instanceof Project;
-    asProject = (_: any) => (_ instanceof Project ? (_ as Project) : undefined);
+    offsetFor = (date: Dayjs) => date.diff(D_START, 'seconds') / D_END.diff(D_START, 'seconds');
+    isProject = (_: IHasFoci) => _ instanceof Project;
+    asProject = (_: IHasFoci) => (_ instanceof Project ? _ : undefined);
     markerFor = (assignee: Assignee) => {
         const diff = Math.abs(assignee.hours_weekly - assignee.avg_hpd * 5);
         if (diff < 0.5) return undefined;
@@ -147,14 +147,13 @@ export class HrWorkloadComponent {
         if (!marker) return '';
         return `marker marker-${marker}`;
     };
-    canSetWeekly = (_: any): boolean => {
+    canSetWeekly = (_: IHasFoci): boolean => {
         if (_ instanceof Project) {
             if (_.company_id == NxGlobal.ME_ID) return true;
             return !!_.is_time_based;
         }
-        if (_.is('Company')) {
-            return _.id == NxGlobal.ME_ID;
-        }
+        const ofCompany = _.assert(Company);
+        if (ofCompany) return ofCompany.id == NxGlobal.ME_ID;
         return false;
     };
     getWeekly = () => this.data()?.weekly_ids.map((_) => this.getSubscriptionFor(_)) ?? [];

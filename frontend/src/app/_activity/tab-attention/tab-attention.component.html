@@ -8,62 +8,62 @@
                     <div class="header">{{ group.displayDate }}</div>
                     <ul class="list-group">
                         @for (_ of group.items; track _.id) {
-                            @if (_.class === 'Comment') {
-                                <li class="list-group-item hstack align-items-start gap-2 py-2" ngbTooltip="{{ _.created_at | date }}: new comment" [nx]="_" [tables]="_newItems">
+                            @if (_.assert(Comment); as comment) {
+                                <li class="list-group-item hstack align-items-start gap-2 py-2" ngbTooltip="{{ comment.created_at | date }}: new comment" [nx]="comment" [tables]="_newItems">
                                     <div>
-                                        @if (_.user) {
-                                            <avatar [object]="_.user"></avatar>
+                                        @if (comment.user) {
+                                            <avatar [object]="comment.user"></avatar>
                                         } @else {
-                                            <div class="avatar avatar-sm bg-black text-{{_.css()}}">
-                                                <i>{{_.getIcon()}}</i>
+                                            <div class="avatar avatar-sm bg-black text-{{comment.css()}}">
+                                                <i>{{comment.getIcon()}}</i>
                                             </div>
                                         }
                                     </div>
-                                    <div class="flex-fill" [innerHTML]="_.text | safe: 'html'"></div>
-                                    @if (_.parent) {
+                                    <div class="flex-fill" [innerHTML]="comment.text | safe: 'html'"></div>
+                                    @if (comment.parent) {
                                         <div>
-                                            <avatar [object]="_.parent"></avatar>
+                                            <avatar [object]="comment.parent"></avatar>
                                         </div>
                                     }
                                 </li>
                             }
-                            @if (_.class === 'Invoice') {
-                                <li roles="invoicing" ngbTooltip="{{ _.created_at | date }}: new invoice" class="list-group-item py-1 hstack align-items-start gap-2" [nx]="_" [tables]="_newItems">
+                            @if (_.assert(Invoice); as invoice) {
+                                <li roles="invoicing" ngbTooltip="{{ invoice.created_at | date }}: new invoice" class="list-group-item py-1 hstack align-items-start gap-2" [nx]="invoice" [tables]="_newItems">
                                     <div>
                                         <div class="badge badge-icon text-green">
                                             <n>invoice</n>
                                         </div>
                                     </div>
-                                    <div class="flex-fill text-truncate">{{ _.name }}</div>
-                                    <div class="text-end text-muted">{{ _.gross | mshort }}</div>
+                                    <div class="flex-fill text-truncate">{{ invoice.name }}</div>
+                                    <div class="text-end text-muted">{{ invoice.gross | mshort }}</div>
                                     <div>
-                                        <avatar [object]="_"></avatar>
+                                        <avatar [object]="invoice"></avatar>
                                     </div>
                                 </li>
                             }
-                            @if (_.class === 'Company') {
-                                <li class="list-group-item py-1 hstack align-items-start gap-2" ngbTooltip="{{ _.created_at | date }}: new company" [nx]="_" [tables]="_newItems">
+                            @if (_.assert(Company); as company) {
+                                <li class="list-group-item py-1 hstack align-items-start gap-2" ngbTooltip="{{ company.created_at | date }}: new company" [nx]="company" [tables]="_newItems">
                                     <div>
                                         <div class="badge badge-icon text-yellow">
                                             <n>customers</n>
                                         </div>
                                     </div>
-                                    <div class="flex-fill">{{ _.name }}</div>
+                                    <div class="flex-fill">{{ company.getName() }}</div>
                                     <div>
-                                        <avatar [object]="_"></avatar>
+                                        <avatar [object]="company"></avatar>
                                     </div>
                                 </li>
                             }
-                            @if (_.class === 'Project') {
-                                <li class="list-group-item py-1 hstack align-items-start gap-2" ngbTooltip="{{ _.created_at | date }}: new project" [nx]="_" [tables]="_newItems">
+                            @if (_.assert(Project); as project) {
+                                <li class="list-group-item py-1 hstack align-items-start gap-2" ngbTooltip="{{ project.created_at | date }}: new project" [nx]="project" [tables]="_newItems">
                                     <div>
                                         <div class="badge badge-icon text-yellow">
                                             <n>project</n>
                                         </div>
                                     </div>
-                                    <div class="flex-fill">{{ _.name }}</div>
+                                    <div class="flex-fill">{{ project.name }}</div>
                                     <div>
-                                        <avatar [object]="_"></avatar>
+                                        <avatar [object]="project"></avatar>
                                     </div>
                                 </li>
                             }

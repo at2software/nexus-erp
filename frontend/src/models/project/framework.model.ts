@@ -20,9 +20,4 @@ export class Framework extends Serializable {
 
     actions = getFrameworkActions(this);
 
-    serialize = (json?: any) => {
-        this.url = json.url || '';
-        this.framework = json.framework || '';
-        this.framework_version = json.framework_version || '';
-    };
 }

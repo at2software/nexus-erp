@@ -16,8 +16,6 @@ import { SmartLinkDirective } from '@directives/smart-link.directive';
 @Component({
     selector: 'customer-nav',
     templateUrl: './customer-nav.component.html',
-    styleUrls: ['./customer-nav.component.scss'],
-    standalone: true,
     imports: [HeaderComponent, HeaderRouteNavComponent, RouterModule, ActivityTabComponent, TabCommentsComponent, ActivityProjectsComponent, DndDirective, Nx, ProjectComponent, NgbDropdownModule, ProjectComponent, SmartLinkDirective],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

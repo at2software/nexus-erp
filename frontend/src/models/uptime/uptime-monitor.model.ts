@@ -9,6 +9,7 @@ import { getUptimeMonitorActions } from './uptime-monitor.actions';
 import { Observable, tap } from 'rxjs';
 import { NxGlobal } from '@app/nx/nx.global';
 import { Model } from '@constants/type-discriminators';
+import { Dictionary } from '@constants/constants';
 
 @Model('UptimeMonitor')
 export class UptimeMonitor extends Serializable {
@@ -25,7 +26,7 @@ export class UptimeMonitor extends Serializable {
     response_time_threshold: number = 5000;
     check_interval: number = 300;
     is_active: boolean = true;
-    request_headers?: Record<string, string>;
+    request_headers?: Dictionary<string>;
     request_body?: string;
     last_check_at?: string;
     last_status: 'up' | 'down' | 'degraded' | 'pending' = 'pending';

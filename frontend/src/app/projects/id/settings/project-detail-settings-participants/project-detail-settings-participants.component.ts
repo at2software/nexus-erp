@@ -9,20 +9,13 @@ import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
-
-interface ParticipatingCompany {
-    id: number;
-    connection_id: string;
-    other_company: any;
-    project_count: number;
-}
+import { ParticipatingCompany } from '@models/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'project-detail-settings-participants',
     templateUrl: './project-detail-settings-participants.component.html',
     styleUrls: ['./project-detail-settings-participants.component.scss'],
-    standalone: true,
     imports: [RouterModule, ConnectionsListComponent, AvatarComponent, NgbTooltipModule, EmptyStateComponent, SpinnerComponent],
 })
 export class ProjectDetailSettingsParticipantsComponent {
@@ -31,7 +24,7 @@ export class ProjectDetailSettingsParticipantsComponent {
     parent = inject(ProjectDetailGuard);
     #projectService = inject(ProjectService);
 
-    participants: ParticipatingCompany[] = [];
+    participants = signal<ParticipatingCompany[]>([]);
     loading = signal(false);
 
     constructor() {
@@ -47,11 +40,11 @@ export class ProjectDetailSettingsParticipantsComponent {
         const object = this.parent.object();
         this.loading.set(true);
         this.#projectService.indexConnectionProjects(object).subscribe({
-            next: (data: any) => {
-                this.participants = (data as ParticipatingCompany[]).map((p) => ({
+            next: (data) => {
+                this.participants.set(data.map((p) => ({
                     ...p,
                     other_company: Company.fromJson(p.other_company),
-                }));
+                })));
                 this.loading.set(false);
             },
             error: () => {

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Framework } from '@models/project/framework.model';
@@ -13,20 +13,18 @@ import { Color } from '@constants/Color';
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'projects-frameworks',
-    standalone: true,
     imports: [FormsModule, RouterModule, Nx, AvatarComponent, NgbTooltipModule],
     templateUrl: './projects-frameworks.component.html',
-    styleUrl: './projects-frameworks.component.scss',
 })
-export class ProjectsFrameworksComponent implements OnInit {
+export class ProjectsFrameworksComponent {
     frameworks = signal<Framework[]>([]);
     latestFrameworks = signal<FrameworkLatest[]>([]);
-    selectedFrameworks = new Set<string>();
+    selectedFrameworks = signal(new Set<string>());
     expandedFrameworks = new Set<string>();
-    versionsBehindFilter = 0;
+    versionsBehindFilter = signal(0);
     #projectService = inject(ProjectService);
 
-    ngOnInit() {
+    constructor() {
         this.#projectService.indexFrameworks().subscribe((data) => {
             data.forEach(
                 (d) =>
@@ -69,18 +67,25 @@ export class ProjectsFrameworksComponent implements OnInit {
         else this.expandedFrameworks.add(key);
     };
 
-    toggleFrameworkFilter = (name: string) => (this.selectedFrameworks.has(name) ? this.selectedFrameworks.delete(name) : this.selectedFrameworks.add(name));
+    toggleFrameworkFilter = (name: string) =>
+        this.selectedFrameworks.update((s) => {
+            const n = new Set(s);
+            if (n.has(name)) n.delete(name); else n.add(name);
+            return n;
+        });
 
-    get filteredFrameworks() {
+    readonly filteredFrameworks = computed(() => {
         let filtered = this.frameworks();
-        if (this.selectedFrameworks.size > 0) {
-            filtered = filtered.filter((f) => this.selectedFrameworks.has(f.framework));
+        const selected = this.selectedFrameworks();
+        if (selected.size > 0) {
+            filtered = filtered.filter((f) => selected.has(f.framework));
         }
-        if (this.versionsBehindFilter > 0) {
-            filtered = filtered.filter((f) => this.differenceFromLatestVersion(f) >= this.versionsBehindFilter);
+        const versionsBehind = this.versionsBehindFilter();
+        if (versionsBehind > 0) {
+            filtered = filtered.filter((f) => this.differenceFromLatestVersion(f) >= versionsBehind);
         }
         return filtered.sort((a, b) => Number(a.projects[0]?.company?.id || 0) - Number(b.projects[0]?.company?.id || 0));
-    }
+    });
 
     getVersionDistribution = (latestFramework: FrameworkLatest) => {
         const frameworkVersions = this.frameworks().filter((f) => f.framework === latestFramework.name);

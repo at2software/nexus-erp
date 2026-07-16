@@ -15,6 +15,16 @@ export function getUserActions(self: User): NxAction[] {
         },
         { title: $localize`:@@i18n.common.retire:retire`, on: () => !self.is_retired, context: '!initiative_subscriber', action: () => self.update({ is_retired: true }).subscribe(), roles: 'hr' },
         {
+            title: $localize`:@@i18n.plugins.linkToPluginUser:link to plugin user`,
+            group: true,
+            context: '!initiative_subscriber',
+            on: () => self.getLinkableRootInstances().length > 0,
+            children: () => self.getLinkableRootInstances().map((inst: any) => ({
+                title: `link to ${inst.icon()} user`,
+                action: () => self.linkToPlugin(inst),
+            })),
+        },
+        {
             title: $localize`:@@i18n.common.assignToGroup:assign to group...`,
             context: '!initiative_subscriber',
             roles: 'admin',

@@ -8,14 +8,13 @@ import { TextParamEditorComponent } from '@shards/text-param-editor/text-param-e
 import { Toast } from '@shards/toast/toast';
 import { typeahead } from '@constants/constants';
 import { Company } from '@models/company/company.model';
+import { Serializable } from '@models/serializable';
 import { CompanyService } from '@models/company/company.service';
 import { ParamService } from '@models/param.service';
 
 @Component({
     selector: 'app-settings-general',
     templateUrl: './settings-general.component.html',
-    styleUrls: ['./settings-general.component.scss'],
-    standalone: true,
     imports: [ScrollbarComponent, InputSettingsGroupComponent, TextParamEditorComponent, SearchInputComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -42,10 +41,10 @@ export class SettingsGeneralComponent {
             .subscribe((company) => this._me.set(company));
     }
 
-    onCompanyChanged(_: any) {
-        if ('id' in _) {
-            this.#paramService.update('params/ME_ID', { value: _.id }).subscribe(() => Toast.info('Company ID updated'));
-            this._me.set(_);
-        }
+    onCompanyChanged(selected: Serializable) {
+        const company = selected.assert(Company);
+        if (!company) return;
+        this.#paramService.update('params/ME_ID', { value: company.id }).subscribe(() => Toast.info('Company ID updated'));
+        this._me.set(company);
     }
 }

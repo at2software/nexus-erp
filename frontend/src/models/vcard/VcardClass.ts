@@ -6,8 +6,9 @@ import type { PluginInstanceFactory } from '../http/plugin.instance.factory';
 import { computed, signal, type Type } from '@angular/core';
 import type { PluginInstance } from '../http/plugin.instance';
 import { VcardRow } from './VcardRow';
+import { Dictionary } from '@constants/constants';
 
-let _pluginFactoryClass: any = null;
+let _pluginFactoryClass: Type<PluginInstanceFactory> | null = null;
 import('../http/plugin.instance.factory').then(({ PluginInstanceFactory }) => (_pluginFactoryClass = PluginInstanceFactory)).catch();
 
 export abstract class VcardClass extends Serializable {
@@ -23,15 +24,15 @@ export abstract class VcardClass extends Serializable {
     getVcardString = computed(() => this.card()?.toString() ?? '');
     set vcard(val: string) { if (val) this.card.set(new Vcard(val)); }
 
-    getName = computed(() => this.card()?.name || (this as any).name || '');
+    getName = computed(():string => this.card()?.name || (this as { name?: string }).name || '');
 
     static readonly #descAdr = ['post office box', 'apartment or suite number', 'street address', 'locality (e.g., city)', 'region (e.g., state or province)', 'postal code', 'country name'];
     static readonly #descN = ['Family Names', 'Given Names', 'Additional Names', 'Honorific Prefixes', 'Honorific Suffixes'];
-    static readonly #SALUTATIONS: Record<string, Record<string, string>> = {
+    static readonly #SALUTATIONS: Dictionary<Dictionary<string>> = {
         en: { M: 'Mr.', F: 'Mrs.' },
         de: { M: 'Herr', F: 'Frau' },
     };
-    static readonly #VCARD_ATTR_MAP: Record<string, string> = {
+    static readonly #VCARD_ATTR_MAP: Dictionary<string> = {
         mantis: 'X-NEXUS-MANTISBT',
         git: 'X-NEXUS-GIT',
         mattermost: 'X-NEXUS-MATTERMOST',
@@ -106,12 +107,23 @@ export abstract class VcardClass extends Serializable {
         );
     };
 
+    // Plugin instances this contact already has a vcard link for, preferring the project-scoped
+    // sub-instance (e.g. a project's GitLab repo) over the root one when viewed inside a project.
+    getLinkedInstances = (): PluginInstance[] => {
+        const factory = this.#getFactory();
+        if (!factory) return [];
+        const rootInstances = factory.getPluginInstances().filter((inst) => inst.isRootInstance() && this.hasLinkForPlugin(inst.getVcardAttributeName()));
+        const currentProject = NxGlobal.global.currentProjectRoot();
+        if (!currentProject) return rootInstances;
+        return rootInstances.map((root) => factory.getInstances(currentProject, [root.getInterfacePropertyName()]).find((i) => i.getPluginTypeName() === root.getPluginTypeName()) ?? root);
+    };
+
     canLinkToInstance = <T extends PluginInstance>(pluginType: Type<T>): boolean => {
         const factory = this.#getFactory();
         if (!factory) return false;
         const instances = factory.getRootPluginInstancesByConstructor(pluginType);
         if (instances.length === 0) return false;
-        const sampleInstance = instances[0] as any;
+        const sampleInstance = instances[0];
         if (this.hasLinkForPlugin(sampleInstance.getVcardAttributeName())) return false;
         const currentProject = NxGlobal.global.currentRoot;
         if (currentProject) {
@@ -125,18 +137,18 @@ export abstract class VcardClass extends Serializable {
         if (!this.card()) return;
         Promise.all([import('../http/plugin.instance.factory'), import('@app/_modals/modal-base-service')])
             .then(async ([{ PluginInstanceFactory }, { ModalBaseService }]) => {
-                const factory = NxGlobal.getService(PluginInstanceFactory as any) as any;
+                const factory = NxGlobal.getService(PluginInstanceFactory);
                 const currentRoot = NxGlobal.getCurrentRoot();
 
                 const rootInstances = factory.getRootPluginInstancesByConstructor(pluginTypeConstructor);
                 if (rootInstances.length === 0) return;
-                const sampleInstance = rootInstances[0] as any;
+                const sampleInstance = rootInstances[0];
 
-                let pluginInstance: any = subPluginType ? factory.instancesFor(currentRoot, subPluginType) : undefined;
+                let pluginInstance: T | undefined = subPluginType ? factory.instancesFor(currentRoot, subPluginType) as T | undefined : undefined;
                 if (!pluginInstance && currentRoot) {
                     const interfaceProperty = sampleInstance.getInterfacePropertyName();
-                    const projectInstances = factory.getInstances(currentRoot, [interfaceProperty]).filter((_: any) => _ instanceof pluginTypeConstructor);
-                    if (projectInstances.length > 0) pluginInstance = projectInstances[0];
+                    const projectInstances = factory.getInstances(currentRoot, [interfaceProperty]).filter((_) => _ instanceof pluginTypeConstructor);
+                    if (projectInstances.length > 0) pluginInstance = projectInstances[0] as T;
                 }
                 if (!pluginInstance) pluginInstance = sampleInstance;
 
@@ -145,7 +157,7 @@ export abstract class VcardClass extends Serializable {
 
                 const vcardAttr = pluginInstance.getVcardAttributeName();
                 ModalBaseService.open(ModalComponent, pluginInstance)
-                    .then((userId: string) => {
+                    .then((userId) => {
                         if (userId && this.card()) {
                             const updatedVcard = this.card()?.toString() + `\n${vcardAttr}:${userId}`;
                             this.update({ vcard: updatedVcard }).subscribe(() => {
@@ -153,7 +165,6 @@ export abstract class VcardClass extends Serializable {
                             });
                         }
                     })
-                    .catch();
             })
             .catch();
     };
@@ -162,26 +173,28 @@ export abstract class VcardClass extends Serializable {
         if (!this.card()) return;
         Promise.all([import('../http/plugin.instance.factory'), import('@app/_modals/modal-base-service')])
             .then(async ([{ PluginInstanceFactory }, { ModalBaseService }]) => {
-                const factory = NxGlobal.getService(PluginInstanceFactory as any) as any;
+                const factory = NxGlobal.getService(PluginInstanceFactory);
                 const currentRoot = NxGlobal.getCurrentRoot();
                 let pluginInstance: PluginInstance = rootInstance;
                 if (currentRoot) {
                     const projectInstances = factory.getInstances(currentRoot, [rootInstance.getInterfacePropertyName()])
-                        .filter((i: any) => i.getPluginTypeName() === rootInstance.getPluginTypeName());
+                        .filter((i) => i.getPluginTypeName() === rootInstance.getPluginTypeName());
                     if (projectInstances.length > 0) pluginInstance = projectInstances[0];
                 }
                 await new Promise<void>(resolve => pluginInstance.init.subscribe(() => resolve()));
                 // If the chosen instance has no users, scan all cached instances for one that does
+                 
                 if (!(pluginInstance as any).getUsers?.()?.length) {
-                    const withUsers = (Object.values(factory.instances) as PluginInstance[])
-                        .find((i: any) => i.getPluginTypeName() === rootInstance.getPluginTypeName() && i.getUsers?.()?.length > 0);
+                    const withUsers = Object.values(factory.instances)
+                         
+                        .find((i) => i.getPluginTypeName() === rootInstance.getPluginTypeName() && (i as any).getUsers?.()?.length > 0);
                     if (withUsers) pluginInstance = withUsers;
                 }
                 const ModalComponent = await PluginInstanceFactory.getModalComponentForPlugin(pluginInstance);
                 if (!ModalComponent) return;
                 const vcardAttr = pluginInstance.getVcardAttributeName();
                 ModalBaseService.open(ModalComponent, pluginInstance)
-                    .then((userId: string) => {
+                    .then((userId) => {
                         if (userId && this.card()) {
                             const updatedVcard = this.card()?.toString() + `\n${vcardAttr}:${userId}`;
                             this.update({ vcard: updatedVcard }).subscribe(() => {
@@ -189,7 +202,6 @@ export abstract class VcardClass extends Serializable {
                             });
                         }
                     })
-                    .catch();
             })
             .catch();
     };
@@ -197,32 +209,38 @@ export abstract class VcardClass extends Serializable {
     openProfile = <T extends PluginInstance>(pluginType: Type<T>) => {
         import('../http/plugin.instance.factory')
             .then(({ PluginInstanceFactory }) => {
-                const factory = NxGlobal.getService(PluginInstanceFactory as any) as any;
+                const factory = NxGlobal.getService(PluginInstanceFactory);
                 const instances = factory.getRootPluginInstancesByConstructor(pluginType);
                 if (instances.length === 0) return;
-                const instance = instances[0];
-                const userId = this.getUserIdForPlugin(instance.getVcardAttributeName());
-                if (!userId) return;
-                const profileUrl = instance.getProfileUrl(userId);
-                if (profileUrl) window.open(profileUrl, '_blank');
+                this.openProfileFor(instances[0]);
             })
             .catch();
     };
 
-    getInstanceIconClass = (instance: any): string => {
+    openProfileFor = (instance: PluginInstance) => {
+        const userId = this.getUserIdForPlugin(instance.getVcardAttributeName());
+        if (!userId) return;
+        const profileUrl = instance.getProfileUrl(userId);
+        if (profileUrl) window.open(profileUrl, '_blank');
+    };
+
+    getInstanceIconClass = (instance: PluginInstance | null): string => {
         if (!instance) return '';
         const userId = this.getUserIdForPlugin(instance.getVcardAttributeName());
         if (!userId) return '';
         if (instance.state !== 'connected') return 'text-muted';
+        // Membership ("is in this project?") only applies to a project-scoped sub-instance.
+        // The root/global instance has no project to be a member of, so it's always success.
+        if (instance.isRootInstance()) return 'text-success';
         return instance.isUserInInstance(userId) ? 'text-success' : 'text-warning';
     };
 
-    getInstanceTooltip = (instance: any): string => {
+    getInstanceTooltip = (instance: PluginInstance | null): string => {
         if (!instance) return '';
         const userId = this.getUserIdForPlugin(instance.getVcardAttributeName());
         if (!userId) return '';
         if (instance.state !== 'connected') return `Loading ${instance.getPluginTypeName()} connection...`;
-        if (!instance.isUserInInstance(userId)) return `User has ${instance.getPluginTypeName()} account but is not in this project`;
+        if (!instance.isRootInstance() && !instance.isUserInInstance(userId)) return `User has ${instance.getPluginTypeName()} account but is not in this project`;
         return `${instance.getName()} Profile`;
     };
 }

@@ -4,7 +4,6 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
     selector: 'file',
     templateUrl: './file.component.html',
     styleUrls: ['./file.component.scss'],
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FileComponent {

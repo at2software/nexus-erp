@@ -3,16 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Enums\SentinelTriggerType;
-use App\Http\Middleware\Auth;
 use App\Models\Sentinel;
-use App\Traits\ControllerHasPermissionsTrait;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class SentinelController extends Controller {
-    use ControllerHasPermissionsTrait;
-
     public function index(Request $request) {
         $user = Auth::user();
         return $user->sentinels()->latest()->get();
@@ -29,7 +26,6 @@ class SentinelController extends Controller {
             $className = 'App\\Models\\'.Str::studly(Str::singular($sentinel->table_name));
             if (class_exists($className)) {
                 $s = call_user_func($className.'::select');
-                // $s->whereRaw(implode(' AND ', $sentinel->sql));
                 foreach ($s->get() as $m) {
                     $items['items'][] = $m;
                 }

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -20,26 +19,17 @@ class Controller extends BaseController {
         return response(null, 501);
     }
     public function getBody() {
-        return json_decode(request()->getContent());
-    }
-    public function updateParametersFromRequest(Request $request, Model $model): Model {
-        $input = $this->body($request);
-        foreach ($input as $key => $value) {
-            $model->$key = $value;
+        $payload = request()->all();
+        if ($payload === []) {
+            return null;
         }
-        return $model;
-    }
-    public function addRequestVariablesToBuilder(Builder $builder, Request $request) {
-        return $builder->where($request->all() + ['index' => 'value']);
+        return json_decode(json_encode($payload));
     }
     protected function applyCarbon(Builder $query, Request $request, string $field, string $input, string $cmp = '>') {
         if ($request->$input && $request->$input != 'undefined') {
             return $query->where($field, $cmp, Carbon::createFromFormat('d.m.Y', $request->$input));
         }
         return $query;
-    }
-    public function permissionsMiddleware() {
-        return 'crud_role';
     }
     protected function maxUpdatedFor(...$models): ?Carbon {
         $max = null;

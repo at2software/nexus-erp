@@ -1,22 +1,22 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { BaseWidgetComponent } from '../base.widget.component';
 import { WidgetService } from '@models/widget.service';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { environment } from 'src/environments/environment';
-import { WidgetsModule } from '../widgets.module';
+import { WIDGET_SHARED } from '../widgets.shared';
 import { DatePipe } from '@angular/common';
+import { JubileeEntry } from '@models/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'widget-jubilees.component',
     templateUrl: './widget-jubilees.component.html',
     styleUrls: ['./widget-jubilees.component.scss', './../base.widget.component.scss'],
-    standalone: true,
-    imports: [WidgetsModule, DatePipe],
+    imports: [...WIDGET_SHARED, DatePipe],
 })
 export class WidgetJubileesComponent extends BaseWidgetComponent {
     #widgetService = inject(WidgetService);
-    jubilees = signal<any[]>([]);
+    jubilees = signal<JubileeEntry[]>([]);
     readonly env = environment;
 
     defaultOptions = () => ({});
@@ -24,10 +24,11 @@ export class WidgetJubileesComponent extends BaseWidgetComponent {
     reload(): void {
         this.#widgetService.indexJubilees().subscribe((data) => {
             this.jubilees.set(
-                data.map((d: any) => ({ ...d, next: moment(d.next) })).sort((a: any, b: any) => a.next - b.next)
+                data.map(d => ({ ...d, next: dayjs(d.next) }))
+                    .sort((a, b) => a.next.valueOf() - b.next.valueOf())
             );
         });
     }
 
-    isToday = (_: any) => moment().isSame(_.next, 'day');
+    isToday = (_: JubileeEntry) => dayjs().isSame(_.next, 'day');
 }

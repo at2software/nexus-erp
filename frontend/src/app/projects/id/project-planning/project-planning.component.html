@@ -1,6 +1,12 @@
 @let _project = parent.object();
+@let _showPredictions = showPredictions();
+@let _isRunning = isRunning();
+@let _items = items();
+@let _predictions = predictions();
+@let _predictionTotal = predictionTotal();
+@let _product = product();
 <div class="row">
-    <div class="col-8" [class.col-8]="!showPredictions()" [class.col-12]="showPredictions()">
+    <div class="col-8" [class.col-8]="!_showPredictions" [class.col-12]="_showPredictions">
         <ng-content></ng-content>
 
         <media-preview [parent]="_project"></media-preview>
@@ -10,79 +16,84 @@
                 <div class="card-header">
                     <span i18n="@@i18n.common.planning">planning</span>
                     <div class="card-header-actions">
-                        @if (showPredictions()) {
-                            <i (click)="showPredictions.set(!showPredictions())" tabindex="0" (keydown.enter)="showPredictions.set(!showPredictions())" class="text-primary cursor-pointer">visibility</i>
+                        @if (_showPredictions) {
+                            <i (click)="showPredictions.set(!_showPredictions)" tabindex="0" (keydown.enter)="showPredictions.set(!_showPredictions)" class="text-primary cursor-pointer">visibility</i>
                         }
-                        @if (!showPredictions()) {
-                            <i (click)="showPredictions.set(!showPredictions())" tabindex="0" (keydown.enter)="showPredictions.set(!showPredictions())" class="text-primary cursor-pointer">visibility_off</i>
+                        @if (!_showPredictions) {
+                            <i (click)="showPredictions.set(!_showPredictions)" tabindex="0" (keydown.enter)="showPredictions.set(!_showPredictions)" class="text-primary cursor-pointer">visibility_off</i>
                         }
                     </div>
                 </div>
-                @if (_project.invoice_items.length === 0) {
+                @if (loading()) {
+                    <spinner></spinner>
+                }
+                @if (!loading() && _items.length === 0) {
                     <empty-state [card]="false" title="nothing planned so far" i18n-title="@@i18n.info.nothingPlannedSoFar" class="projects"></empty-state>
                 }
-                @if (_project.invoice_items.length > 0) {
-                    <table class="card-table table mb-0" cdkDropList [cdkDropListData]="_project.invoice_items" (cdkDropListDropped)="onDrop($event)">
+                @if (!loading() && _items.length > 0) {
+                    <table class="card-table table mb-0" cdkDropList [cdkDropListData]="_items" (cdkDropListDropped)="onDrop($event)">
                         <thead>
                             <tr>
                                 <th style="width: 25px"></th>
                                 <th i18n="@@i18n.common.description">description</th>
-                                @if (!showPredictions()) {
+                                @if (!_showPredictions) {
                                     <th style="width: 60px" class="text-truncate" i18n="@@i18n.project.myPrediction">my prediction</th>
                                 }
-                                @if (!showPredictions()) {
+                                @if (!_showPredictions) {
                                     <th style="width: 25px"></th>
                                 }
-                                @if (showPredictions()) {
-                                    @for (p of predictions; track p) {
+                                @if (_showPredictions) {
+                                    @for (p of _predictions; track p) {
                                         <th style="width: 45px">
-                                            <img alt="" class="avatar avatar-img avatar-sm" src="{{ p.user.icon }}" noroles="financial|project_manager" ngbTooltip="{{ p.user.name }}" />
+                                            <img alt="" class="avatar avatar-img avatar-sm" src="{{ p.user.icon }}" noroles="financial|project_manager" ngbTooltip="{{ p.user.getName() }}" />
                                             <img alt="" class="avatar avatar-img avatar-sm pointer" src="{{ p.user.icon }}" roles="financial|project_manager" ngbTooltip="use all predictions from this user" (click)="onUseAllPredictionsForUser(p.user)" tabindex="0" (keydown.enter)="onUseAllPredictionsForUser(p.user)" i18n-ngbTooltip="@@i18n.projects.useAllPredictionsFromThis" />
                                         </th>
                                     }
                                 }
-                                @if (showPredictions()) {
+                                @if (_showPredictions) {
                                     <th class="text-end pe-2" roles="financial|project_manager">
                                         <n ngbTooltip="current value of invoice item">invoice</n>
                                     </th>
                                 }
-                                @if (!isRunning() && showPredictions()) {
+                                @if (!_isRunning && _showPredictions) {
                                     <th class="text-end pe-2" ngbTooltip="mean of all predictions" i18n-ngbTooltip="@@i18n.projects.meanOfAllPredictions">μ</th>
                                 }
-                                <!-- <th class="text-end pe-2" *ngIf="!isRunning() && showPredictions" ngbTooltip="stddev of all predictions">σ</th> -->
-                                @if (showPredictions()) {
+                                @if (_showPredictions) {
                                     <th style="width: 30px" class="text-end pe-2" ngbTooltip="deviation impact" i18n-ngbTooltip="@@i18n.projects.deviationImpact"></th>
                                 }
                             </tr>
                         </thead>
                         <tbody>
-                            @for (item of _project.invoice_items; track item.id) {
+                            @for (item of _items; track item.id) {
                                 @if (item.type < 10) {
-                                    @if (!isRunning() || item.type === 0) {
-                                        <tr class="py-0 align-items-baseline" [nx]="item" cdkDrag cdkDragLockAxis="y">
+                                    @if (!_isRunning || item.type === 0) {
+                                        <tr class="py-0 align-items-baseline" [nx]="item" cdkDrag cdkDragLockAxis="y" (actionsResolved)="onItemResolved()">
                                             <td>
                                                 <i class="drag_handle" cdkDragHandle>drag_handle</i>
                                             </td>
                                             <td class="text-description" [innerHTML]="item.text | safe: 'html'"></td>
-                                            @if (!showPredictions()) {
+                                            @if (!_showPredictions) {
                                                 <td>
-                                                    @if (!isRunning()) {
-                                                        <input type="number" [suffix]="item.unit_name" class="text-end" [autosave]="item" autosaveKey="my_prediction" (saved)="updatePredictions()" [(ngModel)]="item.my_prediction" />
+                                                    @if (!_isRunning) {
+                                                        <div class="input-group">
+                                            <input type="number" class="form-control text-end" [autosave]="item" autosaveKey="my_prediction" (saved)="updatePredictions()" [value]="item.my_prediction ?? ''" />
+                                            <span class="input-group-text small">{{ item.unit_name }}</span>
+                                        </div>
                                                     }
-                                                    @if (isRunning()) {
+                                                    @if (_isRunning) {
                                                         <span>{{ item.qty }} {{ item.unit_name }}</span>
                                                     }
                                                 </td>
                                             }
-                                            @if (!showPredictions()) {
+                                            @if (!_showPredictions) {
                                                 <td>
-                                                    @if (!isRunning() && item.my_prediction) {
+                                                    @if (!_isRunning && item.my_prediction) {
                                                         <i class="cursor-pointer text-danger" (click)="deletePredictions(item)" tabindex="0" (keydown.enter)="deletePredictions(item)">backspace</i>
                                                     }
                                                 </td>
                                             }
-                                            @if (showPredictions()) {
-                                                @for (p of predictions; track p) {
+                                            @if (_showPredictions) {
+                                                @for (p of _predictions; track p) {
                                                     <td class="text-center small pe-2">
                                                         <span noroles="financial|project_manager" ngbTooltip="prediction of {{ p.user.getName() }}">{{ predictionForUser(item, p.user) }}</span>
                                                         <span roles="financial|project_manager" class="pointer" ngbTooltip="use prediction of {{ p.user.getName() }}" (click)="onPredictionAccept(item, p.user)" tabindex="0" (keydown.enter)="onPredictionAccept(item, p.user)">
@@ -91,20 +102,17 @@
                                                     </td>
                                                 }
                                             }
-                                            @if (showPredictions()) {
+                                            @if (_showPredictions) {
                                                 <th class="text-end pe-2 text-muted small" roles="financial|project_manager" ngbTooltip="current value of invoice item" i18n-ngbTooltip="@@i18n.projects.currentValueOfInvoiceItem">
                                                     {{ item.qty | number: '1.2-2' }}
                                                 </th>
                                             }
-                                            @if (!isRunning() && showPredictions()) {
+                                            @if (!_isRunning && _showPredictions) {
                                                 <td class="pe-2 text-end small pointer" (click)="onAcceptPrediction(item, mean(item))" tabindex="0" (keydown.enter)="onAcceptPrediction(item, mean(item))" ngbTooltip="use mean value" i18n-ngbTooltip="@@i18n.projects.useMeanValue">
                                                     {{ mean(item) | number: '1.2-2' }}
                                                 </td>
                                             }
-                                            <!-- <td class="pe-2 text-end small" [style.color]="variance_color(item)" *ngIf="!isRunning() && showPredictions">
-                          {{ variance(item) | number : '1.2-2'}}
-                        </td> -->
-                                            @if (showPredictions()) {
+                                            @if (_showPredictions) {
                                                 <td class="pe-2 text-end small" [style.color]="variance_wt_color(item)">
                                                     {{ variance_wt(item) | percent: '1.1-1' }}
                                                 </td>
@@ -113,14 +121,14 @@
                                     }
                                 }
                                 @if (item.type === 20) {
-                                    <tr cdkDrag cdkDragLockAxis="y" class="header" [nx]="item">
+                                    <tr cdkDrag cdkDragLockAxis="y" class="header bg-darker" [nx]="item" (actionsResolved)="onItemResolved()">
                                         <td class="header">
                                             <i class="drag_handle" cdkDragHandle>drag_handle</i>
                                         </td>
-                                        <td class="header" [attr.colspan]="4 + (!isRunning() ? 1 : 0) + predictions.length">
+                                        <td class="header text-muted" [attr.colspan]="4 + (!_isRunning ? 1 : 0) + _predictions.length">
                                             {{ item.text }}
                                         </td>
-                                        @if (showPredictions()) {
+                                        @if (_showPredictions) {
                                             <td class="header" roles="financial|project_manager"></td>
                                         }
                                     </tr>
@@ -131,28 +139,28 @@
                             <tr>
                                 <td></td>
                                 <td>&sum;</td>
-                                @if (!showPredictions()) {
+                                @if (!_showPredictions) {
                                     <td class="text-end">{{ sumForMy() }}</td>
                                 }
-                                @if (!showPredictions()) {
+                                @if (!_showPredictions) {
                                     <td></td>
                                 }
-                                @if (showPredictions()) {
-                                    @for (p of predictions; track p) {
+                                @if (_showPredictions) {
+                                    @for (p of _predictions; track p) {
                                         <td class="text-end small pe-2">
                                             {{ sumFor(p.user) }}
                                         </td>
                                     }
                                 }
-                                @if (showPredictions()) {
+                                @if (_showPredictions) {
                                     <td class="text-end pe-2" roles="financial|project_manager">
                                         {{ sumForQty() | number: '1.2-2' }}
                                     </td>
                                 }
-                                @if (!isRunning() && showPredictions()) {
+                                @if (!_isRunning && _showPredictions) {
                                     <td></td>
                                 }
-                                @if (showPredictions()) {
+                                @if (_showPredictions) {
                                     <td></td>
                                 }
                             </tr>
@@ -162,18 +170,18 @@
             </div>
         }
     </div>
-    <div class="col-4" [class.d-none]="showPredictions()">
+    <div class="col-4" [class.d-none]="_showPredictions">
         <project-info [project]="_project"></project-info>
 
-        @if (predictions && _project.state.isPrepared()) {
+        @if (_predictions && _project.state.isPrepared()) {
             <div class="card mb-3 d-flex">
                 <div class="card-header" i18n="@@i18n.common.predictions">predictions</div>
                 <ul class="list-group mb-0">
-                    @for (p of predictions; track p) {
+                    @for (p of _predictions; track p) {
                         <li class="list-group-item hstack gap-2">
                             <div><img class="avatar avatar-img avatar-sm" src="{{ p.user.icon }}" alt="" /></div>
                             <div class="flex-fill">
-                                <chart-progress class="mb-3" scss="primary" [title]="p.user.name" [max]="predictionTotal" [value]="p.total"> </chart-progress>
+                                <chart-progress class="mb-3" scss="primary" [title]="p.user.getName()" [max]="_predictionTotal" [value]="p.total"> </chart-progress>
                             </div>
                         </li>
                     }
@@ -187,7 +195,7 @@
     <div i18n="@@i18n.common.header">header</div>
 </ng-template>
 
-@if (product) {
+@if (_product) {
     <toolbar class="dropleft">
         <div ngbDropdown>
             <button hotkey="CTRL+ALT+N" class="btn btn-primary me-2 dropdown-toggle-simple dropleft" type="button" ngbDropdownToggle>
@@ -196,6 +204,13 @@
             <div ngbDropdownMenu>
                 <button ngbDropdownItem (click)="onNewItem()" tabindex="0" (keydown.enter)="onNewItem()"><span i18n="@@i18n.common.item">item</span></button>
                 <button ngbDropdownItem (click)="onNewHeader()" tabindex="0" (keydown.enter)="onNewHeader()"><span i18n="@@i18n.common.group">group</span></button>
+                @for (t of taskTrackers(); track t.link.id) {
+                    <button ngbDropdownItem (click)="onImportFromTracker(t)" tabindex="0" (keydown.enter)="onImportFromTracker(t)">
+                        <n>{{ t.instance.icon() }}</n>
+                        <span class="ms-1" i18n="@@i18n.issues.importFrom">import from </span>
+                        <span>{{ t.link.name || t.instance.getName() }}</span>
+                    </button>
+                }
             </div>
         </div>
     </toolbar>

@@ -15,6 +15,7 @@ import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { NgComponentOutlet } from '@angular/common';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { BaseWidgetListener } from './widgets/base.widget.listener';
+import type { TOptions } from './widgets/base.widget.component';
 import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { ActivityService } from '@app/_activity/activity.service';
 import { TabAttentionComponent } from '@app/_activity/tab-attention/tab-attention.component';
@@ -26,7 +27,6 @@ import { WidgetSuperadminWarningComponent } from './widgets/widget-superadmin-wa
     selector: 'app-dashboard',
     templateUrl: './dashboard.component.html',
     styleUrls: ['./dashboard.component.scss'],
-    standalone: true,
     host: { '[class.is_editing]': 'is_editing()' },
     imports: [HeaderComponent, HeaderLinkItemComponent, ToolbarComponent, ScrollbarComponent, NgComponentOutlet, CdkDropList, EmptyStateComponent, NgbDropdownModule, CdkDrag, GuidedTourComponent, WidgetSuperadminWarningComponent],
 })
@@ -57,7 +57,7 @@ export class DashboardComponent {
                         this.#route.params.pipe(
                             tap((_) => {
                                 this.currentDashboard.set('dashboard' in _ ? parseInt(_['dashboard']) : 0);
-                                NxGlobal.setTitle(this.global.dashboards[this.currentDashboard()]?.title);
+                                NxGlobal.setTitle(this.global.dashboards[this.currentDashboard()]?.title ?? '');
                             }),
                         ),
                     );
@@ -75,7 +75,7 @@ export class DashboardComponent {
         } else {
             transferArrayItem(event.previousContainer.data, event.container.data, event.previousIndex, event.currentIndex);
         }
-        this.#updateDashboards();
+        this.#updateDashboards(true);
     }
 
     toggleEditing = () => {
@@ -86,9 +86,11 @@ export class DashboardComponent {
     onNewDashboard = () =>
         this.#input
             .open('Title', false)
-            .then((_) => {
-                this.global.dashboards.push({ title: _?.text, cols: [[], [], [], []] });
-                this.#updateDashboards();
+            .then((response) => {
+                if (response?.text) {
+                    this.global.dashboards.push({ title: response.text, cols: [[], [], [], []] });
+                    this.#updateDashboards(true);
+                }
             })
             .catch();
 
@@ -97,24 +99,28 @@ export class DashboardComponent {
             .confirm({ title: $localize`:@@i18n.common.delete:Delete`, message: $localize`:@@i18n.dashboard.confirmDeleteDashboard:Do you really want to delete this dashboard?` })
             .then(() => {
                 this.global.dashboards.splice(pos, 1);
-                this.#updateDashboards();
+                this.#updateDashboards(true);
             })
             .catch();
 
-    #onWidgetDelete = (_: any, col: number, pos: number) =>
+    #onWidgetDelete = (_: unknown, col: number, pos: number) =>
         this.#confirm
             .confirm({ title: $localize`:@@i18n.common.delete:Delete`, message: $localize`:@@i18n.dashboard.confirmDeleteWidget:Do you really want to delete this widget?` })
             .then(() => {
                 this.global.dashboards[this.currentDashboard()].cols[col].splice(pos, 1);
-                this.#updateDashboards();
+                this.#updateDashboards(true);
             })
             .catch();
 
-    #onWidgetOptionsChanged = ($event: any, col: number, pos: number) => {
+    #onWidgetOptionsChanged = ($event: TOptions, col: number, pos: number) => {
         this.global.dashboards[this.currentDashboard()].cols[col][pos].options = $event;
         this.#updateDashboards();
     };
 
-    #updateDashboards = () =>
-        this.global.user?.updateParam('DASHBOARDS', { value: JSON.stringify(this.global.dashboards) }).subscribe();
+    #updateDashboards = (triggerReload = false) =>
+        this.global.user?.updateParam('DASHBOARDS', { value: JSON.stringify(this.global.dashboards) }).subscribe(() => {
+            if (triggerReload) {
+                this.#listener.reloadRequested.next();
+            }
+        });
 }

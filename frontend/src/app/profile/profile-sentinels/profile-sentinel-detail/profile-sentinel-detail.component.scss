@@ -266,10 +266,6 @@ code {
   }
 }
 
-.bg-purple {
-  background-color: var(--bs-purple) !important;
-}
-
 // Variable highlighting in strings (VS Code style)
 ::ng-deep .var-highlight {
   color: #9cdcfe; // VS Code variable blue

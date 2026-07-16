@@ -8,7 +8,6 @@ import { NgxEchartsDirective } from 'ngx-echarts';
             <div echarts [options]="options()" [style.height.px]="options()?.chart?.height ?? 300" class="w-100"></div>
         }
     `,
-    standalone: true,
     imports: [NgxEchartsDirective],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

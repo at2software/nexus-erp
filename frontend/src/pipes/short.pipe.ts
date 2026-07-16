@@ -3,7 +3,6 @@ import { short } from '@constants/short';
 
 @Pipe({
     name: 'short',
-    standalone: true,
 })
 export class ShortPipe implements PipeTransform {
     transform(value: number): string {

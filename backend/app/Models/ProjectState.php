@@ -10,7 +10,6 @@ class ProjectState extends BaseModel {
 
     protected $fillable = ['name', 'progress', 'color', 'is_in_stats', 'is_successful', 'created_at', 'updated_at'];
 
-    // protected $access = ['admin' => '*', 'project_manager'=>'cru', 'user'=>'cru'];
     protected function casts(): array {
         return [
             'progress'      => 'integer',

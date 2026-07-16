@@ -1,31 +1,50 @@
 @let _loading = loading();
 @let _error = error();
+@let _workloadData = workloadData();
+
 <toolbar>
-    <div class="btn-group" ngbDropdown>
-        <button type="button" class="btn btn-outline-primary dropdown-toggle" ngbDropdownToggle><i class="me-1">calendar_view_month</i>{{ currentViewMode() }}</button>
-        <div class="dropdown-menu" ngbDropdownMenu>
-            <button class="dropdown-item" (click)="onViewModeChange('Day')" [class.active]="currentViewMode() === 'Day'"><i class="me-2">view_day</i>Day</button>
-            <button class="dropdown-item" (click)="onViewModeChange('Week')" [class.active]="currentViewMode() === 'Week'"><i class="me-2">view_week</i>Week</button>
-            <button class="dropdown-item" (click)="onViewModeChange('Month')" [class.active]="currentViewMode() === 'Month'"><i class="me-2">calendar_view_month</i>Month</button>
-            <button class="dropdown-item" (click)="onViewModeChange('Year')" [class.active]="currentViewMode() === 'Year'"><i class="me-2">date_range</i>Year</button>
-        </div>
+    <div class="btn-group">
+        <button type="button" class="btn btn-outline-primary" (click)="onRangeShift(-1)"><i>chevron_left</i></button>
+        <button type="button" class="btn btn-outline-primary" (click)="onRangeToday()" i18n="@@i18n.common.today">today</button>
+        <button type="button" class="btn btn-outline-primary" (click)="onRangeShift(1)"><i>chevron_right</i></button>
     </div>
 </toolbar>
 
-<div class="gantt-container">
-    @if (_loading) {
-        <div class="d-flex align-items-center justify-content-center h-100">
-            <spinner></spinner>
-        </div>
-    }
+@if (_loading) {
+    <div class="d-flex align-items-center justify-content-center py-5">
+        <spinner></spinner>
+    </div>
+}
 
-    @if (!_loading && _error) {
-        <div class="alert alert-danger m-3">
-            {{ _error }}
-        </div>
-    }
+@if (!_loading && _error) {
+    <div class="alert alert-danger m-3">{{ _error }}</div>
+}
 
-    @if (!_loading && !_error) {
-        <custom-gantt [rows]="ganttRows()" [viewMode]="currentViewMode()" [milestoneProjectMap]="milestoneProjectMap()" [workloadUser]="global.user" (addMilestone)="onAddMilestone($event)" (addTask)="onAddTask($event)"> </custom-gantt>
-    }
-</div>
+@if (!_loading && !_error && _workloadData) {
+    <div class="row" cdkDropListGroup>
+        <div class="col-3">
+            <planner-backlog
+                [unconfiguredMilestones]="_workloadData.unconfigured_milestones"
+                [undatedMilestones]="undatedMilestones()"
+                [projectGroups]="projectGroups()"
+                [externalIssues]="externalIssues()"
+                [externalIssuesLoading]="externalIssuesLoading()"
+                (addMilestone)="onAddMilestone($event)"
+            ></planner-backlog>
+        </div>
+        <div class="col-9">
+            <div class="card">
+                <div class="card-body">
+                    <capacity-calendar
+                        [workloadData]="_workloadData"
+                        [milestones]="scheduledMilestones()"
+                        (itemDropped)="onCalendarDrop($event)"
+                        (editMilestone)="onEditMilestone($event)"
+                        (milestoneRescheduled)="onMilestoneRescheduled($event)"
+                        (addMilestoneForDay)="onAddMilestoneForDay($event)"
+                    ></capacity-calendar>
+                </div>
+            </div>
+        </div>
+    </div>
+}

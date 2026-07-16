@@ -6,6 +6,8 @@ import { NgxEchartsModule } from 'ngx-echarts';
 import { Color } from '@constants/Color';
 import { EChartsSimpleOptions, ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
+import type { EChartsOption, SeriesOption } from 'echarts';
+import { ChartAxisTooltipParam } from '@models/api-response';
 
 interface PredictionAccuracyData {
     id: number;
@@ -30,7 +32,6 @@ interface PredictionAccuracyData {
 
 @Component({
     selector: 'hr-stats-prediction-accuracy',
-    standalone: true,
     imports: [NgxEchartsModule, EmptyStateComponent],
     templateUrl: './hr-stats-prediction-accuracy.component.html',
     styleUrl: './hr-stats-prediction-accuracy.component.scss',
@@ -41,8 +42,8 @@ export class HrStatsPredictionAccuracyComponent {
     #global = inject(GlobalService);
 
     users = signal<PredictionAccuracyData[]>([]);
-    chartOptions = signal<Record<number, any>>({});
-    donutChartOptions = signal<Record<number, any>>({});
+    chartOptions = signal<Record<number, EChartsOption>>({});
+    donutChartOptions = signal<Record<number, EChartsOption>>({});
 
     constructor() {
         this.#statsService.showPredictionAccuracy().subscribe((response: PredictionAccuracyData[]) => {
@@ -52,8 +53,8 @@ export class HrStatsPredictionAccuracyComponent {
                 return teamA - teamB;
             });
 
-            const charts: Record<number, any> = {};
-            const donuts: Record<number, any> = {};
+            const charts: Record<number, EChartsOption> = {};
+            const donuts: Record<number, EChartsOption> = {};
             sorted.forEach((user) => {
                 charts[user.id] = this.#createChartOptions(user);
                 donuts[user.id] = this.#createDonutChartOptions(user);
@@ -65,7 +66,7 @@ export class HrStatsPredictionAccuracyComponent {
         });
     }
 
-    #createChartOptions(user: PredictionAccuracyData): any {
+    #createChartOptions(user: PredictionAccuracyData): EChartsOption {
         const months = user.monthly_accuracy.map((item) => item.month).sort();
         const series = this.#createSeries(user, months);
         return {
@@ -84,7 +85,8 @@ export class HrStatsPredictionAccuracyComponent {
                 ...EChartsSimpleOptions.tooltip,
                 backgroundColor: 'transparent',
                 borderWidth: 0,
-                formatter: (params: any) => {
+                formatter: (rawParams: unknown) => {
+                    const params = rawParams as ChartAxisTooltipParam[];
                     const month = params[0].axisValue;
                     const monthData = user.monthly_accuracy.find((item) => item.month === month);
 
@@ -107,10 +109,10 @@ export class HrStatsPredictionAccuracyComponent {
                 },
             },
             series: series,
-        };
+        } satisfies EChartsOption;
     }
 
-    #createSeries(user: PredictionAccuracyData, months: string[]): any[] {
+    #createSeries(user: PredictionAccuracyData, months: string[]): SeriesOption[] {
         const monthDataMap = new Map(user.monthly_accuracy.map((item) => [item.month, item]));
 
         const focusedAverage = months.map((month) => monthDataMap.get(month)?.focused.average_bias_factor ?? null);
@@ -180,7 +182,7 @@ export class HrStatsPredictionAccuracyComponent {
         return this.#global.team.find((t) => t.id === user.id.toString()) || { id: user.id.toString(), name: user.name, icon: '', badge: undefined };
     };
 
-    #createDonutChartOptions(user: PredictionAccuracyData): any {
+    #createDonutChartOptions(user: PredictionAccuracyData): EChartsOption {
         // Calculate overall weighted average unfocused bias factor (matches backend MonthlyStats cronjob)
         let totalWeight = 0;
         let weightedSum = 0;
@@ -264,6 +266,6 @@ export class HrStatsPredictionAccuracyComponent {
                     </div>`;
                 },
             },
-        };
+        } satisfies EChartsOption;
     }
 }

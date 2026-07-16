@@ -28,17 +28,19 @@ export class DebriefProjectDebrief extends Serializable {
     
     #problems: DebriefProblem[] = [];
     get problems(): DebriefProblem[] { return this.#problems; }
-    set problems(values: any[]) {
+    set problems(values: unknown[]) {
         if (!Array.isArray(values)) return;
-        this.#problems = values.map(v => plainToInstance(DebriefProblem, v));
+        // afterDeserialize() must run explicitly here (plainToInstance() alone won't call it) -
+        // DebriefProblem relies on it to backfill severity from the debrief-problem pivot.
+        this.#problems = values.map(v => { const p = plainToInstance(DebriefProblem, v); p.afterDeserialize(v); return p; });
         this.#problems.forEach(p => p._parent.set(this));
     }
 
     #positives: DebriefPositive[] = [];
     get positives(): DebriefPositive[] { return this.#positives; }
-    set positives(values: any[]) {
+    set positives(values: unknown[]) {
         if (!Array.isArray(values)) return;
-        this.#positives = values.map(v => plainToInstance(DebriefPositive, v));
+        this.#positives = values.map(v => { const p = plainToInstance(DebriefPositive, v); p.afterDeserialize(v); return p; });
         this.#positives.forEach(p => p._parent.set(this));
     }
 

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, model, TemplateRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, model, signal, TemplateRef } from '@angular/core';
 import { GlobalService } from '@models/global.service';
 import { User } from '@models/user/user.model';
 import { HrTeamService } from '../hr-team/hr-team.service';
@@ -9,14 +9,12 @@ import { NgbDatepickerModule, NgbCalendar, NgbDate, NgbModal } from '@ng-bootstr
 import { VacationService } from '@models/vacation/vacation.service';
 import { Vacation } from '@models/vacation/vacation.model';
 import { VacationGrant } from '@models/vacation/vacation-grant.model';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 
 @Component({
     selector: 'hr-vacation-cols',
     templateUrl: './hr-vacation-cols.component.html',
-    styleUrls: ['./hr-vacation-cols.component.scss'],
-    standalone: true,
     imports: [HrVacationContainerComponent, DecimalPipe, FormsModule, NgbDatepickerModule, ToolbarComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -29,10 +27,10 @@ export class HrVacationColsComponent {
 
     user = model<User>();
 
-    newWorkingHours = { mo: 0, tu: 0, we: 0, th: 0, fr: 0 };
+    newWorkingHours = signal({ mo: 0, tu: 0, we: 0, th: 0, fr: 0 });
     effectiveDate: NgbDate | null = null;
     vacationDaysPerYear = 25;
-    vacationCalculation: { remainingMonths: number; avgHoursChange: number; adjustmentHours: number } | null = null;
+    vacationCalculation = signal<{ remainingMonths: number; avgHoursChange: number; adjustmentHours: number } | null>(null);
 
     #grants: VacationGrant[] = [];
 
@@ -59,13 +57,13 @@ export class HrVacationColsComponent {
     #initializeNewWorkingHours() {
         const user = this.user();
         if (user?.active_employment) {
-            this.newWorkingHours = {
+            this.newWorkingHours.set({
                 mo: user.active_employment.mo || 0,
                 tu: user.active_employment.tu || 0,
                 we: user.active_employment.we || 0,
                 th: user.active_employment.th || 0,
                 fr: user.active_employment.fr || 0,
-            };
+            });
             this.calculateVacationAdjustment();
         }
     }
@@ -73,12 +71,13 @@ export class HrVacationColsComponent {
     calculateVacationAdjustment() {
         const user = this.user();
         if (!user?.active_employment || !this.effectiveDate || !this.vacationDaysPerYear) {
-            this.vacationCalculation = null;
+            this.vacationCalculation.set(null);
             return;
         }
 
+        const newWorkingHours = this.newWorkingHours();
         const currentHours = [user.active_employment.mo || 0, user.active_employment.tu || 0, user.active_employment.we || 0, user.active_employment.th || 0, user.active_employment.fr || 0];
-        const newHours = [this.newWorkingHours.mo, this.newWorkingHours.tu, this.newWorkingHours.we, this.newWorkingHours.th, this.newWorkingHours.fr];
+        const newHours = [newWorkingHours.mo, newWorkingHours.tu, newWorkingHours.we, newWorkingHours.th, newWorkingHours.fr];
 
         const currentAvgDaily = currentHours.reduce((sum, h) => sum + h, 0) / 5;
         const newAvgDaily = newHours.reduce((sum, h) => sum + h, 0) / 5;
@@ -87,16 +86,16 @@ export class HrVacationColsComponent {
         let remainingMonths = Math.max(0, 12 - this.effectiveDate.month + 1);
         if (this.effectiveDate.day > 15) remainingMonths -= 0.5;
 
-        this.vacationCalculation = {
+        this.vacationCalculation.set({
             remainingMonths,
             avgHoursChange,
             adjustmentHours: ((this.vacationDaysPerYear * remainingMonths) / 12) * avgHoursChange,
-        };
+        });
     }
 
     canUpdateHours(): boolean {
         const user = this.user();
-        return !!(user?.active_employment && this.effectiveDate && this.vacationDaysPerYear > 0 && this.vacationCalculation);
+        return !!(user?.active_employment && this.effectiveDate && this.vacationDaysPerYear > 0 && this.vacationCalculation());
     }
 
     onHpwUpdated() {
@@ -104,30 +103,33 @@ export class HrVacationColsComponent {
         const user = this.user();
         if (!user?.active_employment) return;
 
-        user.active_employment.update(this.newWorkingHours).subscribe(() => {
-            user.active_employment.mo = this.newWorkingHours.mo;
-            user.active_employment.tu = this.newWorkingHours.tu;
-            user.active_employment.we = this.newWorkingHours.we;
-            user.active_employment.th = this.newWorkingHours.th;
-            user.active_employment.fr = this.newWorkingHours.fr;
+        const newWorkingHours = this.newWorkingHours();
+        user.active_employment.update(newWorkingHours).subscribe(() => {
+            user.active_employment.mo = newWorkingHours.mo;
+            user.active_employment.tu = newWorkingHours.tu;
+            user.active_employment.we = newWorkingHours.we;
+            user.active_employment.th = newWorkingHours.th;
+            user.active_employment.fr = newWorkingHours.fr;
             this.#createVacationAdjustmentEntry();
             this.calculateVacationAdjustment();
+            this.user.update((u) => (u ? Object.assign(Object.create(Object.getPrototypeOf(u)), u) : u));
         });
     }
 
-    open(content: TemplateRef<any>) {
+    open(content: TemplateRef<unknown>) {
         this.#modalService.open(content, { ariaLabelledBy: 'modal-basic-title' });
     }
 
     #createVacationAdjustmentEntry() {
         const user = this.user();
-        if (!this.vacationCalculation || !user?.active_employment || !this.#grants.length) return;
+        const vacationCalculation = this.vacationCalculation();
+        if (!vacationCalculation || !user?.active_employment || !this.#grants.length) return;
 
         const vacation = Vacation.fromJson({});
-        vacation.comment = `Working hours adjustment: ${this.vacationCalculation.avgHoursChange >= 0 ? '+' : ''}${this.vacationCalculation.avgHoursChange.toFixed(2)} hours/day average change. Formula: ${this.vacationDaysPerYear} days × ${this.vacationCalculation.remainingMonths}/12 months × ${this.vacationCalculation.avgHoursChange.toFixed(2)} hours = ${this.vacationCalculation.adjustmentHours >= 0 ? '+' : ''}${this.vacationCalculation.adjustmentHours.toFixed(2)} vacation hours adjustment`;
-        vacation.amount = this.vacationCalculation.adjustmentHours;
+        vacation.comment = `Working hours adjustment: ${vacationCalculation.avgHoursChange >= 0 ? '+' : ''}${vacationCalculation.avgHoursChange.toFixed(2)} hours/day average change. Formula: ${this.vacationDaysPerYear} days × ${vacationCalculation.remainingMonths}/12 months × ${vacationCalculation.avgHoursChange.toFixed(2)} hours = ${vacationCalculation.adjustmentHours >= 0 ? '+' : ''}${vacationCalculation.adjustmentHours.toFixed(2)} vacation hours adjustment`;
+        vacation.amount = vacationCalculation.adjustmentHours;
         vacation.approved_by_id = this.#global.user!.id;
-        vacation.started_at = moment(new Date(this.effectiveDate!.year, this.effectiveDate!.month - 1, this.effectiveDate!.day)).format('YYYY-MM-DD');
+        vacation.started_at = dayjs(new Date(this.effectiveDate!.year, this.effectiveDate!.month - 1, this.effectiveDate!.day)).format('YYYY-MM-DD');
         vacation.state = Vacation.STATE_APPROVED;
         vacation.vacation_grant_id = this.#grants[0].id;
 

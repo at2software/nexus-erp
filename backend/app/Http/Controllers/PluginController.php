@@ -28,7 +28,6 @@ abstract class PluginController extends Controller {
         $this->baseUri = $baseUri;
         if (! $this->client) {
             $this->client = new Client([
-                'verify'   => false,
                 'base_uri' => $this->baseUri,
                 'headers'  => ['Content-Type' => 'application/json'],
             ]);
@@ -61,9 +60,9 @@ abstract class PluginController extends Controller {
             $data     = json_decode($response->getBody(), true);
             return $data;
         } catch (ClientException $e) {
-            //NLog::error($e->getMessage());
+            // NLog::error($e->getMessage());
         } catch (\Exception $e) {
-            //NLog::error($e->getMessage());
+            // NLog::error($e->getMessage());
         }
         return null;
     }

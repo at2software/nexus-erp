@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { Dictionary } from '@constants/constants';
 import { BaseWidgetComponent } from '../base.widget.component';
 import { OptionType } from '../widget-options/widget-options.component';
-import { WidgetsModule } from '../widgets.module';
+import { WIDGET_SHARED } from '../widgets.shared';
 import { Project } from '@models/project/project.model';
+import type { ProjectTimelineEntry } from '@models/api-response';
 import { ProjectService } from '@models/project/project.service';
 import { WidgetService } from '@models/widget.service';
 import { Color } from '@constants/Color';
@@ -10,21 +12,25 @@ import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS, ECHARTS_DONUT_ITEM_STYLE } from '@char
 import { ChartProgressComponent } from '@charts/chart-progress/chart-progress.component';
 import { MILESTONE_STATES } from '@models/milestones/milestone-state.enum';
 import { ProjectState } from '@models/project/project-state.model';
+import type { EChartsOption } from 'echarts';
+import type { TopLevelFormatterParams } from 'echarts/types/dist/shared';
+
+interface WorkShare { name: string; color: string; val: number; }
+interface MilestoneStateCount { name: string; count: number; color: string; }
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'widget-project-analysis',
     templateUrl: './widget-project-analysis.component.html',
     styleUrls: ['./widget-project-analysis.component.scss', './../base.widget.component.scss'],
-    standalone: true,
-    imports: [WidgetsModule, ChartProgressComponent],
+    imports: [...WIDGET_SHARED, ChartProgressComponent],
 })
 export class WidgetProjectAnalysisComponent extends BaseWidgetComponent {
     project = signal<Project | null>(null);
     runningProjects = signal<Project[]>([]);
-    budgetChartOptions = signal<any>(null);
-    budgetWrapperStyle = signal<any>({});
-    milestoneStates = signal<any[]>([]);
+    budgetChartOptions = signal<EChartsOption | null>(null);
+    budgetWrapperStyle = signal<Dictionary>({});
+    milestoneStates = signal<MilestoneStateCount[]>([]);
 
     #projectService = inject(ProjectService);
     #widgetService = inject(WidgetService);
@@ -34,7 +40,7 @@ export class WidgetProjectAnalysisComponent extends BaseWidgetComponent {
     });
 
     reload(): void {
-        const projectId = this.getOptions()['project-id']?.value;
+        const projectId = this.getOptions()['project-id']?.value as string | undefined;
         if (projectId) this.#loadProject(projectId);
         else this.#loadRunningProjects();
     }
@@ -50,8 +56,8 @@ export class WidgetProjectAnalysisComponent extends BaseWidgetComponent {
     }
 
     #loadRunningProjects(): void {
-        this.#widgetService.indexCashflow('PROJECTS', {}, Project).subscribe((response: any) => {
-            this.runningProjects.set(response.objects || []);
+        this.#widgetService.indexCashflow('PROJECTS', {}, Project).subscribe((response) => {
+            this.runningProjects.set(response.objects);
         });
     }
 
@@ -63,12 +69,12 @@ export class WidgetProjectAnalysisComponent extends BaseWidgetComponent {
     }
 
     #computeWorkshares(project: Project): void {
-        project.var = project.var || ({} as any);
-        project.var.workshares = (project.timeline_chart || []).map((_: any) => ({
+        project.var = project.var || ({} as Dictionary);
+        project.var['workshares'] = (project.timeline_chart || []).map((_: ProjectTimelineEntry) => ({
             name: _.user?.name || 'Unknown',
             color: _.user?.color || '#cccccc',
-            val: _.data.reduce((sum: number, d: any) => sum + (parseFloat(d.sum) || 0), 0),
-        }));
+            val: _.data.reduce((sum: number, d) => sum + (parseFloat(String(d.value)) || 0), 0),
+        } as WorkShare));
     }
 
     #shouldShowBudgetChart(): boolean {
@@ -83,22 +89,21 @@ export class WidgetProjectAnalysisComponent extends BaseWidgetComponent {
         const project = this.project()!;
         const timePercentage = project.timePercentage();
         const dangerColor = Color.fromVar('danger').toHexString();
-        const workShares = project.var.workshares || [];
+        const workShares: WorkShare[] = project.var['workshares'] || [];
         const centerText = `${(timePercentage * 100).toFixed(0)}%`;
         const centerColor = timePercentage >= 1 ? dangerColor : '#ffffff';
 
         const pieData = timePercentage < 1
-            ? [...workShares.map((u: any) => ({ value: u.val, name: u.name, itemStyle: { color: u.color, ...ECHARTS_DONUT_ITEM_STYLE } })), { value: (project.work_estimated ?? 0) - project.hours_invested, name: 'remaining', itemStyle: { color: '#6c757d', ...ECHARTS_DONUT_ITEM_STYLE } }]
-            : workShares.map((u: any) => ({ value: u.val, name: u.name, itemStyle: { color: u.color, ...ECHARTS_DONUT_ITEM_STYLE } }));
+            ? [...workShares.map((u) => ({ value: u.val, name: u.name, itemStyle: { color: u.color, ...ECHARTS_DONUT_ITEM_STYLE } })), { value: (project.work_estimated ?? 0) - project.hours_invested, name: 'remaining', itemStyle: { color: '#6c757d', ...ECHARTS_DONUT_ITEM_STYLE } }]
+            : workShares.map((u) => ({ value: u.val, name: u.name, itemStyle: { color: u.color, ...ECHARTS_DONUT_ITEM_STYLE } }));
 
         this.budgetChartOptions.set({
-            chart: { height: 200 },
             backgroundColor: 'transparent',
             animation: false,
-            tooltip: { trigger: 'item', ...ECHARTS_DEFAULT_TOOLTIP_OPTIONS, formatter: (params: any) => `${params.name}: ${params.value.toFixed(1)}h` },
+            tooltip: { trigger: 'item', ...ECHARTS_DEFAULT_TOOLTIP_OPTIONS, formatter: (params: TopLevelFormatterParams) => { const p = Array.isArray(params) ? params[0] : params; return `${p.name}: ${(p.value as number).toFixed(1)}h`; } },
             graphic: [{ type: 'text', left: 'center', top: 'center', style: { text: centerText, fill: centerColor, fontSize: 20, fontFamily: 'BrunoAce' } }],
             series: [{ type: 'pie', radius: ['35%', '70%'], data: pieData, label: { show: false } }],
-        });
+        } satisfies EChartsOption);
 
         this.budgetWrapperStyle.set(timePercentage >= 1 ? {
             '--budget-over-percentage': `${Math.min(timePercentage - 1, 1) * 360}deg`,

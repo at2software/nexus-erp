@@ -14,11 +14,10 @@ interface TRETURN {
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'modal-invoice-discount',
     templateUrl: './modal-invoice-discount.component.html',
-    styleUrls: ['./modal-invoice-discount.component.scss'],
-    standalone: true,
     imports: [FormsModule],
 })
 export class ModalInvoiceDiscountComponent extends ModalBaseComponent<TRETURN> {
+    
     private readonly titleField = viewChild.required<ElementRef>('title');
     private readonly valueField = viewChild.required<ElementRef>('value');
 

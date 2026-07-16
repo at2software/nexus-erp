@@ -23,7 +23,7 @@
                 <div class="input-group mb-3 d-flex">
                     <span class="input-group-text" i18n="@@i18n.common.category">category</span>
                     <select class="form-select" [(ngModel)]="item.category_id">
-                        @for (cat of categories; track cat.id) {
+                        @for (cat of categories(); track cat.id) {
                             <option value="{{ cat.id }}" [style.color]="cat.color">
                                 {{ cat.name }}
                             </option>

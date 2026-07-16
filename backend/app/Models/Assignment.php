@@ -16,8 +16,7 @@ class Assignment extends BaseModel {
 
     const FLAG_MAIN_CONTACT = 1 << 0; // Binary flag: 1 (for main contact used in quotes/invoices)
 
-    protected $fillable = ['role_id', 'parent_id', 'parent_type', 'assignee_id', 'assignee_type', 'hours_planned', 'flags'];
-    protected $access   = ['admin' => '*', 'project_manager' => 'crud', 'user' => 'cru'];
+    protected $fillable = ['role_id', 'parent_id', 'parent_type', 'assignee_id', 'assignee_type', 'hours_planned', 'hours_weekly', 'flags'];
     protected $appends  = ['avg_hpd'];
 
     public function getAvgHpdAttribute() {

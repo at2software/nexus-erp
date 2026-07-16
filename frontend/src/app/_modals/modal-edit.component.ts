@@ -1,3 +1,4 @@
+import { Dictionary } from '@constants/constants';
 import { Type } from '@angular/core';
 import { deepCopy } from '@constants/deepClone';
 import { Serializable } from '@models/serializable';
@@ -24,9 +25,10 @@ export abstract class ModalEditComponent<T extends Serializable> extends ModalBa
         this.item = deepCopy(item);
     };
     onSuccess = () => {
-        const payload: Record<string, any> = {};
+        const payload: Dictionary = {};
+        const item = this.item as unknown as Record<string, unknown>;
         for (const key of this.keys()) {
-            payload[key] = (this.item as any)[key];
+            payload[key] = item[key];
         }
         if (this.#new) {
             this.#originalItem.store(payload).subscribe();

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Actions\File\GenerateImageThumbnail;
 use App\Actions\File\GeneratePdfThumbnailWithGhostscript;
 use App\Actions\File\GeneratePdfThumbnailWithImagick;
+use App\Enums\FileType;
 use App\Helpers\NLog;
 use App\Traits\HandlesFileOperations;
 use App\Traits\ProvidesFileIcons;
@@ -17,8 +18,10 @@ class File extends BaseModel {
     use ProvidesFileIcons;
 
     protected $fillable = ['name', 'parent_type', 'parent_id', 'dir', 'mime', 'category', 'tags', 'file_size', 'dimensions', 'uploaded_by'];
-    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
+    protected function casts(): array {
+        return ['type' => FileType::class];
+    }
     public function parent() {
         return $this->morphTo();
     }

@@ -21,7 +21,7 @@
         <div class="gt-card-footer">
             <!-- Disable checkbox (bottom-left) -->
             <label class="gt-disable-label">
-                <input type="checkbox" [checked]="disableChecked" (change)="onDisableChange($any($event.target).checked)" />
+                <input #disableCb type="checkbox" [checked]="disableChecked" (change)="onDisableChange(disableCb.checked)" />
                 <span i18n="@@i18n.guidedTour.disable">disable NEXUS guide</span>
             </label>
 
@@ -29,12 +29,12 @@
             <div class="gt-footer-right">
                 <!-- Dot indicators -->
                 <div class="gt-dots">
-                    @for (dot of slideIndicators; track $index; let i = $index) {
+                    @for (dot of slideIndicators(); track $index; let i = $index) {
                         <span class="gt-dot" [class.gt-dot-current]="i === 0"></span>
                     }
                 </div>
                 <button class="btn btn-primary btn-sm" (click)="onNext()">
-                    @if ((queueLength$ | async) === 1) {
+                    @if (queueLength() === 1) {
                         <span i18n="@@i18n.guidedTour.done">done</span>
                     } @else {
                         <span i18n="@@i18n.guidedTour.next">next</span>

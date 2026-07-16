@@ -1,12 +1,15 @@
+@let _isLoaded = isLoaded();
+@let _lopsHeaders = lopsHeaders();
+@let _categories = categories();
 <toolbar>
-    @if (!lopsHeaders()) {
+    @if (!_lopsHeaders) {
         <span class="text-muted small me-1" i18n="@@i18n.invoices.uploadDatevLops">upload DATEV LOPS</span>
         <div class="border rounded px-2 py-1 text-muted small d-flex align-items-center gap-1" style="cursor:pointer" dnd="invoices" [collect]="true" (dndDrop)="onDnd($event)">
             <n>upload_file</n> drop CSV
         </div>
     }
-    @if (lopsHeaders()) {
-        <span class="badge text-bg-primary me-2">{{ lopsHeaders()!.length }} columns</span>
+    @if (_lopsHeaders) {
+        <span class="badge text-bg-primary me-2">{{ _lopsHeaders!.length }} columns</span>
         <button class="btn btn-sm btn-primary me-1" (click)="onLopsUpdate()" i18n="@@i18n.invoices.updateLops">update LOPS</button>
         <button class="btn btn-sm text-muted" (click)="lopsHeaders.set(undefined); lopsItems.set(undefined)" i18n="@@i18n.common.cancel">cancel</button>
     }
@@ -16,7 +19,7 @@
     <div class="col-3">
         <div class="card mb-3">
             <div class="card-body p-0" style="height: 180px">
-                @if (isLoaded()) {
+                @if (_isLoaded) {
                     <div echarts [options]="donutChart()" style="width:100%;height:180px;"></div>
                 }
             </div>
@@ -25,12 +28,12 @@
             <div class="card-header hstack gap-2">
                 <div class="flex-fill text-truncate" i18n="@@i18n.common.categories">categories</div>
                 <div>
-                    <i class="cursor-pointer text-primary" (click)="onNewExpenseCategory()">add</i>
+                    <i class="cursor-pointer text-primary" tabindex="0" (click)="onNewExpenseCategory()" (keyup.enter)="onNewExpenseCategory()">add</i>
                 </div>
             </div>
             <ul class="list-group">
-                @for (_ of categories(); track _.id) {
-                    <li class="list-group-item py-1 d-flex px-3" [nx]="_" [tables]="categories()">
+                @for (_ of _categories; track _.id) {
+                    <li class="list-group-item py-1 d-flex px-3" [nx]="_" [tables]="_categories">
                         <div class="pe-3">
                             <i class="cursor-pointer" (click)="toggleCategoryVisibility(_)" (keyup.enter)="toggleCategoryVisibility(_)" tabindex="0" [style.color]="_.var.visible ? _.css() : '#666666'">
                                 {{ _.var.visible ? 'visibility' : 'visibility_off' }}
@@ -44,17 +47,17 @@
         </div>
     </div>
     <div class="col-9">
-        @if (!isLoaded()) {
+        @if (!_isLoaded) {
             <spinner></spinner>
         }
-        @if (isLoaded() && expenses().length === 0) {
+        @if (_isLoaded && expenses().length === 0) {
             <div class="card">
                 <empty-state [card]="false" class="invoices" i18n-title="@@i18n.invoices.noExpensesYet" title="No expenses yet">
                     <p i18n="@@i18n.invoices.expensesEmptyDescription">Track every cost, master every margin. Add your first expense and gain complete visibility into your operational spending.</p>
                 </empty-state>
             </div>
         }
-        @if (isLoaded() && expenses().length > 0) {
+        @if (_isLoaded && expenses().length > 0) {
             <div class="card">
                 <div class="card-header">
                     <div i18n="@@i18n.common.expenses">expenses</div>
@@ -79,7 +82,7 @@
                         <tbody>
                             @for (_ of getItems(); track _.id) {
                                 @let category = categoryFor(_);
-                                <tr [nx]="_" [tables]="getItems()" [class.d-none]="!(categoryFor(_)?.var.visible ?? true)">
+                                <tr [nx]="_" [tables]="getItems()" [class.d-none]="!(category?.var?.visible ?? true)">
                                     <td class="ps-3 pe-2">
                                         <i [style.color]="category?.css() ?? '#666666'" ngbTooltip="{{ category?.name ?? '' }}">repeat</i>
                                     </td>
@@ -102,12 +105,12 @@
                                         <td class="pe-3 small text-success text-center" i18n="@@i18n.common.new">new</td>
                                     }
 
-                                    @if (!lopsHeaders()) {
+                                    @if (!_lopsHeaders) {
                                         <td class="pe-3 small text-end">
                                             <span [class]="_.repeatColor()">{{ _.repeatString() }}</span>
                                         </td>
                                     }
-                                    @if (lopsHeaders()) {
+                                    @if (_lopsHeaders) {
                                         <td class="pe-3 small text-end text-nowrap">
                                             @if (_.var.lops !== -1) {
                                                 <span>{{ _.var.lops | money }}</span>

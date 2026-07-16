@@ -13,13 +13,11 @@ import { CompanyLocaleSelectorComponent } from '../company-locale-selector/compa
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'customer-payment-details',
     templateUrl: './customer-payment-details.component.html',
-    styleUrls: ['./customer-payment-details.component.scss'],
-    standalone: true,
     imports: [NgbTooltipModule, NgTemplateOutlet, FormsModule, CompanyLocaleSelectorComponent],
 })
 export class CustomerPaymentDetailsComponent {
     company = input<Company>();
-    additionalItems = input<TemplateRef<any>>();
+    additionalItems = input<TemplateRef<unknown>>();
     projectPaymentDuration = input<string>();
     onChangeProjectPaymentDuration = input<() => void>();
     onRemoveProjectPaymentDuration = input<() => void>();
@@ -28,6 +26,7 @@ export class CustomerPaymentDetailsComponent {
     hasProjectPaymentDuration = computed(() => !!this.projectPaymentDuration());
     effectivePaymentDuration = computed(() => this.projectPaymentDuration() || this.current()?.getParam('INVOICE_PAYMENT_DURATION') || '14');
     hasDiscount = computed(() => parseFloat(this.current()?.getParam('INVOICE_DISCOUNT') ?? '0') > 0);
+    hasCustomerPaymentDuration = computed(() => !this.projectPaymentDuration() && !!this.current()?.getParam('INVOICE_PAYMENT_DURATION'));
 
     parent = inject(CustomerDetailGuard, { optional: true });
     inputModal = inject(InputModalService);
@@ -69,6 +68,18 @@ export class CustomerPaymentDetailsComponent {
 
     removeSepa() {
         forkJoin([this.current()!.updateParam('INVOICE_DD_MANDATE', { value: null }), this.current()!.updateParam('INVOICE_DD_IBAN', { value: null })]).subscribe(() => this.parent?.reload());
+    }
+
+    removePaymentDuration() {
+        this.current()!
+            .updateParam('INVOICE_PAYMENT_DURATION', { value: null })
+            .subscribe(() => this.parent?.reload());
+    }
+
+    removeVat() {
+        this.current()!
+            .update({ vat_id: null })
+            .subscribe(() => this.parent?.reload());
     }
 
     onChangeEmail() {

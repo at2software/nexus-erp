@@ -100,7 +100,7 @@ class PluginLocalAiController extends PluginController {
                 }
                 break;
             default:
-                NLog::info(print_r(request()->all(), true));
+                break;
         }
     }
 

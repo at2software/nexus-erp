@@ -1,0 +1,66 @@
+<div class="planner-backlog vstack gap-3">
+    <div class="card">
+        <div class="card-header hstack gap-2">
+            <span class="flex-fill" i18n="@@i18n.planner.unconfigured">unconfigured</span>
+            <span class="badge bg-danger rounded-pill">{{ unconfiguredMilestones().length }}</span>
+        </div>
+        <ul class="list-group list-group-flush" cdkDropList [cdkDropListSortingDisabled]="true">
+            @for (milestone of unconfiguredMilestones(); track milestone.id) {
+                <li class="list-group-item backlog-chip hstack gap-2" cdkDrag [cdkDragData]="milestoneItem(milestone)">
+                    <avatar [object]="milestone.project"></avatar>
+                    <span class="flex-fill text-truncate">{{ milestone.name }}</span>
+                </li>
+            } @empty {
+                <li class="list-group-item text-muted small" i18n="@@i18n.planner.nothingToPlan">nothing to plan</li>
+            }
+        </ul>
+    </div>
+
+    <div class="card">
+        <div class="card-header hstack gap-2">
+            <span class="flex-fill" i18n="@@i18n.planner.undated">undated</span>
+            <span class="badge bg-secondary rounded-pill">{{ undatedMilestones().length }}</span>
+        </div>
+        <ul class="list-group list-group-flush" cdkDropList [cdkDropListSortingDisabled]="true">
+            @for (milestone of undatedMilestones(); track milestone.id) {
+                <li class="list-group-item backlog-chip hstack gap-2" cdkDrag [cdkDragData]="milestoneItem(milestone)">
+                    <avatar [object]="milestone.project"></avatar>
+                    <span class="flex-fill text-truncate">{{ milestone.name }}</span>
+                </li>
+            } @empty {
+                <li class="list-group-item text-muted small" i18n="@@i18n.planner.nothingToPlan">nothing to plan</li>
+            }
+        </ul>
+    </div>
+
+    <div class="card">
+        <div class="card-header hstack gap-2">
+            <span class="flex-fill" i18n="@@i18n.planner.externalIssues">external issues</span>
+            @if (externalIssuesLoading()) {
+                <span class="spinner-border spinner-border-sm text-primary"></span>
+            } @else {
+                <span class="badge bg-secondary rounded-pill">{{ externalIssues().length }}</span>
+            }
+        </div>
+        <ul class="list-group list-group-flush" cdkDropList [cdkDropListSortingDisabled]="true">
+            @for (issue of externalIssues(); track issue.id) {
+                <li class="list-group-item backlog-chip hstack gap-2" cdkDrag [cdkDragData]="issueItem(issue)" [cdkDragDisabled]="!issue.project">
+                    <n class="issue-tracker-icon text-primary" (click)="openIssue(issue, $event)" (keydown.enter)="openIssue(issue, $event)" tabindex="0" [ngbTooltip]="issue.trackerProjectName">{{ issue.task.httpService.icon() }}</n>
+                    <span class="flex-fill text-truncate" [class.text-muted]="!issue.project">{{ issue.task.name }}</span>
+                    @if (issue.project) {
+                        <span class="text-muted small text-truncate issue-project">{{ issue.project.name }}</span>
+                    } @else if (issue.resolving) {
+                        <span class="spinner-border spinner-border-sm text-muted"></span>
+                    } @else {
+                        <i class="text-warning" ngbTooltip="no project related to this repository" i18n-ngbTooltip="@@i18n.planner.issueUnresolvedTooltip">warning</i>
+                    }
+                </li>
+            } @empty {
+                @if (!externalIssuesLoading()) {
+                    <li class="list-group-item text-muted small" i18n="@@i18n.planner.noExternalIssues">no open issues assigned to you</li>
+                }
+            }
+        </ul>
+    </div>
+
+</div>

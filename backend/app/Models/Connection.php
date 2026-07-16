@@ -18,7 +18,6 @@ class Connection extends BaseModel {
     }
 
     protected $fillable = ['company1_id', 'company2_id'];
-    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
     public static function obfuscateNet($connections) {
         return $connections->map(function ($conn) {

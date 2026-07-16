@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
@@ -6,7 +6,7 @@ import { StartEnd } from '@constants/constants';
 import { DATESPAN_RANGE } from '@constants/dateSpanRange';
 import { ProjectService } from '@models/project/project.service';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { Project } from '@models/project/project.model';
 import { Nx } from '@app/nx/nx.directive';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
@@ -15,42 +15,36 @@ import { SpinnerComponent } from '@shards/spinner/spinner.component';
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'projects-reporting',
-    standalone: true,
     imports: [FormsModule, NgxDaterangepickerMd, AvatarComponent, NgbTooltipModule, Nx, AvatarComponent, EmptyStateComponent, SpinnerComponent],
     templateUrl: './projects-reporting.component.html',
-    styleUrl: './projects-reporting.component.scss',
 })
-export class ProjectsReportingComponent implements OnInit {
+export class ProjectsReportingComponent {
     #projectService = inject(ProjectService);
 
     dateRange?: StartEnd = new StartEnd({
-        startDate: moment().subtract(30, 'days'),
-        endDate: moment(),
+        startDate: dayjs().subtract(30, 'days'),
+        endDate: dayjs(),
     });
 
-    ranges: any = DATESPAN_RANGE;
-    reportData: Project[] = [];
+    ranges = DATESPAN_RANGE;
+    reportData = signal<Project[]>([]);
     loading = signal(false);
 
-    formatDate(date: any): string {
-        return moment(date).format('DD.MM.YYYY HH:mm');
-    }
+    formatDate = (date: string): string => dayjs(date).format('DD.MM.YYYY HH:mm');
 
-    isStateInRange(stateDate: any): boolean {
+    isStateInRange(stateDate: string): boolean {
         if (!this.dateRange?.startDate || !this.dateRange?.endDate) return false;
-        const stateMoment = moment(stateDate);
-        const startDate = moment((this.dateRange.startDate as any).$d || this.dateRange.startDate);
-        const endDate = moment((this.dateRange.endDate as any).$d || this.dateRange.endDate);
-        return stateMoment.isSameOrAfter(startDate, 'day') && stateMoment.isSameOrBefore(endDate, 'day');
+        const stateMoment = dayjs(stateDate);
+        return stateMoment.isSameOrAfter(this.dateRange.startDate, 'day') && stateMoment.isSameOrBefore(this.dateRange.endDate, 'day');
     }
 
-    ngOnInit() {
+    constructor() {
         this.loadReport();
     }
 
     onDateRangeChange() {
-        // Only reload if not initial load (ngOnInit already loads)
-        if (this.reportData?.length > 0) {
+        // Only reload if not initial constructor load
+        if (this.reportData().length > 0) {
             this.loadReport();
         }
     }
@@ -65,7 +59,7 @@ export class ProjectsReportingComponent implements OnInit {
         };
 
         this.#projectService.indexReporting(params).subscribe((data) => {
-            this.reportData = data;
+            this.reportData.set(data);
             this.loading.set(false);
         });
     }

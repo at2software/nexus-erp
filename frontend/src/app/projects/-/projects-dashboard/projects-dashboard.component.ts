@@ -24,8 +24,6 @@ const COOKIE_ID = 'project/dashboard';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'projects-dashboard',
     templateUrl: './projects-dashboard.component.html',
-    styleUrls: ['./projects-dashboard.component.scss'],
-    standalone: true,
     imports: [ProjectStateFilterComponent, ContinuousMarkerComponent, ProjectsTableComponent, FormsModule, NgxDaterangepickerMd, EmptyStateComponent, WidgetProjectManagerComponent],
 })
 export class ProjectsDashboardComponent {
@@ -46,7 +44,7 @@ export class ProjectsDashboardComponent {
     selectedAssigneeId?: number = undefined;
     selectedProjectManagerId?: number = undefined;
 
-    ranges: any = DATESPAN_RANGE;
+    ranges = DATESPAN_RANGE;
     global = inject(GlobalService);
     #projectService = inject(ProjectService);
     #originalCookieData: string = '';
@@ -60,7 +58,7 @@ export class ProjectsDashboardComponent {
         this.#originalCookieData = this.#cookieData();
         const cookie = getCookie(COOKIE_ID);
         if (cookie) {
-            const parsed: any = JSON.parse(cookie);
+            const parsed = JSON.parse(cookie) as (StartEnd | undefined)[];
             if (parsed) {
                 const [, , , selCreated, selStarted, selFinished] = parsed;
                 this.selCreated = StartEnd.forceObject(selCreated);
@@ -72,7 +70,7 @@ export class ProjectsDashboardComponent {
     }
 
     filters = (): Dictionary => {
-        const filters: any = filtered({
+        const filters: Dictionary = filtered({
             ...this.stateFilter().getFilters(),
             created_at: span(StartEnd.forceObject(this.selCreated)),
             started_at: span(StartEnd.forceObject(this.selStarted)),
@@ -103,7 +101,7 @@ export class ProjectsDashboardComponent {
             StartEnd.forceObject(this.selFinished)?.toString() ?? undefined,
         ]);
 
-    #filters: any = undefined;
+    #filters: Dictionary | undefined = undefined;
     needsFilterUpdate = (): boolean => {
         const original = JSON.stringify(this.#filters);
         this.#filters = Object.assign({}, this.filters());
@@ -112,14 +110,14 @@ export class ProjectsDashboardComponent {
         }
         return original.localeCompare(JSON.stringify(this.#filters)) !== 0;
     };
-    reloadWithCalendar(_e?: any) {
+    reloadWithCalendar(_e?: unknown) {
         this.updateCookie();
         if (this.#isInitialReload) {
             this.reload();
         }
     }
     reload() {
-        const filters: any = this.filters();
+        const filters = this.filters();
         this.projects = [];
         this.hasLoaded.set(false);
         this.observer = this.#projectService.index(filters);

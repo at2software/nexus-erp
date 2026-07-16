@@ -16,7 +16,7 @@ class Product extends BaseModel {
     use SoftDeletes;
 
     protected $appends  = ['icon', 'class', 'path', 'rootGroup'];
-    protected $fillable = ['name', 'unit_name', 'is_active', 'is_discountable', 'vat', 'recurrence', 'product_group_id', 'created_at', 'updated_at'];
+    protected $fillable = ['name', 'item_number', 'is_active', 'is_discountable', 'time_based', 'price_multiplier', 'recurrence', 'minimum_amount', 'package_amount', 'minimum_price', 'weight', 'size_w', 'size_h', 'size_d', 'quote', 'product_group_id', 'created_at', 'updated_at'];
     protected $touches  = ['group'];
 
     protected function casts(): array {
@@ -24,9 +24,6 @@ class Product extends BaseModel {
             'net' => PrecomputedAuth::class,
         ];
     }
-
-    protected $access = ['admin' => '*', 'project_manager' => 'r', 'user' => 'r'];
-
     public function getIconAttribute() {
         return '../icons/product.jpg';
     }

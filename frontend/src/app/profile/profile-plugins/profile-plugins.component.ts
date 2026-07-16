@@ -15,13 +15,12 @@ import { NComponent } from '@shards/n/n.component';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { TabPluginsComponent } from '@activity/tab-plugins/tab-plugins.component';
 import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
+import { PluginEntry } from '@models/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'app-profile-plugins',
     templateUrl: './profile-plugins.component.html',
-    styleUrls: ['./profile-plugins.component.scss'],
-    standalone: true,
     imports: [RsaSettingsEmptyComponent, SlicePipe, NComponent, ToolbarComponent, TabPluginsComponent, NgbDropdownModule],
 })
 export class ProfilePluginsComponent {
@@ -52,50 +51,24 @@ export class ProfilePluginsComponent {
 
     getMantisProjects = (_: Encryption) => (this.factory.instanceFor(_) as MantisPlugin).projects ?? [];
 
+    #makeEntry = (p: Encryption, type: string, displayName: string): PluginEntry => Object.assign(p, { type, displayName });
+
     // Get all plugin types with their configurations
-    getAllPlugins = () => {
-        return [
-            ...this.factory.getPluginEncryptionsOfType('mattermost').map((p) => {
-                (p as any).type = 'mattermost';
-                (p as any).displayName = 'Mattermost';
-                return p;
-            }),
-            ...this.factory.getPluginEncryptionsOfType('git').map((p) => {
-                (p as any).type = 'git';
-                (p as any).displayName = 'GitLab';
-                return p;
-            }),
-            ...this.factory.getPluginEncryptionsOfType('mantis').map((p) => {
-                (p as any).type = 'mantis';
-                (p as any).displayName = 'MantisBT';
-                return p;
-            }),
-            ...this.factory.getPluginEncryptionsOfType('slack').map((p) => {
-                (p as any).type = 'slack';
-                (p as any).displayName = 'Slack';
-                return p;
-            }),
-            ...this.factory.getPluginEncryptionsOfType('local_ai').map((p) => {
-                (p as any).type = 'local_ai';
-                (p as any).displayName = 'LocalAI Proxy';
-                return p;
-            }),
-            ...this.factory.getPluginEncryptionsOfType('nexus').map((p) => {
-                (p as any).type = 'nexus';
-                (p as any).displayName = 'NEXUS';
-                return p;
-            }),
-        ];
-    };
+    getAllPlugins = (): PluginEntry[] => [
+        ...this.factory.getPluginEncryptionsOfType('mattermost').map((p) => this.#makeEntry(p, 'mattermost', 'Mattermost')),
+        ...this.factory.getPluginEncryptionsOfType('git').map((p) => this.#makeEntry(p, 'git', 'GitLab')),
+        ...this.factory.getPluginEncryptionsOfType('mantis').map((p) => this.#makeEntry(p, 'mantis', 'MantisBT')),
+        ...this.factory.getPluginEncryptionsOfType('slack').map((p) => this.#makeEntry(p, 'slack', 'Slack')),
+        ...this.factory.getPluginEncryptionsOfType('local_ai').map((p) => this.#makeEntry(p, 'local_ai', 'LocalAI Proxy')),
+        ...this.factory.getPluginEncryptionsOfType('nexus').map((p) => this.#makeEntry(p, 'nexus', 'NEXUS')),
+    ];
 
     // Get plugin status text for badge
-    getPluginStatusText = (plugin: any): string => {
+    getPluginStatusText = (plugin: PluginEntry): string => {
         try {
-            // NEXUS plugins don't need configuration
             if (plugin.type === 'nexus') return '';
             if (!plugin?.value?.url) return 'not configured';
-            // Get the original encryption object, not the spread version
-            const originalEncryption = this.factory.getPluginEncryptionsOfType(plugin.key || (plugin as any).type).find((e) => e.id === plugin.id);
+            const originalEncryption = this.factory.getPluginEncryptionsOfType(plugin.key || plugin.type).find((e) => e.id === plugin.id);
             if (!originalEncryption) return 'unknown';
             const instance = this.factory.instanceFor(originalEncryption);
             return (instance?.state || 'unknown').toLowerCase();
@@ -105,12 +78,10 @@ export class ProfilePluginsComponent {
     };
 
     // Check if plugin has successfully connected (for badge styling)
-    isPluginConnected = (plugin: any): boolean => {
-        return this.getPluginStatusText(plugin) === 'connected';
-    };
+    isPluginConnected = (plugin: PluginEntry): boolean => this.getPluginStatusText(plugin) === 'connected';
 
     // Open configuration modal for a plugin
-    openPluginModal = (plugin: any) => {
+    openPluginModal = (plugin: PluginEntry) => {
         const modalRef = this.#modalService.open(PluginConfigModalComponent, { size: 'lg' });
         modalRef.componentInstance.plugin = plugin;
 
@@ -119,7 +90,6 @@ export class ProfilePluginsComponent {
                 if (result === 'delete') {
                     this.onLinkDelete(plugin);
                 } else if (result === 'updated') {
-                    // Plugin was updated, reload to refresh the display
                     this.global.reload();
                 }
             })
@@ -158,28 +128,19 @@ export class ProfilePluginsComponent {
             });
     };
 
-    #getDefaultValuesForPlugin(type: string): any {
+    #getDefaultValuesForPlugin(type: string): Record<string, string> {
         switch (type) {
-            case 'mattermost':
-                return { url: '', team: '', token: '' };
-            case 'git':
-                return { url: '', token: '' };
-            case 'mantis':
-                return { url: '', token: '' };
-            case 'slack':
-                return { url: '', token: '' };
-            case 'local_ai':
-                return { url: '', login: '', password: '' };
-            default:
-                return {};
+            case 'mattermost': return { url: '', team: '', token: '' };
+            case 'git': return { url: '', token: '' };
+            case 'mantis': return { url: '', token: '' };
+            case 'slack': return { url: '', token: '' };
+            case 'local_ai': return { url: '', login: '', password: '' };
+            default: return {};
         }
     }
 
-    #onLinkAdded = (key: string, object: any) => {
-        this.#userService.encrypt(key, object).subscribe((_) => this.global.reload());
-    };
-
+    #onLinkAdded = (key: string, object: Record<string, string>) => this.#userService.encrypt(key, object).subscribe((_) => this.global.reload());
     // Helper methods for template access to dynamic properties
-    getPluginType = (plugin: any): string => (plugin as any).type;
-    getPluginDisplayName = (plugin: any): string => (plugin as any).displayName;
+    getPluginType = (plugin: PluginEntry): string => plugin.type;
+    getPluginDisplayName = (plugin: PluginEntry): string => plugin.displayName;
 }

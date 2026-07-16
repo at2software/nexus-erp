@@ -4,19 +4,16 @@
         @for (res of results(); track res.id; let i = $index) {
             <div class="dropdown-item hstack gap-2 pointer" (click)="selectItem(res, $event)" tabindex="0" (keydown.enter)="selectItem(res, $event)" (mousedown)="preventBlur($event)" (mouseenter)="setCurrentIndex(i)" [class.active]="i === currentIndex()" role="option" [attr.aria-selected]="i === currentIndex()">
                 <div>
-                    @switch (res.class) {
-                        @case ('CompanyContact') {
-                            <img class="list-group-icon avatar avatar-img avatar-xs" src="{{ res.icon }}" [ngbTooltip]="res.company.name" alt="" />
-                        }
-                        @default {
-                            <img class="list-group-icon avatar avatar-img avatar-xs" src="{{ res.icon }}" alt="" />
-                        }
+                    @if (res.assert(CompanyContact); as contact) {
+                    <img class="list-group-icon avatar avatar-img avatar-xs" src="{{ res.icon }}" [ngbTooltip]="contact.company.getName()" alt="" />
+                    } @else {
+                    <img class="list-group-icon avatar avatar-img avatar-xs" src="{{ res.icon }}" alt="" />
                     }
                 </div>
-                <div class="text-truncate flex-fill"><span [innerHTML]="res.name | safe: 'html'"></span></div>
-                @if (res.class === 'Project') {
+                <div class="text-truncate flex-fill"><span [innerHTML]="res.getName() | safe: 'html'"></span></div>
+                @if (res.assert(Project); as project) {
                     <div>
-                        <span class="badge" [style.backgroundColor]="res.state.color">{{ res.state.name }}</span>
+                        <span class="badge" [style.backgroundColor]="project.state.color">{{ project.state.name }}</span>
                     </div>
                 }
             </div>

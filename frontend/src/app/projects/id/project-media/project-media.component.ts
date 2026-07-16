@@ -6,8 +6,6 @@ import { MediaPreviewComponent } from './media-preview/media-preview.component';
 @Component({
     selector: 'project-media',
     templateUrl: './project-media.component.html',
-    styleUrls: ['./project-media.component.scss'],
-    standalone: true,
     imports: [MediaPreviewComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

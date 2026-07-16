@@ -3,7 +3,7 @@
 @let _needsCompany = needsCompany();
 @let _needsLocalization = needsLocalization();
 @let _addUserLoading = addUserLoading();
-@if (showModal) {
+@if (showModal()) {
     <div class="onboarding-overlay">
         <div class="onboarding-dialog">
             <!-- Left panel: background image -->
@@ -16,7 +16,7 @@
                     <i class="text-primary">rocket_launch</i>
                     <span class="fw-semibold flex-fill" i18n="@@i18n.onboarding.setupNexus">set up NEXUS</span>
                     @if (_step < 3) {
-                        <small class="text-muted">{{ currentStepIndex + 1 }} / {{ totalSteps }}</small>
+                        <small class="text-muted">{{ currentStepIndex() + 1 }} / {{ totalSteps() }}</small>
                         <button class="btn-plain ms-2" (click)="dismiss()" i18n-title="@@i18n.common.dismiss" title="dismiss">
                             <i class="text-muted">close</i>
                         </button>
@@ -25,7 +25,7 @@
 
                 <!-- Progress bar -->
                 <div class="wizard-progress mb-4">
-                    <div class="wizard-progress-bar" [style.width.%]="progressPercent"></div>
+                    <div class="wizard-progress-bar" [style.width.%]="progressPercent()"></div>
                 </div>
 
                 <!-- Step dots -->
@@ -144,9 +144,10 @@
                         <p class="text-muted mb-3" i18n="@@i18n.onboarding.wizard.teamDescription">Don't use the superadmin account for your regular day-to-day work — add at least one personal account for yourself. You can assign roles and permissions in settings afterwards.</p>
 
                         <!-- Added users list -->
-                        @if (addedUsers.length > 0) {
+                        @let _addedUsers = addedUsers();
+                        @if (_addedUsers.length > 0) {
                             <ul class="list-group mb-3">
-                                @for (u of addedUsers; track u.email) {
+                                @for (u of _addedUsers; track u.email) {
                                     <li class="list-group-item d-flex align-items-center gap-2">
                                         <i class="text-success">check_circle</i>
                                         <span class="flex-fill">{{ u.name }}</span>
@@ -160,19 +161,19 @@
                         <div class="add-user-form mb-2">
                             <div class="row g-2 mb-2">
                                 <div class="col-12">
-                                    <input type="text" class="form-control" [(ngModel)]="newUserName" i18n-placeholder="@@i18n.onboarding.wizard.userNamePlaceholder" placeholder="Full name" />
+                                    <input type="text" class="form-control" [ngModel]="newUserName()" (ngModelChange)="newUserName.set($event)" i18n-placeholder="@@i18n.onboarding.wizard.userNamePlaceholder" placeholder="Full name" />
                                 </div>
                                 <div class="col-12 col-sm-6">
-                                    <input type="email" class="form-control" [(ngModel)]="newUserEmail" i18n-placeholder="@@i18n.onboarding.wizard.userEmailPlaceholder" placeholder="E-mail address" />
+                                    <input type="email" class="form-control" [ngModel]="newUserEmail()" (ngModelChange)="newUserEmail.set($event)" i18n-placeholder="@@i18n.onboarding.wizard.userEmailPlaceholder" placeholder="E-mail address" />
                                 </div>
                                 <div class="col-12 col-sm-6">
-                                    <input type="password" class="form-control" [(ngModel)]="newUserPassword" i18n-placeholder="@@i18n.onboarding.wizard.userPasswordPlaceholder" placeholder="Password (min. 8 characters)" (keyup.enter)="addUser()" />
+                                    <input type="password" class="form-control" [ngModel]="newUserPassword()" (ngModelChange)="newUserPassword.set($event)" i18n-placeholder="@@i18n.onboarding.wizard.userPasswordPlaceholder" placeholder="Password (min. 8 characters)" (keyup.enter)="addUser()" />
                                 </div>
                             </div>
-                            @if (addUserError) {
-                                <small class="text-danger d-block mb-2">{{ addUserError }}</small>
+                            @if (addUserError()) {
+                                <small class="text-danger d-block mb-2">{{ addUserError() }}</small>
                             }
-                            <button class="btn btn-outline-primary w-100" [disabled]="!canAddUser" (click)="addUser()">
+                            <button class="btn btn-outline-primary w-100" [disabled]="!canAddUser()" (click)="addUser()">
                                 @if (_addUserLoading) {
                                     <spinner [size]="20" [inline]="true" class="me-2"></spinner>
                                 } @else {
@@ -183,7 +184,7 @@
                         </div>
 
                         <div class="mt-auto pt-3 d-flex align-items-center gap-3">
-                            <button class="btn btn-primary btn-lg flex-fill" [disabled]="addedUsers.length === 0" (click)="continueFromTeam()">
+                            <button class="btn btn-primary btn-lg flex-fill" [disabled]="_addedUsers.length === 0" (click)="continueFromTeam()">
                                 <span i18n="@@i18n.common.continue">continue</span>
                                 <i class="ms-1">arrow_forward</i>
                             </button>

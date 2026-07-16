@@ -49,9 +49,6 @@ class User extends BaseAuthenticatable {
             'revenue' => Permission::class.':financial',
         ];
     }
-
-    protected $access = ['admin' => '*', 'hr' => '*', 'project_manager' => 'ru', 'user' => 'ru'];
-
     public function getPredictionAccuracyData($startDate): array {
         return app(GetPredictionAccuracyData::class)->execute($this, $startDate);
     }

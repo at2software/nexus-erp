@@ -5,7 +5,7 @@
         //padding: 1rem 0;
         color: #ffffff;
         text-shadow: 1px 1px 0 #000;
-        background-color: var(--color-lighter);
+        background-color: var(--bs-border-color);
     }
     .annotate { opacity: .5; padding: 0 0 0 0; }
     &:hover .annotate { opacity: 1; }

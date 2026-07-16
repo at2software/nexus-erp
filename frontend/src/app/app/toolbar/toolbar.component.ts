@@ -6,7 +6,6 @@ import { ToolbarService } from './toolbar.service';
     selector: 'toolbar',
     templateUrl: './toolbar.component.html',
     styleUrls: ['./toolbar.component.scss'],
-    standalone: true,
 })
 export class ToolbarComponent {
     #toolbarService = inject(ToolbarService);

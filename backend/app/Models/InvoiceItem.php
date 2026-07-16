@@ -4,11 +4,11 @@ namespace App\Models;
 
 use App\Builders\InvoiceItemBuilder;
 use App\Enums\InvoiceItemType;
-use App\Helpers\NLog;
-use App\Http\Middleware\Auth;
+use App\Enums\InvoiceVatHandling;
 use App\Traits\PrecomputedTrait;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Auth;
 
 class InvoiceItem extends BaseModel {
     use HasFactory;
@@ -39,6 +39,8 @@ class InvoiceItem extends BaseModel {
         'vat_calculation',
         'vat_rate',
         'vat_reason',
+        'ext_issue_plugin_link_id',
+        'ext_issue_id',
     ];
     protected $hides = ['deleted_at'];
 
@@ -56,11 +58,10 @@ class InvoiceItem extends BaseModel {
             'total'              => 'double',
             'is_discountable'    => 'boolean',
             'next_recurrence_at' => 'date',
+            'type'               => InvoiceItemType::class,
+            'vat_calculation'    => InvoiceVatHandling::class,
         ];
     }
-
-    protected $access = ['admin' => '*', 'project_manager' => 'cru', 'developer' => 'cru'];
-
     public function getDirty() { // Exclude virtual attributes from dirty tracking
         $dirty = parent::getDirty();
         unset($dirty['my_prediction']);
@@ -82,6 +83,9 @@ class InvoiceItem extends BaseModel {
     }
     public function foci() {
         return $this->hasMany(Focus::class);
+    }
+    public function extIssuePluginLink() {
+        return $this->belongsTo(PluginLink::class, 'ext_issue_plugin_link_id');
     }
     public function billedFoci() {
         return $this->hasMany(Focus::class, 'invoiced_in_item_id');
@@ -131,7 +135,7 @@ class InvoiceItem extends BaseModel {
     protected function price(): Attribute {
         return Attribute::make(
             get: function ($value) {
-                if ($this->unit_name === '%' && ! $this->invoice_id && ! $this->company_id && ! $this->type === InvoiceItemType::Paydown) {
+                if ($this->unit_name === '%' && ! $this->invoice_id && ! $this->company_id && $this->type !== InvoiceItemType::Paydown) {
                     return floatval($this->nonPercentualSiblings()->sum('total'));
                 }
                 return floatval($value);
@@ -141,7 +145,7 @@ class InvoiceItem extends BaseModel {
     protected function total(): Attribute {
         return Attribute::make(
             get: function ($value) {
-                if ($this->unit_name === '%' && ! $this->invoice_id && ! $this->company_id && ! $this->type === InvoiceItemType::Paydown) {
+                if ($this->unit_name === '%' && ! $this->invoice_id && ! $this->company_id && $this->type !== InvoiceItemType::Paydown) {
                     return floatval($this->nonPercentualSiblings()->sum('total') * $this->qty * 0.01);
                 }
                 return floatval($value);
@@ -167,6 +171,9 @@ class InvoiceItem extends BaseModel {
     }
     public function getBilledFociCountAttribute() {
         return $this->billedFoci()->count();
+    }
+    public function getAssumedWorkloadAttribute() {
+        return $this->assumedWorkload();
     }
     public function getRootGroupAttribute() {
         return $this->productSource?->rootGroup;

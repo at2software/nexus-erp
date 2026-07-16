@@ -24,7 +24,7 @@ export class Vcard {
         }
         if (!vcard) console.trace('Empty vCard string provided');
         const a: VcardRow[] = [];
-        vcard.split('\n').forEach((x: any) => {
+        vcard.split('\n').forEach((x: string) => {
             const v = VcardRow.fromString(x);
             //console.log('Parsed vCard line:', { line: x, parsed: v });
             if (v) {

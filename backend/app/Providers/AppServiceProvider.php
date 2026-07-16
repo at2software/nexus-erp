@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\MarketingProspect;
 use App\Observers\MarketingProspectObserver;
+use App\Support\LiveSyncBroadcaster;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -13,7 +14,9 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider {
-    public function register(): void {}
+    public function register(): void {
+        $this->app->singleton(LiveSyncBroadcaster::class);
+    }
     public function boot(): void {
         MarketingProspect::observe(MarketingProspectObserver::class);
 

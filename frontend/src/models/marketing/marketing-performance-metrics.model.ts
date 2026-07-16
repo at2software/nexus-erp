@@ -1,7 +1,7 @@
 import { Serializable } from '../serializable';
 import { MarketingService } from './marketing.service';
 import { NxActionType } from '@app/nx/nx.actions';
-import { TActivityStats } from './marketing-activity.model';
+import type { ActivityStats } from '@models/api-response';
 import { Model } from '@constants/type-discriminators';
 
 export type TPivot<K1 extends string, K2 extends string> = {
@@ -20,10 +20,11 @@ export class MarketingPerformanceMetric extends Serializable {
     target_value?: number;
     current_value?: number;
     progress_percentage?: number;
-    activity_stats?: TActivityStats;
+    activity_stats?: ActivityStats;
     pivot?: TPivot<'marketing_initiative', 'marketing_performance_metric'> & { target_value?: number };
     kpi_icon?: string;
     kpi_color?: string;
+    related_metric_id?: string;
 
     doubleClickAction = 0;
 
@@ -81,6 +82,7 @@ export class MarketingPerformanceMetric extends Serializable {
         if (!stats) return '';
         switch (this.metric_type) {
             case 'percentage':
+                return `${(this.current_value ?? (stats.completed / stats.total) * 100).toFixed(1)}%`;
             case 'conversion':
                 return `${((stats.completed / stats.total) * 100).toFixed(1)}%`;
             case 'currency':

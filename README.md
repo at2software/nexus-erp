@@ -14,10 +14,11 @@ NEXUS combines CRM, project management, invoicing, time tracking, HR, marketing 
 |---|---|
 | **CRM** | Company and contact management, relationship mapping, revenue analytics |
 | **Projects** | Gantt planning, milestones, tasks, team assignments, budget tracking |
-| **Invoicing** | PDF generation, ZUGFeRD/XRechnung, recurring billing, cash flow, FinTS bank balance |
+| **Invoicing** | PDF generation, ZUGFeRD/Factur-X, recurring billing, cash flow |
 | **Time Tracking** | Focus sessions, break management, workload heatmaps, billable hours |
 | **HR** | Vacation, sick leave, travel expenses, team capacity analytics |
 | **Marketing** | Prospect pipeline, campaign management, Sankey funnel charts |
+| **AI Insights** | Machine-learning predictions — customer churn, revenue forecasts, project overrun risk |
 | **Sentinels** | Visual no-code automation — triggers, conditions, commands |
 | **Uptime Monitoring** | HTTP health checks with alerting via email and team chat |
 | **Calendar** | CalDAV and CardDAV protocol support for universal device sync |

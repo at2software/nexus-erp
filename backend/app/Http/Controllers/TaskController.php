@@ -40,6 +40,9 @@ class TaskController extends Controller {
     public function index(Request $request) {
         return $request->user()?->unfinishedTasks()->with('parent')->get() ?? [];
     }
+    public function show(Task $task) {
+        return $task->load('parent');
+    }
     public function indexForProject(Request $request, Project $_) {
         return $_->unfinishedTasks;
     }

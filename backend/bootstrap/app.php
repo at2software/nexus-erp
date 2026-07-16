@@ -1,9 +1,9 @@
 <?php
 
+use App\Exceptions\SsrfException;
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\AuthenticateBroadcasting;
 use App\Http\Middleware\CompatibleRoleMiddleware;
-use App\Http\Middleware\CrudRoleMiddleware;
 use App\Http\Middleware\EncryptCookies;
 use App\Http\Middleware\HasAccessTokenMiddleware;
 use App\Http\Middleware\HasPermissionsForInvoiceItemMiddleware;
@@ -11,6 +11,7 @@ use App\Http\Middleware\HasPluginMiddleware;
 use App\Http\Middleware\HrMiddleware;
 use App\Http\Middleware\HttpRedirect;
 use App\Http\Middleware\KeycloakAuthMiddleware;
+use App\Http\Middleware\OwnerMiddleware;
 use App\Http\Middleware\PreventRequestsDuringMaintenance;
 use App\Http\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\ReleaseSessionLock;
@@ -84,7 +85,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'throttle'               => ThrottleRequests::class,
             'verified'               => EnsureEmailIsVerified::class,
             'role'                   => CompatibleRoleMiddleware::class,
-            'crud_role'              => CrudRoleMiddleware::class,
+            'owner'                  => OwnerMiddleware::class,
             'permission_invoiceItem' => HasPermissionsForInvoiceItemMiddleware::class,
             'hr_permission'          => HrMiddleware::class,
             'has_plugin'             => HasPluginMiddleware::class,
@@ -97,6 +98,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'password',
             'password_confirmation',
         ]);
+
+        $exceptions->render(function (SsrfException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
 
         $exceptions->render(function (AuthenticationException $e, $request) {
             if ($request->expectsJson() || $request->is('api/*')) {

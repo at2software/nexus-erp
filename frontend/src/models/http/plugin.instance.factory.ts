@@ -1,3 +1,4 @@
+import { Dictionary } from '@constants/constants';
 import { inject, Injectable, Type } from '@angular/core';
 import { IPlugin, PluginInstance } from './plugin.instance';
 import { Encryption } from '../encryption/encryption.model';
@@ -10,6 +11,7 @@ import { SlackPlugin } from './plugin.slack';
 import { LocalAIPlugin } from './plugin.localai';
 import { PluginLink } from '../pluginLink/plugin-link.model';
 import { TaskService } from '@models/tasks/task.service';
+import type { ModalBaseComponent } from '@app/_modals/modal-base.component';
 
 // Lazy-loaded sub-plugin classes to avoid circular dependencies
 let MantisSubPlugin: Type<PluginInstance> | null = null;
@@ -23,7 +25,7 @@ export interface TPluginAllocations {
     sub?: () => Type<PluginInstance> | null;
 }
 
-const PLUGIN_TYPES: Record<string, TPluginAllocations> = {
+const PLUGIN_TYPES: Dictionary<TPluginAllocations> = {
     //'nexus'    : { type: TaskService },
     mattermost: { type: MattermostPlugin },
     git: { type: GitLabPlugin, sub: () => GitLabSubPlugin },
@@ -37,12 +39,12 @@ export class PluginInstanceFactory {
     currentId: number = 0;
     http = inject(HttpClient);
     nexusTaskInstance: TaskService = inject(TaskService);
-    instances: Record<string, PluginInstance> = {};
+    instances: Dictionary<PluginInstance> = {};
 
     /**
      * Get the user selection modal component for a plugin instance
      */
-    static async getModalComponentForPlugin(pluginInstance: PluginInstance): Promise<any> {
+    static async getModalComponentForPlugin(pluginInstance: PluginInstance): Promise<Type<ModalBaseComponent<string>> | null> {
         const pluginTypeName = pluginInstance.getPluginTypeName();
 
         try {
@@ -85,25 +87,28 @@ export class PluginInstanceFactory {
     /**
      * Get all repository (Git) instances for a project
      */
-    getRepositoryInstances(project: any): PluginInstance[] {
-        if (!project || !project.plugin_links) return [];
-        return project.plugin_links.map((link: PluginLink) => this.instanceFor(link)).filter((inst: PluginInstance | undefined) => inst && 'IRepositoryPluginProperty' in inst) as PluginInstance[];
+    getRepositoryInstances(project: unknown): PluginInstance[] {
+        const p = project as { plugin_links?: PluginLink[] } | null | undefined;
+        if (!p || !p.plugin_links) return [];
+        return p.plugin_links.map((link: PluginLink) => this.instanceFor(link)).filter((inst: PluginInstance | undefined) => inst && 'IRepositoryPluginProperty' in inst) as PluginInstance[];
     }
 
     /**
      * Get all task (Git, MantisBT) instances for a project
      */
-    getTaskInstances(project: any): PluginInstance[] {
-        if (!project || !project.plugin_links) return [];
-        return project.plugin_links.map((link: PluginLink) => this.instanceFor(link)).filter((inst: PluginInstance | undefined) => inst && 'ITaskPluginProperty' in inst) as PluginInstance[];
+    getTaskInstances(project: unknown): PluginInstance[] {
+        const p = project as { plugin_links?: PluginLink[] } | null | undefined;
+        if (!p || !p.plugin_links) return [];
+        return p.plugin_links.map((link: PluginLink) => this.instanceFor(link)).filter((inst: PluginInstance | undefined) => inst && 'ITaskPluginProperty' in inst) as PluginInstance[];
     }
 
     /**
      * Get all chat (Mattermost, Slack) instances for a project
      */
-    getChatInstances(project: any): PluginInstance[] {
-        if (!project || !project.plugin_links) return [];
-        return project.plugin_links.map((link: PluginLink) => this.instanceFor(link)).filter((inst: PluginInstance | undefined) => inst && 'IChatPluginProperty' in inst) as PluginInstance[];
+    getChatInstances(project: unknown): PluginInstance[] {
+        const p = project as { plugin_links?: PluginLink[] } | null | undefined;
+        if (!p || !p.plugin_links) return [];
+        return p.plugin_links.map((link: PluginLink) => this.instanceFor(link)).filter((inst: PluginInstance | undefined) => inst && 'IChatPluginProperty' in inst) as PluginInstance[];
     }
 
     /**
@@ -112,10 +117,11 @@ export class PluginInstanceFactory {
      * @param propertyNames - Array of property names to filter by (e.g., ['ITaskPluginProperty', 'IChatPluginProperty'])
      * @returns Array of matching plugin instances
      */
-    getInstances(project: any, propertyNames: string[]): PluginInstance[] {
-        if (!project || !project.plugin_links) return [];
+    getInstances(project: unknown, propertyNames: string[]): PluginInstance[] {
+        const p = project as { plugin_links?: PluginLink[] } | null | undefined;
+        if (!p || !p.plugin_links) return [];
         const seen = new Set<PluginInstance>();
-        return project.plugin_links
+        return p.plugin_links
             .map((link: PluginLink) => this.instanceFor(link))
             .filter((inst: PluginInstance | undefined) => {
                 if (!inst) return false;
@@ -136,12 +142,13 @@ export class PluginInstanceFactory {
      * @param constructorName - Constructor name to filter by (e.g., 'MantisSubPlugin', 'GitLabSubPlugin')
      * @returns Plugin instance or undefined
      */
-    instancesFor<T extends PluginInstance>(object: any, ctor?: Type<T>): T | undefined {
-        if (!object || !('plugin_links' in object) || !object.plugin_links) {
+    instancesFor<T extends PluginInstance>(object: unknown, ctor?: Type<T>): T | undefined {
+        const obj = object as { plugin_links?: PluginLink[] } | null | undefined;
+        if (!obj || !obj.plugin_links) {
             return undefined;
         }
 
-        const link = object.plugin_links.find((link: PluginLink) => {
+        const link = obj.plugin_links.find((link: PluginLink) => {
             const instance = this.instanceFor(link);
             if (!instance) return false;
             if (ctor) {
@@ -155,6 +162,7 @@ export class PluginInstanceFactory {
     instanceFor(encryption: Encryption): PluginInstance | undefined;
     instanceFor(url: string): PluginInstance | undefined;
     instanceFor(url: PluginLink): PluginInstance | undefined;
+    instanceFor(obj: Encryption | string | PluginLink): PluginInstance | undefined;
     instanceFor(obj: Encryption | string | PluginLink): PluginInstance | undefined {
         let url: string | undefined = undefined;
 

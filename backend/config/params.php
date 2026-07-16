@@ -67,6 +67,19 @@ return [
     'INVOICE_REMINDER_EMAIL_TEXT'          => ['type' => TextParam::class, 'history' => false],
     'INVOICE_REMINDER_FEE'                 => ['type' => FloatParam::class, 'history' => false],
     'INVOICE_REVENUE_12M'                  => ['type' => FloatParam::class, 'history' => true],
+    'ML_PREDICTED_REVENUE_12M'             => ['type' => FloatParam::class, 'history' => true],
+    'ML_PREDICTED_INTERVAL_DAYS'           => ['type' => FloatParam::class, 'history' => true],
+    'ML_CHURN_PROBABILITY_12M'             => ['type' => FloatParam::class, 'history' => true],
+    'ML_PREDICTED_SUPPORT_HOURS'           => ['type' => FloatParam::class, 'history' => true],
+    // JSON reliability summaries (cross-validated, written at train time) — see
+    // App\Console\Commands\Concerns\PersistsMlReliability. Global (not per-company/project).
+    'ML_RELIABILITY_CUSTOMER_REVENUE'      => ['type' => TextParam::class,  'history' => false],
+    'ML_RELIABILITY_CUSTOMER_INTERVAL'     => ['type' => TextParam::class,  'history' => false],
+    'ML_RELIABILITY_CUSTOMER_CHURN'        => ['type' => TextParam::class,  'history' => false],
+    'ML_RELIABILITY_PROJECT_HOURS'         => ['type' => TextParam::class,  'history' => false],
+    'ML_RELIABILITY_PROJECT_OVERRUN'       => ['type' => TextParam::class,  'history' => false],
+    'ML_RELIABILITY_PROJECT_QUOTE_ACCEPTANCE' => ['type' => TextParam::class,  'history' => false],
+    'ML_RELIABILITY_SUPPORT_LOAD'          => ['type' => TextParam::class,  'history' => false],
     'INVOICE_SUFFIX'                       => ['type' => TextParam::class, 'history' => false],
     'AT2CONNECT_ENABLED'                   => ['type' => FloatParam::class, 'history' => false, 'default' => 0],
     'ME_BIC'                               => ['type' => StringParam::class, 'history' => false],
@@ -124,4 +137,6 @@ return [
     'NOTIFICATION_EMAIL_ON_FRAMEWORK_UPDATE' => ['type' => StringParam::class, 'history' => false],
     'PROJECT_WORK_THRESHOLDS'                => ['type' => TextParam::class, 'history' => false],
     'PROJECT_WORK_THRESHOLD_NOTIFIED'        => ['type' => TextParam::class, 'history' => false],
+    'PROJECT_PREDICTED_OVERRUN_THRESHOLDS'   => ['type' => TextParam::class, 'history' => false],
+    'PROJECT_PREDICTED_OVERRUN_NOTIFIED'     => ['type' => TextParam::class, 'history' => false],
 ];

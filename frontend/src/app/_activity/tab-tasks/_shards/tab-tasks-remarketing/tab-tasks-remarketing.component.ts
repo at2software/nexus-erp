@@ -13,15 +13,10 @@ import { TabTasksBaseComponent } from '../tab-tasks-base.component';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'tab-tasks-remarketing',
     templateUrl: './tab-tasks-remarketing.component.html',
-    standalone: true,
     imports: [Nx, NComponent, AvatarComponent, NgbTooltipModule, DatePipe],
 })
 export class TabTasksRemarketingComponent extends TabTasksBaseComponent {
     due = signal<Company[]>([]);
-
-    readonly #collapsed = signal<Set<string>>(new Set());
-    toggle = (key: string) => this.#collapsed.update(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
-    isCollapsed = (key: string) => this.#collapsed().has(key);
 
     #marketing = inject(MarketingService);
 
@@ -29,12 +24,6 @@ export class TabTasksRemarketingComponent extends TabTasksBaseComponent {
         this.#marketing
             .getRemarketingDue()
             .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe((response: any[]) => {
-                this.due.set(response.map((_) => {
-                    const n = Company.fromJson(_);
-                    n.var.remarketing_due_at = _.remarketing_due_at;
-                    return n;
-                }));
-            });
+            .subscribe((response) => this.due.set(response));
     }
 }

@@ -1,8 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { NgbActiveModal, NgbDatepickerModule, NgbDateStruct } from '@ng-bootstrap/ng-bootstrap';
 import { CalendarEntry } from '@models/vcalendar/calendar-entry.model';
 import { RecurrenceType, VCalendarEvent } from '@models/vcalendar/vcalendar-event.model';
-import * as moment from 'moment-timezone';
+import { dayjs } from '@constants/dates';
 import { ConfirmationService } from '@app/_modals/modal-confirm/confirmation.service';
 
 import { FormsModule } from '@angular/forms';
@@ -10,12 +10,10 @@ import { FormsModule } from '@angular/forms';
 @Component({
     selector: 'calendar-detail',
     templateUrl: './calendar-entry-modal.component.html',
-    styleUrls: ['./calendar-entry-modal.component.scss'],
-    standalone: true,
     imports: [NgbDatepickerModule, FormsModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CalendarEntryModalComponent implements OnInit {
+export class CalendarEntryModalComponent {
     isSetUp = signal(false);
     recurrenceOptions = RecurrenceType;
 
@@ -45,6 +43,7 @@ export class CalendarEntryModalComponent implements OnInit {
 
     constructor(public activeModal: NgbActiveModal) {
         this.generateLocalizedDaysAndMonths();
+        afterNextRender(() => this.#initializeEntry());
     }
 
     generateLocalizedDaysAndMonths(): void {
@@ -65,7 +64,7 @@ export class CalendarEntryModalComponent implements OnInit {
         this.daysOfWeekEn = fmtDays({ weekday: 'short' }, 'en-US').map((d) => d.substring(0, 2).toUpperCase());
     }
 
-    ngOnInit() {
+    #initializeEntry() {
         if (this.calendarEntry) {
             const calendarEntry = Object.assign(CalendarEntry.fromJson({}), this.calendarEntry);
             calendarEntry.vcalendar_event = Object.assign(new VCalendarEvent(), calendarEntry.vcalendar_event);
@@ -198,8 +197,8 @@ export class CalendarEntryModalComponent implements OnInit {
         }
         const date = new Date(ngbDate.year, ngbDate.month - 1, ngbDate.day, time?.hour || 0, time?.minute || 0);
         const timezone = this.getLocalTimezone();
-        const momentDate = moment.tz(date, timezone);
-        const formattedDate = momentDate.format('YYYYMMDDTHHmmss');
+        const dayjsDate = dayjs.tz(date, timezone);
+        const formattedDate = dayjsDate.format('YYYYMMDDTHHmmss');
         return `;TZID=${timezone}:${formattedDate}`;
     }
     getLocalTimezone(): string {

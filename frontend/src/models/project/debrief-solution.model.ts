@@ -11,6 +11,19 @@ export class DebriefSolution extends Serializable {
     static override API_PATH = (): string => 'debrief_problem_solutions';
     override SERVICE = DebriefService;
 
+    title: string = '';
+    description?: string;
+    created_by_user_id?: string;
+    avg_effectiveness_rating?: number;
+    usage_count: number = 0;
+    
+    pivot?: { effectiveness_rating?: number; notes?: string };
+
+    @Type(()=>User) created_by?: User;
+
+    effectiveness_rating = computed(() => this.pivot?.effectiveness_rating ?? 0);
+    notes = computed(() => this.pivot?.notes ?? '');
+
     actions: NxAction[] = [
         {
             title: $localize`:@@i18n.common.delete:delete`,
@@ -21,20 +34,6 @@ export class DebriefSolution extends Serializable {
             roles: 'project_manager',
         },
     ];
-
-    title: string = '';
-    description?: string;
-    created_by_user_id?: string;
-    avg_effectiveness_rating?: number;
-    usage_count: number = 0;
-    
-    pivot?: { effectiveness_rating?: number; notes?: string };
-
-    effectiveness_rating = computed(() => this.pivot?.effectiveness_rating ?? 0);
-    notes = computed(() => this.pivot?.notes ?? '');
-
-
-    @Type(()=>User) created_by?: User;
 
     getEffectivenessStars(): boolean[] {
         const rating = this.effectiveness_rating();

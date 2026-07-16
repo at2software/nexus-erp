@@ -2,38 +2,34 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { NexusHttpService } from '../http/http.nexus';
 import { Milestone } from './milestone.model';
-import { Project } from '../project/project.model';
+import { MilestoneData, MilestonesGroup } from './api.milestone-group';
+import { Project } from '@models/project/project.model';
+import { Dictionary } from '@constants/constants';
 import { mapVar, serialize } from '@constants/rxjs-operators';
 
-export interface ProjectMilestoneGroup {
-    project: Project;
-    milestones: Milestone[];
-}
+/** PM milestone overview: per-project groups plus the PM's projects that lack milestone coverage. */
+export type PmMilestones = Dictionary & {
+    milestones: MilestonesGroup[];
+    projectsNoCoverage: Project[];
+};
 
-export class TReturnUserMilestones {
-    milestones: { milestone: Milestone }[] = [];
-    projects: Project[] = [];
-}
 @Injectable({ providedIn: 'root' })
 export class MilestoneService extends NexusHttpService<Milestone> {
     public apiPath = 'milestones';
-    public TYPE = () => Milestone;
+    override readonly model = Milestone;
 
-    indexUserMilestones = (userId: string) => this.aget(`users/${userId}/milestones`, {}, TReturnUserMilestones);
-    indexPmMilestones = (userId: string) => this.aget(`users/${userId}/pm-milestones`, {}).pipe(mapVar(['company_name', 'estimated_hours', 'milestone_count'], 'projectsNoCoverage'), serialize('projectsNoCoverage', Project));
+    indexUserMilestones = (userId: string) => this.aget(`users/${userId}/milestones`, {}, MilestonesGroup);
+    indexPmMilestones = (userId: string): Observable<PmMilestones> =>
+        this.get<PmMilestones>(`users/${userId}/pm-milestones`).pipe(
+            serialize('milestones', MilestonesGroup),
+            mapVar(['company_name', 'estimated_hours', 'milestone_count'], 'projectsNoCoverage'),
+            serialize('projectsNoCoverage', Project),
+        );
 
-    indexOverview = () => this.aget('milestones/overview', {}).pipe(serialize('unassigned', Milestone), serialize('overdue', Milestone), serialize('noWorkload', Milestone), mapVar(['company_name', 'estimated_hours', 'milestone_hours', 'deviation', 'milestone_count', 'missing_coverage'], 'projects'), serialize('projects', Project));
+    indexOverview = () => this.get('milestones/overview', {}, MilestoneData);
 
-    update = (id: number, data: object): Observable<Milestone> => {
-        return this.put(`milestones/${id}`, data, Milestone);
-    };
-
-    show = (id: number): Observable<Milestone> => {
-        return this.get(`milestones/${id}`, {}, Milestone);
-    };
-
-    destroy = (id: number): Observable<any> => {
-        return this.delete(`milestones/${id}`);
+    linkInvoiceItem = (milestoneId: string, invoiceItemId: string): Observable<any> => {
+        return this.post(`milestones/${milestoneId}/invoice-items/${invoiceItemId}`, {});
     };
 
     addDependency = (milestoneId: number, dependsOnId: number): Observable<any> => {

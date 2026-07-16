@@ -3,17 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Actions\User\CalculateDailyWorkload;
-use Carbon\Carbon;
 use App\Enums\CommentType;
 use App\Enums\InvoiceItemType;
 use App\Enums\InvoiceVatHandling;
 use App\Helpers\ModelRelationship;
-use App\Http\Middleware\Auth;
 use App\Http\Requests\User\CreateTbeRequest;
 use App\Http\Requests\User\StoreEmploymentRequest;
 use App\Http\Requests\User\StoreUserRequest;
-use App\Models\Assignment;
-use App\Models\Company;
 use App\Models\LeadSource;
 use App\Models\Milestone;
 use App\Models\Param;
@@ -26,12 +22,15 @@ use App\Models\UserPaidTime;
 use App\Models\Vault;
 use App\Models\Vcard;
 use App\Services\DatabaseSchemaService;
+use App\Services\User\UserProjectLoadService;
 use App\Services\UserTimelineService;
-use App\Traits\ControllerHasPermissionsTrait;
 use App\Traits\HasParams;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class UserController extends Controller {
     const ERROR_404   = 'email not found or password incorrect';
@@ -39,7 +38,7 @@ class UserController extends Controller {
 
     protected $exceptedMiddlewares = ['showEnvironment', 'login'];
 
-    use ControllerHasPermissionsTrait;
+    public function __construct(private UserProjectLoadService $userProjectLoadService) {}
 
     public function index(Request $request) {
         return User::get()
@@ -166,11 +165,10 @@ class UserController extends Controller {
                         'company',
                     ]);
                 },
-                'tasks',
                 'dependees',
                 'dependants',
                 'invoiceItems:id,company_id,project_id,net',
-                'user:id,name',
+                'user:id,vcard',
             ])
             ->orderBy('position')
             ->get()
@@ -193,17 +191,18 @@ class UserController extends Controller {
             ->groupBy('parent_id');
         return $milestonesGrouped->map(function ($milestones, $projectId) use ($projectTasksGrouped, $milestoneTasksGrouped) {
             $project = $milestones->first()->project;
-            $project->makeHidden(['params', 'assignees']);
+            $project->makeHidden(['params']);
             $projectTasks = $projectTasksGrouped->get($projectId, collect());
 
-            $milestonesWithTasks = $milestones->map(fn ($milestone) => [
-                'milestone' => $milestone->makeHidden('project'),
-                'tasks'     => $milestoneTasksGrouped->get($milestone->id, collect()),
-            ]);
+            // Attach the (assignee-loaded) tasks as a relation so each milestone serializes
+            // as a plain Milestone the frontend can deserialize directly — no wrapper.
+            $milestones->each(fn ($milestone) => $milestone
+                ->setRelation('tasks', $milestoneTasksGrouped->get($milestone->id, collect()))
+                ->makeHidden('project'));
             return [
                 'project'       => $project,
                 'project_tasks' => $projectTasks,
-                'milestones'    => $milestonesWithTasks->values(),
+                'milestones'    => $milestones->values(),
             ];
         })->values();
     }
@@ -407,60 +406,7 @@ class UserController extends Controller {
         return (new UserTimelineService)->generate($user, $plannedSubscriptions, $remainingHpw, $withoutSubscriptions);
     }
     public function indexProjectLoad(User $_) {
-        $user = $_;
-
-        $meId      = Param::get('ME_ID')->value;
-        $meCompany = Company::find($meId);
-
-        // auto-assign own company as service company (so orga is shown in timetracker)
-        if ($meCompany && ! $user->assigned_companies()->where('companies.id', $meId)->exists()) {
-            $meCompany->addAssignee($user);
-        }
-
-        // computation
-        $ae = $user->activeEmployment;
-        if (! $ae) {
-            return response('user has no active employment', 404);
-        }
-
-        $activeSubscriptions = collect([...$user->activeProjects()->with('company')->get(), ...$user->assigned_companies()->get()])->unique();
-
-        // Load avg_hpd accessor for each subscription's assignment
-        $activeSubscriptions->each(function ($subscription) {
-            if ($subscription->pivot && $subscription->pivot->id) {
-                $assignment = Assignment::find($subscription->pivot->id);
-                if ($assignment) {
-                    $subscription->pivot->avg_hpd = $assignment->avg_hpd;
-                }
-            }
-        });
-
-        $weeklySubscriptions  = $activeSubscriptions->filter(fn ($_) => $_->pivot->hours_weekly > 0);
-        $plannedSubscriptions = $activeSubscriptions->filter(fn ($_) => $_->pivot->hours_planned > 0);
-        $weeklyHpw            = $weeklySubscriptions->reduce(fn ($a, $b) => $a + $b->pivot->hours_weekly, 0);
-        $remainingHpw         = $ae->hpw - $weeklyHpw;
-
-        // Generate leaves independently of subscriptions
-        $timeline_leaves = $this->generateTimeline($user, null, 40, true);
-
-        if ($remainingHpw > 0) {
-            $timeline         = $this->generateTimeline($user, $plannedSubscriptions, $remainingHpw);
-            $timeline_planned = array_values(array_filter($timeline, fn ($_) => $_['type'] == 'Project' || $_['type'] == 'Company'));
-        } else {
-            $timeline_planned = [];
-        }
-
-        // hours_weekly, hours_planned
-        $data = [
-            'user'             => $user,
-            'hpw'              => $ae->hpw,
-            'remaining_hpw'    => $remainingHpw,
-            'subscriptions'    => $activeSubscriptions,
-            'weekly_ids'       => $weeklySubscriptions->map(fn ($_) => ['type' => $_->class, 'id' => $_->id])->values(),
-            'timeline_planned' => $timeline_planned,
-            'timeline_leaves'  => $timeline_leaves,
-        ];
-        return $data;
+        return $this->userProjectLoadService->build($_);
     }
     public function indexDailyWorkload(Request $request, User $_) {
         $startDate = $request->has('start')

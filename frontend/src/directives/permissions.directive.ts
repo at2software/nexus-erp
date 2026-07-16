@@ -7,7 +7,6 @@ import { RoleService } from '@models/user/role.service';
 
 @Directive({
     selector: '[roles], [noroles]',
-    standalone: true,
 })
 export class PermissionsDirective implements OnInit {
     /** Direct role name(s), pipe-separated: "admin|invoicing" */

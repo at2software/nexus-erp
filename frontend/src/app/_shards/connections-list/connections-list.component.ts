@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, ou
 import { CompanyService } from '@models/company/company.service';
 import { Connection } from '@models/company/connection.model';
 import { Company } from '@models/company/company.model';
+import { Serializable } from '@models/serializable';
 import { NgbPopoverModule } from '@ng-bootstrap/ng-bootstrap';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
 import { Nx } from '@app/nx/nx.directive';
@@ -13,13 +14,12 @@ import { tracked } from '@constants/tracked';
     selector: 'connections-list',
     templateUrl: './connections-list.component.html',
     styleUrls: ['./connections-list.component.scss'],
-    standalone: true,
     imports: [NgbPopoverModule, SearchInputComponent, Nx, AvatarComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ConnectionsListComponent {
-    readonly companyIn = input<Company>(undefined, { alias: 'company' });
-    readonly company = tracked(this.companyIn);
+    readonly company = input<Company>();
+    readonly trackedCompany = tracked(this.company);
     showAddButton = input(false);
     hideMyCompany = input(false);
     added = output<Connection>();
@@ -27,7 +27,7 @@ export class ConnectionsListComponent {
 
     connections = signal<Connection[]>([]);
     filteredConnections = computed(() => {
-        const company = this.company();
+        const company = this.trackedCompany();
         const connections = this.connections();
         if (!this.hideMyCompany() || !company) return connections;
         return connections.filter((c) => c.otherCompany(company)?.id !== NxGlobal.ME_ID);
@@ -37,13 +37,13 @@ export class ConnectionsListComponent {
 
     constructor() {
         effect(() => {
-            this.companyIn();
+            this.company();
             this.reload();
         });
     }
 
     reload() {
-        const company = this.companyIn();
+        const company = this.company();
         if (!company) return;
 
         this.#companyService.showConnections(company).subscribe((data) => {
@@ -57,13 +57,16 @@ export class ConnectionsListComponent {
         this.reload();
     }
 
-    onCompanySelect(selected: Company) {
-        const company = this.company();
+    onCompanySelect(selected: Serializable) {
+        const target = selected.assert(Company);
+        if (!target) return;
+
+        const company = this.trackedCompany();
         if (!company) return;
 
         Connection.fromJson({
             company1_id: company.id,
-            company2_id: selected.id,
+            company2_id: target.id,
         })
             .store()
             .subscribe((data) => {

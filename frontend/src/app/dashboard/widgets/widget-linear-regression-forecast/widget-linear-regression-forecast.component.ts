@@ -4,30 +4,26 @@ import { BaseWidgetComponent } from '../base.widget.component';
 import { EChartsRangeAreaOptions, EChartsDualShadowAreaStyle } from '@charts/echarts-presets';
 import { Color } from '@constants/Color';
 import { MoneyShortPipe } from '@pipes/mshort.pipe';
-import moment from 'moment';
-import { WidgetsModule } from '../widgets.module';
-
-interface LinearRegressionData {
-    current: { forecast: number; r2: number; standard_error: number; formula: string; generated_at: string };
-    historical_data: { date: string; forecast: number; r2: number; standard_error: number; annual_expenses: number; revenue_12?: number }[];
-    meta: { data_points: number; date_range: { from: string; to: string } };
-}
+import { dayjs } from '@constants/dates';
+import { WIDGET_SHARED } from '../widgets.shared';
+import type { EChartsOption } from 'echarts';
+import type { EChartsType, TopLevelFormatterParams } from 'echarts/types/dist/shared';
+import { LinearRegressionData } from '@models/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'widget-linear-regression-forecast',
     templateUrl: './widget-linear-regression-forecast.component.html',
-    styleUrls: ['./widget-linear-regression-forecast.component.scss', './../base.widget.component.scss'],
+    styleUrls: ['./../base.widget.component.scss'],
     providers: [MoneyShortPipe],
-    standalone: true,
-    imports: [WidgetsModule],
+    imports: [...WIDGET_SHARED],
 })
 export class WidgetLinearRegressionForecastComponent extends BaseWidgetComponent {
     #stats = inject(StatsService);
     #moneyPipe = inject(MoneyShortPipe);
-    #echartsInstance: any;
+    #echartsInstance: EChartsType | undefined;
 
-    chartOptions = signal<any>({ ...EChartsRangeAreaOptions, series: [] });
+    chartOptions = signal<EChartsOption>({ ...EChartsRangeAreaOptions, series: [] });
     data = signal<LinearRegressionData | null>(null);
 
     defaultOptions = () => ({});
@@ -37,7 +33,7 @@ export class WidgetLinearRegressionForecastComponent extends BaseWidgetComponent
             this.data.set(data);
 
             const sorted = data.historical_data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            const categories = sorted.map((item) => moment(item.date).valueOf());
+            const categories = sorted.map((item) => dayjs(item.date).valueOf());
             const forecasts = sorted.map((item) => item.forecast);
             const expenses = sorted.map((item) => item.annual_expenses ?? null);
             const revenue_12 = sorted.map((item) => item.revenue_12 ?? null);
@@ -55,15 +51,16 @@ export class WidgetLinearRegressionForecastComponent extends BaseWidgetComponent
                 yAxis: { ...this.chartOptions().yAxis, min: 0, max: yMax },
                 tooltip: {
                     ...this.chartOptions().tooltip,
-                    formatter: (params: any) => {
-                        if (!params?.length) return '';
-                        const i = params[0].dataIndex;
+                    formatter: (params: TopLevelFormatterParams) => {
+                        const arr = [params].flat();
+                        if (!arr?.length) return '';
+                        const i = arr[0].dataIndex!;
                         const forecast = forecasts[i];
                         const { standard_error: se, r2 } = sorted[i];
                         const revenue = revenue_12[i];
                         const deviation = revenue ? Math.abs(revenue / forecast - 1) * 100 : 0;
                         return `<div class="p-2">
-                            <div class="fw-bold mb-1">${moment(categories[i]).format('YYYY-MM')}</div>
+                            <div class="fw-bold mb-1">${dayjs(categories[i]).format('YYYY-MM')}</div>
                             ${row('Forecast', 'text-white fw-bold', this.#moneyPipe.transform(forecast))}
                             ${row('R²', 'text-muted', `${(r2 * 100).toFixed(1)}%`)}
                             ${row('Std. Error', 'text-muted', this.#moneyPipe.transform(se))}
@@ -80,7 +77,7 @@ export class WidgetLinearRegressionForecastComponent extends BaseWidgetComponent
                     { name: 'Expenses', type: 'line', symbol: 'none', z: 11, lineStyle: { color: Color.fromVar('red').toHexString(), width: 2, type: 'dashed' }, data: expenses.map((v, i) => [categories[i], v]) },
                     { name: 'real Revenue', type: 'line', symbol: 'none', zlevel: 1, z: 12, lineStyle: { color: '#ffffff', width: 2 }, data: revenue_12.map((v, i) => [categories[i], v]) },
                 ],
-            });
+            } as EChartsOption);
 
             this.#echartsInstance?.setOption(this.chartOptions(), true);
         });
@@ -106,5 +103,5 @@ export class WidgetLinearRegressionForecastComponent extends BaseWidgetComponent
         ];
     }
 
-    onChartInit = (ec: any) => (this.#echartsInstance = ec);
+    onChartInit = (ec: EChartsType) => (this.#echartsInstance = ec);
 }

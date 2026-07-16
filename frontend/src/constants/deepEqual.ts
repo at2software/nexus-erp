@@ -1,19 +1,24 @@
+import { Dictionary } from '@constants/constants';
+
 /**
  * Structural equality. Used for dirty diffing so JSON columns (objects/arrays)
  * are compared by value, not reference.
  */
-export function deepEqual(a: any, b: any): boolean {
+export function deepEqual(a: unknown, b: unknown): boolean {
     if (a === b) return true;
     if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
     if (Array.isArray(a) !== Array.isArray(b)) return false;
     if (Array.isArray(a)) {
-        if (a.length !== b.length) return false;
-        for (let i = 0; i < a.length; i++) if (!deepEqual(a[i], b[i])) return false;
+        const bArr = b as unknown[];
+        if (a.length !== bArr.length) return false;
+        for (let i = 0; i < a.length; i++) if (!deepEqual(a[i], bArr[i])) return false;
         return true;
     }
-    const ka = Object.keys(a),
-        kb = Object.keys(b);
+    const ao = a as unknown as Dictionary;
+    const bo = b as unknown as Dictionary;
+    const ka = Object.keys(ao),
+        kb = Object.keys(bo);
     if (ka.length !== kb.length) return false;
-    for (const k of ka) if (!deepEqual(a[k], b[k])) return false;
+    for (const k of ka) if (!deepEqual(ao[k], bo[k])) return false;
     return true;
 }

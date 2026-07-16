@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { RouterModule } from '@angular/router';
 import { Nx } from '@app/nx/nx.directive';
@@ -13,21 +14,17 @@ import { TabTasksBaseComponent } from '../tab-tasks-base.component';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'tab-tasks-missing-git',
     templateUrl: './tab-tasks-missing-git.component.html',
-    standalone: true,
     imports: [Nx, NComponent, AvatarComponent, RouterModule],
 })
 export class TabTasksMissingGitComponent extends TabTasksBaseComponent {
     data = signal<Project[]>([]);
 
-    readonly #collapsed = signal<Set<string>>(new Set());
-    toggle = (key: string) => this.#collapsed.update(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
-    isCollapsed = (key: string) => this.#collapsed().has(key);
-
     #projectService = inject(ProjectService);
 
-    override ngOnInit() {
-        super.ngOnInit();
+    constructor() {
+        super();
         NxGlobal.broadcast$.pipe(
+            takeUntilDestroyed(),
             filter(e => e.type === TBroadcast.Update && e.data instanceof Project && !!(e.data as Project).no_git_required),
         ).subscribe(e => {
             this.data.update(arr => arr.filter(p => p.id !== (e.data as Project).id));
@@ -35,8 +32,6 @@ export class TabTasksMissingGitComponent extends TabTasksBaseComponent {
     }
 
     override reload() {
-        this.#projectService.aget('projects/missing-git').subscribe((projects: any[]) => {
-            this.data.set(projects);
-        });
+        this.#projectService.indexMissingGit().subscribe((projects) => this.data.set(projects));
     }
 }

@@ -4,7 +4,7 @@
             @let _icon = tab.icon();
             @let _nicon = tab.nicon();
             <li class="nav-item position-relative" role="presentation">
-                <button #buttonRef class="nav-link" [class.active]="srv.activeTabIndex() === i" [class.has-badge]="tab.badge()" id="activity-tab-{{ i }}" data-bs-toggle="tab" [class.d-none]="tab.hidden()" [attr.data-bs-target]="'#activity-' + i" type="button" role="tab" [attr.aria-controls]="'activity-' + i" [attr.aria-selected]="srv.activeTabIndex() === i" (click)="srv.setActiveTab(i)">
+                <button #buttonRef class="nav-link" [class.active]="srv.activeTabIndex() === i" [class.has-badge]="tab.badge()" id="activity-tab-{{ i }}" [class.d-none]="tab.hidden()" type="button" role="tab" [attr.aria-controls]="'activity-' + i" [attr.aria-selected]="srv.activeTabIndex() === i" (click)="srv.setActiveTab(i)">
                     @if (_icon) {
                         <i>{{ _icon }}</i>
                     }

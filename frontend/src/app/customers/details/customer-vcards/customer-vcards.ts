@@ -17,8 +17,6 @@ import { GlobalService } from '@models/global.service';
 @Component({
     selector: 'customer-vcards',
     templateUrl: './customer-vcards.html',
-    styleUrls: ['./customer-vcards.scss'],
-    standalone: true,
     imports: [ScrollbarComponent, ListGroupItemContactComponent, Nx, ProjectComponent, RouterModule, VcardComponent, NxComponent, FormsModule, AutosaveDirective, At2connect],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

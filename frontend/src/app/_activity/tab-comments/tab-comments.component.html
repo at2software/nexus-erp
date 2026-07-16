@@ -1,5 +1,8 @@
 @let _stickies = stickies();
 @let _groupedComments = groupedComments();
+@let _hasActivity = hasActivity();
+@let _showActivity = showActivity();
+@let _availableChatTargets = availableChatTargets();
 
 <div class="container">
     <scrollbar>
@@ -14,17 +17,17 @@
 
         <div class="header d-flex align-items-center">
             <span class="flex-fill" i18n="@@i18n.common.comments">comments</span>
-            @if (hasActivity['GitLabPlugin'] || hasActivity['MantisPlugin'] || hasActivity['MattermostPlugin']) {
+            @if (_hasActivity['GitLabPlugin'] || _hasActivity['MantisPlugin'] || _hasActivity['MattermostPlugin']) {
                 <div class="d-flex gap-2 align-items-center">
-                    <n class="pointer" [class.text-primary]="showActivity['nexus']" [class.text-muted]="!showActivity['nexus']" (click)="toggleActivity('nexus')" ngbTooltip="Toggle Nexus comments" i18n-ngbTooltip="@@i18n.comments.toggleNexusComments">nexus</n>
-                    @if (hasActivity['GitLabPlugin']) {
-                        <n class="pointer" [class.text-primary]="showActivity['GitLabPlugin']" [class.text-muted]="!showActivity['GitLabPlugin']" (click)="toggleActivity('GitLabPlugin')" ngbTooltip="Toggle Git activity" i18n-ngbTooltip="@@i18n.comments.toggleGitActivity">git</n>
+                    <n class="pointer" [class.text-primary]="_showActivity['nexus']" [class.text-muted]="!_showActivity['nexus']" (click)="toggleActivity('nexus')" ngbTooltip="Toggle Nexus comments" i18n-ngbTooltip="@@i18n.comments.toggleNexusComments">nexus</n>
+                    @if (_hasActivity['GitLabPlugin']) {
+                        <n class="pointer" [class.text-primary]="_showActivity['GitLabPlugin']" [class.text-muted]="!_showActivity['GitLabPlugin']" (click)="toggleActivity('GitLabPlugin')" ngbTooltip="Toggle Git activity" i18n-ngbTooltip="@@i18n.comments.toggleGitActivity">git</n>
                     }
-                    @if (hasActivity['MantisPlugin']) {
-                        <n class="pointer" [class.text-primary]="showActivity['MantisPlugin']" [class.text-muted]="!showActivity['MantisPlugin']" (click)="toggleActivity('MantisPlugin')" ngbTooltip="Toggle MantisBT activity" i18n-ngbTooltip="@@i18n.comments.toggleMantisActivity">mantis</n>
+                    @if (_hasActivity['MantisPlugin']) {
+                        <n class="pointer" [class.text-primary]="_showActivity['MantisPlugin']" [class.text-muted]="!_showActivity['MantisPlugin']" (click)="toggleActivity('MantisPlugin')" ngbTooltip="Toggle MantisBT activity" i18n-ngbTooltip="@@i18n.comments.toggleMantisActivity">mantis</n>
                     }
-                    @if (hasActivity['MattermostPlugin']) {
-                        <n class="pointer" [class.text-primary]="showActivity['MattermostPlugin']" [class.text-muted]="!showActivity['MattermostPlugin']" (click)="toggleActivity('MattermostPlugin')" ngbTooltip="Toggle Mattermost activity" i18n-ngbTooltip="@@i18n.comments.toggleMattermostActivity">mattermost</n>
+                    @if (_hasActivity['MattermostPlugin']) {
+                        <n class="pointer" [class.text-primary]="_showActivity['MattermostPlugin']" [class.text-muted]="!_showActivity['MattermostPlugin']" (click)="toggleActivity('MattermostPlugin')" ngbTooltip="Toggle Mattermost activity" i18n-ngbTooltip="@@i18n.comments.toggleMattermostActivity">mattermost</n>
                     }
                 </div>
             }
@@ -46,7 +49,7 @@
                     <n class="me-2">nexus</n>
                     <span i18n="@@i18n.comments.commentInNexus">comment in NEXUS</span>
                 </button>
-                @for (target of availableChatTargets; track target) {
+                @for (target of _availableChatTargets; track target) {
                     <button ngbDropdownItem (click)="selectTarget(target)">
                         <n class="me-2">{{ target.icon() }}</n>
                         <span>{{ target.channelName || target.constructor.name.replace('Plugin', '') }}</span>

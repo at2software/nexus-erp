@@ -1,11 +1,17 @@
 import { EventEmitter, inject, Injectable } from '@angular/core';
-import { Role, UserRoleEntry } from '@models/user/role.model';
+import { Dictionary } from '@constants/constants';
+import { Role } from '@models/user/role.model';
+import { User } from '@models/user/user.model';
 import { GlobalService } from '../global.service';
 import { NexusHttpService } from '../http/http.nexus';
+import { Serializable } from '../serializable';
 import { firstValueFrom } from 'rxjs';
 
+type RoleResponse = { roles: Role[]; users: User[] };
+type RoleManagementResponse = { roles?: Dictionary[]; users?: Dictionary[] };
+
 @Injectable({ providedIn: 'root' })
-export class RoleService extends NexusHttpService<any> {
+export class RoleService extends NexusHttpService<Serializable> {
     apiPath = 'roles';
     onReady = new EventEmitter<void>();
     onUpdate = new EventEmitter<void>();
@@ -31,28 +37,23 @@ export class RoleService extends NexusHttpService<any> {
 
     // === Admin role management API ===
 
-    async loadRoleManagement(): Promise<{ roles: Role[]; users: UserRoleEntry[] }> {
-        const response: any = await firstValueFrom(this.get('roles/'));
-        return {
-            roles: (response.roles ?? []).map((r: any) => Role.fromJson(r)),
-            users: response.users ?? [],
-        };
+    #convertToModels = (data: RoleManagementResponse): RoleResponse => ({
+        roles: (data.roles ?? []).map((r) => Role.fromJson(r)),
+        users: (data.users ?? []).map((u) => User.fromJson(u)),
+    })
+    async loadRoleManagement(): Promise<RoleResponse> {
+        const response = await firstValueFrom(this.get<RoleManagementResponse>('roles/'));
+        return this.#convertToModels(response);
     }
 
-    async assignRole(roleId: number, userId: string): Promise<{ roles: Role[]; users: UserRoleEntry[] }> {
-        const response: any = await firstValueFrom(this.post(`roles/${roleId}/users/${userId}`, {}));
-        return {
-            roles: (response.roles ?? []).map((r: any) => Role.fromJson(r)),
-            users: response.users ?? [],
-        };
+    async assignRole(roleId: number, userId: string): Promise<RoleResponse> {
+        const response = await firstValueFrom(this.post<RoleManagementResponse>(`roles/${roleId}/users/${userId}`, {}));
+        return this.#convertToModels(response);
     }
 
-    async removeRole(roleId: number, userId: string): Promise<{ roles: Role[]; users: UserRoleEntry[] }> {
-        const response: any = await firstValueFrom(this.delete(`roles/${roleId}/users/${userId}`));
-        return {
-            roles: (response.roles ?? []).map((r: any) => Role.fromJson(r)),
-            users: response.users ?? [],
-        };
+    async removeRole(roleId: number, userId: string): Promise<RoleResponse> {
+        const response = await firstValueFrom(this.delete<RoleManagementResponse>(`roles/${roleId}/users/${userId}`));
+        return this.#convertToModels(response);
     }
 
     // Role checking

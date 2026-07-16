@@ -12,7 +12,9 @@ class VaultController extends Controller {
     public function index() {
         return Vault::indexVaults();
     }
-
+    public function show(Vault $vault) {
+        return $vault;
+    }
     public function store(Request $request) {
         $requestKeys = collect($request->all())->keys()->filter(fn ($_) => strlen($request->$_));
 
@@ -72,7 +74,6 @@ class VaultController extends Controller {
         $this->saveCredentials($requestKeys, $originalCredentials, $request);
         return response()->json(['success' => true, 'message' => 'Credentials stored successfully.'], 200);
     }
-
     public function submitTan(Request $request) {
         $challengeId = $request->challenge_id;
         $tan         = $request->tan;
@@ -114,7 +115,6 @@ class VaultController extends Controller {
         Cache::forget("fints_pending_{$challengeId}_keys");
         return response()->json(['success' => true, 'message' => 'Authentication successful, credentials saved.']);
     }
-
     public function bankLookup(Request $request) {
         $iban = preg_replace('/\s+/', '', $request->query('iban', ''));
         $blz  = preg_replace('/\s+/', '', $request->query('blz', ''));
@@ -129,7 +129,6 @@ class VaultController extends Controller {
 
         return response()->json(FinTsBankService::lookupByBlz($blz));
     }
-
     private function saveCredentials($requestKeys, $originalCredentials, $request): void {
         $requestKeys->each(function ($key) use ($originalCredentials, $request) {
             if ($request->$key !== ($originalCredentials[$key] ?? null)) {

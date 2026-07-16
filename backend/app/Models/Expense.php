@@ -9,11 +9,11 @@ class Expense extends BaseModel {
     use HasFactory;
 
     protected function casts(): array {
-        return ['price' => 'double'];
+        return [
+            'price'  => 'double',
+            'repeat' => InvoiceItemType::class,
+        ];
     }
-
-    protected $access = ['admin' => '*', 'project_manager' => '', 'user' => ''];
-
     public function category() {
         return $this->belongsTo(ExpenseCategory::class);
     }

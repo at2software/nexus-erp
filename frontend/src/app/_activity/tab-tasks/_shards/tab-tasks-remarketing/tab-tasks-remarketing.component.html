@@ -1,10 +1,10 @@
-@let _due = due();
+﻿@let _due = due();
 
 @if (_due.length) {
     <div class="header hstack gap-2">
         <n>marketing</n>
         <span class="flex-fill" i18n="@@i18n.common.remarketing">remarketing</span>
-        <i class="pointer" (click)="toggle('remarketing')">{{ isCollapsed('remarketing') ? 'expand_less' : 'expand_more' }}</i>
+        <i class="pointer" tabindex="0" (click)="toggle('remarketing')" (keyup.enter)="toggle('remarketing')">{{ isCollapsed('remarketing') ? 'expand_less' : 'expand_more' }}</i>
     </div>
     @if (!isCollapsed('remarketing')) {
         <ul class="list-group">
@@ -13,7 +13,7 @@
                     <avatar [object]="item"></avatar>
                     <div class="flex-fill text-truncate">{{ item.getName() }}</div>
                     <div class="text-end small text-muted text-nowrap" ngbTooltip="due at" i18n-ngbTooltip="@@i18n.common.dueAt">
-                        {{ item.var.remarketing_due_at | date }}
+                        {{ item.remarketing_due_at | date }}
                     </div>
                 </li>
             }

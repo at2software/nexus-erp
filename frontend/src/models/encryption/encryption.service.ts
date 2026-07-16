@@ -5,5 +5,5 @@ import { Encryption } from '@models/encryption/encryption.model';
 @Injectable({ providedIn: 'root' })
 export class EncryptionService extends NexusHttpService<Encryption> {
     public apiPath = 'encryptions';
-    public TYPE = () => Encryption;
+    override readonly model = Encryption;
 }

@@ -43,7 +43,6 @@ class LiquidityService {
             'events'  => $events->values(),
         ];
     }
-
     protected static function getCurrentBalance(): float {
         $param = Param::get('CASHFLOW_BANK_BALANCE');
         if (! $param) {
@@ -56,7 +55,6 @@ class LiquidityService {
             ->first();
         return (float)($entry?->value ?? 0);
     }
-
     protected static function buildCompanyAvgDaysCache(): array {
         return Invoice::select('company_id')
             ->selectRaw('ROUND(AVG(DATEDIFF(paid_at, created_at))) as avg_days')
@@ -66,11 +64,9 @@ class LiquidityService {
             ->map(fn ($v) => max(1, (int)$v))
             ->toArray();
     }
-
     protected static function avgDaysFor(?int $companyId, array $cache, int $default): int {
         return $companyId && isset($cache[$companyId]) ? $cache[$companyId] : $default;
     }
-
     protected static function getExpenseEvents(Carbon $start, Carbon $end): array {
         $events   = [];
         $expenses = Expense::whereIn('repeat', InvoiceItemType::Repeating)->get();
@@ -106,7 +102,6 @@ class LiquidityService {
         }
         return $events;
     }
-
     protected static function getStandingOrderEvents(Carbon $start, Carbon $end, array $avgDaysCache, int $globalAvgDays): array {
         $events = [];
         $items  = InvoiceItem::whereIn('type', InvoiceItemType::Repeating)
@@ -131,7 +126,7 @@ class LiquidityService {
                 if ($paymentDate->lt($start) || $paymentDate->gt($end)) {
                     continue;
                 }
-                $label    = trim(($item->text ?: 'Standing order') . ($companyName ? " ({$companyName})" : ''));
+                $label    = trim(($item->text ?: 'Standing order').($companyName ? " ({$companyName})" : ''));
                 $events[] = [
                     'date'   => $paymentDate->format('Y-m-d'),
                     'amount' => $net,
@@ -142,7 +137,6 @@ class LiquidityService {
         }
         return $events;
     }
-
     protected static function getOpenInvoiceEvents(Carbon $start, Carbon $end): array {
         $events   = [];
         $invoices = Invoice::whereNull('paid_at')
@@ -169,8 +163,8 @@ class LiquidityService {
             }
 
             $invoicedOn  = Carbon::parse($invoice->created_at);
-            $label       = $invoice->name . ($invoice->company ? ' (' . $invoice->company->name . ')' : '');
-            $events[] = [
+            $label       = $invoice->name.($invoice->company ? ' ('.$invoice->company->name.')' : '');
+            $events[]    = [
                 'date'         => $paymentDate->format('Y-m-d'),
                 'amount'       => $amount,
                 'type'         => 'open_invoice',
@@ -181,7 +175,6 @@ class LiquidityService {
         }
         return $events;
     }
-
     protected static function getBudgetProjectEvents(Carbon $start, Carbon $end, array $avgDaysCache, int $globalAvgDays): array {
         $events   = [];
         $hpd      = (float)(Param::get('INVOICE_HPD')?->value ?? 8);
@@ -193,12 +186,7 @@ class LiquidityService {
             ->get();
 
         foreach ($projects as $project) {
-            // Exclude pending downpayments from net_remaining to avoid double-counting
-            $pendingDownpayments = (float)$project->invoiceItems()
-                ->where('stage', 2)
-                ->whereNull('invoice_id')
-                ->sum('net');
-            $remaining = max(0, (float)$project->net_remaining - $pendingDownpayments);
+            $remaining      = max(0, (float)$project->net_remaining);
             $workEstimated  = (float)$project->work_estimated;
             $hoursInvested  = (float)$project->hours_invested;
             $remainingHours = max(0, $workEstimated - $hoursInvested);
@@ -218,14 +206,13 @@ class LiquidityService {
                 'date'         => $paymentDate->format('Y-m-d'),
                 'amount'       => $remaining,
                 'type'         => 'budget_project',
-                'label'        => $project->name . ($companyName ? " ({$companyName})" : ''),
+                'label'        => $project->name.($companyName ? " ({$companyName})" : ''),
                 'invoice_date' => $invoiceDate->format('Y-m-d'),
                 'payment_days' => $avgDays,
             ];
         }
         return $events;
     }
-
     protected static function getSupportMonthlyEvents(Carbon $start, Carbon $end, array $avgDaysCache, int $globalAvgDays): array {
         $events   = [];
         $baseWage = (float)(Param::get('HR_HOURLY_WAGE')?->value ?? 0);
@@ -278,7 +265,6 @@ class LiquidityService {
         }
         return $events;
     }
-
     protected static function getDownpaymentEvents(Carbon $start, Carbon $end, array $avgDaysCache, int $globalAvgDays): array {
         $events   = [];
         $projects = Project::where('is_time_based', 0)
@@ -331,13 +317,12 @@ class LiquidityService {
                 'date'   => $paymentDate->format('Y-m-d'),
                 'amount' => $pendingAmount,
                 'type'   => 'downpayment',
-                'label'  => $project->name . ($companyName ? " ({$companyName})" : ''),
+                'label'  => $project->name.($companyName ? " ({$companyName})" : ''),
             ];
         }
         return $events;
     }
-
-    protected static function fastForwardToDate(Carbon $anchor, Carbon $target, int $type): ?Carbon {
+    protected static function fastForwardToDate(Carbon $anchor, Carbon $target, InvoiceItemType $type): ?Carbon {
         if ($anchor->gte($target)) {
             return $anchor->copy();
         }
@@ -375,8 +360,7 @@ class LiquidityService {
 
         return $result;
     }
-
-    protected static function generateRecurrences(Carbon $from, Carbon $until, int $type): array {
+    protected static function generateRecurrences(Carbon $from, Carbon $until, InvoiceItemType $type): array {
         $dates   = [];
         $current = $from->copy()->startOfDay();
         $safety  = 400;
@@ -384,17 +368,21 @@ class LiquidityService {
         while ($current->lte($until) && $safety-- > 0) {
             $dates[] = $current->copy();
             switch ($type) {
-                case InvoiceItemType::Daily:     $current->addDay(); break;
-                case InvoiceItemType::Weekly:    $current->addWeek(); break;
-                case InvoiceItemType::Monthly:   $current->addMonth(); break;
-                case InvoiceItemType::Quarterly: $current->addMonths(3); break;
-                case InvoiceItemType::Yearly:    $current->addYear(); break;
+                case InvoiceItemType::Daily:     $current->addDay();
+                    break;
+                case InvoiceItemType::Weekly:    $current->addWeek();
+                    break;
+                case InvoiceItemType::Monthly:   $current->addMonth();
+                    break;
+                case InvoiceItemType::Quarterly: $current->addMonths(3);
+                    break;
+                case InvoiceItemType::Yearly:    $current->addYear();
+                    break;
                 default:                         break 2;
             }
         }
         return $dates;
     }
-
     protected static function addWorkingDays(Carbon $date, int $days): Carbon {
         $result = $date->copy();
         $added  = 0;

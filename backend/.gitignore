@@ -32,3 +32,7 @@ storage/app/foci_invoice_item_ids.sql
 tmpclaude-*-cwd
 .claude/commands/
 .claude/settings.local.json
+nexus-sync-office.bat
+storage/app/api-benchmark-report.json
+storage/app/ml/
+docs

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\NLog;
 use App\Jobs\GitBuildWebhookJob;
 use App\Jobs\GitIssueWebhookJob;
 use App\Jobs\GitNoteWebhookJob;
@@ -83,7 +82,6 @@ class PluginGitController extends PluginController {
         $sastKey  = PluginLink::arrayFindKey($sastData['artifacts'] ?? [], fn ($_) => $_['file_type'] === 'sast');
         if ($sastKey !== -1) {
             $sastFile = $this->get("$baseUrl/jobs/$jobId/artifacts/download?file_type=sast");
-            NLog::info(print_r($sastFile, true));
         }
     }
     public function onWebhook(Request $data): void {
@@ -108,7 +106,7 @@ class PluginGitController extends PluginController {
                 GitPushWebhookJob::dispatch($links, $data->project, $this->credentials);
                 break;
             default:
-                NLog::info(print_r(request()->all(), true));
+                break;
         }
         // $localai = app(PluginLocalAIController::class);
         // if($localai) $localai->onWebhook($data);
@@ -129,7 +127,7 @@ class PluginGitController extends PluginController {
     }
     public function storeWebhook(PluginLink $link) {
         return $this->post($link->buildApiPath().'/hooks', [
-            'url'               => env('API_URL').'gitlab',
+            'url'               => config('app.api_url').'gitlab',
             'token'             => $this->env('APIKEY'),
             'name'              => 'NEXUS',
             'description'       => 'NEXUS Webhook',

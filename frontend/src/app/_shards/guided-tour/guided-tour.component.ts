@@ -1,4 +1,4 @@
-﻿import { ChangeDetectionStrategy, Component, ElementRef, inject, input, OnInit } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, input } from '@angular/core';
 import { GuidedTourService } from './guided-tour.service';
 
 /**
@@ -26,9 +26,8 @@ import { GuidedTourService } from './guided-tour.service';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'guided-tour',
     template: '',
-    standalone: true,
 })
-export class GuidedTourComponent implements OnInit {
+export class GuidedTourComponent {
     id = input.required<string>();
     content = input.required<string>();
     title = input<string | undefined>();
@@ -37,22 +36,33 @@ export class GuidedTourComponent implements OnInit {
 
     #service = inject(GuidedTourService);
     #el = inject(ElementRef);
+    #registered = false;
 
-    ngOnInit(): void {
-        setTimeout(() => {
-            if (this.#service.isDisabled) return;
-            this.#service.register(
-                [
-                    {
-                        id: this.id(),
-                        title: this.title(),
-                        content: this.content(),
-                        focusSelector: this.focusSelector(),
-                        focusElement: this.focusElement(),
-                    },
-                ],
-                this.#getDomDepth(),
-            );
+    constructor() {
+        effect(() => {
+            const id = this.id();
+            const content = this.content();
+            const title = this.title();
+            const focusSelector = this.focusSelector();
+            const focusElement = this.focusElement();
+            if (this.#registered) return;
+
+            setTimeout(() => {
+                if (this.#service.isDisabled) return;
+                this.#service.register(
+                    [
+                        {
+                            id,
+                            title,
+                            content,
+                            focusSelector,
+                            focusElement,
+                        },
+                    ],
+                    this.#getDomDepth(),
+                );
+                this.#registered = true;
+            });
         });
     }
 

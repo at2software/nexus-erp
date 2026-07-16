@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
-import { DebriefService, DebriefStats, CategoryBreakdown, CategoryBreakdownPositives } from '@models/project/debrief.service';
+import { DebriefService } from '@models/project/debrief.service';
+import { DebriefStats, CategoryBreakdown, CategoryBreakdownPositives } from '@models/api-response';
 import { Company } from '@models/company/company.model';
 import { Project } from '@models/project/project.model';
 import { DebriefProblemCategory } from '@models/project/debrief-problem-category.model';
@@ -15,23 +16,20 @@ import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { Nx } from '@app/nx/nx.directive';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { forkJoin } from 'rxjs';
-import moment from 'moment';
+import { dayjs, Dayjs } from '@constants/dates';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { Dictionary } from '@constants/constants';
+import { storageGet, storageSet } from '@constants/storage';
 
 const STORAGE_KEY = 'debrief-dashboard-filters';
 
 function readStoredFilter(key: string): string | null {
-    try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')[key] || null;
-    } catch {
-        return null;
-    }
+    return storageGet<Dictionary<string>>(STORAGE_KEY, {})[key] || null;
 }
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'projects-debriefing',
-    standalone: true,
     imports: [FormsModule, RouterModule, NgbDropdownModule, NgbTooltipModule, NgxDaterangepickerMd, Nx, AvatarComponent, ToolbarComponent, DebriefRadarChartComponent, AvatarComponent, SpinnerComponent],
     templateUrl: './projects-debriefing.component.html',
     styleUrls: ['./projects-debriefing.component.scss'],
@@ -53,16 +51,16 @@ export class ProjectsDebriefingComponent {
     // Initialized directly from localStorage so the effect only runs once on load
     selectedCategoryId = signal<string | null>(readStoredFilter('categoryId'));
     selectedSeverity = signal<string | null>(readStoredFilter('severity'));
-    period: { startDate: any; endDate: any } = { startDate: moment().subtract(12, 'months'), endDate: moment() };
+    period: { startDate: Dayjs; endDate: Dayjs } = { startDate: dayjs().subtract(12, 'months'), endDate: dayjs() };
 
     selectedCategory = computed(() => this.categories().find(c => c.id === this.selectedCategoryId()));
 
-    ranges: any = {
-        'This year': [moment().startOf('year'), moment().endOf('year')],
-        'Last year': [moment().subtract(1, 'year').startOf('year'), moment().subtract(1, 'year').endOf('year')],
-        'Last 3 years': [moment().subtract(3, 'year'), moment()],
-        All: [moment('2000-01-01'), moment()],
-    };
+    ranges = {
+        'This year': [dayjs().startOf('year'), dayjs().endOf('year')],
+        'Last year': [dayjs().subtract(1, 'year').startOf('year'), dayjs().subtract(1, 'year').endOf('year')],
+        'Last 3 years': [dayjs().subtract(3, 'year'), dayjs()],
+        All: [dayjs('2000-01-01'), dayjs()],
+    } satisfies Dictionary<[Dayjs, Dayjs]>;
 
     #service = inject(DebriefService);
 
@@ -102,8 +100,8 @@ export class ProjectsDebriefingComponent {
         });
     }
 
-    buildFilters(): any {
-        const filters: any = {};
+    buildFilters(): Dictionary {
+        const filters: Dictionary = {};
         const catId = this.selectedCategoryId();
         const severity = this.selectedSeverity();
         if (catId) filters.category_id = catId;
@@ -122,7 +120,7 @@ export class ProjectsDebriefingComponent {
     }
 
     clearFilters() {
-        this.period = { startDate: moment().subtract(12, 'months'), endDate: moment() };
+        this.period = { startDate: dayjs().subtract(12, 'months'), endDate: dayjs() };
         this.selectedCategoryId.set(null);
         this.selectedSeverity.set(null);
     }
@@ -141,7 +139,7 @@ export class ProjectsDebriefingComponent {
     }
 
     getSeverityClass(severity: string): string {
-        const map: Record<string, string> = { critical: 'bg-red', high: 'bg-orange', medium: 'bg-cyan', low: 'bg-grey' };
+        const map: Dictionary<string> = { critical: 'bg-red', high: 'bg-orange', medium: 'bg-cyan', low: 'bg-grey' };
         return map[severity] ?? 'bg-grey';
     }
 
@@ -152,9 +150,9 @@ export class ProjectsDebriefingComponent {
         this.displayProblems.set(source.flatMap(cat =>
             (cat.problems || []).map(p => {
                 const problem = DebriefProblem.fromJson({ id: p.id, title: p.title, severity: p.severity, usage_count: p.usage_count });
-                problem.var.category_color = cat.category_color;
-                problem.var.category_name = cat.category_name;
-                problem.var.projects = (p.projects || []).map((proj: any) => Project.fromJson(proj));
+                problem.category_color = cat.category_color;
+                problem.category_name = cat.category_name;
+                problem.var.projects = (p.projects || []).map((proj) => Project.fromJson(proj));
                 return problem;
             }),
         ));
@@ -163,12 +161,12 @@ export class ProjectsDebriefingComponent {
     }
 
     #saveFilters() {
-        const data: any = {};
+        const data: Dictionary<string> = {};
         const catId = this.selectedCategoryId();
         const severity = this.selectedSeverity();
         if (catId) data.categoryId = catId;
         if (severity) data.severity = severity;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        storageSet(STORAGE_KEY, data);
     }
 
     #buildPositivesRadar(positives: CategoryBreakdownPositives[]): CategoryBreakdown[] {

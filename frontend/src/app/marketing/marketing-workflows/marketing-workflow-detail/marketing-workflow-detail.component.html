@@ -22,7 +22,7 @@
 
                     <!-- Activities Table -->
                     @if (_workflow.marketing_activities && _workflow.marketing_activities.length > 0) {
-                        <activity-table [progressBar]="false" [activities]="_workflow.marketing_activities" [activityRoute]="['activity']"> </activity-table>
+                        <activity-table [progressBar]="false" [activities]="_workflow.marketing_activities" [activityRoute]="['activity']" [allMetrics]="availableMetrics()"> </activity-table>
                     } @else {
                         <empty-state [card]="false" class="marketing" i18n-title="@@i18n.marketing.no_activities_yet" title="no activities yet">
                             <p class="text-muted small" i18n="@@i18n.marketing.no_activities_yet_body">click "add activity" to create the first step</p>

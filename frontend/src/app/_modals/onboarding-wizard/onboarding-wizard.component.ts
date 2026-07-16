@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormsModule } from '@angular/forms';
 import { forkJoin, map, switchMap } from 'rxjs';
@@ -10,6 +11,9 @@ import { RoleService } from '@models/user/role.service';
 import { typeahead } from '@constants/constants';
 import { NxGlobal } from '@app/nx/nx.global';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { User } from '@models/user/user.model';
+import { Company } from '@models/company/company.model';
+import { storageGet, storageSet } from '@constants/storage';
 
 const DISMISSED_KEY = 'nexus_onboarding_dismissed';
 
@@ -23,10 +27,9 @@ interface AddedUser {
     selector: 'app-onboarding-wizard',
     templateUrl: './onboarding-wizard.component.html',
     styleUrls: ['./onboarding-wizard.component.scss'],
-    standalone: true,
     imports: [FormsModule, SpinnerComponent],
 })
-export class OnboardingWizardComponent implements OnInit {
+export class OnboardingWizardComponent {
     global = inject(GlobalService);
     #companyService = inject(CompanyService);
     #paramService = inject(ParamService);
@@ -56,24 +59,24 @@ export class OnboardingWizardComponent implements OnInit {
     currency = '';
 
     // team step
-    newUserName = '';
-    newUserEmail = '';
-    newUserPassword = '';
-    addedUsers: AddedUser[] = [];
+    newUserName = signal('');
+    newUserEmail = signal('');
+    newUserPassword = signal('');
     addUserLoading = signal(false);
-    addUserError = '';
+    addedUsers = signal<AddedUser[]>([]);
+    addUserError = signal('');
 
     languages: { key: string; name: string }[] = [];
     countries: { key: string; name: string }[] = [];
     currencies: { key: string; name: string }[] = [];
 
-    ngOnInit() {
+    constructor() {
         Promise.all([import('src/constants/iso0639-1'), import('src/constants/iso3166'), import('src/constants/iso4217')]).then(([lang, country, currency]) => {
             this.languages = typeahead(lang.LANGUAGE_CODES, 'alpha2', 'English');
             this.countries = typeahead(country.COUNTRY_CODES, 'alpha-2', 'name');
             this.currencies = typeahead(currency.CURRENCY_CODES, 'AlphabeticCode', 'Currency');
         });
-        this.global.init.subscribe(() => this.#initialize());
+        this.global.init.pipe(takeUntilDestroyed()).subscribe(() => this.#initialize());
     }
 
     async #initialize() {
@@ -84,10 +87,10 @@ export class OnboardingWizardComponent implements OnInit {
         this.needsCompany.set(!this.global.setting('ME_ID'));
         this.needsLocalization.set(!this.global.setting('SYS_LANGUAGE') || !this.global.setting('SYS_COUNTRY') || !this.global.setting('SYS_CURRENCY'));
 
-        const hasOtherAdmin = this.global.teamAll?.some((u: any) => u.hasRole?.('admin') && u.name !== 'Super Admin') ?? false;
+        const hasOtherAdmin = this.global.teamAll?.some((u: User) => u.hasRole?.('admin') && u.getName() !== 'Super Admin') ?? false;
 
         if (!this.needsCompany() && !this.needsLocalization() && hasOtherAdmin) return;
-        if (!this.needsCompany() && !this.needsLocalization() && localStorage.getItem(DISMISSED_KEY)) return;
+        if (!this.needsCompany() && !this.needsLocalization() && storageGet(DISMISSED_KEY, false)) return;
 
         if (!this.needsCompany()) {
             this.language = this.global.setting('SYS_LANGUAGE') || '';
@@ -100,29 +103,25 @@ export class OnboardingWizardComponent implements OnInit {
         this.#cdr.detectChanges();
     }
 
-    get showModal(): boolean {
-        return (this.visible() || this.step() === 3) && !this.completed();
-    }
+    readonly showModal = computed<boolean>(() => (this.visible() || this.step() === 3) && !this.completed());
 
-    get totalSteps(): number {
-        return (this.needsCompany() ? 1 : 0) + (this.needsLocalization() ? 1 : 0) + 1;
-    }
+    readonly totalSteps = computed<number>(() => (this.needsCompany() ? 1 : 0) + (this.needsLocalization() ? 1 : 0) + 1);
 
-    get currentStepIndex(): number {
+    readonly currentStepIndex = computed<number>(() => {
         if (this.step() === 0) return 0;
         if (this.step() === 1) return this.needsCompany() ? 1 : 0;
         if (this.step() === 2) return (this.needsCompany() ? 1 : 0) + (this.needsLocalization() ? 1 : 0);
-        return this.totalSteps;
-    }
+        return this.totalSteps();
+    });
 
-    get progressPercent(): number {
+    readonly progressPercent = computed<number>(() => {
         if (this.step() === 3) return 100;
-        if (this.totalSteps === 0) return 0;
-        return Math.min(95, (this.currentStepIndex / this.totalSteps) * 100);
-    }
+        if (this.totalSteps() === 0) return 0;
+        return Math.min(95, (this.currentStepIndex() / this.totalSteps()) * 100);
+    });
 
     dismiss() {
-        localStorage.setItem(DISMISSED_KEY, '1');
+        storageSet(DISMISSED_KEY, true);
         this.visible.set(false);
     }
 
@@ -131,9 +130,9 @@ export class OnboardingWizardComponent implements OnInit {
         this.loading.set(true);
         this.#companyService
             .create(this.companyName.trim())
-            .pipe(switchMap((company: any) => this.#paramService.update('params/ME_ID', { value: company.id }).pipe(map(() => company))))
+            .pipe(switchMap((company: Company) => this.#paramService.update('params/ME_ID', { value: company.id }).pipe(map(() => company))))
             .subscribe({
-                next: (company: any) => {
+                next: (company: Company) => {
                     this.global.settings['ME_ID'] = company.id;
                     NxGlobal.ME_ID = company.id;
                     this.loading.set(false);
@@ -165,35 +164,33 @@ export class OnboardingWizardComponent implements OnInit {
         });
     }
 
-    get canAddUser(): boolean {
-        return !!this.newUserName.trim() && !!this.newUserEmail.trim() && this.newUserPassword.length >= 8 && !this.addUserLoading();
-    }
+    readonly canAddUser = computed<boolean>(() => !!this.newUserName().trim() && !!this.newUserEmail().trim() && this.newUserPassword().length >= 8 && !this.addUserLoading());
 
     addUser() {
-        if (!this.canAddUser) return;
+        if (!this.canAddUser()) return;
         this.addUserLoading.set(true);
-        this.addUserError = '';
-        const name = this.newUserName.trim();
-        const email = this.newUserEmail.trim();
+        this.addUserError.set('');
+        const name = this.newUserName().trim();
+        const email = this.newUserEmail().trim();
         this.#userService
             .create({
                 name,
                 email,
-                password: this.newUserPassword,
+                password: this.newUserPassword(),
             })
             .subscribe({
-                next: async (user: any) => {
+                next: async (user: User) => {
                     if (this.#adminRoleId && user?.id) {
                         await this.#roleService.assignRole(this.#adminRoleId, user.id);
                     }
-                    this.addedUsers.push({ name, email });
-                    this.newUserName = '';
-                    this.newUserEmail = '';
-                    this.newUserPassword = '';
+                    this.addedUsers.update((users) => [...users, { name, email }]);
+                    this.newUserName.set('');
+                    this.newUserEmail.set('');
+                    this.newUserPassword.set('');
                     this.addUserLoading.set(false);
                 },
                 error: () => {
-                    this.addUserError = $localize`:@@i18n.onboarding.wizard.addUserError:Could not create user. The e-mail may already be in use.`;
+                    this.addUserError.set($localize`:@@i18n.onboarding.wizard.addUserError:Could not create user. The e-mail may already be in use.`);
                     this.addUserLoading.set(false);
                 },
             });

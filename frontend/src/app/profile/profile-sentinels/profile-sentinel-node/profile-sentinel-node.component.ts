@@ -1,8 +1,8 @@
 import { ObserverTrigger } from '@enums/observer-trigger';
-import { SentinelNode } from '@models/sentinel-node.model';
+import { SentinelNode } from '@models/sentinels/sentinel-node.model';
 import { SentinelNodeType } from '@enums/sentinel-node.type';
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { Sentinel } from '@models/sentinel.model';
+import { Sentinel } from '@models/sentinels/sentinel.model';
 import { SENTINEL_CONDITIONS } from '../sentinel-condition.model';
 import { SENTINEL_COMMANDS } from '../sentinel-command.model';
 import { SentinelOptionFieldType } from '../sentinel-option-field-type.model';
@@ -13,15 +13,14 @@ import { tracked } from '@constants/tracked';
     selector: 'profile-sentinel-node',
     templateUrl: './profile-sentinel-node.component.html',
     styleUrl: './profile-sentinel-node.component.scss',
-    standalone: true,
     imports: [],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileSentinelNodeComponent {
-    readonly nodeIn = input.required<SentinelNode>({ alias: 'node' });
-    readonly node = tracked(this.nodeIn);
-    readonly sentinelIn = input.required<Sentinel>({ alias: 'sentinel' });
-    readonly sentinel = tracked(this.sentinelIn);
+    readonly node = input.required<SentinelNode>();
+    readonly trackedNode = tracked(this.node);
+    readonly sentinel = input.required<Sentinel>();
+    readonly trackedSentinel = tracked(this.sentinel);
     width = input<number>(0);
     height = input<number>(0);
     column = input<number>(0);
@@ -36,8 +35,8 @@ export class ProfileSentinelNodeComponent {
     readonly allCommands = SENTINEL_COMMANDS;
 
     readonly #parsedCondition = computed(() => {
-        if (this.node().type !== SentinelNodeType.Condition) return null;
-        const conditions = JSON.parse(this.sentinel().condition || '[]');
+        if (this.trackedNode().type !== SentinelNodeType.Condition) return null;
+        const conditions = JSON.parse(this.trackedSentinel().condition || '[]');
         const col = this.column();
         const row = this.row();
         if (conditions.length <= col || conditions[col].length <= row) return null;
@@ -59,7 +58,7 @@ export class ProfileSentinelNodeComponent {
     });
 
     readonly commandLabel = computed<string | undefined>(() => {
-        const result = this.sentinel().result;
+        const result = this.trackedSentinel().result;
         if (!result) return undefined;
         const commands = JSON.parse(result);
         if (commands.length >= 1) {
@@ -68,7 +67,7 @@ export class ProfileSentinelNodeComponent {
         return undefined;
     });
 
-    readonly isCondition = computed(() => this.node().type === SentinelNodeType.Condition);
+    readonly isCondition = computed(() => this.trackedNode().type === SentinelNodeType.Condition);
 
     getNodeTypeClass(type: SentinelNodeType) {
         return SentinelNodeType[type].toLocaleLowerCase();

@@ -10,8 +10,6 @@ import { GlobalService } from '@models/global.service';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'activity-tab-invoicing',
     templateUrl: './tab-invoicing.component.html',
-    styleUrls: ['./tab-invoicing.component.scss'],
-    standalone: true,
     imports: [ActivityTabComponent, ScrollbarComponent, TabTasksInvoiceableComponent],
 })
 export class TabInvoicingComponent {

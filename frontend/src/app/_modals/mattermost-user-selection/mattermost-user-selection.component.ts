@@ -10,7 +10,6 @@ import { ModalBaseComponent } from '@app/_modals/modal-base.component';
     selector: 'mattermost-user-selection',
     templateUrl: './mattermost-user-selection.component.html',
     styleUrls: ['./mattermost-user-selection.component.scss'],
-    standalone: true,
     imports: [FormsModule],
 })
 export class MattermostUserSelectionComponent extends ModalBaseComponent<string> {

@@ -12,8 +12,25 @@
                     <span class="input-group-text" i18n="@@i18n.common.product">product</span>
                     <search-input class="p-0 flex-fill" only="Product" [has_icon]="true" [minSearch]="1" (itemSelected)="onSelect($event)" [query]="_currentProduct?.name ?? ''"> </search-input>
                 </div>
-                <div class="form-floating mb-3">
-                    <angular-editor class="form-control pt-2" style="height: auto; min-height: auto" [config]="config" [(ngModel)]="_item.text"></angular-editor>
+                <div class="mb-3">
+                    <div [id]="toolbarId" class="rte-toolbar">
+                        <span class="ql-formats">
+                            <button class="ql-bold" type="button"><i>format_bold</i></button>
+                            <button class="ql-italic" type="button"><i>format_italic</i></button>
+                            <button class="ql-underline" type="button"><i>format_underline</i></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-list" value="ordered" type="button"><i>format_list_numbered</i></button>
+                            <button class="ql-list" value="bullet" type="button"><i>format_list_bulleted</i></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-link" type="button"><i>link</i></button>
+                            <button class="ql-clean" type="button"><i>format_clear</i></button>
+                        </span>
+                    </div>
+                    @if (editorReady()) {
+                        <quill-editor class="form-control pt-2" style="height: auto; min-height: auto" [modules]="modules" [(ngModel)]="_item.text" [debounceTime]="300" (onEditorCreated)="onTitleEditorCreated($event)"></quill-editor>
+                    }
                 </div>
 
                 @if (!_currentProduct || _currentProduct.time_based === 0) {

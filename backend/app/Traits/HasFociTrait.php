@@ -25,7 +25,7 @@ trait HasFociTrait {
     // Sum relations for eager loading to prevent N+1
     public function hoursInvestedSum() {
         return $this->hasOne(Focus::class, 'parent_id')
-            ->where('parent_type', get_class($this))
+            ->where('parent_type', $this::class)
             ->selectRaw('parent_id, SUM(duration) as total')
             ->groupBy('parent_id');
     }

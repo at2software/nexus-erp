@@ -1,33 +1,33 @@
-﻿import { ChangeDetectionStrategy, Component, OnChanges, OnInit, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input } from '@angular/core';
 import { EchartsCardComponent } from './echarts-card.component';
 import { ParamService } from '@models/param.service';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
+import { ParamChartSeries } from '@models/api-response';
+
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: '',
-    standalone: true,
 })
-export abstract class EchartsParamCardComponent extends EchartsCardComponent implements OnChanges, OnInit {
-    abstract updateSeries(result: any[]): void;
+export abstract class EchartsParamCardComponent extends EchartsCardComponent {
+    abstract updateSeries(result: ParamChartSeries[]): void;
 
     keyPath = input<string | undefined>(undefined);
-    chartData = input<any>(undefined);
+    chartData = input<ParamChartSeries[] | undefined>(undefined);
     type = input<string>('bar');
     cluster = input<string>('month');
     offset = input<'none' | 'month' | 'year'>('none');
 
     #paramService = inject(ParamService);
 
-    ngOnInit(): void {
-        super.ngOnInit();
-        this.reload();
-    }
-    ngOnChanges(changes: any): void {
-        super.ngOnChanges(changes);
-        if ('keyPath' in changes || 'chartData' in changes) {
+    constructor() {
+        super();
+        effect(() => {
+            this.keyPath();
+            this.chartData();
+            this.roles();
             this.reload();
-        }
+        });
     }
 
     seriesLength = () => this.keyPath()?.split(',').length ?? 0;
@@ -42,15 +42,14 @@ export abstract class EchartsParamCardComponent extends EchartsCardComponent imp
         }
         // If chartData is provided, use it directly instead of fetching
         if (this.chartData()) {
-            // Ensure chartData is an array (wrap single series in array)
-            const dataArray = [this.chartData()].flat();
+            const dataArray = this.chartData() ?? [];
             return this.updateSeries(dataArray);
         }
         // Otherwise, fetch data using keyPath (legacy behavior)
         if (this.keyPath()) {
             this.chartOptions.update((o) => ({ ...o, series: [] }));
             this.echartsInstance()?.clear();
-            const start = moment().startOf('month').subtract(36, 'month');
+            const start = dayjs().startOf('month').subtract(36, 'month');
             this.#paramService.history(this.keyPath()!, start.unix(), 'month').subscribe((_) => this.updateSeries(_));
         }
     }

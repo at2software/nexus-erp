@@ -1,0 +1,151 @@
+<toolbar>
+    @if (dirty()) {
+        <span class="badge bg-warning-subtle text-warning me-1" i18n="@@i18n.common.unsavedChanges">unsaved changes</span>
+    }
+    <label class="btn btn-sm btn-outline-primary mb-0">
+        <span i18n="@@i18n.settings.pdf.replaceLogo">replace logo</span>
+        <input type="file" accept="image/*" hidden (change)="onLogoSelected($event)" />
+    </label>
+    @if (hasOriginal()) {
+        <button class="btn btn-sm btn-outline-primary" (click)="revert()" i18n="@@i18n.settings.pdf.revert">revert to original</button>
+    }
+    <button class="btn btn-sm btn-outline-primary" [disabled]="rendering()" (click)="renderRealPdf()">
+        @if (rendering()) {
+            <span class="spinner-border spinner-border-sm"></span>
+        }
+        <span i18n="@@i18n.settings.pdf.renderPdf">render real PDF</span>
+    </button>
+    <button class="btn btn-sm btn-primary" [disabled]="saving() || !dirty()" (click)="save()">
+        @if (saving()) {
+            <span class="spinner-border spinner-border-sm"></span>
+        }
+        <span i18n="@@i18n.common.save">save</span>
+    </button>
+</toolbar>
+
+@if (loading()) {
+    <div class="pdf-editor d-flex align-items-center justify-content-center">
+        <span class="spinner-border"></span>
+    </div>
+} @else {
+    <div class="pdf-editor d-flex">
+        <div class="preview-pane">
+            <iframe #preview class="preview-frame" sandbox="allow-scripts" title="PDF preview"></iframe>
+        </div>
+
+        <div class="panel">
+            <div class="card h-100">
+                <div class="card-header p-0">
+                    <ul class="nav nav-tabs card-header-tabs m-0 px-2 pt-2">
+                        <li class="nav-item">
+                            <button class="nav-link" [class.active]="panelTab() === 'element'" (click)="panelTab.set('element')" i18n="@@i18n.settings.pdf.element">element</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" [class.active]="panelTab() === 'code'" (click)="panelTab.set('code')" i18n="@@i18n.settings.pdf.code">code</button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card-body panel-body">
+                    @if (panelTab() === 'element') {
+                        @if (selected(); as sel) {
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <span class="badge bg-primary-subtle text-primary">&lt;{{ sel.tag }}&gt;</span>
+                                <button class="btn btn-sm btn-outline-danger" (click)="removeSelected()" i18n="@@i18n.common.remove">remove</button>
+                            </div>
+
+                            @if (sel.text !== null) {
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted" i18n="@@i18n.settings.pdf.text">text</label>
+                                    <textarea class="form-control form-control-sm" rows="3" [ngModel]="sel.text" (ngModelChange)="setText($event)"></textarea>
+                                </div>
+                            }
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-7">
+                                    <label class="form-label small text-muted" i18n="@@i18n.settings.pdf.fontSize">font size</label>
+                                    <input class="form-control form-control-sm" [ngModel]="sel.fontSize" (ngModelChange)="onStyleInput('fontSize', 'fontSize', $event)" placeholder="11.5pt" />
+                                </div>
+                                <div class="col-5">
+                                    <label class="form-label small text-muted" i18n="@@i18n.settings.pdf.color">color</label>
+                                    <input type="color" class="form-control form-control-color form-control-sm w-100" [ngModel]="sel.color" (ngModelChange)="onStyleInput('color', 'color', $event)" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small text-muted" i18n="@@i18n.settings.pdf.style">style</label>
+                                <div class="btn-group w-100">
+                                    <button class="btn btn-sm btn-outline-primary" [class.active]="sel.bold" (click)="toggleBold()"><b>B</b></button>
+                                    <button class="btn btn-sm btn-outline-primary" [class.active]="sel.italic" (click)="toggleItalic()"><i>I</i></button>
+                                    <button class="btn btn-sm btn-outline-primary" [class.active]="sel.textAlign === 'left'" (click)="setAlign('left')">⯇</button>
+                                    <button class="btn btn-sm btn-outline-primary" [class.active]="sel.textAlign === 'center'" (click)="setAlign('center')">≡</button>
+                                    <button class="btn btn-sm btn-outline-primary" [class.active]="sel.textAlign === 'right'" (click)="setAlign('right')">⯈</button>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label small text-muted" i18n="@@i18n.settings.pdf.marginTop">margin top</label>
+                                    <input class="form-control form-control-sm" [ngModel]="sel.marginTop" (ngModelChange)="onStyleInput('marginTop', 'marginTop', $event)" placeholder="0" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small text-muted" i18n="@@i18n.settings.pdf.marginBottom">margin bottom</label>
+                                    <input class="form-control form-control-sm" [ngModel]="sel.marginBottom" (ngModelChange)="onStyleInput('marginBottom', 'marginBottom', $event)" placeholder="0" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small text-muted" i18n="@@i18n.settings.pdf.paddingTop">padding top</label>
+                                    <input class="form-control form-control-sm" [ngModel]="sel.paddingTop" (ngModelChange)="onStyleInput('paddingTop', 'paddingTop', $event)" placeholder="0" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small text-muted" i18n="@@i18n.settings.pdf.paddingBottom">padding bottom</label>
+                                    <input class="form-control form-control-sm" [ngModel]="sel.paddingBottom" (ngModelChange)="onStyleInput('paddingBottom', 'paddingBottom', $event)" placeholder="0" />
+                                </div>
+                            </div>
+                        } @else {
+                            <p class="text-muted small" i18n="@@i18n.settings.pdf.clickHint">Click an element in the preview to edit its text and styling.</p>
+                        }
+
+                        <hr />
+                        <label class="form-label small text-muted" i18n="@@i18n.settings.pdf.add">add</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-sm btn-outline-primary" (click)="addBlock('text')" i18n="@@i18n.settings.pdf.addText">text block</button>
+                            <button class="btn btn-sm btn-outline-primary" (click)="addBlock('divider')" i18n="@@i18n.settings.pdf.addDivider">divider</button>
+                            <button class="btn btn-sm btn-outline-primary" (click)="addBlock('spacer')" i18n="@@i18n.settings.pdf.addSpacer">spacer</button>
+                        </div>
+                    } @else {
+                        <div class="d-flex flex-column h-100 gap-3">
+                            <div class="d-flex flex-column flex-grow-1 min-h-0">
+                                @if (selected(); as sel) {
+                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                        <label class="form-label small text-muted m-0">HTML — &lt;{{ sel.tag }}&gt;</label>
+                                        <button class="btn btn-sm btn-link p-0" (click)="editFullDocument()" i18n="@@i18n.settings.pdf.editFull">edit full document</button>
+                                    </div>
+                                    <app-code-editor class="flex-grow-1" language="html" [value]="selectedHtml()" (valueChange)="onScopedHtmlChange($event)"></app-code-editor>
+                                } @else {
+                                    <label class="form-label small text-muted mb-1" i18n="@@i18n.settings.pdf.htmlCode">HTML (template.html)</label>
+                                    <app-code-editor class="flex-grow-1" language="html" [value]="html()" (valueChange)="onFullHtmlChange($event)"></app-code-editor>
+                                }
+                            </div>
+                            <div class="d-flex flex-column flex-grow-1 min-h-0">
+                                <label class="form-label small text-muted mb-1" i18n="@@i18n.settings.pdf.cssCode">CSS (styles.css)</label>
+                                <app-code-editor class="flex-grow-1" language="css" [value]="css()" (valueChange)="onCssChange($event)"></app-code-editor>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (pdfUrl(); as url) {
+    <div class="pdf-overlay" (click)="closePdf()">
+        <div class="pdf-overlay-inner" (click)="$event.stopPropagation()">
+            <div class="d-flex align-items-center p-2 border-bottom">
+                <span class="fw-bold" i18n="@@i18n.settings.pdf.realPdf">real PDF (DomPDF)</span>
+                <button class="btn btn-sm btn-outline-primary ms-auto" (click)="closePdf()" i18n="@@i18n.common.close">close</button>
+            </div>
+            <iframe [src]="url" class="pdf-overlay-frame" title="rendered PDF"></iframe>
+        </div>
+    </div>
+}

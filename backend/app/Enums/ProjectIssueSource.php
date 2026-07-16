@@ -2,10 +2,8 @@
 
 namespace App\Enums;
 
-use BenSampo\Enum\Enum;
-
-final class ProjectIssueSource extends Enum {
-    const Internal = 0;
-    const GitLab   = 1;
-    const Mantis   = 2;
+enum ProjectIssueSource: int {
+    case Internal = 0;
+    case GitLab   = 1;
+    case Mantis   = 2;
 }

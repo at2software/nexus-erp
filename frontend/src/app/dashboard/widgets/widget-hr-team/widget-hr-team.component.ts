@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BaseWidgetComponent } from '../base.widget.component';
 import { StatsService } from '@models/stats-service';
 import { User } from '@models/user/user.model';
-import { WidgetsModule } from '../widgets.module';
+import { WIDGET_SHARED } from '../widgets.shared';
 import { DatePipe } from '@angular/common';
 import { timer } from 'rxjs';
 
@@ -11,9 +11,8 @@ import { timer } from 'rxjs';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'widget-hr-team',
     templateUrl: './widget-hr-team.component.html',
-    styleUrls: ['./widget-hr-team.component.scss', './../base.widget.component.scss'],
-    standalone: true,
-    imports: [WidgetsModule, DatePipe],
+    styleUrls: ['./../base.widget.component.scss'],
+    imports: [...WIDGET_SHARED, DatePipe],
 })
 export class WidgetHrTeamComponent extends BaseWidgetComponent {
     #stats = inject(StatsService);

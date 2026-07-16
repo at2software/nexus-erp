@@ -12,8 +12,6 @@ import { GlobalService } from '@models/global.service';
 @Component({
     selector: 'profile-nav',
     templateUrl: './profile-nav.component.html',
-    styleUrls: ['./profile-nav.component.scss'],
-    standalone: true,
     imports: [RouterModule, ToolbarComponent, DndDirective, HeaderComponent, HeaderLinkItemComponent, NgbDropdownModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

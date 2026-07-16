@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, viewChild } from '@angular/
 import { tracked } from '@constants/tracked';
 import { ModalEditInvoiceItemComponent } from '@app/_modals/modal-edit-invoice-item/modal-edit-invoice-item.component';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { InvoicesStandingComponent } from '@app/invoices/-/invoices-standing/invoices-standing.component';
 import { CustomerDetailGuard } from '../../customers.details.guard';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
@@ -13,8 +13,6 @@ import { ModalBaseService } from '@app/_modals/modal-base-service';
 @Component({
     selector: 'customer-standing-orders',
     templateUrl: './customer-standing-orders.component.html',
-    styleUrls: ['./customer-standing-orders.component.scss'],
-    standalone: true,
     imports: [ToolbarComponent, InvoicesStandingComponent, EmptyStateComponent, NgbDropdownModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -29,9 +27,9 @@ export class CustomerStandingOrdersComponent {
         const item = InvoiceItem.fromJson({});
         const company = this.company();
         this.#modal.open(ModalEditInvoiceItemComponent, item, company).then((response) => {
-            if (response.item) {
+            if (response?.item) {
                 response.item.type = rec;
-                response.item.next_recurrence_at = moment().toISOString();
+                response.item.next_recurrence_at = dayjs().toISOString();
                 response.item.company_id = company.id;
                 response.item.store().subscribe(() => this.standing().reload());
             }

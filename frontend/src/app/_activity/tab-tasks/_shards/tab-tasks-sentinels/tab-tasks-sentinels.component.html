@@ -1,8 +1,8 @@
-@for (sentinels of response(); track sentinels.id) {
+﻿@for (sentinels of response(); track sentinels.id) {
     @if (sentinels.items.length) {
         <div class="header hstack gap-2">
             <span class="flex-fill">{{ sentinels.sentinel.name }}</span>
-            <i class="pointer" (click)="toggle(sentinels.id.toString())">{{ isCollapsed(sentinels.id.toString()) ? 'expand_less' : 'expand_more' }}</i>
+            <i class="pointer" tabindex="0" (click)="toggle(sentinels.id.toString())" (keyup.enter)="toggle(sentinels.id.toString())">{{ isCollapsed(sentinels.id.toString()) ? 'expand_less' : 'expand_more' }}</i>
         </div>
         @if (!isCollapsed(sentinels.id.toString())) {
             @for (o of sentinels.items; track o.id) {

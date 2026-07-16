@@ -12,8 +12,6 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 class Document extends BaseModel {
     use HasFactory;
 
-    protected $access = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
-
     public static function getPdfTemplate($title = '', $omit = []) {
         $template = file_get_contents(public_path('pdf/template.html'));
         $template = str_replace('[documentTitle]', $title, $template);

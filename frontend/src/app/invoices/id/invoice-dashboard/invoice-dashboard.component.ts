@@ -1,11 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Invoice } from '@models/invoice/invoice.model';
-import moment from 'moment';
-import { deepMerge } from '@constants/deepMerge';
+import { dayjs } from '@constants/dates';
 import { Color } from '@constants/Color';
 import { InvoiceDetailChartOptions } from './invoice-detail-chart-options';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
-import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { InvoiceDetailGuard } from '@app/invoices/invoice-detail.guard';
 import { InvoiceReminder } from '@models/invoice/invoice-reminder.model';
 import { FileService } from '@models/file/file.service';
@@ -23,7 +21,6 @@ import { ModalInvoiceAddInstalmentComponent } from '@app/_modals/modal-invoice-a
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'invoice-dashboard',
     templateUrl: './invoice-dashboard.component.html',
-    standalone: true,
     imports: [ToolbarComponent, ScrollbarComponent, DatePipe, NComponent, InvoicePrepare, NgbTooltipModule, MoneyPipe, MoneyShortPipe],
 })
 export class InvoiceDashboardComponent {
@@ -32,15 +29,16 @@ export class InvoiceDashboardComponent {
     readonly options = computed(() => {
         const inv = this.invoice();
         if (!inv) return InvoiceDetailChartOptions;
-        const paid_at = inv.paid_at ? inv.time_paid() : moment();
-        return deepMerge(InvoiceDetailChartOptions, {
+        const paid_at = inv.paid_at ? inv.time_paid() : dayjs();
+        return {
+            ...InvoiceDetailChartOptions,
             series: [
-                { name: $localize`:@@i18n.invoices.created:Created`, data: [[inv.momentCreated().unix() * 1000, 1]], color: Color.fromVar('orange').toHexString() },
+                { name: $localize`:@@i18n.invoices.created:Created`, data: [[inv.createdAt().unix() * 1000, 1]], color: Color.fromVar('orange').toHexString() },
                 { name: $localize`:@@i18n.invoices.due:Due`, data: [[inv.time_due().unix() * 1000, 2]], color: Color.fromVar('red').toHexString() },
                 ...(inv.paid_at ? [{ name: $localize`:@@i18n.invoices.paid:Paid`, data: [[inv.time_paid().unix() * 1000, 3]], color: Color.fromVar('green').toHexString() }] : []),
             ],
-            xaxis: { min: inv.momentCreated().unix() * 1000, max: paid_at.unix() * 1000 },
-        });
+            xaxis: { ...InvoiceDetailChartOptions.xaxis, type: 'datetime', min: inv.createdAt().unix() * 1000, max: paid_at.unix() * 1000 },
+        };
     });
 
     #modalService = inject(ModalBaseService);
@@ -49,9 +47,10 @@ export class InvoiceDashboardComponent {
     onInstalmentButtonClicked() {
         this.#modalService
             .open(ModalInvoiceAddInstalmentComponent, this.invoice())
-            .then((item: InvoiceItem) => item.store().subscribe(() => this.parent.reload()))
-            .catch();
+            .then((item) => {
+                if (item) item.store().subscribe(() => this.parent.reload());
+            });
     }
 
-    openFile = (inv: Invoice | InvoiceReminder) => this.#fileService.show(inv);
+    openFile = (inv: Invoice | InvoiceReminder) => this.#fileService.download(inv);
 }

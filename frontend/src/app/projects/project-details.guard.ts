@@ -19,6 +19,7 @@ export class ProjectDetailGuard extends DetailGuard<Project> implements IHasFoci
     }
     setParent = (_?: Project) =>
         this.object().update({ project_id: _ ? _.id : null }).subscribe(() => {
-            this.parent = _;
+            this.onLoaded(this.object());
+            this.touch();
         });
 }

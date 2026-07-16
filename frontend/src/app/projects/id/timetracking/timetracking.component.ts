@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Focus } from '@models/focus/focus.model';
 import { Observable, Subject } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
@@ -8,24 +8,26 @@ import { GlobalService } from '@models/global.service';
 import { IHasFociGuard } from '@models/focus/hasFoci.interface';
 import { InvoiceItemType } from '@enums/invoice-item.type';
 import { StartEnd } from '@constants/constants';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
+import { Project } from '@models/project/project.model';
+import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
+import { Task } from '@models/tasks/task.model';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: '',
     imports: [],
-    standalone: true,
 })
 export abstract class TimetrackingComponent {
     abstract parent: IHasFociGuard;
 
     observer!: Observable<Focus[]>;
-    filteredFoci: Focus[] = [];
-    users: any[] = [];
-    filteredUsers: User[] = [];
-    selection: Focus[] = [];
-    selectionDuration: number = 0;
+    filteredFoci = signal<Focus[]>([]);
+    users: User[] = [];
+    filteredUsers = signal<User[]>([]);
+    selection = signal<Focus[]>([]);
+    selectionDuration = signal(0);
     sortField: string = 'started_at';
     sortDirection: 'asc' | 'desc' = 'desc';
     displayedColumns = ['started_at', 'timespan', 'userIcon', 'comment', 'duration', 'invoiced', 'focus_item'];
@@ -37,6 +39,18 @@ export abstract class TimetrackingComponent {
 
     protected focusService = inject(FocusService);
     #global = inject(GlobalService);
+    #pluginFactory = inject(PluginInstanceFactory);
+
+    selectedIssue = signal<Task | undefined>(undefined);
+    selectedIssueLinkId = signal<string>('');
+    selectedIssueId = signal<string>('');
+    newFocusDuration = signal<number | undefined>(undefined);
+    newFocusComment = signal<string>('');
+
+    readonly hasIssueTracker = computed(() => {
+        const obj = this.parent.object();
+        return obj instanceof Project && obj.hasTimeBudget() && this.#pluginFactory.getTaskInstances(obj).length > 0;
+    });
 
     constructor() {
         effect(() => {
@@ -48,9 +62,11 @@ export abstract class TimetrackingComponent {
         });
 
         this.#global
-            .onSelectionIn(() => this.filteredFoci, 'duration')
+            .onSelectionIn(() => this.filteredFoci(), 'duration')
             .subscribe((_) => {
-                [this.selection, this.selectionDuration] = _;
+                const [selection, selectionDuration] = _;
+                this.selection.set(selection);
+                this.selectionDuration.set(selectionDuration);
             });
 
         // Debounce date range changes to prevent duplicate reloads
@@ -64,33 +80,34 @@ export abstract class TimetrackingComponent {
         let startDate: string | undefined;
         let endDate: string | undefined;
         if (this.dateRange?.startDate) {
-            startDate = moment((this.dateRange.startDate as any).$d).format('YYYY-MM-DD');
+            startDate = this.dateRange.startDate.format('YYYY-MM-DD');
         }
         if (this.dateRange?.endDate) {
-            endDate = moment((this.dateRange.endDate as any).$d).format('YYYY-MM-DD');
+            endDate = this.dateRange.endDate.format('YYYY-MM-DD');
         }
         return this.focusService.getFociFor(this.parent.object() as any, selectedUserIds.length ? selectedUserIds : undefined, this.sortField, this.sortDirection, this.showNotYetInvoiced(), startDate, endDate);
     };
 
     reload = () => {
         this.parent.object().foci = [];
-        this.filteredFoci = [];
+        this.filteredFoci.set([]);
         this.observer = this.onReload();
     };
     userForFocus = (x: Focus) => this.#global.userFor(x.user_id);
     durationFor = (user: User) => this.parent.object().foci.filter((_) => _.user_id === user.id).reduce((a, b) => a + b.duration, 0);
-    getTotal = () => this.filteredFoci.reduce((a, b) => a + b.duration, 0);
+    getTotal = () => this.filteredFoci().reduce((a, b) => a + b.duration, 0);
 
     setupUsersFromWorkShares() {
-        const timeline_chart = (this.parent.object() as any)?.timeline_chart;
+        const timeline_chart = this.parent.object().timeline_chart;
         if (timeline_chart?.length) {
-            this.users = timeline_chart.map((foci: any) => User.fromJson(foci.user));
-            this.filteredUsers = [...this.users];
+            this.users = timeline_chart.map(foci => User.fromJson(foci['user']));
+            this.filteredUsers.set([...this.users]);
         } else {
-            this.users = this.filteredUsers = [];
+            this.users = [];
+            this.filteredUsers.set([]);
         }
     }
-    onResult = (data: any) => {
+    onResult = (data: Focus[]) => {
         this.parent.object().foci = this.parent.object().foci.concat(data as Focus[]).map((_) => {
             _.parent = this.parent.object();
             return _;
@@ -126,7 +143,7 @@ export abstract class TimetrackingComponent {
         this.applyUserFilters();
     };
 
-    applyUserFilters = () => (this.filteredFoci = [...this.parent.object().foci]);
+    applyUserFilters = () => this.filteredFoci.set([...this.parent.object().foci]);
     findUniqueUser = (u: User) => this.users.find((_) => _.id === u.id);
     onFilterChanged(u: User) {
         u.var.hidden = !u.var.hidden;
@@ -158,5 +175,33 @@ export abstract class TimetrackingComponent {
 
     onDateRangeChange() {
         this.#dateRangeChange$.next();
+    }
+
+    onIssueSelected(task: Task) {
+        this.selectedIssue.set(task);
+    }
+
+    onCreateFocus() {
+        const duration = this.newFocusDuration();
+        const project = this.parent.object();
+        if (!duration || !(project instanceof Project)) return;
+        this.focusService
+            .createForProject(project, {
+                duration,
+                started_at: dayjs().format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
+                comment: this.newFocusComment(),
+                ext_issue_plugin_link_id: this.selectedIssueLinkId(),
+                ext_issue_id: this.selectedIssueId(),
+            })
+            .subscribe((focus) => {
+                focus.parent = project;
+                project.foci = [focus, ...project.foci];
+                this.applyUserFilters();
+                this.selectedIssue.set(undefined);
+                this.selectedIssueLinkId.set('');
+                this.selectedIssueId.set('');
+                this.newFocusDuration.set(undefined);
+                this.newFocusComment.set('');
+            });
     }
 }

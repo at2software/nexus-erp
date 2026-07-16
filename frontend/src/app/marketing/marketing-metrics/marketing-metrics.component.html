@@ -67,7 +67,7 @@
                 <table class="table table-hover mb-0 align-middle">
                     <tbody>
                         @for (metric of filteredMetrics; track metric.id) {
-                            <tr class="text-nowrap" [nx]="metric" [nxContext]="editNxContext" [tables]="filteredMetrics" [class.table-active]="selectedMetric?.id === metric.id" (click)="selectMetric(metric)" (actionsResolved)="onActionResolved($event)" style="cursor: pointer">
+                            <tr class="text-nowrap" [nx]="metric" [nxContext]="editNxContext" [tables]="filteredMetrics" [class.table-active]="selectedMetric?.id === metric.id" [class.related-row-highlight]="hoveredRelatedMetricId() === metric.id" (click)="selectMetric(metric)" (actionsResolved)="onActionResolved($event)" style="cursor: pointer">
                                 <td style="width: 1.5rem; padding-right: 0">
                                     <i [style.color]="metric.getIconColor()" [ngbTooltip]="getMetricTypeInfo(metric.metric_type)?.label">{{ metric.getIcon() }}</i>
                                 </td>
@@ -75,18 +75,33 @@
                                 <td class="text-muted w-100">{{ metric.description || '—' }}</td>
                                 <td style="width: 8rem; min-width: 8rem">
                                     @if (metric.activity_stats && metric.activity_stats.total > 0) {
-                                        <div class="progress w-100" style="height: 4px">
-                                            <div class="progress-bar {{ STATS_COLORS.completed }}" [style.width.%]="(metric.activity_stats.completed / metric.activity_stats.total) * 100" [ngbTooltip]="getCompletedTooltip(metric.activity_stats.completed)"></div>
-                                            <div class="progress-bar {{ STATS_COLORS.overdue }}" [style.width.%]="(metric.activity_stats.overdue / metric.activity_stats.total) * 100" [ngbTooltip]="getOverdueTooltip(metric.activity_stats.overdue)"></div>
-                                            <div class="progress-bar {{ STATS_COLORS.pending }}" [style.width.%]="(metric.activity_stats.pending / metric.activity_stats.total) * 100" [ngbTooltip]="getPendingTooltip(metric.activity_stats.pending)"></div>
-                                            <div class="progress-bar bg-purple" [style.width.%]="(metric.activity_stats.skipped / metric.activity_stats.total) * 100" [ngbTooltip]="getSkippedTooltip(metric.activity_stats.skipped)"></div>
-                                        </div>
+                                        @if (metric.metric_type === 'percentage' && getMetricById(metric.related_metric_id); as rel) {
+                                            @if (rel.activity_stats && rel.activity_stats.completed > 0) {
+                                                <div class="progress w-100" style="height: 4px">
+                                                    <div class="progress-bar bg-success" [style.width.%]="(metric.activity_stats.completed / rel.activity_stats.completed) * 100"></div>
+                                                </div>
+                                            }
+                                        } @else {
+                                            <div class="progress w-100" style="height: 4px">
+                                                <div class="progress-bar {{ STATS_COLORS.completed }}" [style.width.%]="(metric.activity_stats.completed / metric.activity_stats.total) * 100" [ngbTooltip]="getCompletedTooltip(metric.activity_stats.completed)"></div>
+                                                <div class="progress-bar {{ STATS_COLORS.overdue }}" [style.width.%]="(metric.activity_stats.overdue / metric.activity_stats.total) * 100" [ngbTooltip]="getOverdueTooltip(metric.activity_stats.overdue)"></div>
+                                                <div class="progress-bar {{ STATS_COLORS.pending }}" [style.width.%]="(metric.activity_stats.pending / metric.activity_stats.total) * 100" [ngbTooltip]="getPendingTooltip(metric.activity_stats.pending)"></div>
+                                                <div class="progress-bar bg-purple" [style.width.%]="(metric.activity_stats.skipped / metric.activity_stats.total) * 100" [ngbTooltip]="getSkippedTooltip(metric.activity_stats.skipped)"></div>
+                                            </div>
+                                        }
                                     }
                                 </td>
                                 <td class="text-end text-nowrap">
                                     @if (metric.activity_stats && metric.activity_stats.total > 0) {
                                         <span class="text-muted small me-1">{{ metric.target_value ? metric.formatTargetValue() : '' }}</span>
                                         <span>{{ metric.formatValue() }}</span>
+                                    }
+                                </td>
+                                <td style="width: 1.25rem; padding-left: 0.25rem">
+                                    @if (metric.metric_type === 'percentage' && getMetricById(metric.related_metric_id); as rel) {
+                                        <i [style.color]="rel.getIconColor()" style="opacity: 0.6; font-size: 0.85rem; cursor: default"
+                                           (mouseenter)="hoveredRelatedMetricId.set(metric.related_metric_id)"
+                                           (mouseleave)="hoveredRelatedMetricId.set(undefined)">{{ rel.getIcon() }}</i>
                                     }
                                 </td>
                             </tr>
@@ -104,7 +119,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <span class="modal-title">
-                    @if (editingMetric) {
+                    @if (editingMetric()) {
                         <span i18n="@@i18n.marketing.edit_metric">edit metric</span>
                     } @else {
                         <span i18n="@@i18n.marketing.create_performance_metric">create performance metric</span>
@@ -139,6 +154,34 @@
                         </select>
                     </div>
 
+                    @if (metricForm.metric_type === 'percentage') {
+                        <div class="mb-3">
+                            <div class="form-label" i18n="@@i18n.marketing.related_metric">related denominator metric (optional)</div>
+                            <div ngbDropdown class="d-block">
+                                <button type="button" class="form-select text-start" ngbDropdownToggle>
+                                    @if (getRelatedMetric(); as rel) {
+                                        <i class="me-1" [style.color]="rel.getIconColor()">{{ rel.getIcon() }}</i>{{ rel.name }}
+                                    } @else {
+                                        <span class="text-muted" i18n="@@i18n.marketing.related_metric_none">none — use own activity total</span>
+                                    }
+                                </button>
+                                <div ngbDropdownMenu class="w-100">
+                                    <div class="px-2 pt-2 pb-1">
+                                        <input type="text" class="form-control form-control-sm" [ngModel]="relatedMetricSearch()" (ngModelChange)="relatedMetricSearch.set($event)" name="relatedMetricSearch" placeholder="search..." i18n-placeholder="@@i18n.common.search" (click)="$event.stopPropagation()" />
+                                    </div>
+                                    <button type="button" ngbDropdownItem (click)="metricForm.related_metric_id = undefined">
+                                        <span class="text-muted" i18n="@@i18n.marketing.related_metric_none">none — use own activity total</span>
+                                    </button>
+                                    @for (m of relatedMetricOptions(); track m.id) {
+                                        <button type="button" ngbDropdownItem [class.active]="metricForm.related_metric_id === m.id" (click)="metricForm.related_metric_id = m.id">
+                                            <i class="me-1" [style.color]="m.getIconColor()">{{ m.getIcon() }}</i>{{ m.name }}
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+
                     <div class="mb-3">
                         <label for="metricTarget" class="form-label" i18n="@@i18n.marketing.default_target_value_optional">default target value (optional)</label>
                         <input type="number" class="form-control" id="metricTarget" [(ngModel)]="metricForm.target_value" name="targetValue" placeholder="e.g., 100" i18n-placeholder="@@i18n.marketing.target_value_placeholder" />
@@ -148,22 +191,19 @@
                     <!-- Icon & Color -->
                     <div class="row mb-3">
                         <div class="col">
-                            <label class="form-label" i18n="@@i18n.common.icon">icon</label>
+                            <div class="form-label" i18n="@@i18n.common.icon">icon</div>
                             <div class="d-flex gap-2 align-items-start">
                                 <div class="d-flex align-items-center justify-content-center rounded flex-shrink-0" style="width: 36px; height: 36px; border: 1px solid var(--bs-border-color)">
                                     <i [style.color]="metricForm.kpi_color || '#6b7280'">{{ metricForm.kpi_icon || 'analytics' }}</i>
                                 </div>
                                 <div class="flex-fill">
-                                    <input type="text" class="form-control form-control-sm mb-1" [(ngModel)]="iconSearch" name="iconSearch" placeholder="search icons..." i18n-placeholder="@@i18n.marketing.search_icons_placeholder" />
+                                    <input type="text" class="form-control form-control-sm mb-1" [ngModel]="iconSearch()" (ngModelChange)="iconSearch.set($event)" name="iconSearch" placeholder="search icons..." i18n-placeholder="@@i18n.marketing.search_icons_placeholder" />
                                     <div class="icon-grid" style="height: 110px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, 34px); gap: 3px; border: 1px solid var(--bs-border-color); border-radius: 4px; padding: 4px">
-                                        @for (icon of filteredIcons; track icon) {
-                                            <button type="button" class="btn p-0 d-flex align-items-center justify-content-center"
-                                                [class.btn-primary]="metricForm.kpi_icon === icon"
+                                        @for (icon of filteredIcons(); track icon) {
+                                            <i class="d-flex align-items-center justify-content-center cursor-pointer rounded"
+                                                [class.text-primary]="metricForm.kpi_icon === icon"
                                                 style="width: 34px; height: 34px; font-size: .85rem"
-                                                (click)="metricForm.kpi_icon = icon"
-                                                [ngbTooltip]="icon">
-                                                <i>{{ icon }}</i>
-                                            </button>
+                                                tabindex="0" (click)="metricForm.kpi_icon = icon" (keyup.enter)="metricForm.kpi_icon = icon">{{ icon }}</i>
                                         }
                                     </div>
                                     <input type="text" class="form-control form-control-sm mt-1" [(ngModel)]="metricForm.kpi_icon" name="kpi_icon" placeholder="or type icon name directly" i18n-placeholder="@@i18n.marketing.icon_name_placeholder" />
@@ -171,8 +211,9 @@
                             </div>
                         </div>
                         <div class="col-auto">
-                            <label class="form-label" i18n="@@i18n.common.color">color</label>
+                            <label class="form-label" for="color-picker" i18n="@@i18n.common.color">color</label>
                             <input type="text"
+                                id="color-picker"
                                 class="form-control color-input"
                                 [style.background]="metricForm.kpi_color"
                                 [(colorPicker)]="metricForm.kpi_color"
@@ -189,7 +230,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" (click)="resetForm()" i18n="@@i18n.common.cancel">cancel</button>
                 <button type="button" class="btn btn-primary" (click)="saveMetric()" [disabled]="!metricForm.name || !metricForm.metric_type">
-                    @if (editingMetric) {
+                    @if (editingMetric()) {
                         <span i18n="@@i18n.marketing.update_metric">update metric</span>
                     } @else {
                         <span i18n="@@i18n.marketing.create_metric">create metric</span>

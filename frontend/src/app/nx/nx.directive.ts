@@ -1,5 +1,5 @@
 import { NxService } from './nx.service';
-import { Directive, ElementRef, inject, input, output, signal } from '@angular/core';
+import { DestroyRef, Directive, ElementRef, NgZone, inject, input, output, signal } from '@angular/core';
 import { NxAction } from './nx.actions';
 import { INxContextMenu } from './nx.contextmenu.interface';
 
@@ -11,12 +11,9 @@ export interface ActionEmitterType {
 
 @Directive({
     selector: '[nx]',
-    standalone: true,
     host: {
         class: 'nx',
         '[class.active]': 'selected()',
-        '(click)': 'onClick($event)',
-        '(contextmenu)': 'onContext($event)',
     },
 })
 export class Nx {
@@ -27,17 +24,36 @@ export class Nx {
     readonly nx = input.required<INxContextMenu>();
     readonly tables = input<INxContextMenu | INxContextMenu[]>();
     readonly context = input<string>();
-    readonly nxContext = input<any>();
+    // Per-template context payload passed through to NxAction.action(); shape is consumer-defined.
+    readonly nxContext = input<unknown>();
     readonly singleActionResolved = output<ActionEmitterType>();
     readonly actionsResolved = output<ActionEmitterType>();
 
     constructor() {
         // Expose directive instance on the DOM element for NxService.getSiblings() traversal
         this.el.nativeElement.nx = this;
+
+        // Outside-zone listeners prevent zone.js from triggering a full CD cycle on every row interaction.
+        const ngZone = inject(NgZone);
+        const destroyRef = inject(DestroyRef);
+        const handler = (event: MouseEvent) => this.#handleClick(event);
+        const contextHandler = (event: MouseEvent) => {
+            this.#srv.onRightClick(this, event);
+            event.stopPropagation();
+            event.preventDefault();
+        };
+        ngZone.runOutsideAngular(() => {
+            this.el.nativeElement.addEventListener('click', handler);
+            this.el.nativeElement.addEventListener('contextmenu', contextHandler);
+        });
+        destroyRef.onDestroy(() => {
+            this.el.nativeElement.removeEventListener('click', handler);
+            this.el.nativeElement.removeEventListener('contextmenu', contextHandler);
+        });
     }
 
-    onClick(event: MouseEvent) {
-        this.el.nativeElement.blur();
+    #handleClick(event: MouseEvent) {
+        if (document.activeElement === this.el.nativeElement) this.el.nativeElement.blur();
         if (event.ctrlKey && event.shiftKey) {
             event.preventDefault();
             event.stopImmediatePropagation();
@@ -53,12 +69,6 @@ export class Nx {
         } else {
             this.#srv.onClick(this);
         }
-    }
-
-    onContext(event: MouseEvent) {
-        this.#srv.onRightClick(this, event);
-        event.stopPropagation();
-        event.preventDefault();
     }
 
     setSelected = (_: boolean): Nx => { this.selected.set(_); return this; };

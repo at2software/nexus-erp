@@ -22,7 +22,7 @@ export class MarketingInitiative extends Serializable {
     end_date?: Date;
     parent_id?: number;
     pivot?: TPivot<'marketing_initiative', 'marketing_workflow'> & { is_active?: boolean };
-    channels?: any[];
+    channels?: { id: number; name?: string; pivot?: { is_primary?: boolean; [k: string]: unknown }; [k: string]: unknown }[];
     prospects_count?: number;
     overdue_prospects_count?: number;
     company_prospects_count?: number;

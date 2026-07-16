@@ -39,6 +39,18 @@
                 }
             </li>
         }
+        @if (_project.ml_predicted_hours !== null && _project.ml_predicted_hours !== undefined) {
+            <li class="list-group-item hstack gap-2">
+                <n class="local-ai-icon" [mlReliability]="'project_overrun'">local_ai</n>
+                <div class="flex-fill" i18n="@@i18n.common.duration">duration</div>
+                <div>{{ _project.ml_predicted_hours | number: '1.1-1' }}h</div>
+            </li>
+            <li class="list-group-item hstack gap-2">
+                <n class="local-ai-icon" [mlReliability]="'project_overrun'">local_ai</n>
+                <div class="flex-fill" i18n="@@i18n.common.remaining">remaining</div>
+                <div>{{ (_project.ml_predicted_hours - _project.hours_invested) | number: '1.1-1' }}h</div>
+            </li>
+        }
         @if (_project.worksharesTotal() > 0) {
             <li class="list-group-item hstack gap-2">
                 <div class="bg-transparent w-100 d-flex flex-column">

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { Expense } from '@models/expense/expense.model';
@@ -22,10 +22,10 @@ export class ModalAssignExpenseComponent extends ModalBaseComponent<Expense> {
 
     onSuccess() { return this.#selected!; }
 
-    get filtered(): Expense[] {
+    readonly filtered = computed<Expense[]>(() => {
         const q = this.filter().toLowerCase();
         return q ? this.expenses().filter((e) => e.name.toLowerCase().includes(q)) : this.expenses();
-    }
+    });
 
     pick(exp: Expense) {
         this.#selected = exp;

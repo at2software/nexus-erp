@@ -5,7 +5,7 @@ import { ContinuousMarkerComponent } from '@shards/continuous/continuous.marker.
 import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { Observable } from 'rxjs';
-import { StartEnd } from '@constants/constants';
+import { Dictionary, StartEnd } from '@constants/constants';
 import { DATESPAN_RANGE } from '@constants/dateSpanRange';
 import { Invoice } from '@models/invoice/invoice.model';
 import { InvoiceService } from '@models/invoice/invoice.service';
@@ -15,8 +15,6 @@ import { GlobalService } from '@models/global.service';
 @Component({
     selector: 'invoices-dashboard',
     templateUrl: './invoices-dashboard.html',
-    styleUrls: ['./invoices-dashboard.scss'],
-    standalone: true,
     imports: [FormsModule, InvoicesTable, ContinuousMarkerComponent, NgxDaterangepickerMd, EmptyStateComponent, WidgetInvoiceManagerComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -32,7 +30,7 @@ export class InvoicesDashboard {
     selPaid = signal<StartEnd>(null!);
     observer = signal<Observable<Invoice[]> | undefined>(undefined);
 
-    readonly ranges: any = DATESPAN_RANGE;
+    readonly ranges = DATESPAN_RANGE;
     #currentFilter = '';
 
     constructor() {
@@ -40,7 +38,7 @@ export class InvoicesDashboard {
     }
 
     reload() {
-        const filters: any = Object.assign({}, this.#filters());
+        const filters: Dictionary = Object.assign({}, this.#filters());
         const filterStr = JSON.stringify(filters);
         if (filterStr === this.#currentFilter) return;
         this.#currentFilter = filterStr;

@@ -27,11 +27,34 @@ class Authenticate extends Middleware {
                 $user = User::where('api_token', $token)->first();
                 if ($user) {
                     Auth::setUser($user);
+                    $this->applyImpersonation();
                     return $next($request);
                 }
             }
         }
-        return parent::handle($request, $next, ...$guards);
+        // Don't use parent::handle() here: it calls $next() internally, which would
+        // run the controller before we get a chance to swap in the impersonated user.
+        $this->authenticate($request, $guards);
+        $this->applyImpersonation();
+        return $next($request);
+    }
+
+    /**
+     * Dev-only: swap the authenticated user for IMPERSONATE_USER_ID, if set.
+     * Never active outside local/testing to avoid an accidental auth bypass in production.
+     */
+    protected function applyImpersonation(): void {
+        if (! app()->environment(['local', 'testing'])) {
+            return;
+        }
+        $impersonateId = env('IMPERSONATE_USER_ID');
+        if (! $impersonateId || ! Auth::check()) {
+            return;
+        }
+        $impersonated = User::find($impersonateId);
+        if ($impersonated) {
+            Auth::setUser($impersonated);
+        }
     }
 
     /**

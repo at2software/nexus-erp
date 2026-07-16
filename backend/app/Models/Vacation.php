@@ -18,10 +18,10 @@ class Vacation extends BaseModel {
             'amount'      => 'double',
             'hpd'         => 'integer',
             'days'        => 'double',
+            'state'       => VacationState::class,
         ];
     }
 
-    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
     protected $fillable = ['amount', 'started_at', 'log', 'ended_at', 'vacation_grant_id', 'comment', 'state', 'approved_at', 'approved_by_id'];
 
     // Relationships

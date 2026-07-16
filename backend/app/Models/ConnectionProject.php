@@ -20,7 +20,6 @@ class ConnectionProject extends BaseModel {
     use HasFactory;
 
     protected $fillable = ['project_id', 'connection_id'];
-    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
     public function connection() {
         return $this->belongsTo(Connection::class);

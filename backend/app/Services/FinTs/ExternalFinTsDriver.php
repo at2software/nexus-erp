@@ -7,6 +7,7 @@ use App\Helpers\NLog;
 use Fhp\Action\GetBalance;
 use Fhp\Action\GetSEPAAccounts;
 use Fhp\Action\GetStatementOfAccount;
+use Fhp\FinTs;
 use Fhp\Model\SEPAAccount;
 use Fhp\Model\StatementOfAccount\Transaction as NemiahTransaction;
 use Fhp\Options\Credentials;
@@ -37,9 +38,8 @@ class ExternalFinTsDriver implements FinTsDriverInterface {
             return null;
         }
 
-        return (float) $balances[0]->getGebuchterSaldo()->getAmount();
+        return (float)$balances[0]->getGebuchterSaldo()->getAmount();
     }
-
     public function fetchTransactionsSince(\DateTime $since): array {
         $fints       = $this->loginFull();
         $getAccounts = GetSEPAAccounts::create();
@@ -54,7 +54,7 @@ class ExternalFinTsDriver implements FinTsDriverInterface {
             return [];
         }
 
-        $getStatement = GetStatementOfAccount::create($account, $since, new \DateTime());
+        $getStatement = GetStatementOfAccount::create($account, $since, new \DateTime);
         $fints->execute($getStatement);
 
         // nemiah uses 'credit'/'debit'; we normalise to our 'C'/'D' constants
@@ -64,7 +64,7 @@ class ExternalFinTsDriver implements FinTsDriverInterface {
                 $t->getCreditDebit() === NemiahTransaction::CD_CREDIT
                     ? FinTsTransaction::CD_CREDIT
                     : FinTsTransaction::CD_DEBIT,
-                (float) $t->getAmount(),
+                (float)$t->getAmount(),
                 $t->getName(),
                 $t->getMainDescription(),
                 $t->getBookingDate(),
@@ -72,8 +72,7 @@ class ExternalFinTsDriver implements FinTsDriverInterface {
             ))
             ->all();
     }
-
-    private function loginFull(): \Fhp\FinTs {
+    private function loginFull(): FinTs {
         $fints    = CaAwareFinTs::new($this->buildOptions(), $this->buildCredentials());
         $bpd      = $fints->getBpd();
         $tanModes = array_filter($bpd->allTanModes, fn ($m) => $m->isProzessvariante2());
@@ -89,7 +88,6 @@ class ExternalFinTsDriver implements FinTsDriverInterface {
         }
         return $fints;
     }
-
     private function buildOptions(): FinTsOptions {
         $caFile = ini_get('curl.cainfo');
         if (! $caFile || ! file_exists($caFile)) {
@@ -100,18 +98,16 @@ class ExternalFinTsDriver implements FinTsDriverInterface {
             }
         }
 
-        $options                 = new FinTsOptions();
+        $options                 = new FinTsOptions;
         $options->url            = $this->cred('URL');
         $options->bankCode       = $this->cred('BLZ');
         $options->productName    = 'NEXUS';
         $options->productVersion = '1.0';
         return $options;
     }
-
     private function buildCredentials(): Credentials {
-        return Credentials::create((string) $this->cred('USERNAME'), (string) $this->cred('PIN'));
+        return Credentials::create((string)$this->cred('USERNAME'), (string)$this->cred('PIN'));
     }
-
     private function cred(string $key): ?string {
         return $this->credentials["FINTS_{$key}"] ?? null;
     }

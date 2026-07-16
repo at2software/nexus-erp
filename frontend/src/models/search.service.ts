@@ -1,12 +1,13 @@
 import { Injectable } from '@angular/core';
 import { NexusHttpService } from './http/http.nexus';
+import { Dictionary } from '@constants/constants';
 
 @Injectable({ providedIn: 'root' })
 export class SearchService extends NexusHttpService<any> {
     apiPath = 'search';
 
-    search = (query: string, filters: any = {}) => this.post('search', Object.assign(filters, { query: query }));
+    search = (query: string, filters: object = {}) => this.post<Dictionary>('search', Object.assign(filters, { query: query }));
 
     getCommands = () => this.get('commands');
-    executeCommand = (command: string, args: any = {}) => this.post('commands/execute', { command, arguments: args });
+    executeCommand = (command: string, args: object = {}) => this.post('commands/execute', { command, arguments: args });
 }

@@ -10,8 +10,6 @@ import { ToolbarLocaleSelectorComponent, LocaleKey } from '@shards/toolbar-local
 @Component({
     selector: 'app-settings-invoices',
     templateUrl: './settings-invoices.component.html',
-    styleUrls: ['./settings-invoices.component.scss'],
-    standalone: true,
     imports: [TabPlaceholderInfoComponent, ScrollbarComponent, InputSettingsGroupComponent, TextParamEditorComponent, ToolbarComponent, ToolbarLocaleSelectorComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

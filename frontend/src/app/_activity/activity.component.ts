@@ -8,7 +8,6 @@ import { NComponent } from '@shards/n/n.component';
     selector: 'app-activity',
     templateUrl: './activity.component.html',
     styleUrls: ['./activity.component.scss'],
-    standalone: true,
     imports: [NComponent],
 })
 export class ActivityComponent {

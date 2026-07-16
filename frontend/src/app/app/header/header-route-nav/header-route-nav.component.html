@@ -1,4 +1,4 @@
-@for (route of routes; track route.path) {
+@for (route of routes(); track route.path) {
     @if (!route.hasChildren) {
         <header-link-item [routerLink]="route.path" [title]="route.title" [exact]="route.exact"></header-link-item>
     } @else {

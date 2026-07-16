@@ -1,24 +1,23 @@
 import { Injectable } from '@angular/core';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
-import { Dictionary } from '@constants/constants';
 import { NexusHttpService } from '@models/http/http.nexus';
 import { Company } from '@models/company/company.model';
 import { Project } from '@models/project/project.model';
 import { Serializable } from '@models/serializable';
+import { Dictionary } from '@constants/constants';
 
 @Injectable({ providedIn: 'root' })
 export class InvoiceItemService extends NexusHttpService<InvoiceItem> {
-    public apiPath = 'invoice-items';
-    public TYPE = () => InvoiceItem;
+    public apiPath = 'invoice_items';
+    override readonly model = InvoiceItem;
 
-    getInvoiceItems = (parent: Serializable, data?: Dictionary | undefined) => this.aget(parent.apiPathWithId() + '/invoice-items', data);
-    getSupportItems = (parent: Serializable, data?: Dictionary | undefined) => this.aget(parent.apiPathWithId() + '/invoice-items', { support_only: true, ...data });
+    getInvoiceItems = (parent: Serializable, data?: Dictionary) => this.aget(parent.apiPathWithId() + '/invoice-items', data);
+    getSupportItems = (parent: Serializable, data?: Dictionary) => this.aget(parent.apiPathWithId() + '/invoice-items', { support_only: true, ...data });
 
+    indexEstimationItems = (project: Project) => this.aget(`projects/${project.id}/invoice-items/estimation`, null, InvoiceItem);
     indexStandingOrders = (company?: Company) => this.aget('invoice_items/standing-orders', company ? { company_id: company.id } : {});
 
-    destroy = (item: InvoiceItem) => this.delete(`invoice_items/${item.id}`);
-    store = (item: InvoiceItem) => this.post('invoice_items', item);
-    update = (item: InvoiceItem) => this.put(`invoice_items/${item.id}`, item);
+    store = (data: Dictionary | InvoiceItem) => this.post(this.apiPath, data);
     prepareInvoice = (project: Project) => this.post(`projects/${project.id}/prepare_invoice`);
 
     reorder = (_: string[]) => this.put('invoice_items/reorder', { order: _ });

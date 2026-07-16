@@ -1,4 +1,4 @@
-﻿import { ChangeDetectionStrategy, AfterViewInit, Component, input, viewChild, ElementRef } from '@angular/core';
+﻿import { ChangeDetectionStrategy, AfterViewInit, Component, EventEmitter, input, viewChild, ElementRef } from '@angular/core';
 import { TableHeaderComponent } from '../table-header/table-header.component';
 import { SearchData } from '../search-data';
 import { TableHeaderSortButtonComponent } from '../table-header-sort-button/table-header-sort-button.component';
@@ -8,13 +8,12 @@ import { TableHeaderSortButtonComponent } from '../table-header-sort-button/tabl
     selector: 'table-header-search',
     templateUrl: './table-header-search.component.html',
     styleUrls: ['../table-header/table-header.component.scss', './table-header-search.component.scss'],
-    standalone: true,
     imports: [TableHeaderSortButtonComponent],
 })
 export class TableHeaderSearchComponent extends TableHeaderComponent implements AfterViewInit {
     searchInput = viewChild<ElementRef>('searchInput');
     searchData = input<SearchData>();
-    clearSearchEvent = input<any>();
+    clearSearchEvent = input<EventEmitter<void>>();
 
     ngAfterViewInit(): void {
         this.subscribe(this.clearSearchEvent(), () => {

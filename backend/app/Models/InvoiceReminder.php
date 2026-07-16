@@ -12,7 +12,6 @@ class InvoiceReminder extends BaseModel {
     const REMINDER_PAYMENT_DURATION = 14;
 
     protected $appends  = ['class', 'icon', 'path'];
-    protected $access   = ['admin' => '*', 'project_manager' => '', 'user' => ''];
     protected $fillable = ['stage', 'fee', 'file_dir', 'invoice_id'];
 
     public function invoice() {

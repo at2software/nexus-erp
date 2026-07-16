@@ -6,18 +6,15 @@ use App\Jobs\ChatRemoveUsersJob;
 use App\Models\Assignment;
 use App\Models\Project;
 use App\Models\User;
-use App\Traits\ControllerHasPermissionsTrait;
 use Illuminate\Http\Request;
 
 class AssignmentController extends Controller {
-    use ControllerHasPermissionsTrait;
-
-    public function destroy(Request $request, int $id) {
-        $assignment = Assignment::with('assignee')->find($id);
+    public function destroy(Assignment $assignment) {
+        $assignment->load('assignee');
         if ($assignment->links(Project::class, User::class)) {
             ChatRemoveUsersJob::dispatch($assignment->parent, [$assignment->assignee->id]);
         }
-        return Assignment::destroy([$id]);
+        return $assignment->delete();
     }
     public function update(Request $request, int $id) {
         $assignment = Assignment::with('assignee', 'parent')->find($id);

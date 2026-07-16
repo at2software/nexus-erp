@@ -2,9 +2,9 @@
 
 namespace App\Casts;
 
-use App\Http\Middleware\Auth;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class Permission implements CastsAttributes {
     public function __construct(protected ?string $role = null) {}

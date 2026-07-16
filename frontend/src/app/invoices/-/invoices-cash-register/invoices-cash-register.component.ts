@@ -9,8 +9,6 @@ import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'invoices-cash-register',
     templateUrl: './invoices-cash-register.component.html',
-    styleUrls: ['./invoices-cash-register.component.scss'],
-    standalone: true,
     imports: [Nx, RouterModule, EmptyStateComponent],
 })
 export class InvoicesCashRegisterComponent {

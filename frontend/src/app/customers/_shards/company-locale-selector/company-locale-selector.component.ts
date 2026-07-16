@@ -8,7 +8,6 @@ import { VcardRow } from '@models/vcard/VcardRow';
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'company-locale-selector',
-    standalone: true,
     imports: [FormsModule, NgbDropdownModule, NgbTooltipModule],
     template: `
         @if (company().card()) {

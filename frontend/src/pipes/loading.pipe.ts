@@ -5,7 +5,6 @@ import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
     name: 'loading',
-    standalone: true,
 })
 export class LoadingPipe implements PipeTransform {
     transform(value: any, length?: number, suffix?: string, ascii: string = '■'): any {

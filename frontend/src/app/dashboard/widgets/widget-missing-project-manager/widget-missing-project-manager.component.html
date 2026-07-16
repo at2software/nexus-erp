@@ -1,4 +1,5 @@
-<div class="card card-chart mb-3" [class.d-none-container]="data().length === 0">
+@let _data = data();
+<div class="card card-chart mb-3" [class.d-none-container]="_data.length === 0">
     <div class="card-header gap-2">
         <n>project</n>
         <span class="flex-fill text-truncate" i18n="@@i18n.project.missingProjectManager">missing project manager</span>
@@ -7,10 +8,10 @@
 
     <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
 
-    @if (data().length > 0) {
-        <ul class="list-group list-group-flush">
-            @for (_ of data(); track _.id; let i = $index) {
-                <li class="list-group-item d-flex text-nowrap" [nx]="_" context="widget-missing-project-manager" [tables]="data()" [compact]="indexExceedsSettings(i)">
+    @if (_data.length > 0) {
+        <ul revealList class="list-group list-group-flush">
+            @for (_ of _data; track _.id; let i = $index) {
+                <li class="list-group-item d-flex text-nowrap" [nx]="_" context="widget-missing-project-manager" [tables]="_data" [compact]="indexExceedsSettings(i)">
                     <div>
                         <avatar [object]="_"></avatar>
                     </div>

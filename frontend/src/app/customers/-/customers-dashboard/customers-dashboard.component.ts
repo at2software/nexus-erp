@@ -1,14 +1,15 @@
 import { Router } from '@angular/router';
-import { ChangeDetectionStrategy, Component, inject, OnInit, AfterViewInit, signal } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { CompanyService } from '@models/company/company.service';
 import { ProductService } from '@models/product/product.service';
 import { Observable } from 'rxjs';
 import { span, StartEnd } from '@constants/constants';
 import { DATESPAN_RANGE } from '@constants/dateSpanRange';
-import moment from 'moment';
+import { dayjs, Dayjs } from '@constants/dates';
 import { Company } from '@models/company/company.model';
 import { Project } from '@models/project/project.model';
 import { Product } from '@models/product/product.model';
+import { Serializable } from '@models/serializable';
 import { SortData } from '@app/app/table-controls/sort-data';
 import { SortMode } from '@app/app/table-controls/sort-mode';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
@@ -30,16 +31,16 @@ import { SearchInputComponent } from '@shards/search-input/search-input.componen
 import { EnableTableExportDirective } from '@app/app/table-controls/enable-table-export.directive';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { GuidedTourComponent } from '@shards/guided-tour/guided-tour.component';
+import { Dictionary } from '@constants/constants';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'customers-dashboard',
     templateUrl: './customers-dashboard.component.html',
     styleUrls: ['./customers-dashboard.component.scss'],
-    standalone: true,
     imports: [ToolbarComponent, EnableTableExportDirective, CdkTableModule, Nx, AvatarComponent, ProjectComponent, MoneyPipe, ContinuousMarkerComponent, FormsModule, DatePipe, ProjectComponent, NgxDaterangepickerMd, SearchInputComponent, EmptyStateComponent, GuidedTourComponent],
 })
-export class CustomersDashboardComponent extends TableSearchSortBase<Company> implements OnInit, AfterViewInit {
+export class CustomersDashboardComponent extends TableSearchSortBase<Company> implements AfterViewInit {
     protected getItems(): Company[] {
         return this.companies;
     }
@@ -67,13 +68,13 @@ export class CustomersDashboardComponent extends TableSearchSortBase<Company> im
     productFilterActive = signal(false);
 
     // Filter values
-    dateRange?: { startDate: any; endDate: any };
-    updatedAtRange?: { startDate: any; endDate: any };
+    dateRange?: { startDate: Dayjs; endDate: Dayjs };
+    updatedAtRange?: { startDate: Dayjs; endDate: Dayjs };
     revenue_min?: number;
     selectedProduct?: Product;
 
-    ranges: any = DATESPAN_RANGE;
-    updatedAtRanges: any = {};
+    ranges: Dictionary<[Dayjs, Dayjs]> = DATESPAN_RANGE;
+    updatedAtRanges: Dictionary<[Dayjs, Dayjs]> = {};
     loadsum: number = 0;
     currentFilter: string = '';
     global = inject(GlobalService);
@@ -90,7 +91,8 @@ export class CustomersDashboardComponent extends TableSearchSortBase<Company> im
     #router: Router = inject(Router);
     #inputModalService: InputModalService = inject(InputModalService);
 
-    ngOnInit() {
+    constructor() {
+        super();
         // Compute static roles once to avoid repeated hasRole() calls in template
         this.hasInvoicesModule = this.global.user?.hasRole('invoicing') ?? false;
         if (this.hasInvoicesModule) {
@@ -102,19 +104,18 @@ export class CustomersDashboardComponent extends TableSearchSortBase<Company> im
             this.products = products;
         });
 
-        // Create preset ranges for updated_at filter
         this.updatedAtRanges = {
             ...DATESPAN_RANGE, // Include standard ranges
-            'Before 1 Year': [moment('1900-01-01'), moment().subtract(1, 'years')],
-            'Before 2 Years': [moment('1900-01-01'), moment().subtract(2, 'years')],
-            'Before 3 Years': [moment('1900-01-01'), moment().subtract(3, 'years')],
-            'Before 5 Years': [moment('1900-01-01'), moment().subtract(5, 'years')],
-            'Before 10 Years': [moment('1900-01-01'), moment().subtract(10, 'years')],
+            'Before 1 Year': [dayjs('1900-01-01'), dayjs().subtract(1, 'years')],
+            'Before 2 Years': [dayjs('1900-01-01'), dayjs().subtract(2, 'years')],
+            'Before 3 Years': [dayjs('1900-01-01'), dayjs().subtract(3, 'years')],
+            'Before 5 Years': [dayjs('1900-01-01'), dayjs().subtract(5, 'years')],
+            'Before 10 Years': [dayjs('1900-01-01'), dayjs().subtract(10, 'years')],
         };
     }
 
-    filtersUpdated = (_e?: any) => {
-        const filters: any = Object.assign({}, this.filters());
+    filtersUpdated = (_e?: unknown) => {
+        const filters = Object.assign({}, this.filters());
         const nextFilter = JSON.stringify(filters);
         if (nextFilter === this.currentFilter) return;
         this.currentFilter = nextFilter;
@@ -124,7 +125,7 @@ export class CustomersDashboardComponent extends TableSearchSortBase<Company> im
     };
 
     filters = () => {
-        const filters: any = {
+        const filters: Dictionary = {
             onlyWithActiveProjects: this.onlyWithActiveProjects(),
             revenueOn: this.revenueOn,
             revenueSpan: span(this.revenueSpan),
@@ -165,7 +166,9 @@ export class CustomersDashboardComponent extends TableSearchSortBase<Company> im
         this.filtersUpdated(null);
     }
 
-    onProductSelect = (product: Product) => {
+    onProductSelect = (selected: Serializable) => {
+        const product = selected.assert(Product);
+        if (!product) return;
         this.selectedProduct = product;
         this.filtersUpdated(null);
     };
@@ -221,11 +224,7 @@ export class CustomersDashboardComponent extends TableSearchSortBase<Company> im
         return 'bubble-active';
     };
 
-    httpOptions: any = {
-        headers: new HttpHeaders({
-            'Access-Control-Allow-Origin': '*',
-        }),
-    };
+    httpOptions: { headers: HttpHeaders } = { headers: new HttpHeaders({ 'Access-Control-Allow-Origin': '*' }) };
     create = () => {
         this.#inputModalService.open($localize`:@@i18n.customers.company_name_or_url:Company name or URL`).confirmed(({ text }) => {
             this.#companyService.create(text).subscribe((x) => {

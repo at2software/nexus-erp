@@ -25,7 +25,6 @@ trait GitWebhookTrait {
             ['job' => 'vuln_scan',      'artifact' => 'grype-report.json',    'type' => 'grype'],
         ];
     }
-
     private function dispatchSecurityReport(string $jobName, int $jobId, array $props): void {
         $jobMap    = collect($this->pipelineJobs())->keyBy('job');
         $jobConfig = $jobMap->get($jobName);
@@ -59,7 +58,6 @@ trait GitWebhookTrait {
             ChatSendMessageJob::dispatch($securityMessage, $securityProps, channelId: $chatInfo['channelId'], cacheId: $cacheId);
         }
     }
-
     private function notifyProjectManager(string $message): void {
         foreach ($this->links as $link) {
             $project = $link->parent;
@@ -69,7 +67,6 @@ trait GitWebhookTrait {
             }
         }
     }
-
     private function formatSast(array $data): ?string {
         $vulns = $data['vulnerabilities'] ?? [];
         if (empty($vulns)) {
@@ -85,7 +82,6 @@ trait GitWebhookTrait {
         }
         return implode("\n", $lines);
     }
-
     private function formatNpmAudit(array $data): ?string {
         $lines = [];
         foreach ($data['vulnerabilities'] ?? [] as $vuln) {
@@ -101,7 +97,6 @@ trait GitWebhookTrait {
         }
         return empty($lines) ? null : implode("\n", $lines);
     }
-
     private function formatCargoAudit(array $data): ?string {
         $lines = [];
         foreach ($data['vulnerabilities']['list'] ?? [] as $vuln) {
@@ -112,7 +107,6 @@ trait GitWebhookTrait {
         }
         return empty($lines) ? null : implode("\n", $lines);
     }
-
     private function formatComposerAudit(array $data): ?string {
         $lines = [];
         foreach ($data['advisories'] ?? [] as $package => $pkgAdvisories) {
@@ -125,7 +119,6 @@ trait GitWebhookTrait {
         }
         return empty($lines) ? null : implode("\n", $lines);
     }
-
     private function formatGrype(array $data): ?string {
         $lines = [];
         foreach ($data['matches'] ?? [] as $match) {
@@ -137,7 +130,6 @@ trait GitWebhookTrait {
         }
         return empty($lines) ? null : implode("\n", $lines);
     }
-
     private function emojiForSeverity(string $severity): string {
         return match (strtolower($severity)) {
             'critical'           => '🔴',
@@ -146,7 +138,6 @@ trait GitWebhookTrait {
             default              => '🟢',
         };
     }
-
     private function emojiForStatus(string $status): string {
         return match ($status) {
             'manual', 'skipped' => '⚫',
@@ -159,7 +150,6 @@ trait GitWebhookTrait {
             default             => "❓ (unknown $status)",
         };
     }
-
     private function securityProps(string $repoName, string $label, string $icon): array {
         $displayName = "$repoName [$label]";
         return [
@@ -170,7 +160,6 @@ trait GitWebhookTrait {
             'nexus_type'           => 'git_security',
         ];
     }
-
     private function props(string $name): array {
         return [
             'from_webhook'         => 'true',

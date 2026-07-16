@@ -6,30 +6,30 @@
 <div class="modal-body">
     @if (company) {
         <div class="mb-3 text-muted small">
-            for <span class="text-white">{{ company.name }}</span>
+            for <span class="text-white">{{ company.getName() }}</span>
         </div>
     }
 
     <div class="mb-3">
         <label for="aii-name" class="form-label text-muted small" i18n="@@i18n.common.name">name</label>
-        <input id="aii-name" class="form-control" [(ngModel)]="name" i18n-placeholder="@@i18n.invoices.auditNamePlaceholder" placeholder="e.g. Security audit — monthly" />
+        <input id="aii-name" class="form-control" [ngModel]="name()" (ngModelChange)="name.set($event)" i18n-placeholder="@@i18n.invoices.auditNamePlaceholder" placeholder="e.g. Security audit — monthly" />
     </div>
 
     <div class="row mb-3">
         <div class="col">
             <label for="aii-price" class="form-label text-muted small" i18n="@@i18n.common.price">price</label>
-            <input id="aii-price" class="form-control" type="number" [(ngModel)]="price" min="0" step="0.01" />
+            <input id="aii-price" class="form-control" type="number" [ngModel]="price()" (ngModelChange)="price.set($event)" min="0" step="0.01" />
         </div>
         <div class="col">
             <label for="aii-unit" class="form-label text-muted small" i18n="@@i18n.common.unit">unit</label>
-            <input id="aii-unit" class="form-control" [(ngModel)]="unit_name" i18n-placeholder="@@i18n.invoices.unitMonth" placeholder="month" />
+            <input id="aii-unit" class="form-control" [ngModel]="unit_name()" (ngModelChange)="unit_name.set($event)" i18n-placeholder="@@i18n.invoices.unitMonth" placeholder="month" />
         </div>
     </div>
 
     <div class="row mb-3">
         <div class="col">
             <label for="aii-interval" class="form-label text-muted small" i18n="@@i18n.common.interval">interval</label>
-            <select id="aii-interval" class="form-select" [(ngModel)]="type">
+            <select id="aii-interval" class="form-select" [ngModel]="type()" (ngModelChange)="type.set($event)">
                 @for (opt of typeOptions; track opt.value) {
                     <option [value]="opt.value">{{ opt.label }}</option>
                 }
@@ -37,14 +37,14 @@
         </div>
         <div class="col">
             <label for="aii-recurrence" class="form-label text-muted small" i18n="@@i18n.invoices.firstRecurrence">first recurrence</label>
-            <input id="aii-recurrence" class="form-control" type="date" [(ngModel)]="next_recurrence_at" />
+            <input id="aii-recurrence" class="form-control" type="date" [ngModel]="next_recurrence_at()" (ngModelChange)="next_recurrence_at.set($event)" />
         </div>
     </div>
 </div>
 
 <div class="modal-footer">
     <button class="btn btn-outline-primary" (click)="decline()" i18n="@@i18n.common.cancel">cancel</button>
-    <button class="btn btn-primary" (click)="save()" [disabled]="!canSave || saving()">
+    <button class="btn btn-primary" (click)="save()" [disabled]="!canSave() || saving()">
         @if (saving()) {
             <spinner [size]="20" [inline]="true" class="me-1"></spinner>
         }

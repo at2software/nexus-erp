@@ -13,7 +13,6 @@ class TanChallengeException extends \RuntimeException {
     public function getChallengeId(): string {
         return $this->challengeId;
     }
-
     public function getChallenge(): array {
         return $this->challenge;
     }

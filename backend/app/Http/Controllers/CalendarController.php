@@ -3,32 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\DAV\OwnCalDAVBackend;
+use App\Http\Requests\Calendar\StoreCalendarRequest;
 use App\Models\CalendarEntry;
-use App\Traits\ControllerHasPermissionsTrait;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CalendarController extends Controller {
-    use ControllerHasPermissionsTrait;
-
     public function index() {
         $pdo               = DB::connection()->getPdo();
         $ownCalDAVBackend  = new OwnCalDAVBackend($pdo);
         $calendarObjects   = $ownCalDAVBackend->getCalendarObjects([0, 0]);
-        $calendarDataArray = [];
         $index             = 1;
         $calendarDataArray = collect($calendarObjects)
-            ->filter(fn ($calendarObject) => isset($calendarObject['uri']) && strpos($calendarObject['uri'], 'calendarEntry_') !== 0)
-            ->map(function ($calendarObject) use ($ownCalDAVBackend, &$index) {
-                $fullCalendarObject = $ownCalDAVBackend->getCalendarObject([0, 0], $calendarObject['uri']);
-                if (isset($fullCalendarObject['calendardata'])) {
-                    return [
-                        'id'          => -1 * $index++,
-                        'vcalendar'   => $fullCalendarObject['calendardata'],
-                        'is_editable' => false,
-                    ];
-                }
-                return null;
+            ->filter(fn ($calendarObject) => isset($calendarObject['uri'], $calendarObject['calendardata']) && strpos($calendarObject['uri'], 'calendarEntry_') !== 0)
+            ->map(function ($calendarObject) use (&$index) {
+                return [
+                    'id'          => -1 * $index++,
+                    'vcalendar'   => $calendarObject['calendardata'],
+                    'is_editable' => false,
+                ];
             })
             ->filter()
             ->values()
@@ -44,13 +37,10 @@ class CalendarController extends Controller {
         })->toArray());
         return response()->json($calendarDataArray);
     }
-    public function store(CalendarEntry $focus) {
-        request()->validate([
-            'vcalendar' => 'required|string',
-        ]);
-        $vcalendar = request('vcalendar');
+    public function store(StoreCalendarRequest $request) {
+        $vcalendar = $request->validated('vcalendar');
         if (! preg_match('/^UID:/m', $vcalendar)) {
-            $newUID         = uniqid();
+            $newUID         = (string)Str::uuid();
             $vcalendarLines = explode("\n", $vcalendar);
             array_splice($vcalendarLines, 1, 0, "UID:$newUID");
             $vcalendar = implode("\n", $vcalendarLines);
@@ -59,11 +49,8 @@ class CalendarController extends Controller {
             'vcalendar' => $vcalendar,
         ]);
     }
-    public function update(Request $request, CalendarEntry $calendarEntry) {
-        $request->validate([
-            'vcalendar' => 'required|string',
-        ]);
-        $calendarEntry->vcalendar = request('vcalendar');
+    public function update(StoreCalendarRequest $request, CalendarEntry $calendarEntry) {
+        $calendarEntry->vcalendar = $request->validated('vcalendar');
         $calendarEntry->save();
         return $calendarEntry;
     }

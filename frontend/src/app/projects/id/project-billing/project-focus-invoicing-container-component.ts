@@ -5,7 +5,6 @@ import { ProjectBillingComponent } from '@app/projects/id/project-billing/projec
 
 @Component({
     template: '@if (parent.object()) {<project-billing [parent]="parent.object()"></project-billing>}',
-    standalone: true,
     imports: [ProjectBillingComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

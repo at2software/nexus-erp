@@ -105,10 +105,20 @@ input[type='number']::-webkit-outer-spin-button {
 .cursor-pointer, .pointer { cursor: pointer; }
 .cursor-default { cursor: default; }
 .cursor-move { cursor: move; }
+.cursor-help { cursor: help; }
+
+.local-ai-icon {  
+    background-image: linear-gradient( 0deg, #ff4d4d, #ffb84d, #f4ff4d, #4dff88, #4dd8ff, #7a5cff, #ff4dd2);
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    background-color: transparent !important;
+    color: transparent !important;
+}
 
 .text-header {
+    text-shadow: 0 0 10px #000, 0 0 5px #000, liquid-glass();
     font-family: 'BrunoAce', sans-serif;
-    font-size: 20px;
+    font-size: 24px;
 }
 
 .chart-title {
@@ -118,8 +128,8 @@ input[type='number']::-webkit-outer-spin-button {
     font-weight: bold;
     top: 6px;
     right: 10px;
-    color: #ccc;
-    margin: -5px 0;
+    color: #999;
+    margin: -6px 0;
 }
 
 .sticky-side {
@@ -246,18 +256,18 @@ ngb-tooltip-window {
     }
 }
 
-.btn-table-export-flap {
-    box-shadow: liquid-glass() !important;
-    position: absolute !important;
-    right: 0;
-    top: 12px;
-    transform: translateX(100%);
-    background-color: colors.$bg-darker !important;
-    padding: 6px 8px !important;
+.btn-table-export {
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
     color: colors.$primary !important;
-    border-radius: 0 0.5rem 0.5rem 0 !important;
-    font-size: 1rem;
-    transition: transform 0.2s ease, background-color 0.2s ease;
+    font-size: 1.1rem;
+    line-height: 1;
+    transition: color 0.2s ease;
+    &:hover {
+        color: color.adjust(colors.$primary, $lightness: 10%) !important;
+    }
 }
 
 .action-buttons {
@@ -330,7 +340,7 @@ ngb-tooltip-window {
     height: 1rem;
     font-size: 1rem;
     border: 1px black solid;
-    .avatar-leader { border: 1px var(--bs-complement) solid; }
+    .avatar-leader { border: 1px var(--bs-secondary) solid; }
 }
 
 .avatar-img {
@@ -434,11 +444,12 @@ $status-bevel: inset 2px 2px 2px #ffffff66, inset -2px -2px 2px #00000066;
     .annotation {
         position: absolute;
         width: 33%;
+        border-bottom: 1px black solid;
         &>* { width: 100%; }
     }
     .annotation-spacer {
         margin-top: 10px;
-        border-top: 1px var(--color-lighter) solid;
+        border-top: 1px var(--bs-border-color) solid;
     }
     &.annotate-left .annotation {
         left:0;
@@ -452,14 +463,12 @@ nx-dropdown.dropstart > .dropdown-menu {
     transform: translateX(-100%) translateZ(0) !important;
 }
 
+// Appearance only; positioning + z-index live in _dropdown.scss
 .dropdown-menu {
     border: 2px solid rgba(0, 0, 0, 0.3) !important;
     background-color: rgba(colors.$bg-darker, 0.95) !important;
     border-radius: $border-radius;
     box-shadow: liquid-glass() !important;
-
-    position: absolute;
-    z-index: 999;    
 }
 
 .dropdown-menu li:hover {
@@ -476,7 +485,7 @@ table {
                 background-color: var(--color-primary-4);
             }
         }
-        border-top: 1px var(--color-lighter) solid;
+        border-top: 1px var(--bs-border-color) solid;
     }
 
     tr.sticky-header {
@@ -510,8 +519,33 @@ table {
             }
         }
         th, td {
-            background-color: colors.$bg-darker;
-            border-top: 1px var(--color-lighter) solid !important;
+            background-color: colors.$bg-card;
+            border-top: 1px var(--bs-border-color) solid !important;
+        }
+        &:last-child {
+            th, td {
+                border-bottom: 0;
+            }
+            th:first-child, td:first-child {
+                border-bottom-left-radius: $border-radius;
+            }
+            th:last-child, td:last-child {
+                border-bottom-right-radius: $border-radius;
+            }
+        }
+    }
+
+    // Footer-less tables: the last body row is the table's bottom edge, so drop
+    // the overshooting border and round it like sticky-footer would.
+    &:not(:has(tfoot tr)) tbody tr:last-child {
+        th, td {
+            border-bottom: 0;
+        }
+        th:first-child, td:first-child {
+            border-bottom-left-radius: $border-radius;
+        }
+        th:last-child, td:last-child {
+            border-bottom-right-radius: $border-radius;
         }
     }
 }
@@ -521,7 +555,7 @@ table {
     margin-bottom: 0;
     color: #fff;
     background-color: colors.$bg-card;
-    border-bottom: 1px var(--color-lighter) solid;
+    border-bottom: 1px var(--bs-border-color) solid;
 }
 
 /**** FORMS ****/
@@ -540,56 +574,6 @@ table {
     }
     &:focus {
         border-bottom-color: var(--color-primary-0);
-    }
-}
-
-/**** ANGULAR EDITOR ****/
-
-angular-editor {
-    .ae-picker-item {
-        background-color: var(--color-background-3) !important;
-    }
-
-    .ae-picker-label {
-        background-color: var(--color-background-3) !important;
-    }
-
-    button {
-        background-color: transparent !important;
-        border: none !important;
-        color: var(--color-primary-0) !important;
-        &.active,
-        &.selected {
-            background-color: var(--color-primary-4) !important;
-            color: white !important;
-        }
-        &:hover {
-            background-color: var(--color-primary-3) !important;
-            color: white !important;
-        }
-    }
-
-    #sourceText {
-        background-color: pink !important;
-    }
-
-    .angular-editor-textarea {
-        outline: none;
-        resize: none !important;
-        border-radius: 0 !important;
-        border: 1px solid var(--color-background-2) !important;
-        background-color: var(--color-darker) !important;
-        &:focus {
-            border: 1px solid var(--color-lighter) !important;
-        }
-        &::after {
-            display: none !important;
-        }
-    }
-
-    .angular-editor-toolbar {
-        background-color: transparent !important;
-        border: none !important;
     }
 }
 

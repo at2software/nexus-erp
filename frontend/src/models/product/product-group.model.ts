@@ -6,6 +6,7 @@ import { getProductGroupActions } from './product-group.actions';
 import { Observable, map } from 'rxjs';
 import { Type } from 'class-transformer';
 import { Model } from '@constants/type-discriminators';
+import { Dictionary } from '@constants/constants';
 
 @Model('ProductGroup')
 export class ProductGroup extends Serializable {
@@ -31,7 +32,9 @@ export class ProductGroup extends Serializable {
 
     static API_PATH = (): string => 'product_groups';
     frontendUrl = (): string => `/products/group/${this.id}`;
-    put = (path: string) => NxGlobal.service.put(`product_groups/${this.id}/${path}`, {}).subscribe((_) => Object.assign(this, _));
+    // patch() (not raw Object.assign) bumps Serializable#state so signal-based template
+    // consumers (e.g. tracked(group) in product-tree-list) re-render under zoneless CD.
+    put = (path: string) => NxGlobal.service.put(`product_groups/${this.id}/${path}`, {}).subscribe((_) => this.patch(_ as Dictionary));
 
     static createWithParentId = (name: string = 'New product group', parentId: string | undefined = undefined): Observable<ProductGroup> => NxGlobal.service.post('product_groups', { name: name, product_group_id: parentId }).pipe(map((x) => ProductGroup.fromJson(x)));
 }

@@ -1,3 +1,4 @@
+@let _isLoading = isLoading();
 <div class="row">
     <!-- Timeline candlestick chart -->
     <div class="col-12 mb-3">
@@ -5,7 +6,7 @@
             <div class="card-header d-flex align-items-center gap-2">
                 <i>waterfall_chart</i>
                 <span i18n="@@i18n.financial.liquidityTimeline">12-month liquidity projection</span>
-                @if (!isLoading()) {
+                @if (!_isLoading) {
                     @if (zeroDate(); as z) {
                         <span class="ms-auto text-muted small" i18n="@@i18n.financial.cashOutDate">cash-out date</span>
                         <strong class="ms-2 text-danger">{{ z.date | date:'dd.MM.yyyy' }}</strong>
@@ -16,12 +17,12 @@
                 }
             </div>
             <div class="card-body p-0" style="height: 320px">
-                @if (isLoading()) {
+                @if (_isLoading) {
                     <div class="d-flex align-items-center justify-content-center h-100">
                         <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
                     </div>
                 }
-                @if (!isLoading()) {
+                @if (!_isLoading) {
                     <div echarts [options]="chartOptions()" style="width:100%;height:320px"></div>
                 }
             </div>
@@ -34,24 +35,24 @@
             <div class="card-header d-flex align-items-center gap-2">
                 <i>format_list_bulleted</i>
                 <span i18n="@@i18n.financial.liquidityEvents">liquidity events</span>
-                @if (!isLoading()) {
+                @if (!_isLoading) {
                     <span class="badge text-bg-primary ms-auto">{{ groupedEvents().length }}</span>
                     <span class="text-muted small">days</span>
                     <span class="badge text-bg-primary">{{ events().length }}</span>
                     <span class="text-muted small">events</span>
                 }
             </div>
-            @if (isLoading()) {
+            @if (_isLoading) {
                 <div class="d-flex align-items-center justify-content-center" style="height:120px">
                     <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
                 </div>
             }
-            @if (!isLoading() && !groupedEvents().length) {
+            @if (!_isLoading && !groupedEvents().length) {
                 <div class="card-body text-center text-muted py-5" i18n="@@i18n.financial.noLiquidityEvents">
                     No liquidity events in the next 12 months.
                 </div>
             }
-            @if (!isLoading() && groupedEvents().length) {
+            @if (!_isLoading && groupedEvents().length) {
                 <div class="table-responsive">
                     <table class="table table-hover mb-0 align-middle">
                         <thead class="sticky-top">

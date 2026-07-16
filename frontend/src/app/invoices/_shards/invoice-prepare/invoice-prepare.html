@@ -57,7 +57,7 @@
                 </td>
             </tr>
             } @for (item of regularItems(); track ('regularItems:' + item.track_id); let i = $index) {
-            <tr cdkDrag [nx]="item" [tables]="_items()" [nxContext]="{company: companyRef()}" cdkDragLockAxis="y" invoice-item-row [company]="effectiveCompany()" [item]="item" [annotationType]="annotationType()" (singleActionResolved)="singleActionResolved($event)" class="{{item.markerClass()}}"></tr>
+            <tr cdkDrag [nx]="item" [tables]="_items()" [nxContext]="{company: companyRef()}" cdkDragLockAxis="y" invoice-item-row [company]="effectiveCompany()" [item]="item" [annotationType]="annotationType()" [extIssues]="extIssues()" (singleActionResolved)="singleActionResolved($event)" class="{{item.markerClass()}}"></tr>
             } @if (lastGroup()) {
             <tr>
                 <td class="small text-end" colspan="6">{{lastGroup()!.var.sum | money}}</td>

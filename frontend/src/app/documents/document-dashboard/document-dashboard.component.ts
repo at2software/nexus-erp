@@ -7,8 +7,6 @@ import { HotkeyDirective } from '@directives/hotkey.directive';
 @Component({
     selector: 'document-dashboard',
     templateUrl: './document-dashboard.component.html',
-    styleUrls: ['./document-dashboard.component.scss'],
-    standalone: true,
     imports: [HeaderComponent, HeaderLinkItemComponent, ScrollbarComponent, HotkeyDirective],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

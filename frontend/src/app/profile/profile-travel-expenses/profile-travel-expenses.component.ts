@@ -1,16 +1,34 @@
 import { ChangeDetectionStrategy, Component, inject, signal, viewChild, Type } from '@angular/core';
 import { NxGlobal } from '@app/nx/nx.global';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { dateToMoment, momentToDate } from '@constants/momentToDate';
 import { DndDirective } from '@directives/dnd.directive';
 import { FileService } from '@models/file/file.service';
-import { TRAVEL_ALLOWANCE_DATA, getTravelAllowanceByCountry, getAvailableCountries, TravelAllowanceRates } from './travel-allowance-data';
+import { TRAVEL_ALLOWANCE_DATA, getTravelAllowanceByCountry, getAvailableCountries } from './travel-allowance-data';
+import { TravelAllowanceRates } from '@models/api-response';
 
 import { FormsModule } from '@angular/forms';
 import { NgbDatepickerModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { MoneyPipe } from '@pipes/money.pipe';
 import { AffixInputDirective } from '@directives/affix-input.directive';
 
+interface IData { 
+    purpose: string; 
+    way: string; 
+    start: string; 
+    end: string; 
+    days: TDay[]; 
+    expenses: TExpense[] 
+}
+interface IYMD {
+    year: number;
+    month: number;
+    day: number;
+}
+interface IHM {
+    hours: number;
+    minutes: number;
+}
 interface TDay {
     name: string;
     brunch: boolean;
@@ -52,8 +70,6 @@ const ExpenseType: TExpenseType[] = [
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'profile-travel-expenses',
     templateUrl: './profile-travel-expenses.component.html',
-    styleUrls: ['./profile-travel-expenses.component.scss'],
-    standalone: true,
     imports: [FormsModule, NgbDatepickerModule, MoneyPipe, AffixInputDirective, DndDirective, NgbDropdownModule],
 })
 export class ProfileTravelExpensesComponent {
@@ -61,26 +77,27 @@ export class ProfileTravelExpensesComponent {
 
     protected readonly dragDrop = viewChild(DndDirective);
 
-    pauschSmall: number = 14;
-    pauschLarge: number = 28;
-    pauschSleep: number = 20;
-    selectedCountry: string = 'Deutschland';
-    purpose: string = '';
-    way: string = '';
-    days: TDay[] = [];
-    twoDayTrip = signal(false);
-    withSleep = signal(false);
-    expenses: TExpense[] = [];
-    timeDiff: number = 0;
-    startDate: any = momentToDate(moment());
-    endDate: any = momentToDate(moment());
-    startTime: any = { hours: 10, minutes: 0 };
-    endTime: any = { hours: 10, minutes: 0 };
-    types: TExpenseType[] = ExpenseType;
+    pauschSmall     : number         = 14;
+    pauschLarge     : number         = 28;
+    pauschSleep     : number         = 20;
+    selectedCountry: string          = 'Deutschland';
+    purpose         : string         = '';
+    way             : string         = '';
+    days            : TDay[]         = [];
+    expenses        : TExpense[]     = [];
+    timeDiff        : number         = 0;
+    startDate       : IYMD           = momentToDate(dayjs());
+    endDate         : IYMD           = momentToDate(dayjs());
+    startTime       : IHM            = { hours: 10, minutes: 0 };
+    endTime         : IHM            = { hours: 10, minutes: 0 };
+    types           : TExpenseType[] = ExpenseType;
 
     availableCountries: string[] = getAvailableCountries();
     travelAllowanceData: TravelAllowanceRates[] = TRAVEL_ALLOWANCE_DATA;
 
+    twoDayTrip      = signal(false);
+    withSleep       = signal(false);
+    
     constructor() {
         this.onCountryChange();
     }
@@ -103,7 +120,7 @@ export class ProfileTravelExpensesComponent {
         if (!dragDrop) return;
         this.days.forEach((_) => (_.sum = this.sumFor(_)));
         this.expenses.forEach((_) => (_.sum = _.getTotal()));
-        const data: any = {
+        const data: IData = {
             purpose: this.purpose,
             way: this.way,
             start: this.#start().format('YYYY-MM-DD HH:mm'),
@@ -117,10 +134,11 @@ export class ProfileTravelExpensesComponent {
 
     updateDays() {
         const response: TDay[] = [];
-        const m = this.#start().clone().startOf('day');
-        while (m <= this.#end().clone().endOf('day')) {
+        const end = this.#end().endOf('day');
+        let m = this.#start().startOf('day');
+        while (m.isSameOrBefore(end)) {
             response.push({ name: m.format('YYYY-MM-DD'), brunch: false, lunch: false, dinner: false, sleep: true, base: this.pauschLarge, sum: 0 });
-            m.add(1, 'day');
+            m = m.add(1, 'day');
         }
         this.twoDayTrip.set(response.length === 2);
         if (response.length === 2 && !this.withSleep()) response.pop();

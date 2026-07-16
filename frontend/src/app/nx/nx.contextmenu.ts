@@ -1,4 +1,4 @@
-import { Component, ElementRef, Renderer2, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, Renderer2, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NxAction } from './nx.actions';
 import { ContextMenuTrigger, NxService } from './nx.service';
@@ -10,8 +10,8 @@ import { Serializable } from '@models/serializable';
 
 @Component({
     selector: 'nx-contextmenu',
+    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: 'nx.contextmenu.html',
-    standalone: true,
     imports: [NxDropdown, NgbDropdown, NgbDropdownMenu],
     host: { '(window:keydown)': 'onDocumentKeyDown($event)' },
 })
@@ -35,13 +35,13 @@ export class NxContextMenu {
 
     #onNewContextMenu = (e: ContextMenuTrigger) => {
         this.ngbDropdown()?.close();
+        if (e.objects.length === 0) return console.error('no objects selected');
+
         const firstNx = e.objects[0].nx();
         NxGlobal.context = firstNx instanceof Serializable ? firstNx : undefined;
 
-        let sameClass = true;
-        e.objects.forEach(_ => (sameClass &&= _.nx().class === firstNx.class));
+        const sameClass = e.objects.every(_ => _.nx().class === firstNx.class);
         if (!sameClass) return console.error('different classes have been selected');
-        if (e.objects.length === 0) return console.error('no objects selected');
 
         this.actions.set(NxService.filteredActions(e.objects));
 

@@ -6,6 +6,7 @@ import { WebSocketService, MousePosition, SharingStatus, MouseClick, QuickMessag
 import { GlobalService } from './global.service';
 import { filter } from 'rxjs/operators';
 import { getCookie, setCookie } from '@constants/cookies';
+import { storageGet, storageSet } from '@constants/storage';
 
 export interface ActiveSharing {
     userId: string;
@@ -22,7 +23,7 @@ export class LiveSharingService extends NexusHttpService<any> {
     #router = inject(Router);
     #global = inject(GlobalService);
 
-    featureEnabled$ = new BehaviorSubject<boolean>(localStorage.getItem('live_sharing_feature') === '1');
+    featureEnabled$ = new BehaviorSubject<boolean>([true, 1, '1'].includes(storageGet<boolean | number | string>('live_sharing_feature', false)));
     sharingEnabled$ = new BehaviorSubject<boolean>(false);
     activeSharings$ = new BehaviorSubject<ActiveSharing[]>([]);
     currentUrl$ = new BehaviorSubject<string>('');
@@ -59,7 +60,7 @@ export class LiveSharingService extends NexusHttpService<any> {
     }
 
     toggleFeature(enabled: boolean) {
-        localStorage.setItem('live_sharing_feature', enabled ? '1' : '0');
+        storageSet('live_sharing_feature', enabled);
         this.featureEnabled$.next(enabled);
         if (!enabled && this.sharingEnabled$.value) {
             this.toggleSharing(false);

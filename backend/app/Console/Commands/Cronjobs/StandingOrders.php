@@ -26,14 +26,14 @@ class StandingOrders extends Command {
 
         $this->logToFile('Executing query: '.$query->toSql());
         $this->logToFile('With bindings: '.json_encode($query->getBindings()));
-        $this->logToFile('InvoiceItemType::Repeating contains: '.json_encode(InvoiceItemType::Repeating));
+        $this->logToFile('InvoiceItemType::Repeating contains: '.json_encode(array_column(InvoiceItemType::Repeating, 'value')));
 
         $recurringItems = $query->get();
 
         $this->logToFile('Found '.$recurringItems->count().' recurring items to process at '.now());
 
         foreach ($recurringItems as $item) {
-            $this->logToFile("Processing item ID: {$item->id}, Type: {$item->type}, Next recurrence: {$item->next_recurrence_at}, Text: ".substr($item->text, 0, 50));
+            $this->logToFile("Processing item ID: {$item->id}, Type: {$item->type->value}, Next recurrence: {$item->next_recurrence_at}, Text: ".substr($item->text, 0, 50));
 
             // Store original values for debugging
             $original_next_recurrence = $item->next_recurrence_at->copy();

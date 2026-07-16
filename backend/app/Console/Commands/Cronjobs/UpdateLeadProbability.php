@@ -2,110 +2,84 @@
 
 namespace App\Console\Commands\Cronjobs;
 
-use App\Http\Controllers\StatsController;
+use App\ML\ProjectQuoteDataset;
+use App\ML\ProjectQuoteHistory;
+use App\ML\ProjectQuoteModel;
 use App\Models\Project;
-use App\Models\ProjectState;
 use Illuminate\Console\Command;
 
+/**
+ * Refreshes projects.lead_probability for open (Prepared) budget-based quotes
+ * from the ML quote-acceptance model (App\ML\ProjectQuoteModel) — replaces
+ * the previous two-factor budget/age logistic-regression heuristic (see git
+ * history for the old implementation), which the ML model beats decisively
+ * on cross-validated accepted-F1 (0.808 vs a 0.690 baseline — see
+ * backend/docs/ml/project-quote-acceptance-plan.md).
+ *
+ * Must run before cron:cashflow / stats cronjobs, which consume
+ * projects.lead_probability (see routes/console.php ordering — Laravel's
+ * scheduler runs same-time-due commands in registration order).
+ */
 class UpdateLeadProbability extends Command {
     protected $signature   = 'cron:update-lead-probability';
-    protected $description = 'updates lead probability';
+    protected $description = 'Refresh projects.lead_probability for open (Prepared) budget-based quotes from the ML quote-acceptance model';
 
-    public function handle() {
-        // Train on all projects that reached a decision (any state with progress >= 1)
-        // This includes: Running (1), Finished (2), Failed (2), Lead Failed (2), etc.
-        // Excludes: Prepared (0), Quoted (0), Ignored (2 but is_in_stats=0)
-        // y=1: Has finished state with is_successful=true AND is_in_stats=true
-        // y=0: Still running (progress=1) OR failed (progress=2, is_successful=false)
-        $projects = Project::whereBudgetBased()
-            ->whereHas('states', fn ($q) => $q->where('progress', '>=', ProjectState::Running)->where('is_in_stats', true))
-            ->with('lastFinishedState')
-            ->get();
-
-        $stats      = app(StatsController::class);
-        $dataTime   = $stats->computeLogisticRegressionData($projects, ...$stats->fnShowLeadProbabilityByDuration());
-        $dataBudget = $stats->computeLogisticRegressionData($projects, ...$stats->fnShowLeadProbabilityByBudget());
-
-        $maxTime = array_reduce($dataTime, fn ($_, $point) => $point['y'] > $_ ? $point['y'] : $_, PHP_INT_MIN);
-        if ($maxTime === 0) {
-            return;
+    public function handle(): int {
+        if (! ProjectQuoteModel::load()) {
+            $this->warn('No trained quote-acceptance model found — run ml:train-project-quote-acceptance first. Skipping.');
+            return 0;
         }
 
-        $projects           = Project::whereBudgetBased()->whereProgress(ProjectState::Prepared)->where('lead_probability', '>=', 0)->get();
+        // Negative lead_probability is a manual "pin this down" override (see the
+        // raw, un-abs()'d use of lead_probability in WidgetController's cashflow
+        // sum) — those projects are deliberately excluded from auto-recompute,
+        // same exclusion the previous heuristic already applied.
+        $projects = Project::whereBudgetBased()
+            ->wherePrepared()
+            ->where('lead_probability', '>=', 0)
+            ->with(['states', 'company', 'invoiceItemsRaw'])
+            ->get();
+
+        if ($projects->isEmpty()) {
+            $this->info('No prepared projects to update.');
+            return 0;
+        }
+
+        // Batched: one eligible-pool load, one history pass, one model call —
+        // not N of each (see ProjectQuoteWhatIf for the same batching discipline).
+        $pool    = ProjectQuoteDataset::eligibleProjects();
+        $history = ProjectQuoteHistory::compute($pool, $projects);
+        $rows    = $projects->map(fn (Project $p) => ProjectQuoteDataset::extractRow($p, $history[$p->id] ?? []))->values()->all();
+
+        $probabilities = ProjectQuoteModel::probaForRows($rows);
+
+        $this->info("Updating ML lead probability for {$projects->count()} prepared projects...");
+
         $totalExpectedValue = 0;
-
-        foreach ($projects as $project) {
-            $budgetProb = $this->findYBelowThreshold($dataBudget, $project->net);
-            $timeProb   = $this->findYBelowThreshold($dataTime, $project->created_at->diffInDays(now()));
-
-            $argumentation = [];
-            $daysAge       = $project->created_at->diffInDays(now());
-
-            // Handle cases where values are outside the training data range
-            // Use the first (smallest) data point if value is below range
-            if ($budgetProb === null && ! empty($dataBudget)) {
-                $budgetProb      = $dataBudget[0]['y'];
-                $argumentation[] = 'Budget ('.number_format($project->net, 2).') is below training data range, using minimum probability.';
-            } else {
-                $argumentation[] = 'Budget-based probability: '.round($budgetProb * 100, 1).'% (based on €'.number_format($project->net, 2).')';
-            }
-
-            if ($timeProb === null && ! empty($dataTime)) {
-                $timeProb        = $dataTime[0]['y'];
-                $argumentation[] = "Age ({$daysAge} days) is below training data range, using minimum probability.";
-            } else {
-                $argumentation[] = 'Time-based probability: '.round($timeProb * 100, 1)."% (based on {$daysAge} days old)";
-            }
-
-            // Skip if we still don't have valid probabilities (empty training data)
-            if ($budgetProb === null || $timeProb === null) {
-                $this->warn("Skipping project {$project->id}: insufficient training data (budgetProb={$budgetProb}, timeProb={$timeProb})");
-
+        foreach ($projects->values() as $i => $project) {
+            $probability = $probabilities[$i] ?? null;
+            if ($probability === null) {
                 continue;
             }
 
-            $timeMult        = $timeProb / $maxTime;   // need to adjust because base probability already comes from budget
-            $probability     = $timeMult * $budgetProb;
-            $argumentation[] = 'Time multiplier: '.round($timeMult * 100, 1).'% (adjusts for lead age)';
-            $argumentation[] = 'Computed probability: '.round($probability * 100, 1).'%';
-
-            // Apply manual multiplier if set
             $multiplier = $project->lead_probability_multiplier ?? 1.0;
+            $final      = $probability * $multiplier;
+
+            $argumentation = 'ML-predicted acceptance probability (RandomForest quote-acceptance model): '.round($probability * 100, 1).'%';
             if ($multiplier != 1.0) {
-                $argumentation[] = 'Manual multiplier: '.$multiplier.'x';
-                $probability     = $probability * $multiplier;
-                $argumentation[] = 'Final probability (after multiplier): '.round($probability * 100, 1).'%';
-            } else {
-                $argumentation[] = 'Final probability: '.round($probability * 100, 1).'%';
+                $argumentation .= "\nManual multiplier: {$multiplier}x\nFinal probability: ".round($final * 100, 1).'%';
             }
 
-            $argumentationText = implode("\n", $argumentation);
-
-            $this->info("Updating lead probability for project \"{$project->name}\" to {$probability} (budgetProb: {$budgetProb}, timeProb: {$timeProb}, timeMult: {$timeMult}, multiplier: {$multiplier})");
+            $this->info("  \"{$project->name}\": ".round($final * 100, 1).'%');
             $project->update([
-                'lead_probability'               => $probability,
-                'lead_probability_argumentation' => $argumentationText,
+                'lead_probability'               => $final,
+                'lead_probability_argumentation' => $argumentation,
             ]);
 
-            $totalExpectedValue += $project->net * $probability;
+            $totalExpectedValue += $project->net * $final;
         }
 
         $this->info('Total expected value (sum of net * lead_probability): '.number_format($totalExpectedValue, 2));
-    }
-    public function findYBelowThreshold(array $array, float $threshold): ?float {
-        $low    = 0;
-        $high   = count($array) - 1;
-        $result = null;
-        while ($low <= $high) {
-            $mid = intdiv($low + $high, 2);
-            $x   = $array[$mid]['x'];
-            if ($x < $threshold) {
-                $result = $array[$mid]['y'];
-                $low    = $mid + 1;
-            } else {
-                $high = $mid - 1;
-            }
-        }
-        return $result;
+        return 0;
     }
 }

@@ -1,13 +1,16 @@
 import { catchError, map, Observable, of, switchMap, throwError, timeout } from 'rxjs';
 import { PluginInstance } from './plugin.instance';
-import { IAIPlugin, IAIModel, IAICompletion } from '../ai/ai.plugin.interface';
+import { IAIPlugin } from '../http/ai.plugin.interface';
+import { AiModel, AiCompletionResponse } from '@models/api-response';
 import { environment } from 'src/environments/environment';
 import { HttpHeaders } from '@angular/common/http';
 import { PluginLink } from '../pluginLink/plugin-link.model';
+import { Dictionary } from '@constants/constants';
+import { Deserializer } from './http.wrapper';
 
 export class LocalAIPlugin extends PluginInstance implements IAIPlugin {
     IAIPluginProperty: boolean = true;
-    models: IAIModel[] = [];
+    models: AiModel[] = [];
     _name: string = '';
     needsHttpInterceptor: boolean = false; // Disable interceptor since we use CORS proxy
 
@@ -22,7 +25,7 @@ export class LocalAIPlugin extends PluginInstance implements IAIPlugin {
     // CORS Proxy for cross-origin requests
     baseUrl = () => environment.envApi + 'cors' + this._baseUrl.substring(this.enc.value.url.length);
 
-    #payload = (url: string, method: string, params: any = {}) => {
+    #payload = (url: string, method: string, params: Dictionary = {}) => {
         const headers = ['Content-Type: application/json'];
         if (this.enc?.value?.login && this.enc?.value?.password) {
             const credentials = btoa(`${this.enc.value.login}:${this.enc.value.password}`);
@@ -39,14 +42,14 @@ export class LocalAIPlugin extends PluginInstance implements IAIPlugin {
         );
     };
 
-    get(url: string, params?: any, ...args: any) {
+    get<T = unknown>(url: string, params?: Dictionary, ...args: unknown[]) {
         const payload = this.#payload(url, 'GET', params);
-        return super.post('', payload, ...args);
+        return super.post<T>('', payload, ...(args as Deserializer[])) as Observable<T>;
     }
 
-    post(url: string, params?: any, ...args: any) {
+    post<T = unknown>(url: string, params?: Dictionary, ...args: unknown[]) {
         const payload = this.#payload(url, 'POST', params);
-        return super.post('', payload, ...args);
+        return super.post<T>('', payload, ...(args as Deserializer[])) as Observable<T>;
     }
 
     icon = () => 'local_ai';
@@ -55,17 +58,17 @@ export class LocalAIPlugin extends PluginInstance implements IAIPlugin {
     toPluginLink = () => PluginLink.fromJson({ type: 'local_ai', url: this.enc.value.url });
 
     // Get activity for comments tab (AI plugins don't have activity)
-    getActivityComments(): Observable<any[]> {
+    getActivityComments(): Observable<Dictionary[]> {
         return of([]);
     }
 
     // Health check using LocalAI's health endpoint
-    healthCheck(): Observable<any> {
-        return this.get('healthz').pipe(
+    healthCheck(): Observable<{ status: string; response?: unknown; error?: unknown }> {
+        return this.get<string | { raw_response?: string; status?: string }>('healthz').pipe(
             timeout(10000), // 10 second timeout
-            map((response: any) => {
+            map((response: { raw_response?: string; status?: string } | string) => {
                 // Handle both JSON responses and plain text wrapped in raw_response
-                const isHealthy = response?.raw_response === 'OK' || response?.status === 'ok' || typeof response === 'string';
+                const isHealthy = typeof response === 'string' || response.raw_response === 'OK' || response.status === 'ok';
                 return { status: isHealthy ? 'healthy' : 'unhealthy', response };
             }),
             catchError((error) => {
@@ -75,11 +78,11 @@ export class LocalAIPlugin extends PluginInstance implements IAIPlugin {
     }
 
     // List available models
-    listModels(): Observable<IAIModel[]> {
-        return this.get('v1/models').pipe(
-            map((response: any) => {
+    listModels(): Observable<AiModel[]> {
+        return this.get<{ data?: { id: string; owned_by?: string }[] }>('v1/models').pipe(
+            map((response: { data?: { id: string; owned_by?: string }[] }) => {
                 if (response?.data && Array.isArray(response.data)) {
-                    this.models = response.data.map((model: any) => ({
+                    this.models = response.data.map((model) => ({
                         id: model.id,
                         name: model.id,
                         owned_by: model.owned_by || 'local',
@@ -93,19 +96,19 @@ export class LocalAIPlugin extends PluginInstance implements IAIPlugin {
     }
 
     // Helper methods specific to LocalAI
-    getDefaultModel(): IAIModel | undefined {
+    getDefaultModel(): AiModel | undefined {
         return this.models.length > 0 ? this.models[0] : undefined;
     }
 
-    getModelById(id: string): IAIModel | undefined {
+    getModelById(id: string): AiModel | undefined {
         return this.models.find((model) => model.id === id);
     }
 
     // Create completion using OpenAI-compatible API, with fallback to text completions
-    createCompletion(prompt: string, model?: string): Observable<IAICompletion> {
+    createCompletion(prompt: string, model?: string): Observable<AiCompletionResponse> {
         const selectedModel = model || this.getDefaultModel()?.id || 'default';
 
-        const errorCompletion: IAICompletion = {
+        const errorCompletion: AiCompletionResponse = {
             id: '',
             object: 'chat.completion',
             created: Date.now(),
@@ -118,36 +121,37 @@ export class LocalAIPlugin extends PluginInstance implements IAIPlugin {
             messages: [{ role: 'user', content: prompt }],
             max_tokens: 2048,
             temperature: 0.7,
-        }).pipe(
-            switchMap((response: any) => {
-                if (response?.error) {
-                    const msg: string = response.error.message || '';
+        } as Dictionary).pipe(
+            switchMap((response) => {
+                const completionResponse = response as AiCompletionResponse | { error?: { message?: string } };
+                if ('error' in completionResponse && completionResponse.error) {
+                    const msg: string = (completionResponse.error as { message?: string }).message || '';
                     // Only fall back to text completions for the gRPC "unimplemented" error
                     // (model supports text completions but not chat completions)
                     if (!msg.includes('unimplemented')) {
                         return throwError(() => new Error(msg));
                     }
-                    return this.post('v1/completions', {
+                    return this.post<{ choices?: ({ text?: string; finish_reason?: string } & Dictionary)[] }>('v1/completions', {
                         model: selectedModel,
                         prompt,
                         max_tokens: 2048,
                         temperature: 0.7,
                     }).pipe(
                         map(
-                            (textResponse: any) =>
+                            (textResponse: { choices?: ({ text?: string; finish_reason?: string } & Dictionary)[] }) =>
                                 ({
                                     ...textResponse,
-                                    choices: (textResponse.choices || []).map((c: any) => ({
+                                    choices: (textResponse.choices || []).map((c: { text?: string; finish_reason?: string } & Dictionary) => ({
                                         ...c,
                                         message: { role: 'assistant', content: c.text || '' },
                                         finish_reason: c.finish_reason || 'stop',
                                     })),
-                                }) as IAICompletion,
+                                }) as AiCompletionResponse,
                         ),
                         catchError(() => of(errorCompletion)),
                     );
                 }
-                return of(response as IAICompletion);
+                return of(completionResponse as AiCompletionResponse);
             }),
             catchError(() => of(errorCompletion)),
         );
@@ -156,7 +160,7 @@ export class LocalAIPlugin extends PluginInstance implements IAIPlugin {
     // Generate text using the AI
     generateText(prompt: string, model?: string): Observable<string> {
         return this.createCompletion(prompt, model).pipe(
-            map((completion: IAICompletion) => {
+            map((completion: AiCompletionResponse) => {
                 return completion.choices[0]?.message?.content || 'No response generated';
             }),
         );
@@ -177,7 +181,7 @@ export class LocalAIPlugin extends PluginInstance implements IAIPlugin {
 
     // Override interceptor headers for username/password auth
     protected interceptorHeaders = () => {
-        const headers: any = { 'Content-Type': 'application/json' };
+        const headers: Dictionary<string> = { 'Content-Type': 'application/json' };
         if (this.enc.value.login && this.enc.value.password) {
             // Basic Auth with username:password
             const credentials = btoa(`${this.enc.value.login}:${this.enc.value.password}`);

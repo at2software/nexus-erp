@@ -9,7 +9,6 @@ import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
     selector: 'column-relation-autocomplete',
     templateUrl: './column-relation-autocomplete.component.html',
     styleUrl: './column-relation-autocomplete.component.scss',
-    standalone: true,
     imports: [ScrollbarComponent, FormsModule],
 })
 export class ColumnRelationAutocompleteComponent {
@@ -36,6 +35,11 @@ export class ColumnRelationAutocompleteComponent {
         this.searchbox().nativeElement.focus();
     }
 
+    #stringValue(): string {
+        const value = this.option().value;
+        return typeof value === 'string' ? value : '';
+    }
+
     search(event: KeyboardEvent) {
         const len = this.results().length;
         switch (event.key) {
@@ -54,7 +58,7 @@ export class ColumnRelationAutocompleteComponent {
                     clearTimeout(this.#delay);
                     this.#delay = setTimeout(() => {
                         this.currentIndex.set(0);
-                        this.results.set(this.#getSuggestions(this.option().value, this.tableName()));
+                        this.results.set(this.#getSuggestions(this.#stringValue(), this.tableName()));
                         this.#focus();
                     }, 500);
                 }
@@ -63,13 +67,14 @@ export class ColumnRelationAutocompleteComponent {
 
     open(o: { name: string; type: string }) {
         this.results.set([]);
-        const lastDot = this.option().value.lastIndexOf('.');
-        this.option().value = (lastDot !== -1 ? this.option().value.substring(0, lastDot + 1) : '') + o.name;
+        const val = this.#stringValue();
+        const lastDot = val.lastIndexOf('.');
+        this.option().value = (lastDot !== -1 ? val.substring(0, lastDot + 1) : '') + o.name;
         if (o.type === 'relation' || o.type === 'variable') {
-            this.option().value += '.';
+            this.option().value = this.#stringValue() + '.';
             this.#focus();
             this.currentIndex.set(0);
-            this.results.set(this.#getSuggestions(this.option().value, this.tableName()));
+            this.results.set(this.#getSuggestions(this.#stringValue(), this.tableName()));
         }
     }
 
@@ -93,20 +98,20 @@ export class ColumnRelationAutocompleteComponent {
             const relationship = this.#global.relations.find((r) => r.table === tableName);
             if (!table) return [];
 
+            const filterAndMap = (array: string[], type: string) => array
+                .filter((v) => v !== null && v.toLowerCase().startsWith(prefix.toLowerCase()))
+                .map((name) => ({ name, type }));
+
             if (i === parts.length - 1) {
                 return [
-                    ...(table.columns?.map((c: any) => c.Field) ?? []).filter((c: string) => c.startsWith(prefix)).map((c: string) => ({ name: c, type: 'column' })),
-                    ...Object.keys(this.#global.accessors[tableName] ?? {})
-                        .filter((a) => a.startsWith(prefix))
-                        .map((a) => ({ name: a, type: 'accessor' })),
-                    ...Object.keys(relationship?.relations ?? {})
-                        .filter((r) => r.startsWith(prefix))
-                        .map((r) => ({ name: r, type: 'relation' })),
+                    ...filterAndMap(table.columns.map((c) => c.Field), 'column'),
+                    ...filterAndMap(Object.keys(this.#global.accessors[tableName] ?? {}), 'accessor'),
+                    ...filterAndMap(Object.keys(relationship?.relations ?? {}), 'relation'),
                 ];
             }
             const nextRelation = relationship?.relations?.[prefix];
             if (!nextRelation) return [];
-            tableName = nextRelation.model.toLowerCase();
+            tableName = (nextRelation.model ?? '').toLowerCase();
         }
         return [];
     }

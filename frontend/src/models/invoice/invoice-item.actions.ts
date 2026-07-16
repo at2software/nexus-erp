@@ -3,9 +3,16 @@ import { InvoiceItem } from './invoice-item.model';
 import { InvoiceItemService } from './invoice-item.service';
 import { InvoiceItemType } from '@enums/invoice-item.type';
 import { REPEATING_MULT } from '../expense/expense.model';
-import { NxGlobal } from '@app/nx/nx.global';
+import { NxGlobal, TBroadcast } from '@app/nx/nx.global';
 import { ModalCombineInvoiceItemsComponent } from '@app/_modals/modal-combine-invoice-items/modal-combine-invoice-items.component';
+import { ModalLinkExtIssueComponent, ExtIssueLinkResult } from '@app/_modals/modal-link-ext-issue/modal-link-ext-issue.component';
+import { ModalInputComponent, ModalInputResult } from '@app/_modals/modal-input/modal-input.component';
+import { ModalAssignProductComponent, AssignProductResult } from '@app/_modals/modal-assign-product/modal-assign-product.component';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
+import { Company } from '../company/company.model';
+import { ProjectService } from '../project/project.service';
+import { MilestoneService } from '../milestones/milestone.service';
+import { switchMap, tap } from 'rxjs';
 
 export function getInvoiceItemActions(self: InvoiceItem): NxAction[] {
     return [
@@ -34,9 +41,68 @@ export function getInvoiceItemActions(self: InvoiceItem): NxAction[] {
             on: () => canCombineSelectedItems(),
             action: (success) => combineSelectedItems(self, success),
         },
+        {
+            // Opens the picker once; the chosen issue is applied to every selected item.
+            title: $localize`:@@i18n.issues.linkExternalIssue:link external issue`,
+            group: true,
+            interrupt: { service: ModalLinkExtIssueComponent, args: self },
+            action: (_resolve, _ctx, result: ExtIssueLinkResult | undefined) =>
+                result ? self.update({ ext_issue_plugin_link_id: result.ext_issue_plugin_link_id, ext_issue_id: result.ext_issue_id }) : undefined,
+        },
+        {
+            title: $localize`:@@i18n.milestones.addMilestone:add milestone`,
+            on: () => !!self.project_id && !self.milestones?.length,
+            // `initialValue` is a getter, not a baked-in value: `actions` is built once in the
+            // constructor field initializer, before class-transformer assigns `text` from JSON,
+            // so a plain value here would always capture the empty default instead of the real text.
+            interrupt: { service: ModalInputComponent, args: { title: $localize`:@@i18n.common.addMilestone:add milestone`, get initialValue() { return stripHtml(self.text); } } },
+            action: (success, _ctx, result: ModalInputResult | undefined) => {
+                const name = result?.text?.trim();
+                if (!name || !self.project_id) return;
+                return NxGlobal.getService(ProjectService)
+                    .createMilestone(self.project_id, { name })
+                    .pipe(
+                        switchMap((milestone) =>
+                            NxGlobal.getService(MilestoneService)
+                                .linkInvoiceItem(milestone.id, self.id)
+                                .pipe(
+                                    tap(() => {
+                                        self.milestones = [milestone];
+                                        NxGlobal.broadcast({ type: TBroadcast.Update, data: self });
+                                        success?.(self);
+                                    }),
+                                ),
+                        ),
+                    );
+            },
+        },
         ...self.markerActions(),
+        {
+            // Opens the product/qty picker once; the changes are applied to every selected item.
+            title: $localize`:@@i18n.invoices.assignProductQty:assign product & qty`,
+            group: true,
+            on: () => self.type !== InvoiceItemType.Header,
+            interrupt: { service: ModalAssignProductComponent, args: self },
+            action: (_success, nxContext: { company?: Company } | undefined, result: AssignProductResult | undefined) => {
+                if (!result || (!result.product && !result.qtyFactor)) return;
+                if (result.product) self.applyProduct(result.product, nxContext?.company || self.company);
+                if (result.qtyFactor && result.qtyFactor !== 1) {
+                    const step = result.roundTo && result.roundTo > 0 ? result.roundTo : 0.125;
+                    self.qty = roundUpToMultiple(self.qty * result.qtyFactor, step);
+                }
+                return self.update();
+            },
+        },
         NxGlobal.deleteAction(self, $localize`:@@i18n.invoices.reallyDeleteThisInvoiceItem:really delete this invoice item?`, { roles: 'invoicing|financial|project_manager' }),
     ];
+}
+
+function roundUpToMultiple(value: number, step: number): number {
+    return Math.round((Math.ceil(value / step) * step) * 1e6) / 1e6;
+}
+
+function stripHtml(html: string): string {
+    return new DOMParser().parseFromString(html, 'text/html').body.textContent?.trim() ?? '';
 }
 
 /**
@@ -73,7 +139,7 @@ function combineSelectedItems(self: InvoiceItem, success?: (v?: any) => void): v
     if (items[0] !== self) return;
 
     ModalBaseService.open(ModalCombineInvoiceItemsComponent, items)
-        .then((result: { description: string }) => {
+        .then((result) => {
             if (!result) return;
 
             const itemIds = items.map((item) => item.id);
@@ -83,8 +149,5 @@ function combineSelectedItems(self: InvoiceItem, success?: (v?: any) => void): v
                 // Call success callback to trigger singleActionResolved
                 success?.();
             });
-        })
-        .catch(() => {
-            // Modal dismissed
         });
 }

@@ -6,8 +6,6 @@ import { InputSettingsGroupComponent } from '@shards/input-group/input-settings-
 @Component({
     selector: 'profile-settings',
     templateUrl: './profile-settings.component.html',
-    styleUrls: ['./profile-settings.component.scss'],
-    standalone: true,
     imports: [InputSwitchGroupComponent, InputSettingsGroupComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

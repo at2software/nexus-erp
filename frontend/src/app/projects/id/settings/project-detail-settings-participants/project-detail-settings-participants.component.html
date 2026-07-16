@@ -13,7 +13,7 @@
                         <span class="notranslate">...</span>
                     </span>
                 </div>
-            } @else if (participants.length === 0) {
+            } @else if (participants().length === 0) {
                 <empty-state [card]="false" class="settings" i18n-title="@@i18n.projects.noParticipants" title="no participating companies yet">
                     <p class="text-muted small" i18n="@@i18n.projects.addParticipantsHint">add connections from the list on the right</p>
                 </empty-state>
@@ -27,14 +27,14 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @for (participant of participants; track participant.id) {
+                        @for (participant of participants(); track participant.id) {
                             <tr>
                                 <td>
                                     <avatar [object]="participant.other_company"></avatar>
                                 </td>
                                 <td class="align-middle">
                                     <div [routerLink]="'/customers/' + participant.other_company.id">
-                                        {{ participant.other_company.name }}
+                                        {{ participant.other_company.getName() }}
                                     </div>
                                 </td>
                                 <td class="text-center align-middle">

@@ -42,28 +42,40 @@
                 </div>
             </div>
             <div class="col-8">
-                <div class="card mb-3">
-                    <div class="card-header">revenue shares <span class="badge badge-dark" i18n="@@i18n.common.12m">12m</span></div>
-                    <div class="card-body">
-                        <nx-echarts [options]="_pieOptions"></nx-echarts>
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header">revenue shares <span class="badge badge-dark" i18n="@@i18n.common.12m">12m</span></div>
+                            <div class="card-body">
+                                <nx-echarts [options]="_pieOptions"></nx-echarts>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <div class="card mb-3">
-                    <div class="card-header" i18n="@@i18n.common.hourlyWage">hourly wage</div>
-                    <div class="card-body" style="position: relative">
-                        <nx-echarts [options]="_wageOptions"></nx-echarts>
+                    <div class="col-12 col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header" i18n="@@i18n.common.hourlyWage">hourly wage</div>
+                            <div class="card-body" style="position: relative">
+                                <nx-echarts [options]="_wageOptions"></nx-echarts>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <div class="row mb-3">
-                    <div class="col">
-                        <div class="card">
+                    <div class="col-12 col-md-6">
+                        <div class="card mb-3">
                             <div class="card-header" i18n="@@i18n.customers.bcgMatrix">BCG matrix</div>
                             <div class="card-body">
                                 <nx-echarts [options]="_bcgOptions"></nx-echarts>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <customer-revenue-bubble-chart xAxisKey="lifetime_revenue" label="Lifetime revenue" [data]="customerScatterData()"></customer-revenue-bubble-chart>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <widget-customer-churn></widget-customer-churn>
                     </div>
                 </div>
             </div>

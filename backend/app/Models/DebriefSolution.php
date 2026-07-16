@@ -11,7 +11,6 @@ class DebriefSolution extends BaseModel {
     protected $table    = 'debrief_solutions';
     protected $fillable = ['title', 'description', 'created_by_user_id'];
     protected $appends  = ['class', 'icon'];
-    protected $access   = ['admin' => '*', 'project_manager' => 'cru'];
 
     public function createdBy() {
         return $this->belongsTo(User::class, 'created_by_user_id');

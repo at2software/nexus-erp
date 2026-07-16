@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { Router, RouterModule } from '@angular/router';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { ActionEmitterType } from '@app/nx/nx.directive';
-import { Sentinel } from '@models/sentinel.model';
-import { SentinelService } from '@models/sentinel.service';
+import { Sentinel } from '@models/sentinels/sentinel.model';
+import { SentinelService } from '@models/sentinels/sentinel.service';
 import { Nx } from '@app/nx/nx.directive';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
@@ -11,8 +11,6 @@ import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 @Component({
     selector: 'profile-sentinels',
     templateUrl: './profile-sentinels.component.html',
-    styleUrl: './profile-sentinels.component.scss',
-    standalone: true,
     imports: [ToolbarComponent, Nx, RouterModule, NgbTooltipModule, EmptyStateComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

@@ -10,26 +10,25 @@ import { tracked } from '@constants/tracked';
 @Component({
     selector: 'activity-projects',
     templateUrl: './activity-projects.component.html',
-    styleUrls: ['./activity-projects.component.scss'],
-    standalone: true,
     imports: [Nx, ProjectComponent, ProjectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ActivityProjectsComponent {
-    readonly projectIn = input<Project | undefined>(undefined, { alias: 'project' });
-    readonly project = tracked(this.projectIn);
-    readonly companyIn = input<Company | undefined>(undefined, { alias: 'company' });
-    readonly company = tracked(this.companyIn);
+    readonly project = input<Project | undefined>(undefined);
+    readonly trackedProject = tracked(this.project);
+    readonly company = input<Company | undefined>(undefined);
+    readonly trackedCompany = tracked(this.company);
 
     pp = signal<Project[]>([]);
 
     #ps = inject(ProjectService);
 
     constructor() {
-        const company = this.companyIn();
+        const company = this.company();
         if (company) {
             const preparedOrRunningStates = [...ProjectState.idsPrepared(), ...ProjectState.idsRunning()];
-            this.#ps.index({ company_id: company.id, state: preparedOrRunningStates }).subscribe((x: any) => this.pp.set(x.data));
+            const payload = { company_id: company.id, state: preparedOrRunningStates };
+            this.#ps.indexPaginated(payload).subscribe((x) => this.pp.set(x.data));
         }
     }
 }

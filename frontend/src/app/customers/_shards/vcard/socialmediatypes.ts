@@ -1,4 +1,6 @@
-export const SOCIAL_MEDIA_TYPES: Record<string, string> = {
+import { Dictionary } from "@constants/constants";
+
+export const SOCIAL_MEDIA_TYPES: Dictionary<string> = {
     facebook: 'assets/socialmedia/icons8-facebook-48.png',
     facebook_messenger: 'assets/socialmedia/icons8-facebook-messenger-48.png',
     instagram: 'assets/socialmedia/icons8-instagram-48.png',

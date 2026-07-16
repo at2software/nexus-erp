@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Stats\QuoteAccuracyRequest;
 use App\Models\User;
+use App\Services\CustomerRevenueStatsService;
 use App\Services\FocusStatisticsService;
 use App\Services\ForecastStatisticsService;
+use App\Services\Project\ProjectQuoteSignalCurveService;
 use App\Services\ProjectStatisticsService;
 use App\Services\RevenueStatisticsService;
 use App\Services\TeamStatisticsService;
 use App\Services\WorkingTimeService;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class StatsController extends Controller {
     public function showRevenueCurrentYear() {
@@ -33,15 +37,20 @@ class StatsController extends Controller {
     public function showWorkingTimeFor(User $user) {
         return WorkingTimeService::getWorkingTimeFor($user);
     }
-    public function showQuoteAccuracy() {
-        request()->validate([
-            'startDate' => 'required|date',
-            'endDate'   => 'required|date',
-        ]);
-
-        $start = Carbon::parseFromLocale(request('startDate'));
-        $end   = Carbon::parseFromLocale(request('endDate'));
+    public function showQuoteAccuracy(QuoteAccuracyRequest $request) {
+        $start = Carbon::parseFromLocale($request->validated('startDate'));
+        $end   = Carbon::parseFromLocale($request->validated('endDate'));
         return ProjectStatisticsService::getQuoteAccuracy($start, $end);
+    }
+    public function showProjectProductMix(QuoteAccuracyRequest $request) {
+        $start = Carbon::parseFromLocale($request->validated('startDate'));
+        $end   = Carbon::parseFromLocale($request->validated('endDate'));
+        return ProjectStatisticsService::getProductMix($start, $end);
+    }
+    public function showProjectSuccessRate(QuoteAccuracyRequest $request) {
+        $start = Carbon::parseFromLocale($request->validated('startDate'));
+        $end   = Carbon::parseFromLocale($request->validated('endDate'));
+        return ProjectStatisticsService::getSuccessRate($start, $end);
     }
     public static function clusterFor(Carbon $start, Carbon $end): string {
         $diff = $end->diffInDays($start);
@@ -53,15 +62,8 @@ class StatsController extends Controller {
         }
         return '%Y-%m-%d';
     }
-    public function showLeadProbabilityByDuration($span = null) {
-        $data = ProjectStatisticsService::getLeadProbabilityByDuration($span);
-        if ($data === null) {
-            return responseError('Not enough labeled data');
-        }
-        return response()->json($data);
-    }
-    public function showLeadProbabilityByBudget($span = null) {
-        $data = ProjectStatisticsService::getLeadProbabilityByBudget($span);
+    public function showQuoteAcceptanceSignalCurve(string $signal) {
+        $data = ProjectQuoteSignalCurveService::build($signal);
         if ($data === null) {
             return responseError('Not enough labeled data');
         }
@@ -81,5 +83,11 @@ class StatsController extends Controller {
     }
     public function showCompanyPredictionAccuracy() {
         return response()->json(FocusStatisticsService::getCompanyPredictionAccuracy());
+    }
+    public function showCustomerRevenueScatter(Request $request) {
+        $xAxis = $request->validate([
+            'x_axis' => 'nullable|in:cross_sell_ratio,customer_age,lifetime_revenue,project_count,months_since_last',
+        ])['x_axis'] ?? null;
+        return response()->json(CustomerRevenueStatsService::getScatterData($xAxis));
     }
 }

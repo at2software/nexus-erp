@@ -15,7 +15,6 @@ import { Project } from '@models/project/project.model';
 import { MoneyPipe } from '@pipes/money.pipe';
 
 @Component({
-    standalone: true,
     imports: [DatePipe, Nx, ProjectComponent, CdkTableModule, EnableTableExportDirective, NgbTooltipModule, NgbDatepickerModule, FormsModule, MoneyPipe, AvatarComponent],
     selector: 'projects-table',
     templateUrl: './projects-table.component.html',

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\InvoiceItemType;
 use App\Enums\MilestoneState;
 use App\Http\Requests\MilestoneRequest;
 use App\Jobs\ChatSendMessageJob;
@@ -9,13 +10,12 @@ use App\Models\InvoiceItem;
 use App\Models\Milestone;
 use App\Models\Param;
 use App\Models\Project;
-use App\Traits\ControllerHasPermissionsTrait;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class MilestoneController extends Controller {
-    use ControllerHasPermissionsTrait;
-
+    public function show(Milestone $milestone) {
+        return $milestone->load('project');
+    }
     public function indexOverview(Request $request) {
         // 1. Unassigned milestones (user_id is null) from running projects
         $unassigned = Milestone::whereNull('user_id')
@@ -83,19 +83,29 @@ class MilestoneController extends Controller {
             })
             ->sortByDesc(fn ($p) => abs($p['deviation']))
             ->values();
+
+        // 5. Invoice items in running projects that are not linked to any milestone yet
+        $invoiceItemsWithoutMilestone = InvoiceItem::where('type', InvoiceItemType::Default)
+            ->whereNotNull('project_id')
+            ->whereHas('project', fn ($q) => $q->whereRunning()->where('is_time_based', false))
+            ->whereDoesntHave('milestones')
+            ->with(['project:id,name,company_id', 'project.company'])
+            ->orderBy('text')
+            ->get();
         return [
-            'unassigned'  => $unassigned,
-            'overdue'     => $overdue,
-            'no_workload' => $noWorkload,
-            'projects'    => $projects,
+            'unassigned'                   => $unassigned,
+            'overdue'                      => $overdue,
+            'no_workload'                  => $noWorkload,
+            'projects'                     => $projects,
+            'invoiceItemsWithoutMilestone' => $invoiceItemsWithoutMilestone,
         ];
     }
     public function index(Request $request) {
         $userId   = $request->user()->id;
         $response = [
-            'overdue'     => Milestone::where('user_id', $userId)->whereState(1)->with('project')->whereBefore('due_at', now())->get(),
-            'needs_start' => Milestone::where('user_id', $userId)->whereState(0)->with('project')->whereBefore('started_at', now())->get(),
-            'running'     => Milestone::where('user_id', $userId)->whereState(1)->with('project')->whereAfter('due_at', now())->get(),
+            'overdue'     => Milestone::where('user_id', $userId)->whereState(1)->with('project')->whereBefore(now(), 'due_at')->get(),
+            'needs_start' => Milestone::where('user_id', $userId)->whereState(0)->with('project')->whereBefore(now(), 'started_at')->get(),
+            'running'     => Milestone::where('user_id', $userId)->whereState(1)->with('project')->whereAfter(now(), 'due_at')->get(),
         ];
         return $response;
     }
@@ -125,7 +135,7 @@ class MilestoneController extends Controller {
         }
 
         if (! $milestone->due_at && $milestone->started_at) {
-            $startDate            = Carbon::parse($milestone->started_at);
+            $startDate            = $milestone->started_at->copy();
             $updateData['due_at'] = $startDate->addDays($estimatedDays)->toDateString();
         }
 
@@ -173,26 +183,38 @@ class MilestoneController extends Controller {
         $milestone->update($data);
 
         if (array_key_exists('state', $data) && $oldState !== $milestone->state) {
-            $pm = $milestone->project->projectManager;
-            if ($pm && $pm->id !== $request->user()->id) {
-                $props = [
-                    'from_webhook'         => 'true',
-                    'webhook_display_name' => $milestone->user->name ?? 'NEXUS',
-                    'override_username'    => $milestone->user->name ?? 'NEXUS',
-                    'override_icon_url'    => env('API_URL').($milestone->user->icon ?? ''),
-                ];
-                $state         = MilestoneState::from($milestone->state);
-                $stateName     = $state->getName();
-                $utf8StateIcon = match ($state) {
-                    MilestoneState::TODO        => '⏳',
-                    MilestoneState::IN_PROGRESS => '⚒️',
-                    MilestoneState::DONE        => '✅',
-                };
-                $message = "{$utf8StateIcon} **{$request->user()->name}** changed milestone **{$milestone->name}** to **{$stateName}** (Project: {$milestone->project->name})";
-                ChatSendMessageJob::dispatch($message, user: $pm, props: $props);
-            }
+            $this->notifyStateChange($milestone, $request->user());
         }
         return $milestone->fresh(['dependees', 'dependants']);
+    }
+    public function resolve(Request $request, Milestone $milestone) {
+        $oldState = $milestone->state;
+        $milestone->update(['state' => MilestoneState::DONE->value]);
+
+        if ($oldState !== $milestone->state) {
+            $this->notifyStateChange($milestone, $request->user());
+        }
+        return $milestone->fresh();
+    }
+    private function notifyStateChange(Milestone $milestone, $actingUser): void {
+        $pm = $milestone->project->projectManager;
+        if ($pm && $pm->id !== $actingUser->id) {
+            $props = [
+                'from_webhook'         => 'true',
+                'webhook_display_name' => $milestone->user->name ?? 'NEXUS',
+                'override_username'    => $milestone->user->name ?? 'NEXUS',
+                'override_icon_url'    => config('app.api_url').($milestone->user->icon ?? ''),
+            ];
+            $state         = MilestoneState::from($milestone->state);
+            $stateName     = $state->getName();
+            $utf8StateIcon = match ($state) {
+                MilestoneState::TODO        => '⏳',
+                MilestoneState::IN_PROGRESS => '⚒️',
+                MilestoneState::DONE        => '✅',
+            };
+            $message = "{$utf8StateIcon} **{$actingUser->name}** changed milestone **{$milestone->name}** to **{$stateName}** (Project: {$milestone->project->name})";
+            ChatSendMessageJob::dispatch($message, user: $pm, props: $props);
+        }
     }
     public function reorder(Request $request) {
         $data = $request->validate([

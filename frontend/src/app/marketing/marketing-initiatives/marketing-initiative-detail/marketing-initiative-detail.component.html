@@ -2,6 +2,11 @@
 @let _showChannelModal = showChannelModal();
 @let _showWorkflowModal = showWorkflowModal();
 @let _showMetricModal = showMetricModal();
+@let _initiative = initiative();
+@let _chartOptions = chartOptions();
+@let _donutChartOptions = donutChartOptions();
+@let _availableWorkflows = availableWorkflows();
+@let _availableMetrics = availableMetrics();
 
 <div class="row">
     <!-- Left: Initiative detail card -->
@@ -14,23 +19,23 @@
             </div>
         }
 
-        @if (!_isLoading && initiative) {
+        @if (!_isLoading && _initiative) {
             <div class="card mb-3">
                 <!-- Header -->
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <div>{{ initiative.name }}</div>
+                    <div>{{ _initiative.name }}</div>
                     <div class="d-flex align-items-center gap-1">
-                        @if (initiative.users?.length) {
-                            @for (user of initiative.users; track user.id) {
-                                <avatar [object]="user" [nx]="user" [tables]="initiative.users" [nxContext]="{ initiative: initiative, component: this }" context="initiative_subscriber"> </avatar>
+                        @if (_initiative.users?.length) {
+                            @for (user of _initiative.users; track user.id) {
+                                <avatar [object]="user" [nx]="user" [tables]="_initiative.users" [nxContext]="{ initiative: _initiative, component: this }" context="initiative_subscriber"> </avatar>
                             }
                         }
-                        @if (!isSubscribed) {
+                        @if (!isSubscribed()) {
                             <button class="btn btn-plain btn-sm rounded-circle text-primary" (click)="subscribe()" tabindex="0" (keydown.enter)="subscribe()" i18n-ngbTooltip="@@i18n.uptime.subscribe" ngbTooltip="subscribe">
                                 <i class="text-primary">notifications_active</i>
                             </button>
                         }
-                        @if (isSubscribed) {
+                        @if (isSubscribed()) {
                             <button class="btn btn-plain btn-sm rounded-circle" (click)="unsubscribe()" tabindex="0" (keydown.enter)="unsubscribe()" i18n-ngbTooltip="@@i18n.uptime.unsubscribe" ngbTooltip="unsubscribe">
                                 <i class="text-primary">notifications_off</i>
                             </button>
@@ -39,39 +44,39 @@
                 </div>
 
                 <!-- Description row -->
-                @if (initiative.description) {
+                @if (_initiative.description) {
                     <div class="px-3 py-2">
-                        <p class="small text-muted mb-0">{{ initiative.description }}</p>
+                        <p class="small text-muted mb-0">{{ _initiative.description }}</p>
                     </div>
                 }
 
                 <!-- Prospect Development Chart -->
-                @if (chartOptions) {
+                @if (_chartOptions) {
                     <div class="card-body py-2 px-0 d-flex gap-2 align-items-center">
                         <div class="w-100 overflow-hidden">
-                            <nx-echarts [options]="chartOptions"></nx-echarts>
+                            <nx-echarts [options]="_chartOptions"></nx-echarts>
                         </div>
-                        @if (donutChartOptions) {
+                        @if (_donutChartOptions) {
                             <div class="flex-shrink-0" style="margin-bottom: -10px">
-                                <nx-echarts [options]="donutChartOptions"></nx-echarts>
+                                <nx-echarts [options]="_donutChartOptions"></nx-echarts>
                             </div>
                         }
                     </div>
                 }
 
                 <!-- Timeline -->
-                @if (initiative.start_date || initiative.end_date) {
+                @if (_initiative.start_date || _initiative.end_date) {
                     <div class="card-body py-2">
-                        @if (initiative.start_date) {
+                        @if (_initiative.start_date) {
                             <div class="small text-muted">
                                 <span i18n="@@i18n.common.start">start</span><span class="notranslate">:</span>
-                                {{ initiative.start_date | date: 'mediumDate' }}
+                                {{ _initiative.start_date | date: 'mediumDate' }}
                             </div>
                         }
-                        @if (initiative.end_date) {
+                        @if (_initiative.end_date) {
                             <div class="small text-muted">
                                 <span i18n="@@i18n.common.end">end</span><span class="notranslate">:</span>
-                                {{ initiative.end_date | date: 'mediumDate' }}
+                                {{ _initiative.end_date | date: 'mediumDate' }}
                             </div>
                         }
                     </div>
@@ -79,14 +84,14 @@
 
                 <ul class="list-group list-group-flush">
                     <!-- Channels -->
-                        
+
                     <li class="list-group-item hstack gap-2 align-items-center">
                         <div class="flex-fill" i18n="@@i18n.marketing.channels">channels</div>
-                        @if (initiative.channels?.length) {
+                        @if (_initiative.channels?.length) {
                             <div class="hstack gap-1">
-                                @for (channel of initiative.channels; track channel.id) {
+                                @for (channel of _initiative.channels; track channel.id) {
                                     <span class="badge cursor-pointer bg-dark text-white" (click)="removeChannel(channel.id)" tabindex="0" (keydown.enter)="removeChannel(channel.id)" i18n-title="@@i18n.marketing.click_to_remove_channel" title="click to remove channel">
-                                        @if (channel.pivot.is_primary) {
+                                        @if (channel.pivot?.is_primary) {
                                             <i class="me-1 text-yellow" style="font-size: 0.75rem">star</i>
                                         }
                                         {{ channel.name }}
@@ -104,10 +109,10 @@
                     <!-- Workflows -->
                     <li class="list-group-item hstack gap-2 align-items-center">
                         <div class="flex-fill" i18n="@@i18n.marketing.workflows">workflows</div>
-                        @if (initiative.workflows?.length) {
+                        @if (_initiative.workflows?.length) {
                             <div class="hstack gap-1">
-                                @for (workflow of initiative.workflows; track workflow.id) {
-                                    <span class="badge bg-dark cursor-pointer" [nx]="workflow" [tables]="initiative.workflows" [nxContext]="{ initiative: initiative, component: this }" [class.text-white]="workflow.is_active" [class.text-muted]="!workflow.is_active" context="initiative_details" tabindex="0">
+                                @for (workflow of _initiative.workflows; track workflow.id) {
+                                    <span class="badge bg-dark cursor-pointer" [nx]="workflow" [tables]="_initiative.workflows" [nxContext]="{ initiative: _initiative, component: this }" [class.text-white]="workflow.is_active" [class.text-muted]="!workflow.is_active" context="initiative_details" tabindex="0">
                                         {{ workflow.name }}
                                     </span>
                                 }
@@ -122,8 +127,8 @@
                 </ul>
 
                 <!-- Activity Visualization -->
-                @if (initiative.initiative_activities && initiative.initiative_activities.length > 0) {
-                    <activity-table [activities]="initiative.initiative_activities" [prospectsCount]="initiative.prospects_count || 0" [activityRoute]="['activity']"> </activity-table>
+                @if (_initiative.initiative_activities && _initiative.initiative_activities.length > 0) {
+                    <activity-table [activities]="_initiative.initiative_activities" [prospectsCount]="_initiative.prospects_count || 0" [activityRoute]="['activity']" [allMetrics]="_availableMetrics"> </activity-table>
                 }
             </div>
         }
@@ -193,7 +198,7 @@
                         </label>
                         <select class="form-select" id="workflowSelect" [(ngModel)]="selectedWorkflowId" name="workflow">
                             <option value="" i18n="@@i18n.marketing.select_workflow">select a workflow...</option>
-                            @for (workflow of availableWorkflows; track workflow.id) {
+                            @for (workflow of _availableWorkflows; track workflow.id) {
                                 <option [value]="workflow.id">
                                     {{ workflow.name }}
                                     @if (workflow.is_active) {
@@ -212,7 +217,7 @@
                                 </option>
                             }
                         </select>
-                        @if (availableWorkflows.length === 0) {
+                        @if (_availableWorkflows.length === 0) {
                             <small class="text-muted" i18n="@@i18n.marketing.no_workflows_create_first">no workflows available. create workflows in the workflows tab first.</small>
                         }
                     </div>
@@ -243,11 +248,11 @@
                         </label>
                         <select class="form-select" id="metricSelect" [(ngModel)]="selectedMetricId" name="metric">
                             <option value="" i18n="@@i18n.marketing.select_metric">select a metric...</option>
-                            @for (metric of availableMetrics; track metric.id) {
+                            @for (metric of _availableMetrics; track metric.id) {
                                 <option [value]="metric.id">{{ metric.name }} ({{ metric.metric_type }})</option>
                             }
                         </select>
-                        @if (availableMetrics.length === 0) {
+                        @if (_availableMetrics.length === 0) {
                             <small class="text-muted" i18n="@@i18n.marketing.no_metrics_auto_created">no metrics available. metrics are created automatically when workflows are seeded.</small>
                         }
                     </div>

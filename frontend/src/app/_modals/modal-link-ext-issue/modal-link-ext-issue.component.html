@@ -1,0 +1,29 @@
+<div class="modal d-block" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" i18n="@@i18n.issues.linkExternalIssue">link external issue</span>
+                <button type="button" class="btn-close" (click)="decline()" tabindex="0" (keydown.enter)="decline()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <issue-picker [projectId]="projectId()" [(selectedLinkId)]="selectedLinkId" [(selectedIssueId)]="selectedIssueId" (issueSelected)="onIssueSelected($event)"></issue-picker>
+
+                @if (activeTracker() && !canConnect()) {
+                    <div class="card card-body text-warning mb-3" i18n="@@i18n.issues.noTokenManualHint">no credentials for this tracker — enter the issue id manually below</div>
+                }
+
+                <div class="input-group mt-2">
+                    <label class="input-group-text" for="extIssueManualId" i18n="@@i18n.issues.issueIdManual">issue id</label>
+                    <input type="text" class="form-control" id="extIssueManualId" [ngModel]="manualId()" (ngModelChange)="manualId.set($event)" [disabled]="!activeTracker()" [placeholder]="activeTracker() ? '#' : ''" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                @if (hadLink()) {
+                    <button type="button" class="btn btn-outline-danger me-auto" (click)="unlink()" i18n="@@i18n.issues.removeLink">remove link</button>
+                }
+                <button type="button" class="btn" (click)="decline()" tabindex="0" (keydown.enter)="decline()" i18n="@@i18n.common.cancel">cancel</button>
+                <button type="button" class="btn btn-primary" (click)="accept()" [disabled]="!canSubmit()" hotkey="CTRL+ENTER" i18n="@@i18n.common.ok">ok</button>
+            </div>
+        </div>
+    </div>
+</div>

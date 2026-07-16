@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, ElementRef, OnInit, inject, input, output, effect } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, effect, inject, input, output } from '@angular/core';
 import { Company } from '@models/company/company.model';
 import { Connection } from '@models/company/connection.model';
-import { select, forceSimulation, forceManyBody, forceCenter, forceLink, drag, zoom, zoomIdentity, Simulation } from 'd3';
+import { select, forceSimulation, forceManyBody, forceCenter, forceLink, drag, zoom, zoomIdentity, Simulation, Selection, ZoomBehavior, D3DragEvent, D3ZoomEvent, ForceLink } from 'd3';
 import { NxGlobal } from '@app/nx/nx.global';
 
 interface NetworkNode {
@@ -27,9 +27,8 @@ interface NetworkLink {
     selector: 'network-chart',
     template: '<div class="network-chart" style="height:100%;"></div>',
     styles: [':host { display: block; width: 100%; height: 100%; }'],
-    standalone: true,
 })
-export class NetworkChart implements OnInit {
+export class NetworkChart {
     root = input<Company | undefined>();
     data = input.required<Connection[]>();
     focus = input<string | Company | null>();
@@ -39,18 +38,25 @@ export class NetworkChart implements OnInit {
     #nodes: NetworkNode[] = [];
     #links: NetworkLink[] = [];
     #simulation!: Simulation<NetworkNode, NetworkLink>;
-    #svg: any;
-    #linkSelection: any;
-    #nodeSelection: any;
+    #svg!: Selection<SVGSVGElement, unknown, null, undefined>;
+    #linkSelection!: Selection<SVGLineElement, NetworkLink, SVGGElement, unknown>;
+    #nodeSelection!: Selection<SVGGElement, NetworkNode, SVGGElement, unknown>;
     #chartElement!: HTMLElement;
-    #container: any;
-    #zoomBehavior: any;
+    #container!: Selection<SVGGElement, unknown, null, undefined>;
+    #zoomBehavior!: ZoomBehavior<SVGSVGElement, unknown>;
     #isPanning = false;
     #panStart = { x: 0, y: 0 };
 
     readonly #el = inject(ElementRef);
 
     constructor() {
+        afterNextRender(() => {
+            this.#chartElement = this.#el.nativeElement.querySelector('.network-chart')!;
+            this.initSvg();
+            this.initSimulation();
+            this.updateData();
+        });
+
         effect(() => {
             // read signals to track them
             this.data();
@@ -60,13 +66,6 @@ export class NetworkChart implements OnInit {
                 this.updateData();
             }
         });
-    }
-
-    ngOnInit() {
-        this.#chartElement = this.#el.nativeElement.querySelector('.network-chart')!;
-        this.initSvg();
-        this.initSimulation();
-        this.updateData();
     }
 
     #getNodeRadius(net: number): number {
@@ -90,14 +89,14 @@ export class NetworkChart implements OnInit {
     }
 
     initSvg() {
-        this.#svg = select(this.#chartElement).append('svg').attr('width', '100%').attr('height', '100%');
+        this.#svg = select<HTMLElement, unknown>(this.#chartElement).append<SVGSVGElement>('svg').attr('width', '100%').attr('height', '100%');
 
-        this.#container = this.#svg.append('g');
+        this.#container = this.#svg.append<SVGGElement>('g');
 
-        this.#zoomBehavior = zoom()
+        this.#zoomBehavior = zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.1, 4])
-            .on('zoom', (event: any) => {
-                this.#container.attr('transform', event.transform);
+            .on('zoom', (event: D3ZoomEvent<SVGSVGElement, unknown>) => {
+                this.#container.attr('transform', event.transform.toString());
             });
 
         this.#svg.call(this.#zoomBehavior);
@@ -116,7 +115,8 @@ export class NetworkChart implements OnInit {
                 const dx = event.clientX - this.#panStart.x;
                 const dy = event.clientY - this.#panStart.y;
                 this.#panStart = { x: event.clientX, y: event.clientY };
-                const currentTransform = this.#svg.node().__zoom || zoomIdentity;
+                const node = this.#svg.node() as (SVGSVGElement & { __zoom?: typeof zoomIdentity }) | null;
+                const currentTransform = node?.__zoom || zoomIdentity;
                 const newTransform = currentTransform.translate(dx / currentTransform.k, dy / currentTransform.k);
                 this.#svg.call(this.#zoomBehavior.transform, newTransform);
             }
@@ -241,7 +241,7 @@ export class NetworkChart implements OnInit {
         this.#links = newLinks;
 
         this.#simulation.nodes(this.#nodes);
-        const linkForce = this.#simulation.force('link') as any;
+        const linkForce = this.#simulation.force('link') as ForceLink<NetworkNode, NetworkLink> | undefined;
         if (linkForce) {
             linkForce.links(this.#links).strength((d: NetworkLink) => d.strength);
         }
@@ -252,7 +252,7 @@ export class NetworkChart implements OnInit {
             return `${s}-${t}`;
         };
 
-        this.#linkSelection = this.#container.select('g.links').selectAll('line').data(this.#links, linkKey);
+        this.#linkSelection = this.#container.select<SVGGElement>('g.links').selectAll<SVGLineElement, NetworkLink>('line').data(this.#links, linkKey);
 
         this.#linkSelection.exit().remove();
 
@@ -265,8 +265,8 @@ export class NetworkChart implements OnInit {
             .attr('stroke-width', (d: NetworkLink) => this.#getLinkWidth(d));
 
         this.#nodeSelection = this.#container
-            .select('g.nodes')
-            .selectAll('g')
+            .select<SVGGElement>('g.nodes')
+            .selectAll<SVGGElement, NetworkNode>('g')
             .data(this.#nodes, (d: NetworkNode) => d.id);
 
         this.#nodeSelection.exit().remove();
@@ -276,11 +276,11 @@ export class NetworkChart implements OnInit {
             .append('g')
             .call(
                 drag<SVGGElement, NetworkNode>()
-                    .on('start', (event: any, d: NetworkNode) => this.#dragstarted(event, d))
-                    .on('drag', (event: any, d: NetworkNode) => this.#dragged(event, d))
-                    .on('end', (event: any, d: NetworkNode) => this.#dragended(event, d)),
+                    .on('start', (event, d) => this.#dragstarted(event, d))
+                    .on('drag', (event, d) => this.#dragged(event, d))
+                    .on('end', (event, d) => this.#dragended(event, d)),
             )
-            .on('click', (event: any, d: NetworkNode) => this.#togglePin(event, d));
+            .on('click', (event: MouseEvent, d: NetworkNode) => this.#togglePin(event, d));
 
         nodeEnter.append('circle').style('filter', 'url(#neumorphism-shadow)').style('cursor', 'pointer');
 
@@ -336,19 +336,19 @@ export class NetworkChart implements OnInit {
         this.#linkSelection.attr('stroke', (d: NetworkLink) => this.#getLinkColor(d)).attr('stroke-width', (d: NetworkLink) => this.#getLinkWidth(d));
     }
 
-    #dragstarted(event: any, d: NetworkNode) {
+    #dragstarted(event: D3DragEvent<SVGGElement, NetworkNode, NetworkNode>, d: NetworkNode) {
         if (!event.active) this.#simulation.alphaTarget(0.3).restart();
         d.fx = d.x;
         d.fy = d.y;
         this.#highlightConnectedLinks(d.id);
     }
 
-    #dragged(event: any, d: NetworkNode) {
+    #dragged(event: D3DragEvent<SVGGElement, NetworkNode, NetworkNode>, d: NetworkNode) {
         d.fx = event.x;
         d.fy = event.y;
     }
 
-    #dragended(event: any, d: NetworkNode) {
+    #dragended(event: D3DragEvent<SVGGElement, NetworkNode, NetworkNode>, d: NetworkNode) {
         if (!event.active) this.#simulation.alphaTarget(0);
         const focusId = this.#getFocusId();
 
@@ -371,7 +371,7 @@ export class NetworkChart implements OnInit {
             });
     }
 
-    #togglePin(event: any, d: NetworkNode) {
+    #togglePin(event: MouseEvent, d: NetworkNode) {
         event.stopPropagation();
 
         if (d.fx != null) {

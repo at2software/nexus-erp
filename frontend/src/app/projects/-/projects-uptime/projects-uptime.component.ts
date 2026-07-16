@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { UptimeMonitor } from '@models/uptime/uptime-monitor.model';
-import { UptimeMonitorService, UptimeCheckDay } from '@models/uptime/uptime-monitor.service';
+import { UptimeMonitorService } from '@models/uptime/uptime-monitor.service';
+import { UptimeCheckDay } from '@models/api-response';
 import { GlobalService } from '@models/global.service';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { Nx } from '@app/nx/nx.directive';
@@ -16,21 +17,20 @@ import { SpinnerComponent } from '@shards/spinner/spinner.component';
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'projects-uptime',
-    standalone: true,
     imports: [DatePipe, NgbTooltipModule, Nx, AvatarComponent, ToolbarComponent, AvatarComponent, EmptyStateComponent, SpinnerComponent],
     templateUrl: './projects-uptime.component.html',
     styleUrls: ['./projects-uptime.component.scss'],
 })
-export class ProjectsUptimeComponent implements OnInit {
+export class ProjectsUptimeComponent {
     monitors = signal<UptimeMonitor[]>([]);
     loading = signal(true);
-    checksCache = new Map<string, UptimeCheckDay[]>();
+    checksCache = signal(new Map<string, UptimeCheckDay[]>());
 
     global = inject(GlobalService);
     #service = inject(UptimeMonitorService);
     #modalService = inject(UptimeMonitorModalService);
 
-    ngOnInit() {
+    constructor() {
         this.loadMonitors();
     }
 
@@ -101,11 +101,15 @@ export class ProjectsUptimeComponent implements OnInit {
                     catchError(() => of({ id: m.id, checks: [] as UptimeCheckDay[] })),
                 ),
             ),
-        ).subscribe((results) => results.forEach((r) => this.checksCache.set(r.id, r.checks)));
+        ).subscribe((results) => {
+            const next = new Map(this.checksCache());
+            results.forEach((r) => next.set(r.id, r.checks));
+            this.checksCache.set(next);
+        });
     }
 
     getChecks(monitor: UptimeMonitor): UptimeCheckDay[] {
-        return this.checksCache.get(monitor.id) || [];
+        return this.checksCache().get(monitor.id) || [];
     }
 
     getSparklineData(monitor: UptimeMonitor): { percentage: number; color: string; day: string }[] {

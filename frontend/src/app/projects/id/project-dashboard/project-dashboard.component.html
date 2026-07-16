@@ -65,10 +65,14 @@
                 }
             </div>
             <ul class="list-group">
+                @if (_project.state.isPrepared()) {
+                <parent-project-selector></parent-project-selector>
+                }
+
                 <project-default-product [project]="_project"></project-default-product>
 
                 @if (!_project.is_internal && _project.company.requires_po) {
-                <li class="hstack gap-2" roles="project_manager">
+                <li class="list-group-item hstack gap-2" roles="project_manager">
                     <div class="input-group">
                         <div class="input-group-text input-group-text-darker">
                             <i i18n-ngbTooltip="@@i18n.project.purchaseOrderNumber"
@@ -82,8 +86,8 @@
             </ul>
 
             <div class="card-header hstack gap-2">
+                <span class="flex-fill cursor-pointer" i18n="@@i18n.common.plugins" tabindex="0" (click)="pluginCompact.set(!pluginCompact())" (keydown.enter)="pluginCompact.set(!pluginCompact())">plugins</span>
                 <span class="badge bg-dark">{{ _project.plugin_links.length }}</span>
-                <span class="flex-fill cursor-pointer" i18n="@@i18n.common.plugins" (click)="pluginCompact = !pluginCompact">plugins</span>
 
                 <div ngbDropdown>
                     <button class="btn btn-plain p-0 dropdown-toggle-simple" ngbDropdownToggle>
@@ -91,13 +95,14 @@
                     </button>
                     <div ngbDropdownMenu style="text-transform: none">
                         @for (p of factory.getPluginEncryptions(); track $index) {
+                        @let _inst = factory.instanceFor(p);
                         <button class="dropdown-item pointer hstack gap-2 text-nowrap px-2"
-                            (click)="onNewPluginLink(factory.instanceFor(p)!)" tabindex="0"
-                            (keydown.enter)="onNewPluginLink(factory.instanceFor(p)!)" style="text-transform: none">
+                            (click)="onNewPluginLink(_inst!)" tabindex="0"
+                            (keydown.enter)="onNewPluginLink(_inst!)" style="text-transform: none">
                             <div>
-                                <n [ngbTooltip]="factory.instanceFor(p)?.state"
-                                    class="text-{{ factory.instanceFor(p)?.getStateCss() }}"> {{
-                                    factory.instanceFor(p)?.icon() }}</n>
+                                <n [ngbTooltip]="_inst?.state"
+                                    class="text-{{ _inst?.getStateCss() }}"> {{
+                                    _inst?.icon() }}</n>
                             </div>
                             @if (p?.value?.url) {
                             <div class="flex-fill hstack gap-2">
@@ -106,13 +111,13 @@
                             </div>
                             }
                         </button>
-                        @if (instanceFor(p)?.createBlankFor) {
+                        @if (_inst?.createBlankFor) {
                         <button class="dropdown-item pointer hstack gap-2 text-nowrap px-2" (click)="createBlank(p)"
                             tabindex="0" (keydown.enter)="createBlank(p)" style="text-transform: none">
                             <div>
-                                <n [ngbTooltip]="factory.instanceFor(p)?.state"
-                                    class="text-{{ factory.instanceFor(p)?.getStateCss() }}"> {{
-                                    factory.instanceFor(p)?.icon() }}</n>
+                                <n [ngbTooltip]="_inst?.state"
+                                    class="text-{{ _inst?.getStateCss() }}"> {{
+                                    _inst?.icon() }}</n>
                             </div>
                             @if (p?.value?.url) {
                             <div class="flex-fill hstack gap-2">
@@ -130,7 +135,7 @@
                             <i>add_circle</i>
                             <span i18n="@@i18n.common.createNew">create new</span>
                         </button>
-                        @for (monitor of allMonitors(); track monitor.id) {
+                        @for (monitor of linkableMonitors(); track monitor.id) {
                         <button class="dropdown-item pointer hstack gap-2 text-nowrap px-2"
                             (click)="linkExistingMonitor(monitor)" tabindex="0"
                             (keydown.enter)="linkExistingMonitor(monitor)" style="text-transform: none">
@@ -141,20 +146,21 @@
                     </div>
                 </div>
             </div>
-            <ul class="list-group" [class.d-none]="pluginCompact">
+            <ul class="list-group" [class.d-none]="pluginCompact()">
                 @for (p of _project.plugin_links; track p.id) {
-                <li class="list-group-item list-group-item-action hstack gap-2 align-items-center">
+                @let _inst = factory.instanceFor(p);
+                <li [nx]="p" [tables]="_project.plugin_links" class="list-group-item list-group-item-action hstack gap-2 align-items-center">
                     <a class="d-flex align-items-center cursor-pointer text-decoration-none" [href]="p.url"
-                        target="_blank" [nx]="p" [tables]="_project.plugin_links">
+                        target="_blank">
                         <n [ngbTooltip]="p.url"
-                            class="cursor-pointer text-{{ factory.instanceFor(p)?.getStateCss() }}"> {{
-                            factory.instanceFor(p)?.icon() }}</n>
+                            class="cursor-pointer text-{{ _inst?.getStateCss() }}"> {{
+                            _inst?.icon() }}</n>
                     </a>
                     <div>{{ p.getName() }}</div>
                 </li>
                 }
                 @for (monitor of monitors(); track monitor.id) {
-                <li class="list-group-item list-group-item-action hstack gap-2 align-items-center">
+                <li [nx]="monitor" [tables]="_project.plugin_links" class="list-group-item list-group-item-action hstack gap-2 align-items-center">
                     <a class="d-flex align-items-center cursor-pointer text-decoration-none"
                         [routerLink]="['/projects/monitoring/uptime']" [ngbTooltip]="monitor.name">
                         <i class="cursor-pointer text-{{ monitor.statusColor }}">{{ monitor.statusIcon }}</i>
@@ -183,7 +189,7 @@
                             @for (group of _allAvailableContacts; track group.company.id) {
                             @if (_allAvailableContacts.length > 1) {
                             <li>
-                                {{ group.company.name }}
+                                {{ group.company.getName() }}
                             </li>
                             }
                             @for (x of group.employees; track x.id) {
@@ -210,9 +216,7 @@
             <ul class="list-group" #company>
                 @for (c of contacts(); track c.id) {
                 <list-group-item-contact [nx]="c" [tables]="contacts()" [contact]="c.assignee" [showQuickContact]="true"
-                    [subject]="_project.name" (actionsResolved)="onAssignmentActions()" [imageUrl]="c.assignee.icon"
-                    [mantisInstance]="getMantisInstance()" [gitInstance]="getGitInstance()"
-                    [mattermostInstance]="getMattermostInstance()"> </list-group-item-contact>
+                    [subject]="_project.name" (actionsResolved)="onAssignmentActions()" [imageUrl]="c.assignee.icon"> </list-group-item-contact>
                 }
             </ul>
         </div>
@@ -230,105 +234,11 @@
 
     @if (!_project.state.isPrepared()) {
     <div class="col-md-6">
-        <div class="card mb-3">
-            <div class="card-header" i18n="@@i18n.common.timeline">timeline</div>
-            @if (chartOptions) {
-            <div class="position-relative">
-                <div echarts [options]="chartOptions" [style.height.px]="chartHeight"></div>
-                <!-- Avatar overlay for heatmap rows -->
-                @if (timelineUsers.length > 0) {
-                <div class="position-absolute" style="left: 20px; top: 140px; width: 30px">
-                    @for (user of timelineUsers; track user.id) {
-                    <div class="d-flex align-items-center justify-content-center" [style.height.px]="20">
-                        <avatar [object]="user" [size]="'xs'"></avatar>
-                    </div>
-                    }
-                </div>
-                }
-            </div>
-            }
-        </div>
+        <workload-timeline-chart [timeline]="_project.timeline_chart"></workload-timeline-chart>
 
         <!-- InvoiceItem duration -->
         @if (!_project.is_time_based && !_project.is_internal) {
-        <ng-template #featureItemContent let-item="item">
-            <div class="d-flex">
-                @if (item.milestones && item.milestones.length > 0) {
-                <div class="me-2 d-flex gap-1 align-items-center">
-                    @for (m of item.milestones; track m.id) {
-                    <div class="d-flex align-items-center gap-1">
-                        <i class="cursor-default"
-                            [ngbTooltip]="'Milestone: ' + m.name + (m.progress ? ' (' + (m.progress | number: '1.0-0') + '%)' : '')"
-                            [class.text-muted]="m.state === 0" [class.text-primary]="m.state === 1"
-                            [class.text-success]="m.state === 2">
-                            @if (m.state === 0) {
-                            radio_button_unchecked
-                            }
-                            @if (m.state === 1) {
-                            schedule
-                            }
-                            @if (m.state === 2) {
-                            check_circle
-                            }
-                        </i>
-                        @if (m.user) {
-                        <avatar [object]="m.user" [size]="'xs'"></avatar>
-                        }
-                    </div>
-                    }
-                </div>
-                }
-                <div class="flex-fill me-2 text-truncate" [innerHTML]="item.text | safe: 'html'"
-                    [class]="getItemTextColor(item)"></div>
-                @if (item.progress && item.pt > 0) {
-                <div class="text-end me-2 text-nowrap" [class]="getProgressColorClass(item)"
-                    [ngbTooltip]="(item.fociSum | number: '1.1-1') + 'h / ' + (item.pt * 8 | number: '1.1-1') + 'h'">{{
-                    item.progress * 100 | number: '1.0-0' }}%</div>
-                }
-            </div>
-            @if (item.qty > 0) {
-            @if (getUserContributions(item).length > 0) {
-            <div class="progress" [style.height.px]="3">
-                @for (contribution of getUserContributions(item); track contribution.user?.id) {
-                <div class="progress-bar" [style.width.%]="contribution.percentage"
-                    [style.background-color]="contribution.color"
-                    [ngbTooltip]="(contribution.user?.name || 'Unknown') + ': ' + (contribution.hours | number: '1.1-1') + 'h'">
-                </div>
-                }
-            </div>
-            } @else if (item.progress) {
-            <div class="progress" [style.height.px]="3">
-                <div class="progress-bar bg-primary" [style.width.%]="item.progress * 100"
-                    [ngbTooltip]="(item.progress * 100 | number: '1.0-0') + '%'"></div>
-            </div>
-            }
-            }
-        </ng-template>
-
-        <div class="card mb-3">
-            <div class="card-header gap-2">
-                <span i18n="@@i18n.common.features" class="flex-fill text-truncate">features</span>
-                <div class="chart-title" ngbTooltip="foci with invoice item relationship"
-                    i18n-ngbTooltip="@@i18n.projects.fociWithInvoiceItemRelationship"
-                    [class.text-warning]="getUnfocusedProgress() > 0.1 && getUnfocusedProgress() <= 0.2"
-                    [class.text-danger]="getUnfocusedProgress() > 0.2">
-                    {{ getFocusedProgress() | percent: '1.1-1' }}
-                </div>
-            </div>
-            <ul class="list-group">
-                @for (i of focusItems; track i.id) {
-                @if (i.milestones && i.milestones.length > 0) {
-                <li class="list-group-item" [class.text-muted]="allMilestonesDone(i)" [nx]="i.milestones.first()!">
-                    <ng-container *ngTemplateOutlet="featureItemContent; context: { item: i }"></ng-container>
-                </li>
-                } @else {
-                <li class="list-group-item" [class.text-muted]="allMilestonesDone(i)">
-                    <ng-container *ngTemplateOutlet="featureItemContent; context: { item: i }"></ng-container>
-                </li>
-                }
-                }
-            </ul>
-        </div>
+        <project-features-list [project]="_project"></project-features-list>
         }
         <media-preview [parent]="_project"></media-preview>
         <ng-container *ngTemplateOutlet="descriptionCard"></ng-container>

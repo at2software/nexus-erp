@@ -1,20 +1,24 @@
-import { ChangeDetectionStrategy, Component, input, OnChanges } from '@angular/core';
+import { Dictionary } from '@constants/constants';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { EchartsParamCardComponent } from './echarts-param-card.component';
+
 import { Color } from '@constants/Color';
 import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS, EChartsRangeAreaOptions, EChartsDualShadowAreaStyle } from '../echarts-presets';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { CASHFLOW_I18N } from '@dashboard/widgets/widget-cashflow/widget-cashflow.options';
 import { NgxEchartsDirective } from 'ngx-echarts';
+import type { LineSeriesOption } from 'echarts';
+import type { TopLevelFormatterParams } from 'echarts/types/dist/shared';
+import { ParamChartSeries, ParamChartPoint } from '@models/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'echarts-range-card',
     templateUrl: './echarts-card.component.html',
     styleUrls: ['./echarts-card.component.scss'],
-    standalone: true,
     imports: [NgxEchartsDirective],
 })
-export class EchartsRangeCardComponent extends EchartsParamCardComponent implements OnChanges {
+export class EchartsRangeCardComponent extends EchartsParamCardComponent {
     computeTrend = input<boolean>(true);
     seriesCount = input<number>(1);
 
@@ -24,25 +28,25 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent impleme
         return `var(--bs-${this.getColor(0)})`;
     }
 
-    startOfStats = () => moment().startOf('month').subtract(36, 'month');
+    startOfStats = () => dayjs().startOf('month').subtract(36, 'month');
 
     individualOptions = () => ({
         ...EChartsRangeAreaOptions,
         series: [],
     });
 
-    updateSeries(result: any[]): void {
+    updateSeries(result: ParamChartSeries[]): void {
         if (!result || result.length === 0) return;
 
-        const findNode = (d: string, a: any[]) => a?.find((_) => _.x == d);
+        const findNode = (d: string, a: ParamChartPoint[]) => a?.find((_) => _.x == d);
 
-        this.value = result.length ? result[0].current : 0;
+        this.value.set(result.length && result[0].current != null ? result[0].current : 0);
 
         // Fill missing date gaps
-        result.forEach((_: any) => {
-            const blanko: any[] = [];
-            let last: any | undefined = undefined;
-            for (let i = this.startOfStats(); i < moment(); i.add(1, 'month')) {
+        result.forEach((_) => {
+            const blanko: ParamChartPoint[] = [];
+            let last: ParamChartPoint | undefined = undefined;
+            for (let i = this.startOfStats(); i.isBefore(dayjs()); i = i.add(1, 'month')) {
                 const date = i.format('YYYY-MM-01');
                 const node = findNode(date, _['data']);
                 last = node ? node : last;
@@ -56,17 +60,17 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent impleme
         let maxVal = 0;
 
         if (useSharedStack) {
-            const aggregateByDate: Record<string, number> = {};
-            result.forEach((_: any) => {
-                _['data'].forEach((__: any) => {
+            const aggregateByDate: Dictionary<number> = {};
+            result.forEach((_) => {
+                _.data.forEach((__) => {
                     const avg = (__.min + __.max) / 2;
                     aggregateByDate[__.x] = (aggregateByDate[__.x] || 0) + avg;
                 });
             });
             maxVal = Math.max(...Object.values(aggregateByDate), 0);
         } else {
-            result.forEach((_: any, i: number) => {
-                _['data'].forEach((__: any) => {
+            result.forEach((_, i: number) => {
+                _.data.forEach((__) => {
                     if (this.offset() == 'none' || i == 0) {
                         maxVal = Math.max(maxVal, __.max);
                     }
@@ -77,18 +81,18 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent impleme
         const padding = maxVal * 0.2;
 
         // Convert to ECharts series format
-        const echartsData: any[] = [];
+        const echartsData: (LineSeriesOption & { showInLegend?: boolean })[] = [];
         const sharedStackName = 'combined';
 
         if (useSharedStack) {
-            result.forEach((_: any, i: number) => {
+            result.forEach((_, i: number) => {
                 const baseColor = Color.fromVar(this.getColor(i));
                 const areaColor = baseColor.toHexString();
 
                 echartsData.push({
-                    name: CASHFLOW_I18N(_['name']),
+                    name: CASHFLOW_I18N(_.name),
                     type: 'line',
-                    data: _['data'].map((__: any) => [__.x, (__.min + __.max) / 2]),
+                    data: _.data.map((__) => [__.x, (__.min + __.max) / 2]),
                     lineStyle: {
                         color: baseColor.toHexString(),
                         width: 2,
@@ -103,15 +107,15 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent impleme
                 });
             });
         } else {
-            result.forEach((_: any, i: number) => {
+            result.forEach((_, i: number) => {
                 const baseColor = Color.fromVar(this.getColor(i));
                 const areaColor = baseColor.toHexString();
 
                 // Bottom area (from 0 to min)
                 echartsData.push({
-                    name: `${CASHFLOW_I18N(_['name'])} Base`,
+                    name: `${CASHFLOW_I18N(_.name)} Base`,
                     type: 'line',
-                    data: _['data'].map((__: any) => [__.x, __.min]),
+                    data: _.data.map((__) => [__.x, __.min]),
                     lineStyle: { opacity: 0 },
                     symbol: 'none',
                     areaStyle: { color: 'transparent', opacity: 0 },
@@ -122,9 +126,9 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent impleme
 
                 // Top area (range area between min and max)
                 echartsData.push({
-                    name: `${CASHFLOW_I18N(_['name'])} Range`,
+                    name: `${CASHFLOW_I18N(_.name)} Range`,
                     type: 'line',
-                    data: _['data'].map((__: any) => [__.x, __.max - __.min]),
+                    data: _.data.map((__) => [__.x, __.max - __.min]),
                     lineStyle: { opacity: 0 },
                     symbol: 'none',
                     areaStyle: {
@@ -140,20 +144,20 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent impleme
 
         // Add line series (average lines above the range areas) - only for single series
         if (!useSharedStack) {
-            result.forEach((serie: any, seriesIndex: number) => {
+            result.forEach((serie, seriesIndex: number) => {
                 const lineColor = Color.fromVar(this.getColor(seriesIndex)).toHexString();
                 echartsData.push({
-                    name: seriesIndex >= this.seriesCount() ? 'Vergleichszeitraum' : CASHFLOW_I18N(serie['name']),
+                    name: seriesIndex >= this.seriesCount() ? 'Vergleichszeitraum' : CASHFLOW_I18N(serie.name),
                     type: 'line',
                     symbol: 'none',
                     lineStyle: {
                         color: lineColor,
                         width: 2,
                     },
-                    data: serie['data'].map((_: any, i: number) => {
+                    data: serie.data.map((_, i: number) => {
                         let y = 0.5 * (_.min + _.max);
-                        if (i == serie['data'].length - 1 && serie['current']) {
-                            y = serie['current'];
+                        if (i == serie.data.length - 1 && serie.current) {
+                            y = serie.current;
                         }
                         return [_.x, y];
                     }),
@@ -164,11 +168,11 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent impleme
 
         // Calculate trend if needed (when comparing multiple series)
         if (result.length >= 2 && echartsData.length >= 2) {
-            const currentSeries = echartsData[1]?.data || [];
-            const lastSeries = echartsData[3]?.data || [];
-            if (currentSeries.length > 0 && lastSeries.length > 0) {
-                const current = currentSeries[currentSeries.length - 1]?.[1] || 0;
-                const last = lastSeries[lastSeries.length - 1]?.[1] || 0;
+            const lastPoint1 = result[1]?.data?.at(-1);
+            const lastPoint3 = result[3]?.data?.at(-1);
+            if (lastPoint1) {
+                const current = (lastPoint1.min + lastPoint1.max) / 2;
+                const last = lastPoint3 ? (lastPoint3.min + lastPoint3.max) / 2 : 0;
                 this.trend.set(current - last);
             }
         }
@@ -176,10 +180,10 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent impleme
         // Add trend lines if computeTrend is enabled and not stacked
         if (this.computeTrend() && !useSharedStack) {
             echartsData.forEach((series) => {
-                if (series.type === 'line' && series.data.length > 10 && series.lineStyle?.color && !series.name.includes('Base') && !series.name.includes('Range')) {
-                    const trendData = this.#calculateTrendLine(series.data);
+                if (series.type === 'line' && (series.data?.length ?? 0) > 10 && series.lineStyle?.color && typeof series.name !== 'number' && !series.name?.includes('Base') && !series.name?.includes('Range')) {
+                    const trendData = this.#calculateTrendLine((series.data ?? []) as [string | number, number][]);
                     if (trendData.length > 0) {
-                        const trendColor = new Color(series.lineStyle.color).lighten(35).toHexString();
+                        const trendColor = new Color(series.lineStyle?.color as string).lighten(35).toHexString();
                         echartsData.push({
                             name: `${series.name} Trend`,
                             type: 'line',
@@ -212,24 +216,25 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent impleme
                 trigger: 'axis',
                 ...ECHARTS_DEFAULT_TOOLTIP_OPTIONS,
                 confine: true,
-                formatter: (params: any) => {
-                    if (!params || params.length === 0) return '';
+                formatter: (params: TopLevelFormatterParams) => {
+                    const arr = [params].flat();
+                    if (arr.length === 0) return '';
 
-                    const dataIndex = params[0].dataIndex;
-                    const xValue = params[0].axisValue;
+                    const dataIndex = arr[0].dataIndex;
+                    const xValue = arr[0].axisValue;
                     const headerColor = Color.fromVar(this.getColor(0)).toHexString();
 
                     // Group by original series (skip trend lines, range areas, and base areas)
-                    const originalSeries = params.filter((p: any) => !p.seriesName.includes('Trend') && !p.seriesName.includes('Range') && !p.seriesName.includes('Base'));
+                    const originalSeries = arr.filter((p) => !p.seriesName?.includes('Trend') && !p.seriesName?.includes('Range') && !p.seriesName?.includes('Base'));
 
                     let html = `<div class="text-center d-flex justify-content-between align-items-center" style="color: ${headerColor}; padding: 4px;">`;
-                    html += `<span class="fw-bold">${moment(xValue).format('YYYY-MM')}</span>`;
+                    html += `<span class="fw-bold">${dayjs(xValue as string).format('YYYY-MM')}</span>`;
                     html += `</div>`;
 
                     if (useSharedStack && originalSeries.length > 1) {
                         let total = 0;
-                        originalSeries.forEach((param: any, i: number) => {
-                            const value = param.value[1] || param.value;
+                        originalSeries.forEach((param, i: number) => {
+                            const value = (param.value as number[])[1] ?? (param.value as number);
                             total += value;
                             const seriesColor = Color.fromVar(this.getColor(i)).toHexString();
                             html += `<div class="f-b p-0 hstack gap-2">`;
@@ -240,13 +245,13 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent impleme
                         html += `<div class="flex-fill">∑:</div>`;
                         html += `<div class="text-end font-monospace" style="color:${headerColor};">${this.#formatNumber(total)}${this.suffix()}</div></div>`;
                     } else {
-                        originalSeries.forEach((param: any) => {
-                            const isLast = dataIndex === originalSeries[0]?.data?.length - 1;
+                        originalSeries.forEach((param) => {
+                            const isLast = dataIndex === originalSeries[0]?.dataIndex;
                             const name = isLast ? $localize`:@@i18n.common.current:current` : $localize`:@@i18n.common.average:average`;
 
                             html += `<div class="f-b p-0 hstack gap-2">`;
                             html += `<div class="flex-fill">${name}:</div>`;
-                            html += `<div class="text-end font-monospace" style="color:${headerColor};">${this.#formatNumber(param.value[1] || param.value)}${this.suffix()}</div></div>`;
+                            html += `<div class="text-end font-monospace" style="color:${headerColor};">${this.#formatNumber((param.value as number[])[1] ?? (param.value as number))}${this.suffix()}</div></div>`;
                         });
                     }
                     return `<div class="arrow_box">${html}</div>`;
@@ -258,7 +263,7 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent impleme
         this.echartsInstance()?.setOption(this.chartOptions(), true);
     }
 
-    #calculateTrendLine(data: any[]): any[] {
+    #calculateTrendLine(data: [string | number, number][]): [string | number, number][] {
         if (data.length < 6) return [];
 
         let bestMidPoint = Math.floor(data.length / 2);

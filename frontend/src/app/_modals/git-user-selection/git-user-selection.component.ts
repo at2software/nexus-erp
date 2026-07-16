@@ -10,7 +10,6 @@ import { ModalBaseComponent } from '@app/_modals/modal-base.component';
     selector: 'git-user-selection',
     templateUrl: './git-user-selection.component.html',
     styleUrls: ['./git-user-selection.component.scss'],
-    standalone: true,
     imports: [FormsModule],
 })
 export class GitUserSelectionComponent extends ModalBaseComponent<string> {

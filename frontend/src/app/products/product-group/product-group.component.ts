@@ -14,8 +14,6 @@ import { FormsModule } from '@angular/forms';
 @Component({
     selector: 'app-product-group',
     templateUrl: './product-group.component.html',
-    styleUrls: ['./product-group.component.scss'],
-    standalone: true,
     imports: [HeaderComponent, HeaderLinkItemComponent, FormsModule, RouterModule, ToolbarComponent, HotkeyDirective],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

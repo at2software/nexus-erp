@@ -27,3 +27,15 @@
     min-height: 10rem;
     cursor: pointer;
 }
+.rte-toolbar {
+    border-radius: var(--bs-border-radius);
+}
+::ng-deep quill-editor {
+    display: block;
+    width: 100% !important;
+}
+::ng-deep .ql-editor {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: pre-wrap;
+}

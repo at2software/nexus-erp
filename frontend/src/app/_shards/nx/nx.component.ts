@@ -5,9 +5,7 @@ import { Serializable } from '@models/serializable';
 @Component({
     selector: 'nx',
     templateUrl: './nx.component.html',
-    styleUrls: ['./nx.component.scss'],
     host: { class: 'list-group-item d-flex text-nowrap nx' },
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NxComponent {

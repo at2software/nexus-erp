@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter } from 'rxjs';
 import { DatePipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
@@ -7,40 +9,45 @@ import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { Nx } from '@app/nx/nx.directive';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { FormsModule } from '@angular/forms';
-import { Milestone } from '@models/milestones/milestone.model';
-import { Project } from '@models/project/project.model';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
-
-interface OverviewData {
-    unassigned: Milestone[];
-    overdue: Milestone[];
-    noWorkload: Milestone[];
-    projects: Project[];
-}
+import { MilestoneData } from '@models/milestones/api.milestone-group';
+import { InvoiceItem } from '@models/invoice/invoice-item.model';
+import { NxGlobal, TBroadcast } from '@app/nx/nx.global';
+import { SafePipe } from '@pipes/safe.pipe';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'projects-milestones',
-    standalone: true,
-    imports: [DatePipe, RouterModule, NgbTooltipModule, Nx, AvatarComponent, ToolbarComponent, AvatarComponent, FormsModule, SpinnerComponent],
+    imports: [DatePipe, RouterModule, NgbTooltipModule, Nx, AvatarComponent, ToolbarComponent, AvatarComponent, FormsModule, SpinnerComponent, SafePipe],
     templateUrl: './projects-milestones.component.html',
-    styleUrls: ['./projects-milestones.component.scss'],
 })
-export class ProjectsMilestonesOverviewComponent implements OnInit {
+export class ProjectsMilestonesOverviewComponent {
     #service = inject(MilestoneService);
 
     loading = signal(true);
-    data: OverviewData | null = null;
+    data = signal<MilestoneData | null>(null, { equal: () => false });
 
-    ngOnInit() {
+    constructor() {
         this.loadData();
+
+        NxGlobal.broadcast$.pipe(
+            takeUntilDestroyed(),
+            filter((e) => e.type === TBroadcast.Update && e.data instanceof InvoiceItem && !!(e.data as InvoiceItem).milestones?.length),
+        ).subscribe((e) => {
+            this.data.update((current) => {
+                if (!current) return current;
+                const item = e.data as InvoiceItem;
+                current.invoiceItemsWithoutMilestone = current.invoiceItemsWithoutMilestone.filter((_) => _.id !== item.id);
+                return current;
+            });
+        });
     }
 
     loadData() {
         this.loading.set(true);
         this.#service.indexOverview().subscribe({
-            next: (data: any) => {
-                this.data = data;
+            next: (data) => {
+                this.data.set(data as MilestoneData);
                 this.loading.set(false);
             },
             error: () => this.loading.set(false),

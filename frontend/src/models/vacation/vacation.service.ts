@@ -1,16 +1,17 @@
 import { Injectable } from '@angular/core';
+import { Dictionary } from '@constants/constants';
 import { Vacation } from './vacation.model';
 import { NexusHttpService } from '../http/http.nexus';
 import { VacationGrant } from './vacation-grant.model';
 import { User } from '../user/user.model';
 import { NxGlobal } from '@app/nx/nx.global';
 import { map } from 'rxjs';
+import { Holiday } from '@models/api-response';
 
 @Injectable({ providedIn: 'root' })
 export class VacationService extends NexusHttpService<Vacation> {
     apiPath = 'vacations';
-
-    TYPE = () => Vacation;
+    override readonly model = Vacation;
 
     indexGrants = (user: User) =>
         this.aget(user.apiPathWithId() + '/vacation_grants', {}, VacationGrant).pipe(
@@ -19,12 +20,12 @@ export class VacationService extends NexusHttpService<Vacation> {
                 return grants;
             }),
         );
+    indexHolidays = () => this.aget<Holiday>('vacations/holidays');
     indexRequests = (user: User) => this.aget(user.apiPathWithId() + '/vacation_requests', {}, Vacation);
     indexAbsences = (user: User) => this.aget(user.apiPathWithId() + '/vacation_absences', {}, Vacation);
     indexPendingRequests = () => this.aget('vacations/requests', {}, Vacation);
     indexSickNotes = () => this.aget('vacations/sick-notes', {}, Vacation);
-    show = (id: string) => this.get('vacations/' + id);
-    storeManual = (v: Vacation) => this.post('vacations/manual', NxGlobal.payloadFor(v, v.constructor));
-    storeSickNote = (v: Vacation) => this.post('vacations/sick-notes', NxGlobal.payloadFor(v, v.constructor));
-    storeSickNoteForOther = (payload: any) => this.post('vacations/sick-notes', payload);
+    storeManual = (v: Vacation) => this.post('vacations/manual', NxGlobal.payloadFor(v, v.constructor as typeof Vacation));
+    storeSickNote = (v: Vacation) => this.post('vacations/sick-notes', NxGlobal.payloadFor(v, v.constructor as typeof Vacation));
+    storeSickNoteForOther = (payload: Dictionary) => this.post('vacations/sick-notes', payload);
 }

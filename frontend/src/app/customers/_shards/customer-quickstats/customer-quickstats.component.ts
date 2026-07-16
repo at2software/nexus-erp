@@ -7,18 +7,16 @@ import { tracked } from '@constants/tracked';
 
 @Component({
     selector: 'customer-quickstats',
-    standalone: true,
     imports: [PercentPipe, DecimalPipe, ProgressBarComponent, MoneyShortPipe],
     templateUrl: './customer-quickstats.component.html',
-    styleUrl: './customer-quickstats.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CustomerQuickstatsComponent {
-    readonly companyIn = input<Company>(undefined, { alias: 'company' });
-    readonly company = tracked(this.companyIn);
+    readonly company = input<Company>();
+    readonly trackedCompany = tracked(this.company);
 
-    projectSuccess = computed(() => parseFloat(this.company()?.getParam('PROJECT_SUCCESS_RATE') ?? '0') * 0.01);
-    paymentOverdue = computed(() => this.company()?.averagePaymentDelay() ?? 0);
+    projectSuccess = computed(() => parseFloat(this.trackedCompany()?.getParam('PROJECT_SUCCESS_RATE') ?? '0') * 0.01);
+    paymentOverdue = computed(() => this.trackedCompany()?.averagePaymentDelay() ?? 0);
     paymentOverdueStyle = computed(() => (this.paymentOverdue() > 0 ? 'red' : 'green'));
-    paymentDurationPerc = computed(() => Math.abs(this.paymentOverdue()) / parseFloat(this.company()?.getParam('INVOICE_PAYMENT_DURATION') ?? '14'));
+    paymentDurationPerc = computed(() => Math.abs(this.paymentOverdue()) / parseFloat(this.trackedCompany()?.getParam('INVOICE_PAYMENT_DURATION') ?? '14'));
 }

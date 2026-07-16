@@ -3,7 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\NLog;
-use App\Http\Middleware\Auth;
+use App\Http\Requests\Timetracker\JoinProjectRequest;
+use App\Http\Requests\Timetracker\ParentRequest;
+use App\Http\Requests\Timetracker\SearchRequest;
+use App\Http\Requests\Timetracker\StoreRequest;
+use App\Http\Requests\Timetracker\UpdateStatusRequest;
 use App\Models\Assignment;
 use App\Models\Company;
 use App\Models\Focus;
@@ -12,6 +16,7 @@ use App\Models\Project;
 use App\Models\ProjectState;
 use App\Services\TimetrackerDataService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class TimetrackerController extends Controller {
@@ -59,20 +64,18 @@ class TimetrackerController extends Controller {
         }
         return null;
     }
-    public function store() {
+    public function store(StoreRequest $request) {
         // deprecated. not used anymore? TBD: shut down
-        request()->validate([
-            'duration'           => 'required|numeric',
-            'started_at'         => 'required|date',
-            self::TARGET_PROJECT => 'required_without_all:company_id|exists:App\Models\Project,id',
-            'company_id'         => 'required_without_all:project_id|exists:App\Models\Company,id',
-            'is_unpaid'          => 'boolean',
-            'item_focus_id'      => 'exists:App\Models\InvoiceItem,id',
-        ]);
 
         $payload = [];
         if (request()->has('invoice_item_id')) {
             $payload['invoice_item_id'] = request('item_focus_id');
+        }
+        if (request()->has('ext_issue_plugin_link_id')) {
+            $payload['ext_issue_plugin_link_id'] = request('ext_issue_plugin_link_id');
+        }
+        if (request()->has('ext_issue_id')) {
+            $payload['ext_issue_id'] = request('ext_issue_id');
         }
         if ($parent = $this->getParentPolyFromRequest()) {
             if (is_a($parent, Project::class) && $parent->state->progress == ProjectState::Finished) {
@@ -90,11 +93,7 @@ class TimetrackerController extends Controller {
             return response('no valid parent found', 400);
         }
     }
-    public function subscribe() {
-        request()->validate([
-            self::TARGET_PROJECT => 'required_without_all:'.self::TARGET_COMPANY.'|exists:App\Models\Project,id',
-            self::TARGET_COMPANY => 'required_without_all:'.self::TARGET_PROJECT.'|exists:App\Models\Company,id',
-        ]);
+    public function subscribe(ParentRequest $request) {
         $parent = $this->getParentPolyFromRequest();
 
         $assignment = Assignment::firstOrCreate([
@@ -103,11 +102,7 @@ class TimetrackerController extends Controller {
         ], ['role' => 2]);
         return $assignment->wasRecentlyCreated ? $this->getParent() : response('Already subscribed', 406);
     }
-    public function unsubscribe() {
-        request()->validate([
-            self::TARGET_PROJECT => 'required_without_all:'.self::TARGET_COMPANY.'|exists:App\Models\Project,id',
-            self::TARGET_COMPANY => 'required_without_all:'.self::TARGET_PROJECT.'|exists:App\Models\Company,id',
-        ]);
+    public function unsubscribe(ParentRequest $request) {
         $parent = $this->getParentPolyFromRequest();
 
         $deleted = Assignment::where($parent->toPoly())->whereAssignee(Auth::user())->delete();
@@ -165,15 +160,11 @@ class TimetrackerController extends Controller {
         }
         return null;
     }
-    public function join() {
-        request()->validate(['project_id' => 'required|exists:App\Models\Project,id']);
-        request()->user()->projects()->associate(request('project_id'));
+    public function join(JoinProjectRequest $request) {
+        request()->user()->projects()->associate($request->validated('project_id'));
         return request()->user();
     }
-    public function search() {
-        request()->validate([
-            'q' => 'required',
-        ]);
+    public function search(SearchRequest $request) {
         $projects  = $this->dataService->mapProjects(Project::wherePreparedOrRunning()->where('name', 'like', '%'.request('q').'%'));
         $companies = $this->dataService->mapCompanies(Company::where('vcard', 'like', '%'.request('q').'%'));
         return $this->sorted($projects, $companies);
@@ -216,8 +207,7 @@ class TimetrackerController extends Controller {
             ]);
         }
     }
-    public function updateStatus() {
-        request()->validate(['status' => 'required|in:online,offline,away,dnd']);
+    public function updateStatus(UpdateStatusRequest $request) {
         if (request('status') === 'offline') {
             request()->user()->fill(Param::nullPoly('current_focus'));
             request()->user()->save();
@@ -240,12 +230,7 @@ class TimetrackerController extends Controller {
         }
         return response('successfully updated');
     }
-    public function indexRecentComments() {
-        request()->validate([
-            self::TARGET_PROJECT => 'required_without_all:'.self::TARGET_COMPANY.'|exists:App\Models\Project,id',
-            self::TARGET_COMPANY => 'required_without_all:'.self::TARGET_PROJECT.'|exists:App\Models\Company,id',
-        ]);
-
+    public function indexRecentComments(ParentRequest $request) {
         $parent = $this->getParentPolyFromRequest();
 
         if (! $parent) {

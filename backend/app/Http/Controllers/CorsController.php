@@ -3,76 +3,91 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\NLog;
+use App\Http\Requests\Cors\CurlIdRequest;
+use App\Http\Requests\Cors\CurlRequest;
+use App\Services\SafeUrlGuard;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class CorsController extends Controller {
-    public function curlId(int $id) {
-        $this->validateRequest(['idKey' => 'required|string']);
-        $url = request('url').'?'.request('idKey').'='.$id;
-        return $this->_curl($url);
-    }
-    public function curl() {
-        $this->validateRequest();
-        return $this->_curl(request('url'));
-    }
-    private function validateRequest($additional = []) {
-        request()->validate(array_merge([
-            'method' => 'required|in:get,post,put,delete,patch',
-            'url'    => 'required|string',
-        ]), $additional);
-    }
-    private function _curl(string $url) {
-        $headers = request('headers', []);
-        $timeout = (int)request('timeout', 5);  // caller can override, default 5s
-        $ch      = curl_init();
+    public function __construct(private SafeUrlGuard $guard) {}
 
-        curl_setopt_array($ch, [
-            CURLOPT_URL            => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER     => $headers,
-            CURLOPT_SSL_VERIFYHOST => 0,
-            CURLOPT_SSL_VERIFYPEER => 0,
-            CURLOPT_CUSTOMREQUEST  => Str::upper(request('method')),
-            // Critical: Add timeouts to prevent blocking
-            CURLOPT_CONNECTTIMEOUT => 2,    // 2 seconds to establish connection
-            CURLOPT_TIMEOUT        => $timeout,     // configurable, default 5s
-            // Performance optimizations
-            CURLOPT_ENCODING       => '',          // Accept gzip/deflate
-            CURLOPT_TCP_NODELAY    => true,     // Disable Nagle's algorithm for faster response
-            CURLOPT_FOLLOWLOCATION => true,  // Follow redirects
-            CURLOPT_MAXREDIRS      => 3,          // Max 3 redirects
-        ]);
+    public function curlId(CurlIdRequest $request, int $id) {
+        $url = $request->validated('url').'?'.$request->validated('idKey').'='.$id;
+        $this->guard->validate($url);
 
-        if (request('method') === 'post') {
-            curl_setopt($ch, CURLOPT_POST, 1);
-        }
-        if (request('data')) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(request('data')));
+        return $this->send($url);
+    }
+    public function curl(CurlRequest $request) {
+        $url = $request->validated('url');
+        $this->guard->validate($url);
+
+        return $this->send($url);
+    }
+    private function send(string $url, int $hopsLeft = 3): mixed {
+        $method  = Str::upper(request('method'));
+        $headers = $this->parseHeaders(request('headers', []));
+        $timeout = (int)request('timeout', 5);
+        $data    = request('data');
+
+        $options = ['allow_redirects' => false];
+        $body    = [];
+        if ($data) {
+            $body = in_array($method, ['POST', 'PUT', 'PATCH'])
+                ? ['json' => $data]
+                : ['query' => $data];
         }
 
-        $server_output = curl_exec($ch);
-        $curl_error    = curl_error($ch);
-        $http_code     = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        $response = Http::withHeaders($headers)
+            ->timeout($timeout)
+            ->connectTimeout(2)
+            ->withOptions($options)
+            ->send($method, $url, $body);
 
-        // Handle CURL errors (timeout, connection failed, etc)
-        if ($server_output === false) {
-            NLog::warning("CORS request failed for {$url}: {$curl_error}");
-            return response()->json(['error' => 'External service unavailable', 'details' => $curl_error], 503);
-        }
-
-        $obj             = json_decode($server_output);
-        $jsonDecodeError = json_last_error();
-
-        if ($jsonDecodeError) {
-            // If JSON decode fails, return the raw response for plain text endpoints like /healthz
-            if ($jsonDecodeError === JSON_ERROR_SYNTAX && is_string($server_output)) {
-                return response()->json(['raw_response' => trim($server_output)]);
+        // Follow redirects manually so every hop is re-validated
+        if ($response->redirect() && $hopsLeft > 0) {
+            $location = $response->header('Location');
+            if (! $location) {
+                return response()->json(['error' => 'Redirect without Location header'], 502);
             }
-            NLog::error("JSON decode error for {$url}: {$server_output}");
-            NLog::error($jsonDecodeError);
+            $location = $this->resolveLocation($url, $location);
+            $this->guard->validate($location);
+
+            return $this->send($location, $hopsLeft - 1);
+        }
+
+        $body    = $response->body();
+        $decoded = json_decode($body);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            if (is_string($body)) {
+                return response()->json(['raw_response' => trim($body)]);
+            }
+            NLog::error("JSON decode error for {$url}");
+
             return response()->json(['error' => 'Invalid JSON response'], 500);
         }
-        return $obj;
+
+        return $decoded;
+    }
+    private function parseHeaders(array $rawHeaders): array {
+        $headers = [];
+        foreach ($rawHeaders as $line) {
+            $parts = explode(':', $line, 2);
+            if (count($parts) === 2) {
+                $headers[trim($parts[0])] = trim($parts[1]);
+            }
+        }
+
+        return $headers;
+    }
+    private function resolveLocation(string $baseUrl, string $location): string {
+        if (preg_match('#^https?://#i', $location)) {
+            return $location;
+        }
+        $parts = parse_url($baseUrl);
+        $port  = isset($parts['port']) ? ':'.$parts['port'] : '';
+
+        return $parts['scheme'].'://'.$parts['host'].$port.$location;
     }
 }

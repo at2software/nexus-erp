@@ -15,7 +15,6 @@ interface RelationEntry {
     selector: 'relation-path-autocomplete',
     templateUrl: './relation-path-autocomplete.component.html',
     styleUrl: './relation-path-autocomplete.component.scss',
-    standalone: true,
     imports: [ScrollbarComponent, FormsModule],
 })
 export class RelationPathAutocompleteComponent {
@@ -34,6 +33,11 @@ export class RelationPathAutocompleteComponent {
     readonly #global = inject(GlobalService);
     readonly #relationshipMap = this.#global.relations;
     #delay: ReturnType<typeof setTimeout> | null = null;
+
+    readonly #pathValue = computed(() => {
+        const value = this.option().value;
+        return typeof value === 'string' ? value : '';
+    });
 
     constructor() {
         afterNextRender(() => this.focus());
@@ -63,20 +67,21 @@ export class RelationPathAutocompleteComponent {
 
     searchDelayed() {
         this.currentIndex.set(0);
-        this.results.set(this.getSuggestions(this.option().value, this.tableName()));
+        this.results.set(this.getSuggestions(this.#pathValue(), this.tableName()));
         this.focus();
     }
 
     open(o: RelationEntry) {
         if (!o) return;
         this.results.set([]);
-        const lastDotIndex = this.option().value.lastIndexOf('.');
-        this.option().value = lastDotIndex !== -1 ? this.option().value.substring(0, lastDotIndex + 1) + o.name : o.name;
+        const val = this.#pathValue();
+        const lastDotIndex = val.lastIndexOf('.');
+        this.option().value = lastDotIndex !== -1 ? val.substring(0, lastDotIndex + 1) + o.name : o.name;
 
         if (['hasMany', 'belongsToMany', 'morphMany', 'morphToMany'].includes(o.type)) {
             this.relationSelected.emit(o.name);
         } else {
-            this.option().value += '.';
+            this.option().value = `${this.option().value}.`;
             this.focus();
             this.searchDelayed();
         }
@@ -98,7 +103,7 @@ export class RelationPathAutocompleteComponent {
         for (let i = 0; i < pathParts.length; i++) {
             const isLast = i === pathParts.length - 1;
             const prefix = pathParts[i];
-            const relationship = this.#relationshipMap.find((r: any) => r.table === tableName);
+            const relationship = this.#relationshipMap.find((r) => r.table === tableName);
             if (!relationship?.relations) return [];
 
             const relations = Object.entries(relationship.relations) as [string, { type: string; model?: string }][];

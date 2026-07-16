@@ -1,4 +1,11 @@
 import { ShortPipe } from '@pipes/short.pipe';
+import type { EChartsOption } from 'echarts';
+
+declare module 'echarts/types/dist/shared' {
+    interface CallbackDataParams {
+        axisValue?: string | number;
+    }
+}
 
 export const ECHARTS_DEFAULT_TOOLTIP_OPTIONS = {
     appendToBody: true,
@@ -44,7 +51,7 @@ export const EChartsSimpleOptions = {
         ...ECHARTS_DEFAULT_TOOLTIP_OPTIONS,
     },
     animation: false,
-};
+} satisfies EChartsOption;
 
 // ECharts stacked bar chart configuration for widgets
 export const EChartsStackedBarOptions = {
@@ -63,7 +70,7 @@ export const EChartsStackedBarOptions = {
             type: 'shadow',
         },
     },
-};
+} satisfies EChartsOption;
 
 // ECharts dual shadow configuration for area styles
 export const EChartsDualShadowAreaStyle = {
@@ -92,7 +99,7 @@ export const EChartsRangeAreaOptions = {
         ...ECHARTS_DEFAULT_TOOLTIP_OPTIONS,
         confine: true,
     },
-};
+} satisfies EChartsOption;
 
 // ECharts y-axis mark line annotation helper
 export const eAnnotateY = (v: number, pipe: ShortPipe) => ({

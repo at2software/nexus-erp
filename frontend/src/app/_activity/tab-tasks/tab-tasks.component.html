@@ -6,6 +6,9 @@
                 @if (_user.hasRole('hr')) {
                     <tab-tasks-hr (countChanged)="onCount('hr', $event)"></tab-tasks-hr>
                 }
+                @if (_user.hasRole('admin')) {
+                    <tab-tasks-deletion-requests (countChanged)="onCount('deletionRequests', $event)"></tab-tasks-deletion-requests>
+                }
                 <tab-tasks-sentinels (countChanged)="onCount('sentinels', $event)"></tab-tasks-sentinels>
                 @if (_user.hasRole('marketing')) {
                     <tab-tasks-remarketing></tab-tasks-remarketing>
@@ -13,9 +16,11 @@
                 <tab-tasks-milestones (countChanged)="onCount('milestones', $event)"></tab-tasks-milestones>
                 @if (_user.hasRole('project_manager')) {
                     <tab-tasks-missing-git></tab-tasks-missing-git>
-                    <tab-tasks-marketing-activities></tab-tasks-marketing-activities>
                 }
                 <tab-tasks-plugin-tasks></tab-tasks-plugin-tasks>
+                @if (_user.hasRole('marketing')) {
+                    <tab-tasks-marketing-activities></tab-tasks-marketing-activities>
+                }
             </scrollbar>
         }
     </div>

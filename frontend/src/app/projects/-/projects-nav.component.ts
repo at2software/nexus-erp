@@ -7,7 +7,6 @@ import { HeaderRouteNavComponent } from '@app/app/header/header-route-nav/header
     selector: 'projects-nav',
     templateUrl: './projects-nav.component.html',
     styleUrls: ['./projects-nav.component.scss'],
-    standalone: true,
     imports: [RouterModule, HeaderComponent, HeaderRouteNavComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

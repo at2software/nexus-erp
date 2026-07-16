@@ -17,7 +17,6 @@ import { HrWorkloadHeatmapComponent } from '../hr-workload-heatmap/hr-workload-h
             </div>
         </div>
     }`,
-    standalone: true,
     imports: [HrWorkloadComponent, HrWorkloadHeatmapComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

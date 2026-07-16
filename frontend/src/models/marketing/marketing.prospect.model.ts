@@ -12,6 +12,7 @@ import { Model } from '@constants/type-discriminators';
 import { computed } from '@angular/core';
 import { tap } from 'rxjs';
 import { MarketingProspectActions } from './marketing.prospect.actions';
+import { Dictionary } from '@constants/constants';
 
 @Model('MarketingProspect')
 export class MarketingProspect extends VcardClass implements IHasMarker {
@@ -19,7 +20,7 @@ export class MarketingProspect extends VcardClass implements IHasMarker {
     static API_PATH = (): string => 'marketing/prospects';
     static DB_TABLE_NAME = (): string => 'marketing_prospects';
 
-    static readonly STATUS_ICONS: Record<string, string> = {
+    static readonly STATUS_ICONS: Dictionary<string> = {
         new: 'add_circle',
         engaged: 'chat_bubble',
         converted: 'check_circle',
@@ -28,7 +29,7 @@ export class MarketingProspect extends VcardClass implements IHasMarker {
         on_hold: 'pause_circle',
     }
 
-    static readonly STATUS_BG_CLASSES: Record<string, string> = {
+    static readonly STATUS_BG_CLASSES: Dictionary<string> = {
         new: 'bg-cyan',
         engaged: 'bg-teal',
         converted: 'bg-success',
@@ -37,7 +38,7 @@ export class MarketingProspect extends VcardClass implements IHasMarker {
         on_hold: 'bg-secondary',
     }
 
-    static readonly STATUS_TEXT_CLASSES: Record<string, string> = {
+    static readonly STATUS_TEXT_CLASSES: Dictionary<string> = {
         new: 'text-cyan',
         engaged: 'text-teal',
         converted: 'text-success',
@@ -57,10 +58,10 @@ export class MarketingProspect extends VcardClass implements IHasMarker {
     notes?: string;
     company_id?: string;
     company_contact_id?: string;
-    companyModel?: any;
+    companyModel?: { company_name?: string; [key: string]: unknown };
     company = computed((): string => {
         const src: VcardClass = this.company_contact?.company?.card() ? this.company_contact.company : this;
-        return src.card()?.get('ORG')?.map((_: any) => _.vals.join(' '))?.join(', ') ?? '';
+        return src.card()?.get('ORG')?.map((_: { vals: string[] }) => _.vals.join(' '))?.join(', ') ?? '';
     });
     status!: 'new' | 'engaged' | 'converted' | 'unresponsive' | 'disqualified' | 'on_hold';
     added_via!: 'addon' | 'manual' | 'import';
@@ -86,13 +87,13 @@ export class MarketingProspect extends VcardClass implements IHasMarker {
 
     mark = (state: string) =>
         this.httpService.put(`marketing/prospects/${this.id}`, { status: state })
-            .pipe(tap((response: any) => this.status = response.status ?? state));
+            .pipe(tap((response) => this.status = ((response as { status?: string }).status ?? state) as typeof this.status));
 
     name = computed(() => this.company_contact?.getName() || this.getName() || this.email);
 
     getPersonal = (): VcardClass | undefined => this.company_contact?.contact ?? this;
 
-    override afterDeserialize(json: any): void {
+    override afterDeserialize(json: Dictionary): void {
         this.#ensureVcardNameFields();
         super.afterDeserialize(json);
     }
@@ -124,14 +125,4 @@ export class MarketingProspect extends VcardClass implements IHasMarker {
         this.card.set(new Vcard(vcardStr));
     }
 
-}
-
-// Supporting interfaces
-export interface LeadSourceChannel {
-    id: number;
-    name: string;
-    pivot: {
-        is_primary: boolean;
-        custom_settings?: any;
-    };
 }

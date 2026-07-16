@@ -1,11 +1,11 @@
-import { Directive, ElementRef, HostListener, inject, input, output } from '@angular/core';
-import { Toast } from '@shards/toast/toast';
-import { forkJoin, Observable } from 'rxjs';
+import { Directive, ElementRef, inject, input, NgZone, output } from '@angular/core';
+import { HttpEventType } from '@angular/common/http';
+import { Toast, ToastItem } from '@shards/toast/toast';
+import { forkJoin, last, Observable, tap } from 'rxjs';
 import { FileService } from '@models/file/file.service';
 
 @Directive({
     selector: '[dnd]',
-    standalone: true,
 })
 export class DndDirective {
     readonly dnd = input.required<string>();
@@ -17,58 +17,111 @@ export class DndDirective {
 
     readonly #fileService = inject(FileService);
     readonly #el = inject(ElementRef<HTMLElement>);
+    readonly #zone = inject(NgZone);
 
     formData = new FormData();
     fileNames: string[] = [];
     files: File[] = [];
 
     constructor() {
-        this.#el.nativeElement.classList.add('dnd-item');
+        const el = this.#el.nativeElement;
+        el.classList.add('dnd-item');
+
+        // All drag handlers run outside Angular's zone so they never trigger
+        // change detection. Only onDrop re-enters the zone to emit outputs.
+        this.#zone.runOutsideAngular(() => {
+            el.addEventListener('dragenter', (e: DragEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            el.addEventListener('dragover', (e: DragEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                el.classList.add('dnd-item-drag');
+            });
+            el.addEventListener('dragleave', (e: DragEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                el.classList.remove('dnd-item-drag');
+            });
+            el.addEventListener('drop', (e: DragEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                el.classList.remove('dnd-item-drag');
+                this.#zone.run(() => this.#handleDrop(e));
+            });
+        });
     }
 
     clear() {
-        this.formData.delete('html');
-        this.formData.delete('file');
-        this.formData.delete('file[]');
+        this.formData = new FormData();
         this.fileNames = [];
+        this.files = [];
     }
 
-    @HostListener('dragover', ['$event']) onDragOver(e: DragEvent) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.#el.nativeElement.classList.add('dnd-item-drag');
-    }
-
-    @HostListener('dragleave', ['$event']) onDragLeave(e: DragEvent) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.#el.nativeElement.classList.remove('dnd-item-drag');
-    }
-
-    @HostListener('drop', ['$event']) onDrop(evt: DragEvent) {
-        evt.preventDefault();
-        evt.stopPropagation();
-        this.#el.nativeElement.classList.remove('dnd-item-drag');
-
+    #handleDrop(evt: DragEvent) {
         const files = evt.dataTransfer?.files;
         if (!files?.length) return;
 
+        this.clear();
+
+        const progresses: number[] = [];
+        let progressToast: ToastItem | null = null;
         const uploads: Observable<unknown>[] = [];
+
         for (const file of Array.from(files)) {
             const allowed = !this.dndAllowed().length || this.dndAllowed().some((a) => file.type.match(a));
             if (!allowed) {
                 Toast.error(`${file.name} could not be uploaded: wrong file type (allowed: \`${this.dndAllowed().join('`, `')}\`)`);
                 continue;
             }
-            this.formData.append(this.collect() ? 'file[]' : 'file', file);
-            if (this.dndCategory()) this.formData.append('category', this.dndCategory());
             this.fileNames.push(file.name);
             this.files.push(file);
-            uploads.push(this.#fileService.upload(this.dnd(), this.formData));
+            if (this.collect()) {
+                this.formData.append('file[]', file);
+                if (this.dndCategory()) this.formData.append('category', this.dndCategory());
+            } else {
+                const fd = new FormData();
+                fd.append('file', file);
+                if (this.dndCategory()) fd.append('category', this.dndCategory());
+                const idx = uploads.length;
+                progresses.push(0);
+                uploads.push(
+                    this.#fileService.uploadWithProgress(this.dnd(), fd).pipe(
+                        tap((event) => {
+                            if (event.type === HttpEventType.UploadProgress && event.total) {
+                                progresses[idx] = Math.round(100 * event.loaded / event.total);
+                                if (progressToast) progressToast.progress = Math.round(progresses.reduce((a, b) => a + b) / progresses.length);
+                            }
+                        }),
+                        last(),
+                    )
+                );
+            }
         }
 
+        if (this.collect()) { if (this.files.length) this.dndDrop.emit(this.files); return; }
         if (!uploads.length) return;
-        if (this.collect()) this.dndDrop.emit(this.files);
-        else forkJoin(uploads).subscribe(() => this.dndUploaded.emit());
+
+        const label = this.fileNames.length === 1 ? this.fileNames[0] : `${this.fileNames.length} files`;
+        progressToast = Toast.show(`Uploading ${label}…`, {
+            classname: 'bg-info bg-gradient text-dark',
+            icon: 'upload_file',
+            progress: 0,
+            autohide: false,
+        });
+
+        forkJoin(uploads).subscribe({
+            next: () => {
+                Toast.remove(progressToast);
+                Toast.success(`${label} uploaded`);
+                this.dndUploaded.emit();
+            },
+            error: (err: any) => {
+                Toast.remove(progressToast);
+                const msg = err?.error?.message ?? err?.statusText;
+                if (msg) Toast.error(msg);
+            },
+        });
     }
 }

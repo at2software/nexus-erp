@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\VacationState;
 use App\Http\Controllers\VacationController;
 use App\Models\User;
 use Carbon\CarbonPeriod;
@@ -49,16 +50,19 @@ class WorkingTimeService {
         $weekEnd   = now()->endOfWeek();
 
         $vacationDays = [];
-        $vacations    = array_merge(
-            $payload['vacation_start']->toArray(),
-            $payload['vacation_end']->toArray()
-        );
+        $vacations    = $payload['vacation_start']
+            ->concat($payload['vacation_end'])
+            ->unique('id')
+            ->whereIn('state', [VacationState::Approved, VacationState::Sick]);
         foreach ($vacations as $vacation) {
-            $start = new \DateTime($vacation['started_at']);
-            $end   = new \DateTime($vacation['ended_at']);
-            while ($start <= $end) {
-                $vacationDays[] = $start->format('Y-m-d');
-                $start->modify('+1 day');
+            if (! $vacation->started_at || ! $vacation->ended_at) {
+                continue;
+            }
+            $cursor = $vacation->started_at->copy()->startOfDay();
+            $end    = $vacation->ended_at->copy()->startOfDay();
+            while ($cursor <= $end) {
+                $vacationDays[] = $cursor->format('Y-m-d');
+                $cursor->addDay();
             }
         }
         $vacationDays = array_unique($vacationDays);

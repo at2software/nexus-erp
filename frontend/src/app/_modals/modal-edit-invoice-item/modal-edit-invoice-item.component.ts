@@ -1,12 +1,13 @@
-import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { Product } from '@models/product/product.model';
-import { DEFAULT_RTE_CONFIG } from '@shards/text-param-editor/default-rte-config';
+import { Serializable } from '@models/serializable';
 import { GlobalService } from '@models/global.service';
 import { Company } from '@models/company/company.model';
-import { AngularEditorComponent, AngularEditorModule } from '@kolkov/angular-editor';
+import { QuillEditorComponent, QuillModules } from 'ngx-quill';
+import type Quill from 'quill';
 import { FormsModule } from '@angular/forms';
 import { AffixInputDirective } from '@directives/affix-input.directive';
 import { HotkeyDirective } from '@directives/hotkey.directive';
@@ -18,14 +19,14 @@ import { ModalBaseComponent } from '@app/_modals/modal-base.component';
     selector: 'modal-edit-invoice-item',
     templateUrl: './modal-edit-invoice-item.component.html',
     styleUrls: ['./modal-edit-invoice-item.component.scss'],
-    standalone: true,
-    imports: [SearchInputComponent, AngularEditorModule, FormsModule, AffixInputDirective, HotkeyDirective, MoneyPipe],
+    imports: [SearchInputComponent, QuillEditorComponent, FormsModule, AffixInputDirective, HotkeyDirective, MoneyPipe],
 })
 export class ModalEditInvoiceItemComponent extends ModalBaseComponent<{ item: InvoiceItem; continue: boolean }> {
-    readonly config = { ...DEFAULT_RTE_CONFIG, height: 'auto', minHeight: '0', maxHeight: 'auto' };
+    readonly toolbarId = `modal-edit-invoice-item-toolbar-${Math.random().toString(36).slice(2)}`;
+    readonly modules: QuillModules = { toolbar: { container: `#${this.toolbarId}` } };
 
     private readonly search = viewChild.required(SearchInputComponent);
-    private readonly titleEditor = viewChild.required(AngularEditorComponent);
+    #titleEditor?: Quill;
 
     readonly item = signal<InvoiceItem>(null!);
     readonly currentProduct = signal<Product | undefined>(undefined);
@@ -35,6 +36,21 @@ export class ModalEditInvoiceItemComponent extends ModalBaseComponent<{ item: In
     global = inject(GlobalService);
     #companyRef!: Company;
     #activeModal = inject(NgbActiveModal);
+
+    // Quill registers its own (high-frequency) keystroke/selection listeners during construction.
+    // Deferring its creation into afterNextRender() — which Angular always runs outside the zone —
+    // keeps those listeners out of zone.js, so typing doesn't trigger a full-app change detection
+    // tick on every keystroke.
+    readonly editorReady = signal(false);
+
+    constructor() {
+        super();
+        afterNextRender(() => this.editorReady.set(true));
+    }
+
+    onTitleEditorCreated(quill: Quill) {
+        this.#titleEditor = quill;
+    }
 
     init(item: InvoiceItem, companyRef: Company, okButtonText: string = 'Add', _header?: string, okNextButtonText?: string) {
         this.#companyRef = companyRef;
@@ -53,42 +69,17 @@ export class ModalEditInvoiceItemComponent extends ModalBaseComponent<{ item: In
                 this.currentProduct.set(x);
                 this.search().selected.set(x);
                 this.search().query.set(x.name);
-                this.titleEditor().focus();
+                this.#titleEditor?.focus();
             });
         }
     };
 
-    #applyCompanyModifiers(item: InvoiceItem) {
-        item.discount = parseFloat(this.#companyRef.getParam('INVOICE_DISCOUNT') ?? '0');
-        if (this.#companyRef.isVatExcempt()) item.vat_rate = 0;
-    }
-
-    onSelect(product: any) {
-        const item = this.item();
-        if (product.invoice_items.length > 0) {
-            const template = product.getInvoiceItem().getClone();
-            this.currentProduct.set(product);
-            this.#applyCompanyModifiers(template);
-            const cp = this.currentProduct()!;
-            if (cp.time_based > 0) {
-                template.price = parseFloat(this.global.setting('INVOICE_HOURLY_WAGE'));
-                template.unit_name = this.global.setting('INVOICE_HOUR_UNIT');
-                if (cp.time_based == 8) {
-                    template.price *= parseFloat(this.global.setting('INVOICE_HPD'));
-                    template.unit_name = this.global.setting('INVOICE_DAY_UNIT');
-                }
-            }
-            item.product_source_id = product.id;
-            item.price = template.price;
-            item.unit_name = template.unit_name;
-            item.vat_rate = template.vat_rate;
-            item.discount = template.discount;
-            item.is_discountable = template.is_discountable;
-            item.vat_calculation = template.vat_calculation;
-            if (!item.text) item.text = template.text || product.name;
-        }
-        this.titleEditor().focus();
-        item.product_source = Product.fromJson(product);
+    onSelect(selected: Serializable) {
+        const product = selected.assert(Product);
+        if (!product) return;
+        this.item().applyProduct(product, this.#companyRef);
+        this.currentProduct.set(product);
+        this.#titleEditor?.focus();
     }
 
     onTogglePriceVisiblity(a: HTMLSpanElement, b: HTMLSpanElement) {

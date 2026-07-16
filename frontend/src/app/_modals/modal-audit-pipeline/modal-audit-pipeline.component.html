@@ -1,3 +1,12 @@
+@let _projectUrl = projectUrl();
+@let _checking = checking();
+@let _error = error();
+@let _selectedCompany = selectedCompany();
+@let _branch = branch();
+@let _creating = creating();
+@let _stages = stages();
+@let _selectedList = selectedList();
+@let _isCustomCron = isCustomCron();
 <div class="modal-header">
     <span class="modal-title" i18n="@@i18n.invoices.addAuditPipeline">add audit pipeline</span>
     <button class="btn-close" i18n-aria-label="@@i18n.common.close" aria-label="Close" (click)="activeModal.dismiss()"></button>
@@ -7,56 +16,56 @@
     <div class="mb-3">
         <label for="projectUrl" class="form-label text-muted small" i18n="@@i18n.invoices.gitlabProjectUrl">GitLab project URL</label>
         <div class="input-group">
-            <input id="projectUrl" class="form-control" [(ngModel)]="projectUrl" i18n-placeholder="@@i18n.invoices.gitlabProjectUrlPlaceholder" placeholder="https://gitlab.example.com/namespace/project" (keyup.enter)="check()" />
-            <button class="btn btn-outline-primary" (click)="check()" [disabled]="!projectUrl || checking()">
-                @if (checking()) {
+            <input id="projectUrl" class="form-control" [ngModel]="_projectUrl" (ngModelChange)="projectUrl.set($event)" i18n-placeholder="@@i18n.invoices.gitlabProjectUrlPlaceholder" placeholder="https://gitlab.example.com/namespace/project" (keyup.enter)="check()" />
+            <button class="btn btn-outline-primary" (click)="check()" [disabled]="!_projectUrl || _checking">
+                @if (_checking) {
                     <spinner [size]="20" [inline]="true"></spinner>
                 } @else {
                     <ng-container i18n="@@i18n.common.check">check</ng-container>
                 }
             </button>
         </div>
-        @if (error) {
-            <div class="text-danger small mt-1">{{ error }}</div>
+        @if (_error) {
+            <div class="text-danger small mt-1">{{ _error }}</div>
         }
     </div>
 
     <div class="mb-3">
         <div class="form-label text-muted small"><ng-container i18n="@@i18n.common.company">company</ng-container> <span class="text-muted" i18n="@@i18n.common.optional">(optional)</span></div>
-        @if (selectedCompany) {
+        @if (_selectedCompany) {
             <div class="d-flex align-items-center gap-2">
-                <span class="text-white">{{ selectedCompany.name }}</span>
-                <button class="btn btn-sm text-primary p-0" (click)="selectedCompany = undefined">
+                <span class="text-white">{{ _selectedCompany.getName() }}</span>
+                <button class="btn btn-sm text-primary p-0" (click)="selectedCompany.set(undefined)">
                     <i>close</i>
                 </button>
             </div>
         } @else {
-            <search-input only="Company" (itemSelected)="selectedCompany = $event"></search-input>
+            <search-input only="Company" (itemSelected)="selectCompany($event)"></search-input>
         }
     </div>
 
-    @if (checkedProject) {
+    @if (checkedProject(); as project) {
         <div class="d-flex align-items-center gap-2 mb-4 p-2 border rounded">
             <n class="text-primary">git</n>
             <div>
-                <div class="fw-semibold text-white">{{ checkedProject.name }}</div>
-                <small class="text-muted">{{ checkedProject.path_with_namespace }}</small>
+                <div class="fw-semibold text-white">{{ project.name }}</div>
+                <small class="text-muted">{{ project.path_with_namespace }}</small>
             </div>
         </div>
 
         <div class="mb-3">
             <label for="pipelineBranch" class="form-label text-muted small" i18n="@@i18n.common.branch">branch</label>
-            <input id="pipelineBranch" class="form-control" [(ngModel)]="branch" />
+            <input id="pipelineBranch" class="form-control" [ngModel]="_branch" (ngModelChange)="branch.set($event)" />
         </div>
 
-        @if (stages.length) {
+        @if (_stages.length) {
             <div class="mb-3">
                 <div class="form-label text-muted small" i18n="@@i18n.invoices.jobsFromGitlabCi">jobs from .gitlab-ci.yml</div>
                 <ul class="list-group">
-                    @for (stage of stages; track stage) {
+                    @for (stage of _stages; track stage) {
                         <li class="list-group-item">
                             <label class="d-flex align-items-center gap-2 mb-0" style="cursor: pointer">
-                                <input type="checkbox" class="form-check-input" [(ngModel)]="selectedStages[stage]" />
+                                <input type="checkbox" class="form-check-input" [ngModel]="selectedStages()[stage]" (ngModelChange)="setStage(stage, $event)" />
                                 <span>{{ stage }}</span>
                             </label>
                         </li>
@@ -71,14 +80,14 @@
             <div class="form-label text-muted small" i18n="@@i18n.invoices.scheduleInterval">schedule interval</div>
             <div class="d-flex gap-2 flex-wrap mb-2">
                 @for (preset of cronPresets; track preset.cron) {
-                    <button class="btn btn-sm" [class.btn-primary]="!isCustomCron && selectedCron === preset.cron" [class.btn-outline-primary]="isCustomCron || selectedCron !== preset.cron" (click)="isCustomCron = false; selectedCron = preset.cron">
+                    <button class="btn btn-sm" [class.btn-primary]="!isCustomCron() && selectedCron() === preset.cron" [class.btn-outline-primary]="isCustomCron() || selectedCron() !== preset.cron" (click)="isCustomCron.set(false); selectedCron.set(preset.cron)">
                         {{ preset.label }}
                     </button>
                 }
-                <button class="btn btn-sm" [class.btn-primary]="isCustomCron" [class.btn-outline-primary]="!isCustomCron" (click)="isCustomCron = true" i18n="@@i18n.common.custom">custom</button>
+                <button class="btn btn-sm" [class.btn-primary]="_isCustomCron" [class.btn-outline-primary]="!_isCustomCron" (click)="isCustomCron.set(true)" i18n="@@i18n.common.custom">custom</button>
             </div>
-            @if (isCustomCron) {
-                <input class="form-control" [(ngModel)]="customCron" i18n-placeholder="@@i18n.invoices.cronPlaceholder" placeholder="e.g. 0 3 * * 1" />
+            @if (isCustomCron()) {
+                <input class="form-control" [ngModel]="customCron()" (ngModelChange)="customCron.set($event)" i18n-placeholder="@@i18n.invoices.cronPlaceholder" placeholder="e.g. 0 3 * * 1" />
             }
         </div>
     }
@@ -86,12 +95,12 @@
 
 <div class="modal-footer">
     <button class="btn btn-outline-primary" (click)="activeModal.dismiss()" i18n="@@i18n.common.cancel">cancel</button>
-    <button class="btn btn-primary" (click)="create()" [disabled]="!canCreate || creating()">
-        @if (creating()) {
+    <button class="btn btn-primary" (click)="create()" [disabled]="!canCreate() || _creating">
+        @if (_creating) {
             <spinner [size]="20" [inline]="true" class="me-1"></spinner>
         }
-        @if (selectedList.length) {
-            add {{ selectedList.length }} schedule{{ selectedList.length !== 1 ? 's' : '' }}
+        @if (_selectedList.length) {
+            add {{ _selectedList.length }} schedule{{ _selectedList.length !== 1 ? 's' : '' }}
         } @else {
             <ng-container i18n="@@i18n.invoices.addSchedules">add schedules</ng-container>
         }

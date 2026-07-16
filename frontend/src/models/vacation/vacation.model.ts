@@ -3,7 +3,7 @@ import { Serializable } from '../serializable';
 import { VacationGrant } from './vacation-grant.model';
 import { VacationService } from './vacation.service';
 import { getVacatisingleActionResolveds } from './vacation.actions';
-import moment from 'moment';
+import { dayjs, Dayjs } from '@constants/dates';
 import { NxGlobal } from '@app/nx/nx.global';
 import { User } from '../user/user.model';
 import { Type } from 'class-transformer';
@@ -45,12 +45,14 @@ export class Vacation extends Serializable {
     hasVacationPermissions = () => NxGlobal.global.user!.hasRole('hr');
     approve = () => NxGlobal.service.put(`vacations/${this.id}/approve`, { state: Vacation.STATE_APPROVED });
     acknowledge = () => NxGlobal.service.put(`vacations/${this.id}/acknowledge`, {});
-    deny = (reason?: any) => NxGlobal.service.put(`vacations/${this.id}/approve`, { state: Vacation.STATE_DENIED, reason: reason });
+    deny = (reason?: string) => NxGlobal.service.put(`vacations/${this.id}/approve`, { state: Vacation.STATE_DENIED, reason: reason });
     cancel = () => NxGlobal.service.put(`vacations/${this.id}/approve`, { state: Vacation.STATE_CANCELLED });
+    revoke = () => NxGlobal.service.put(`vacations/${this.id}/revoke`);
+    isOwnedByCurrentUser = () => this.grant?.user_id === NxGlobal.global.user?.id;
 
-    time_started = (): moment.Moment => moment(this.started_at);
-    time_ended = (): moment.Moment => moment(this.ended_at);
-    time_approved = (): moment.Moment => moment(this.approved_at);
+    time_started = (): Dayjs => dayjs(this.started_at);
+    time_ended = (): Dayjs => dayjs(this.ended_at);
+    time_approved = (): Dayjs => dayjs(this.approved_at);
 
     delta = () => (this.state === Vacation.STATE_APPROVED ? this.amount : 0);
     getStateIcon = (): string => {

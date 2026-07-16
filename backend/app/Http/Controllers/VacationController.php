@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\VacationState;
+use App\Http\Requests\Vacation\ApproveRequest;
 use App\Http\Requests\Vacation\StoreGrantRequest;
 use App\Http\Requests\Vacation\StoreManualRequest;
 use App\Http\Requests\Vacation\StoreSickNoteRequest;
@@ -12,14 +13,11 @@ use App\Models\Holiday;
 use App\Models\User;
 use App\Models\Vacation;
 use App\Models\VacationGrant;
-use App\Traits\ControllerHasPermissionsTrait;
 use Carbon\Carbon;
 use Mail;
 use Storage;
 
 class VacationController extends Controller {
-    use ControllerHasPermissionsTrait;
-
     public function indexGrants(User $_) {
         return $_->vacation_grants()
             ->whereAfter(now(), 'expires_at')
@@ -82,17 +80,14 @@ class VacationController extends Controller {
         $vacation->delete();
     }
     public function showGrant(VacationGrant $grant) {
-        if (! $this->validateAccessPool($grant)) {
-            return response('not permitted', 400);
-        }
         return $grant->load('vacations');
     }
     public function destroyGrant(VacationGrant $grant) {
-        if ($grant->vacations()->where('state', VacationState::Approved)->count() > 0) {
+        if ($grant->vacations()->where('state', VacationState::Approved)->exists()) {
             return response('cannot delete grant with approved vacations', 400);
         }
         $sickNotes = $grant->vacations()->where('state', VacationState::Sick);
-        if ($sickNotes->count() > 0) {
+        if ($sickNotes->exists()) {
             $latestGrant = VacationGrant::where('user_id', $grant->user_id)
                 ->where('id', '!=', $grant->id)
                 ->latest()
@@ -105,9 +100,6 @@ class VacationController extends Controller {
         $grant->delete();
     }
     public function show(Vacation $vacation) {
-        if (! $this->validateAccess($vacation)) {
-            return response('not permitted', 400);
-        }
         return $vacation->load('user', 'grant', 'approved_by');
     }
     public function revoke(Vacation $vacation) {
@@ -119,16 +111,13 @@ class VacationController extends Controller {
         $vacation->update(['state' => VacationState::Cancelled]);
         return $vacation;
     }
-    public function approve(Vacation $vacation) {
-        request()->validate([
-            'state' => 'required|in:1,2,4',
-        ]);
+    public function approve(ApproveRequest $request, Vacation $vacation) {
         $data                     = $this->getBody();
         $vacation->state          = $data->state;
         $vacation->approved_by_id = request()->user()->id;
         $vacation->approved_at    = now();
         $vacation->save();
-        Mail::to($vacation->user->email)->send(new VacationMail($vacation, $data->state, @$data->reason, request()->user()));
+        Mail::to($vacation->user->email)->send(new VacationMail($vacation, $vacation->state, @$data->reason, request()->user()));
         return $vacation;
     }
     public function acknowledge(Vacation $_) {
@@ -140,9 +129,6 @@ class VacationController extends Controller {
         return $_;
     }
     public function store(StoreVacationRequest $request) {
-        if (! $this->validateAccessPool(VacationGrant::find($request->validated('vacation_grant_id')))) {
-            response('not permitted', 400);
-        }
         $payload                                          = request()->all();
         isset($payload['comment']) || $payload['comment'] = '';
         $v                                                = Vacation::create($payload);
@@ -174,24 +160,9 @@ class VacationController extends Controller {
         return VacationGrant::create($request->validated());
     }
     public function storeManual(StoreManualRequest $request) {
-        if (! $this->validateAccessPool(VacationGrant::find($request->validated('vacation_grant_id')))) {
-            response('not permitted', 400);
-        }
         $payload          = (new Vacation)->getValidFields(request()->all());
         $payload['state'] = VacationState::Approved;
         $v                = Vacation::create($payload);
         return $v->fresh();
-    }
-    private function validateAccess(Vacation $vacation): bool {
-        return $this->validateAccessPool($vacation->grant);
-    }
-    private function validateAccessPool(VacationGrant $grant): bool {
-        if ($grant->user_id == request()->user()->id) {
-            return true;
-        }
-        if (request()->user()->hasAnyRole(['admin', 'hr'])) {
-            return true;
-        }
-        return false;
     }
 }

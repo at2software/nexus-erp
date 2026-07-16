@@ -11,7 +11,7 @@
                 </div>
                 <div class="input-group mb-3">
                     <span class="input-group-text" i18n="@@i18n.common.base">base</span>
-                    <input type="number" class="form-control" [(ngModel)]="basePrice" (change)="applyPercentage()" />
+                    <input type="number" class="form-control" [(ngModel)]="displayBasePrice" (change)="applyPercentage()" />
                     <span class="input-group-text">{{ global.currencySymbol() }}</span>
                 </div>
                 <div class="input-group mb-3">

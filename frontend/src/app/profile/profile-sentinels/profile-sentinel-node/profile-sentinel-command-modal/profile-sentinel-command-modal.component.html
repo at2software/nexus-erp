@@ -106,7 +106,7 @@
         }
         @case ('model_fields') {
             @if (getTargetTable()) {
-                <model-field-editor [targetTable]="getTargetTable()" [sourceTable]="sentinel.table_name" [triggerVariable]="sentinel.trigger_variable" [loopVariable]="loopVariable" [loopTable]="loopTable" [fieldsJson]="opt.value || '{}'" (fieldsJsonChange)="opt.value = $event"> </model-field-editor>
+                <model-field-editor [targetTable]="getTargetTable()" [sourceTable]="sentinel.table_name" [triggerVariable]="sentinel.trigger_variable" [loopVariable]="loopVariable" [loopTable]="loopTable" [fieldsJson]="opt.value?.toString() || '{}'" (fieldsJsonChange)="opt.value = $event"> </model-field-editor>
             } @else {
                 <div class="text-muted" i18n="@@i18n.profile.selectAModelFirst">select a model first</div>
             }

@@ -8,8 +8,6 @@ import { PermissionsDirective } from '@directives/permissions.directive';
 @Component({
     selector: 'app-settings-nav',
     templateUrl: './settings-nav.component.html',
-    styleUrls: ['./settings-nav.component.scss'],
-    standalone: true,
     imports: [RouterModule, HeaderComponent, HeaderLinkItemComponent, PermissionsDirective],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

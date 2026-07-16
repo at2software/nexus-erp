@@ -1,4 +1,5 @@
 @use 'sass:color';
+@use 'sass:map';
 @use 'colors';
 @use 'var';
 @use 'bootstrap/scss/bootstrap' with (
@@ -17,6 +18,9 @@
     $list-group-color          : var.$list-group-color,
     $list-group-action-color   : var.$list-group-action-color,
     $list-group-item-padding-y : var.$list-group-item-padding-y,
+    $list-group-active-bg          : transparent,
+    $list-group-active-border-color: transparent,
+    $list-group-active-color       : colors.$primary,
     $modal-backdrop-bg         : var.$modal-backdrop-bg,
     $modal-backdrop-opacity    : var.$modal-backdrop-opacity,
     $modal-content-border-width: var.$modal-content-border-width,
@@ -26,6 +30,12 @@
     $tooltip-color             : var.$tooltip-color,
     $primary                   : colors.$primary,
     $secondary                 : colors.$secondary,
+    // Brand state colors (from the palette map) so .btn-*/.alert-*/.badge
+    // match the .text-*/.bg-* utilities instead of Bootstrap's defaults.
+    $success                   : map.get(colors.$custom-colors, 'success'),
+    $danger                    : map.get(colors.$custom-colors, 'danger'),
+    $warning                   : map.get(colors.$custom-colors, 'warning'),
+    $info                      : map.get(colors.$custom-colors, 'info'),
 );
 
 app-root {
@@ -34,12 +44,6 @@ app-root {
     }
 }
 [data-bs-theme='dark'] {
-    --color-bg-default: rgb(20, 20, 20);
-    --light: 255, 255, 255;
-    --shadow: 0, 0, 0;
-    --light-mod: 0.08;
-    --shadow-mod: 2;
-
     --bs-body-bg: #{colors.$bg-body};
     --bs-dropdown-bg: #{colors.$bg-card};
     --bs-tertiary-bg: transparent;
@@ -109,13 +113,6 @@ app-root {
     cursor: default;
 }
 
-.cursor-default {
-    cursor:default;
-}
-.cursor-help {
-    cursor:help;
-}
-
 ul.list-group:not(:first-child) > li.list-group-item:first-child {
     border-top-left-radius: 0;
     border-top-right-radius: 0;
@@ -178,9 +175,8 @@ ul.list-group:not(:last-child) > li.list-group-item:last-child {
 }
 
 .form-select {
-    border: none !important;
     height: 27px !important;
-    
+
     .form-floating & {
         height: 58px !important;
     }
@@ -199,11 +195,6 @@ ul.list-group:not(:last-child) > li.list-group-item:last-child {
     max-width: fit-content;
 }
 
-.list-group-item.active {
-    background-color: transparent !important;
-    border-color: var(--bs-list-group-border-color) !important;
-    color: var(--bs-primary) !important;
-}
 .progress {
     box-shadow: var.liquid-glass(), var.shadow-down(2px, 4px) !important;
 }

@@ -1,11 +1,13 @@
-@if (!isEditing) {
+@let _isFallback = isFallback();
+@let _steps = steps();
+@if (!isEditing()) {
     <div class="payment-plan-view">
         <div class="d-flex align-items-center mb-1 gap-1">
-            @if (!isFallback) {
+            @if (!_isFallback) {
                 <small class="text-primary flex-fill" i18n="@@i18n.payment.customPlan">custom payment plan</small>
-            } @else if (activeTierLabel) {
+            } @else if (activeTierLabel()) {
                 <small class="text-muted flex-fill">
-                    <span i18n="@@i18n.payment.defaultPlanTier">default payment plan ({{ activeTierLabel }} projects)</span>
+                    <span i18n="@@i18n.payment.defaultPlanTier">default payment plan ({{ activeTierLabel() }} projects)</span>
                 </small>
             } @else {
                 <small class="text-muted flex-fill" i18n="@@i18n.payment.defaultPlan">default payment plan</small>
@@ -13,18 +15,18 @@
             <button class="btn btn-sm btn-plain p-0 text-primary" (click)="startEdit()" (keyup.enter)="startEdit()" tabindex="0" i18n-ngbTooltip="@@i18n.common.edit" ngbTooltip="edit">
                 <i>edit</i>
             </button>
-            @if (!isFallback && object()) {
+            @if (!_isFallback && object()) {
                 <button class="btn btn-sm btn-plain p-0 text-muted" (click)="revertToDefault()" (keyup.enter)="revertToDefault()" tabindex="0" i18n-ngbTooltip="@@i18n.payment.revertToDefault" ngbTooltip="revert to default">
                     <i>undo</i>
                 </button>
             }
         </div>
 
-        @if (steps.length === 0) {
+        @if (_steps.length === 0) {
             <small class="text-muted fst-italic" i18n="@@i18n.payment.noPlanDefined">no payment plan defined — click edit to create one</small>
         } @else {
             <div class="payment-steps">
-                @for (step of steps; track $index) {
+                @for (step of _steps; track $index) {
                     <div class="d-flex align-items-center gap-2 py-1 border-bottom border-secondary border-opacity-25">
                         <span class="badge bg-primary" style="min-width: 42px">{{ step.percentage }}%</span>
                         <span class="text-muted small flex-fill">{{ getTriggerLabel(step) }}</span>
@@ -35,7 +37,7 @@
     </div>
 }
 
-@if (isEditing) {
+@if (isEditing()) {
     <div class="payment-plan-edit">
         @for (step of editSteps; let i = $index; track i) {
             <div class="d-flex align-items-center gap-2 mb-2">

@@ -10,8 +10,6 @@ import { ProductGroupService } from '@models/product/product-group.service';
 @Component({
     selector: 'product-overview',
     templateUrl: './product-overview.component.html',
-    styleUrls: ['./product-overview.component.scss'],
-    standalone: true,
     imports: [HeaderComponent, HeaderLinkItemComponent, RouterModule, HotkeyDirective, EmptyStateComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

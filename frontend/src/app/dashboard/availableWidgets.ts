@@ -1,3 +1,4 @@
+import { Dictionary } from '@constants/constants';
 import { Type } from '@angular/core';
 import { WidgetProjectAcquisitionsComponent } from './widgets/widget-project-acquisitions/widget-project-acquisitions.component';
 import { WidgetProjectRunningComponent } from './widgets/widget-project-running/widget-project-running.component';
@@ -22,6 +23,8 @@ import { WidgetProjectManagerComponent } from './widgets/widget-project-manager/
 import { WidgetInvoiceManagerComponent } from './widgets/widget-invoice-manager/widget-invoice-manager.component';
 import { WidgetUptimeMonitorsComponent } from './widgets/widget-uptime-monitors/widget-uptime-monitors.component';
 import { WidgetProjectAnalysisComponent } from './widgets/widget-project-analysis/widget-project-analysis.component';
+import { WidgetCustomerChurnComponent } from './widgets/widget-customer-churn/widget-customer-churn.component';
+import { WidgetOverrunRiskComponent } from './widgets/widget-overrun-risk/widget-overrun-risk.component';
 
 export interface TWidget {
     widget: Type<any>;
@@ -41,29 +44,31 @@ const hasRole = (roles: string): boolean => {
     return NxGlobal.global.user?.hasAnyRole(roles.split('|')) ?? false;
 };
 
-const ALL_WIDGETS: Record<string, TWidget> = {
-    'widget-customer-support': { widget: WidgetCustomerSupportComponent, i18n: $localize`:@@i18n.common.customerSupport:customer support`, on: () => hasRole('project_manager') },
-    'widget-hr-team': { widget: WidgetHrTeamComponent, i18n: $localize`:@@i18n.widget-hr-team:team status` },
-    'widget-my-working-time': { widget: WidgetMyWorkingTimeComponent, i18n: $localize`:@@i18n.widget-my-working-time:my working time` },
-    'widget-missing-project-manager': { widget: WidgetMissingProjectManagerComponent, i18n: $localize`:@@i18n.project.missingProjectManager:missing project manager`, on: () => hasRole('project_manager') },
-    'widget-project-acquisitions': { widget: WidgetProjectAcquisitionsComponent, i18n: $localize`:@@i18n.common.acquisitions:acquisitions`, on: () => hasRole('project_manager') },
-    'widget-project-manager': { widget: WidgetProjectManagerComponent, i18n: $localize`:@@i18n.common.projectManager:project manager`, on: () => hasRole('project_manager') },
-    'widget-project-analysis': { widget: WidgetProjectAnalysisComponent, i18n: $localize`:@@i18n.widget-project-analysis:project analysis`, on: () => hasRole('project_manager') },
-    'widget-project-running': { widget: WidgetProjectRunningComponent, i18n: $localize`:@@i18n.widget-project-running:running projects`, on: () => hasRole('project_manager') },
-    'widget-project-timebased': { widget: WidgetProjectTimebasedComponent, i18n: $localize`:@@i18n.common.timeBasedProjects:time based projects`, on: () => hasRole('project_manager') },
-    'widget-prepared-invoices': { widget: WidgetPreparedInvoicesComponent, i18n: $localize`:@@i18n.common.preparedInvoices:prepared invoices`, on: () => hasRole('financial') },
-    'widget-invoice-manager': { widget: WidgetInvoiceManagerComponent, i18n: $localize`:@@i18n.widget-invoice-manager:invoice manager`, on: () => hasRole('financial') },
-    'widget-unpaid-invoices': { widget: WidgetUnpaidInvoicesComponent, i18n: $localize`:@@i18n.invoice.unpaidInvoices:unpaid invoices`, on: () => hasRole('financial') },
-    'widget-cashflow': { widget: WidgetCashflowComponent, i18n: $localize`:@@i18n.common.cashFlow:cash flow`, on: () => hasRole('financial') },
-    'widget-revenue-12': { widget: WidgetRevenue12Component, i18n: $localize`:@@i18n.common.revenue:revenue`, on: () => hasRole('financial') },
-    'widget-revenue-current-year': { widget: WidgetRevenueCurrentYearComponent, i18n: $localize`:@@i18n.invoice.revenueCurrentYear:revenue current year`, on: () => hasRole('financial') },
-    'widget-revenue-monthly': { widget: WidgetRevenueMonthlyComponent, i18n: $localize`:@@i18n.widget-revenue-monthly:monthly revenue`, on: () => hasRole('financial') },
-    'widget-project-success': { widget: WidgetProjectSuccessComponent, i18n: $localize`:@@i18n.widget-project-success:project success`, on: () => hasRole('financial') },
-    'widget-ext': { widget: WidgetExtComponent, i18n: $localize`:@@i18n.widget-ext:external widget` },
-    'widget-jubilees': { widget: WidgetJubileesComponent, i18n: $localize`:@@i18n.common.jubilees:jubilees`, on: () => hasRole('hr|project_manager') },
-    'widget-time-based-employees': { widget: WidgetTimeBasedEmploymentComponent, i18n: $localize`:@@i18n.widget-time-based-employees:time-based employees`, on: () => hasRole('hr') },
+const ALL_WIDGETS: Dictionary<TWidget> = {
+    'widget-customer-support'          : { widget: WidgetCustomerSupportComponent, i18n: $localize`:@@i18n.common.customerSupport:customer support`, on: () => hasRole('project_manager') },
+    'widget-hr-team'                   : { widget: WidgetHrTeamComponent, i18n: $localize`:@@i18n.widget-hr-team:team status` },
+    'widget-my-working-time'           : { widget: WidgetMyWorkingTimeComponent, i18n: $localize`:@@i18n.widget-my-working-time:my working time` },
+    'widget-missing-project-manager'   : { widget: WidgetMissingProjectManagerComponent, i18n: $localize`:@@i18n.project.missingProjectManager:missing project manager`, on: () => hasRole('project_manager') },
+    'widget-project-acquisitions'      : { widget: WidgetProjectAcquisitionsComponent, i18n: $localize`:@@i18n.common.acquisitions:acquisitions`, on: () => hasRole('project_manager') },
+    'widget-project-manager'           : { widget: WidgetProjectManagerComponent, i18n: $localize`:@@i18n.common.projectManager:project manager`, on: () => hasRole('project_manager') },
+    'widget-project-analysis'          : { widget: WidgetProjectAnalysisComponent, i18n: $localize`:@@i18n.widget-project-analysis:project analysis`, on: () => hasRole('project_manager') },
+    'widget-project-running'           : { widget: WidgetProjectRunningComponent, i18n: $localize`:@@i18n.widget-project-running:running projects`, on: () => hasRole('project_manager') },
+    'widget-project-timebased'         : { widget: WidgetProjectTimebasedComponent, i18n: $localize`:@@i18n.common.timeBasedProjects:time based projects`, on: () => hasRole('project_manager') },
+    'widget-prepared-invoices'         : { widget: WidgetPreparedInvoicesComponent, i18n: $localize`:@@i18n.common.preparedInvoices:prepared invoices`, on: () => hasRole('financial') },
+    'widget-invoice-manager'           : { widget: WidgetInvoiceManagerComponent, i18n: $localize`:@@i18n.widget-invoice-manager:invoice manager`, on: () => hasRole('financial') },
+    'widget-unpaid-invoices'           : { widget: WidgetUnpaidInvoicesComponent, i18n: $localize`:@@i18n.invoice.unpaidInvoices:unpaid invoices`, on: () => hasRole('financial') },
+    'widget-cashflow'                  : { widget: WidgetCashflowComponent, i18n: $localize`:@@i18n.common.cashFlow:cash flow`, on: () => hasRole('financial') },
+    'widget-revenue-12'                : { widget: WidgetRevenue12Component, i18n: $localize`:@@i18n.common.revenue:revenue`, on: () => hasRole('financial') },
+    'widget-revenue-current-year'      : { widget: WidgetRevenueCurrentYearComponent, i18n: $localize`:@@i18n.invoice.revenueCurrentYear:revenue current year`, on: () => hasRole('financial') },
+    'widget-revenue-monthly'           : { widget: WidgetRevenueMonthlyComponent, i18n: $localize`:@@i18n.widget-revenue-monthly:monthly revenue`, on: () => hasRole('financial') },
+    'widget-project-success'           : { widget: WidgetProjectSuccessComponent, i18n: $localize`:@@i18n.widget-project-success:project success`, on: () => hasRole('financial') },
+    'widget-ext'                       : { widget: WidgetExtComponent, i18n: $localize`:@@i18n.widget-ext:external widget` },
+    'widget-jubilees'                  : { widget: WidgetJubileesComponent, i18n: $localize`:@@i18n.common.jubilees:jubilees`, on: () => hasRole('hr|project_manager') },
+    'widget-time-based-employees'      : { widget: WidgetTimeBasedEmploymentComponent, i18n: $localize`:@@i18n.widget-time-based-employees:time-based employees`, on: () => hasRole('hr') },
     'widget-linear-regression-forecast': { widget: WidgetLinearRegressionForecastComponent, i18n: $localize`:@@i18n.widget-linear-regression-forecast:linear regression forecast`, on: () => hasRole('financial') },
-    'widget-uptime-monitors': { widget: WidgetUptimeMonitorsComponent, i18n: $localize`:@@i18n.uptime.uptimeMonitoring:uptime monitoring`, on: () => hasRole('project_manager') },
+    'widget-uptime-monitors'           : { widget: WidgetUptimeMonitorsComponent, i18n: $localize`:@@i18n.uptime.uptimeMonitoring:uptime monitoring`, on: () => hasRole('project_manager') },
+    'widget-customer-churn'            : { widget: WidgetCustomerChurnComponent, i18n: $localize`:@@i18n.widget-customer-churn:customer churn`, on: () => hasRole('project_manager|marketing') },
+    'widget-overrun-risk'              : { widget: WidgetOverrunRiskComponent, i18n: $localize`:@@i18n.widget-overrun-risk:overrun risk`, on: () => hasRole('project_manager') },
 };
 export const ALL_WIDGETS_ASYNC = () => ALL_WIDGETS;
 export const ALL_WIDGET_COMPONENTS = () => Object.values(ALL_WIDGETS).map((_) => _.widget);

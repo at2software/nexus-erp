@@ -12,11 +12,8 @@ export const DebriefProblemsActions = (that: DebriefProblem): NxAction[] => [
             group: false,
             action: (success) => {
                 ModalBaseService.open(ModalInputComponent, { title: $localize`:@@i18n.common.rename:rename`, initialValue: that.title })
-                    .then((result: any) => {
+                    .then((result) => {
                         if (result?.text?.trim()) that.update({ title: result.text }).subscribe(() => success?.(undefined));
-                    })
-                    .catch(() => {
-                        /* noop */
                     });
             },
         },
@@ -31,7 +28,7 @@ export const DebriefProblemsActions = (that: DebriefProblem): NxAction[] => [
                     ModalCombineDebriefItemsComponent,
                     items.map((i) => ({ id: i.id, title: i.title })),
                 )
-                    .then((result: any) => {
+                    .then((result) => {
                         if (!result?.title?.trim()) return;
                         NxGlobal.getService(DebriefService)
                             .combineProblems(
@@ -40,9 +37,6 @@ export const DebriefProblemsActions = (that: DebriefProblem): NxAction[] => [
                                 result.title,
                             )
                             .subscribe(() => success?.(undefined));
-                    })
-                    .catch(() => {
-                        /* noop */
                     });
             },
         },
@@ -51,7 +45,7 @@ export const DebriefProblemsActions = (that: DebriefProblem): NxAction[] => [
             group: true,
             children: () => [
                 { title: $localize`:@@i18n.common.none:none`, group: true, action: () => that.update({ debrief_problem_category_id: null }) },
-                ...['customer', 'process', 'technical', 'planning'].map((cat: any, index: number) => ({
+                ...['customer', 'process', 'technical', 'planning'].map((cat: string, index: number) => ({
                     title: cat,
                     group: true,
                     action: () => that.update({ debrief_problem_category_id: index + 1 }),

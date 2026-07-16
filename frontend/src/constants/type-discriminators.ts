@@ -1,10 +1,12 @@
 import { Type } from 'class-transformer';
 
-const modelRegistry = new Map<string, any>();
+type ModelConstructor = new(...args: unknown[]) => unknown;
 
-export const Model = (name: string) => (target: any) => void modelRegistry.set(name, target);
+const modelRegistry = new Map<string, ModelConstructor>();
 
-type ClassRef = abstract new(...args: any[]) => any;
+export const Model = (name: string) => (target: ModelConstructor) => void modelRegistry.set(name, target);
+
+type ClassRef = ModelConstructor;
 type ClassThunk = () => ClassRef;
 
 export function TypeFromClass(): PropertyDecorator;
@@ -12,8 +14,8 @@ export function TypeFromClass(superClass: ClassRef): PropertyDecorator;
 export function TypeFromClass(...thunks: ClassThunk[]): PropertyDecorator;
 export function TypeFromClass(...args: (ClassRef | ClassThunk)[]) {
     const [first] = args;
-    const isThunkMode = args.length === 0 || (first as any).prototype === undefined;
-    let resolved: { name: string, value: any }[] | null = null;
+    const isThunkMode = args.length === 0 || (first as { prototype?: unknown }).prototype === undefined;
+    let resolved: { name: string, value: ModelConstructor }[] | null = null;
     const resolve = () => {
         if (args.length === 0)
             return [...modelRegistry].map(([k, v]) => ({ name: k, value: v }));
@@ -32,8 +34,11 @@ export function TypeFromClass(...args: (ClassRef | ClassThunk)[]) {
         property: 'class' as const,
         get subTypes() { return resolved ??= resolve(); }
     };
-    return Type(() => (args.length === 0 ? Object : isThunkMode ? (first as ClassThunk)() : first) as any, {
-        discriminator: discriminator as any,
+    return Type(() => (args.length === 0 ? Object : isThunkMode ? (first as ClassThunk)() : first) as ClassRef, {
+        discriminator: discriminator as {
+            property: 'class';
+            subTypes: { name: string; value: ModelConstructor }[];
+        },
         keepDiscriminatorProperty: true
     });
 }

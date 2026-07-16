@@ -5,8 +5,6 @@ import { ConfirmationArguments } from './confirmation.service';
 @Component({
     selector: 'app-modal-confirm',
     templateUrl: './modal-confirm.component.html',
-    styleUrls: ['./modal-confirm.component.scss'],
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ModalConfirmComponent extends ModalBaseComponent<boolean> {

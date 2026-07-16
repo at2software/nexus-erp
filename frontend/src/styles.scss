@@ -6,14 +6,12 @@
 
 @use './scss/datepicker';
 @use './scss/dropdown';
-@use './scss/input';
 @use './scss/nexus';
+@use './scss/quill';
 @use 'material-icons/iconfont/material-icons';
-@use './scss/frappe-gantt-dark';
-
-@use 'frappe-gantt';
 
 @import 'leaflet/dist/leaflet.css';
+@import 'quill/dist/quill.snow.css';
 
 i {
     @extend .material-icons-outlined;

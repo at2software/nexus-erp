@@ -14,6 +14,10 @@ class Milestone extends BaseModel {
     use HasTasksTrait;
     use SoftDeletes;
 
+    // Milestone has no natural $touches target elsewhere, unlike InvoiceItem/Comment/Focus -
+    // this is what makes a milestone save also broadcast the owning project as 'updated'.
+    protected $touches = ['project'];
+
     protected $fillable = [
         'name',
         'comments',
@@ -27,9 +31,14 @@ class Milestone extends BaseModel {
         'position',
         'user_id',
         'workload_hours',
+        'ext_issue_plugin_link_id',
+        'ext_issue_id',
     ];
     protected $appends = ['computed_workload_percent'];
-    protected $access  = ['admin' => '*', 'project_manager' => '*', 'user' => '*'];
+    protected $casts   = [
+        'started_at' => 'date',
+        'due_at'     => 'date',
+    ];
 
     public function getChildrenAttribute() {
         return $this->dependees()->withPivot(['dependant_id', 'dependee_id'])->get();
@@ -51,6 +60,9 @@ class Milestone extends BaseModel {
     }
     public function user() {
         return $this->belongsTo(User::class);
+    }
+    public function extIssuePluginLink() {
+        return $this->belongsTo(PluginLink::class, 'ext_issue_plugin_link_id');
     }
     public function dependants() {
         return $this->belongsToMany(Milestone::class, 'milestone_milestones', 'dependant_id', 'dependee_id');
@@ -82,8 +94,8 @@ class Milestone extends BaseModel {
             return 0;
         }
 
-        $startedAt   = $this->started_at ? Carbon::parse($this->started_at) : now();
-        $dueAt       = $this->due_at ? Carbon::parse($this->due_at) : now()->addDays(7);
+        $startedAt   = $this->started_at ? $this->started_at->copy() : now();
+        $dueAt       = $this->due_at ? $this->due_at->copy() : now()->addDays(7);
         $workingDays = $this->countWorkingDaysBetween($startedAt, $dueAt);
 
         if ($workingDays <= 0) {

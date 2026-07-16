@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
 import { CdkTable } from '@angular/cdk/table';
-import { Workbook } from 'exceljs';
+import { Dictionary } from '@constants/constants';
 
 @Injectable({
     providedIn: 'root',
 })
 export class TableExportService {
-    async exportAnyTableToCSV(table: HTMLTableElement | CdkTable<any>, filenamePrefix: string = '') {
+    async exportAnyTableToCSV(table: HTMLTableElement | CdkTable<unknown>, filenamePrefix: string = '') {
         if (table instanceof HTMLTableElement) {
             await this.#exportTableAsCsv(table, filenamePrefix);
         } else if (table instanceof CdkTable) {
@@ -21,6 +21,7 @@ export class TableExportService {
         }
 
         const rows = this.#convertTableToCsv(table);
+        const { Workbook } = await import('exceljs');
         const wb = new Workbook();
         const ws = wb.addWorksheet('Daten');
         ws.addRows(rows);
@@ -39,9 +40,9 @@ export class TableExportService {
         document.body.removeChild(link);
     }
 
-    #convertTableToCsv(table: HTMLTableElement): any[][] {
+    #convertTableToCsv(table: HTMLTableElement): (string | number)[][] {
         const rows = Array.from(table.rows);
-        const conv = (cell: any, data: any) => {
+        const conv = (cell: HTMLTableCellElement, data: string) => {
             if ('exportNumeric' in cell.dataset) return parseFloat(data);
             return data;
         };
@@ -60,7 +61,7 @@ export class TableExportService {
             });
     }
 
-    #exportCdkTableAsCsv(table: CdkTable<any>, filenamePrefix: string): void {
+    #exportCdkTableAsCsv(table: CdkTable<unknown>, filenamePrefix: string): void {
         if (!table || !table.dataSource) {
             console.error('CdkTable or dataSource empty');
             return;
@@ -77,7 +78,7 @@ export class TableExportService {
         const headers = columns.join(separator);
         let csvContent = headers + '\n';
 
-        const data = table.dataSource as any[];
+        const data = table.dataSource as Dictionary[];
         data.forEach((row) => {
             const rowData = columns.map((column) => {
                 let cell = row[column] === null || row[column] === undefined ? '' : row[column];

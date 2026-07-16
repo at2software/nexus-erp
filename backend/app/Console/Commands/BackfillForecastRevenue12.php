@@ -102,7 +102,6 @@ class BackfillForecastRevenue12 extends Command {
         $this->info('Done.');
         return 0;
     }
-
     private function computeRevenue(Carbon $asOf): float {
         return Invoice::whereBetween('created_at', [$asOf->copy()->subYear(), $asOf])
             ->where(fn ($q) => $q->where('is_cancelled', false)->orWhereNull('is_cancelled'))

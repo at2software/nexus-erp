@@ -13,6 +13,7 @@ import { Toast } from '@shards/toast/toast';
 import { Task } from '@models/tasks/task.model';
 import { CustomGanttComponent, GanttRow } from '@app/projects/_shards/custom-gantt/custom-gantt.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { storageGet, storageSet } from '@constants/storage';
 
 interface T_ASSIGNMENT {
     assignee: Assignee;
@@ -24,7 +25,6 @@ interface T_ASSIGNMENT {
     selector: 'project-milestones',
     templateUrl: './project-milestones.component.html',
     styleUrls: ['./project-milestones.component.scss'],
-    standalone: true,
     host: { class: 'container-full' },
     imports: [ToolbarComponent, CustomGanttComponent, NgbTooltipModule, NgbDropdownModule, SpinnerComponent],
 })
@@ -33,8 +33,8 @@ export class ProjectMilestonesComponent {
 
     project!: Project;
     assignees: T_ASSIGNMENT[] = [];
-    currentViewMode: string = localStorage.getItem('projectMilestonesViewMode') || 'Week';
-    ganttRows: GanttRow[] = [];
+    currentViewMode: string = storageGet('projectMilestonesViewMode', 'Week');
+    ganttRows = signal<GanttRow[]>([]);
     isLoading = signal(true);
     #isInitialized = false;
 
@@ -65,13 +65,11 @@ export class ProjectMilestonesComponent {
             .indexMilestones(this.project.id)
             .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe({
-                next: (response: any) => {
-                    const milestonesWithTasks = response.milestones || [];
+                next: (response) => {
                     const projectTasks = response.project_tasks || [];
 
-                    // Extract milestones and properly instantiate them as Milestone objects
-                    const milestones = milestonesWithTasks.map((item: any) => {
-                        const milestone = Milestone.fromJson(item.milestone);
+                    const milestones = (response.milestones || []).map((item) => {
+                        const milestone = Milestone.fromJson(item);
                         milestone.project = this.project;
                         return milestone;
                     });
@@ -81,7 +79,7 @@ export class ProjectMilestonesComponent {
                     this.#prepareGanttRows();
                     this.isLoading.set(false);
                 },
-                error: (error: any) => {
+                error: (error: unknown) => {
                     console.error('Error loading milestones:', error);
                     this.isLoading.set(false);
                 },
@@ -89,10 +87,10 @@ export class ProjectMilestonesComponent {
     }
 
     #prepareGanttRows() {
-        this.ganttRows = [];
+        const rows: GanttRow[] = [];
 
         // Add header row for project
-        this.ganttRows.push({
+        rows.push({
             type: 'header',
             data: this.project,
             project: this.project,
@@ -100,7 +98,7 @@ export class ProjectMilestonesComponent {
 
         // Add project-level tasks
         (this.project.tasks || []).forEach((task: Task) => {
-            this.ganttRows.push({
+            rows.push({
                 type: 'task',
                 data: task,
                 project: this.project,
@@ -109,7 +107,7 @@ export class ProjectMilestonesComponent {
 
         // Add milestones and their tasks
         (this.project.milestones || []).forEach((milestone: Milestone) => {
-            this.ganttRows.push({
+            rows.push({
                 type: 'milestone',
                 data: milestone,
                 project: this.project,
@@ -117,7 +115,7 @@ export class ProjectMilestonesComponent {
 
             // Add tasks for this milestone
             ((milestone as any).tasks || []).forEach((task: Task) => {
-                this.ganttRows.push({
+                rows.push({
                     type: 'task',
                     data: task,
                     project: this.project,
@@ -125,9 +123,11 @@ export class ProjectMilestonesComponent {
                 });
             });
         });
+
+        this.ganttRows.set(rows);
     }
 
-    find = (id: string): T_ASSIGNMENT => this.assignees.find((x: any) => x.assignee.id == id) ?? this.assignees[0];
+    find = (id: string): T_ASSIGNMENT => this.assignees.find((x) => x.assignee.id == id) ?? this.assignees[0];
 
     onAddButton = () => {
         this.#inputModalService
@@ -144,7 +144,7 @@ export class ProjectMilestonesComponent {
                                 Toast.success($localize`:@@i18n.milestone.created:milestone created`);
                                 this.loadMilestones();
                             },
-                            error: (error: any) => {
+                            error: (error: unknown) => {
                                 Toast.error($localize`:@@i18n.milestone.createError:failed to create milestone`);
                                 console.error('Error creating milestone:', error);
                             },
@@ -158,7 +158,7 @@ export class ProjectMilestonesComponent {
 
     onViewModeChange = (mode: string) => {
         this.currentViewMode = mode;
-        localStorage.setItem('projectMilestonesViewMode', mode);
+        storageSet('projectMilestonesViewMode', mode);
     };
 
     onConvertInvoiceItems = () => {
@@ -175,7 +175,7 @@ export class ProjectMilestonesComponent {
             .convertInvoiceItemsToMilestones(this.project.id)
             .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe({
-                next: (response: any) => {
+                next: (response) => {
                     if (response.milestones_created > 0) {
                         // Reload milestones to reflect changes
                         this.loadMilestones();
@@ -244,7 +244,7 @@ export class ProjectMilestonesComponent {
                                 Toast.success($localize`:@@i18n.task.created:Task created`);
                                 this.loadMilestones();
                             },
-                            error: (error: any) => {
+                            error: (error: unknown) => {
                                 Toast.error($localize`:@@i18n.task.createError:Failed to create task`);
                                 console.error('Error creating task:', error);
                             },

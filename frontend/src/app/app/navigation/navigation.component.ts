@@ -7,13 +7,15 @@ import { fromEvent } from 'rxjs';
 import { NComponent } from '@shards/n/n.component';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { GuidedTourComponent } from '@shards/guided-tour/guided-tour.component';
+import { Serializable } from '@models/serializable';
+
+type SearchResult = Serializable & { company_id?: string };
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'app-navigation',
     templateUrl: './navigation.component.html',
     styleUrls: ['./navigation.component.scss'],
-    standalone: true,
     imports: [NComponent, SearchInputComponent, RouterModule, HotkeyDirective, GuidedTourComponent],
     host: { '(document:click)': 'onDocumentClick($event)' },
 })
@@ -65,12 +67,12 @@ export class NavigationComponent {
         this.searchExpanded.set(false);
     }
 
-    onSelect(e: any) {
+    onSelect(e: SearchResult) {
         this.clearSearch();
         this.#router.navigate([this.#pathFor(e)]);
     }
 
-    #pathFor(o: any) {
+    #pathFor(o: SearchResult) {
         switch (o.class) {
             case 'Company': return '/customers/' + o.id;
             case 'CompanyContact': return '/customers/' + o.company_id;

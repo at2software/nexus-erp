@@ -6,7 +6,6 @@ import { CompactItemDirective } from './CompactItemDirective';
     selector: 'ul-compact',
     templateUrl: './ul-compact.component.html',
     styleUrls: ['./ul-compact.component.scss'],
-    standalone: true,
     imports: [SafePipe],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

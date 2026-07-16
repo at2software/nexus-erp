@@ -21,7 +21,6 @@ class Contact extends BaseModel {
     protected $fillable = ['vcard', 'created_at', 'updated_at', 'at2_connect_token', 'at2_connect_thread_id', 'flags'];
     protected $touches  = [];
     protected $appends  = ['gender', 'class', 'path', 'icon'];
-    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
     public function companyContacts() {
         return $this->hasMany(CompanyContact::class);
@@ -49,7 +48,7 @@ class Contact extends BaseModel {
         }
     }
     public function getQrCodeContentAttribute() {
-        $at2_connect_url = $this->at2_connect_token ? env('AT2CONNECT_URL').'?token='.$this->at2_connect_token : null;
+        $at2_connect_url = $this->at2_connect_token ? config('services.at2connect.url').'?token='.$this->at2_connect_token : null;
         return $at2_connect_url;
     }
     public static function isMattermostTimestampFromToday(int $msTimestamp): bool {

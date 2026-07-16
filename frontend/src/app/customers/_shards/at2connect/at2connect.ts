@@ -3,22 +3,30 @@ import { Contact } from '@models/company/contact.model';
 import { ContactService } from '@models/company/contact.service';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { tracked } from '@constants/tracked';
+import { CustomerDetailGuard } from '@app/customers/customers.details.guard';
 
 @Component({
     selector: 'at2connect',
     templateUrl: './at2connect.html',
-    styleUrls: ['./at2connect.scss'],
-    standalone: true,
     imports: [NgbTooltipModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class At2connect {
-    readonly contactIn = input.required<Contact>({ alias: 'contact' });
-    readonly contact = tracked(this.contactIn);
+    readonly contact = input.required<Contact>();
+    readonly trackedContact = tracked(this.contact);
 
     #cService = inject(ContactService);
+    #parent = inject(CustomerDetailGuard);
 
-    createAt2ConnectToken = () => this.#cService.createAt2ConnectToken(this.contact().id).subscribe((_) => (this.contact().qr_code = _.qr_code));
-    deleteAt2ConnectToken = () => this.#cService.deleteAt2ConnectToken(this.contact().id).subscribe((_) => (this.contact().qr_code = _.qr_code));
-    openAt2Connect = () => window.open(this.contact().qr_code_content, '_blank');
+    createAt2ConnectToken = () =>
+        this.#cService.createAt2ConnectToken(this.trackedContact().id).subscribe((_) => {
+            this.trackedContact().qr_code = _.qr_code;
+            this.#parent.touch();
+        });
+    deleteAt2ConnectToken = () =>
+        this.#cService.deleteAt2ConnectToken(this.trackedContact().id).subscribe((_) => {
+            this.trackedContact().qr_code = _.qr_code;
+            this.#parent.touch();
+        });
+    openAt2Connect = () => window.open(this.trackedContact().qr_code_content, '_blank');
 }

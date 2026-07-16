@@ -1,6 +1,14 @@
 import { ALL_TRIGGERS, MODEL_BASED_TRIGGERS, ObserverTrigger } from '@enums/observer-trigger';
 import { SentinelOptionFieldType } from './sentinel-option-field-type.model';
-import { SentinelOptionField } from './sentinel-condition-option-field.model';
+import { SentinelOptionField, SentinelOptionInstance } from './sentinel-condition-option-field.model';
+import { SentinelConditionInstance } from './sentinel-condition.model';
+
+export interface SentinelCommandInstance {
+    key: string;
+    options?: SentinelOptionInstance[];
+    conditions?: SentinelConditionInstance[][];
+    actions?: SentinelCommandInstance[];
+}
 
 export class SentinelCommand {
     label: string = '';

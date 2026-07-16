@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { InvoiceItemService } from '@models/invoice/invoice-item.service';
 import { DecimalPipe, registerLocaleData } from '@angular/common';
@@ -14,6 +14,7 @@ import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
 import { moveInvoiceItems, reindexInvoiceItems } from './invoice-item.reorder.const';
 import { HasInvoiceItems } from '@interfaces/hasInvoiceItems.interface';
+import { Dictionary } from '@constants/constants';
 import { InvoiceItemAnnotationType, InvoiceItemRowComponent } from './invoice-item/invoice-item-row.component';
 import { ModalInvoiceDiscountComponent } from '@app/_modals/modal-invoice-discount/modal-invoice-discount.component';
 import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
@@ -28,6 +29,7 @@ import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap'
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { ExtIssueResolverService, ExtIssueRef } from '@models/ext-issue/ext-issue-resolver.service';
 
 type TNewItems = 'item' | 'paydown' | 'group' | 'discount';
 interface VatEntry {
@@ -37,9 +39,9 @@ interface VatEntry {
 
 @Component({
     selector: 'invoice-prepare',
+    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './invoice-prepare.html',
     styleUrls: ['./invoice-prepare.scss'],
-    standalone: true,
     imports: [ToolbarComponent, DecimalPipe, Nx, CdkTableModule, InvoiceItemRowComponent, MoneyPipe, NgbDropdownModule, NgbTooltipModule, CdkDrag, CdkDropList, HotkeyDirective, SpinnerComponent],
 })
 export class InvoicePrepare {
@@ -47,6 +49,7 @@ export class InvoicePrepare {
     #modalGroups = inject(InputModalService);
     #modalService = inject(ModalBaseService);
     #global = inject(GlobalService);
+    #extIssueResolver = inject(ExtIssueResolverService);
 
     parent = input.required<HasInvoiceItems>();
     items = input<InvoiceItem[] | undefined>(undefined);
@@ -68,6 +71,9 @@ export class InvoicePrepare {
     selectionNet = signal<number>(0);
     selectionQty = signal<number>(0);
     loading = signal<boolean>(false);
+
+    /** Live-resolved external issue links keyed by invoice-item id. Status is fetched, never stored. */
+    extIssues = signal<Record<string, ExtIssueRef>>({});
 
     regularItems = computed(() => (this.withInstalments() ? this._items().filter((_) => _.type !== InvoiceItemType.Instalment) : this._items()));
     instalmentItems = computed(() => (this.withInstalments() ? this._items().filter((_) => _.type === InvoiceItemType.Instalment) : []));
@@ -121,6 +127,8 @@ export class InvoicePrepare {
                 this.selectionNet.set(selectionNet);
                 this.selectionQty.set(selectionQty);
             });
+
+        effect(() => this.#extIssueResolver.resolveRows(this.project(), this._items(), this.extIssues));
     }
 
     clear = () => this._items.set([]);
@@ -184,13 +192,15 @@ export class InvoicePrepare {
 
     onNewItem = (continueWith?: InvoiceItem) => {
         const item = continueWith ?? this.#getNewItem();
+        const company = this.companyRef();
+        if (!company) return;
         this.#modalService
-            .open(ModalEditInvoiceItemComponent, item, this.companyRef(), 'Add', '@@i18n.invoice.addNewInvoiceItem', 'Add & next')
+            .open(ModalEditInvoiceItemComponent, item, company, 'Add', '@@i18n.invoice.addNewInvoiceItem', 'Add & next')
             .then((_) => {
-                if ('item' in _) {
+                if (_ && 'item' in _) {
                     const key = InvoiceItem.parentField(this.parent());
                     if (key) {
-                        (_.item as any)[key] = this.parent().id;
+                        (_.item as unknown as Record<string, unknown>)[key] = this.parent().id;
                         const payload = _.item.toPayload(['my_prediction']);
                         payload[key] = this.parent().id;
                         payload.position = this.#getNextPosition();
@@ -202,24 +212,25 @@ export class InvoicePrepare {
                         }
                     }
                 }
-            })
-            .catch();
+            });
     };
 
     onNewPaydown = (continueWith?: InvoiceItem) => {
         const item = continueWith ?? this.#getNewItem();
+        const company = this.companyRef();
+        if (!company) return;
         this.#modalService
-            .open(ModalEditInvoiceItemComponent, item, this.companyRef(), 'Add', 'New paydown')
+            .open(ModalEditInvoiceItemComponent, item, company, 'Add', 'New paydown')
             .then((_) => {
-                if ('item' in _) {
+                if (_ && 'item' in _) {
                     const key = InvoiceItem.parentField(this.parent());
                     if (key) {
-                        (_.item as any)[key] = this.parent().id;
+                        (_.item as unknown as Record<string, unknown>)[key] = this.parent().id;
 
                         const payload = _.item.toPayload(['my_prediction']);
                         payload.position = this.#getNextPosition();
                         payload.type = InvoiceItemType.Paydown;
-                        payload.qty = -payload.qty;
+                        payload.qty = -(payload.qty as number);
 
                         const payloadCompany = _.item.toPayload(['my_prediction']);
                         payloadCompany[key] = null;
@@ -241,8 +252,7 @@ export class InvoicePrepare {
                         }
                     }
                 }
-            })
-            .catch();
+            });
     };
 
     onNewGroup = () =>
@@ -255,12 +265,11 @@ export class InvoicePrepare {
                     group.text = text;
                     const payload = group.toPayload(['my_prediction']);
                     payload.position = this.#getNextPosition();
-                    group.store(payload).subscribe((x: InvoiceItem) => {
+                    group.store(payload).subscribe((x) => {
                         this._items.set(this.#reindex([...this._items(), InvoiceItem.fromJson(x)]));
                     });
                 }
-            })
-            .catch();
+            });
 
     onNewDiscount = () =>
         this.#modalService.open(ModalInvoiceDiscountComponent, 'add discount', this.#getBasePrice()).then((res) => {
@@ -272,7 +281,7 @@ export class InvoicePrepare {
                 _.unit_name = res.unit;
                 const payload = _.toPayload(['my_prediction']);
                 payload.position = this.#getNextPosition();
-                _.store(payload).subscribe((x: InvoiceItem) => {
+                _.store(payload).subscribe((x) => {
                     this._items.set(this.#reindex([...this._items(), InvoiceItem.fromJson(x)]));
                 });
             }
@@ -286,7 +295,7 @@ export class InvoicePrepare {
 
     #getNewItem = (t: InvoiceItemType = InvoiceItemType.Default) => {
         const key = InvoiceItem.parentField(this.parent());
-        const data: Record<string, unknown> = { type: t, position: 0 };
+        const data: Dictionary = { type: t, position: 0 };
         if (key && this.parent()?.id) {
             data[key] = this.parent().id;
         }

@@ -7,7 +7,6 @@ export type LocaleKey = 'de-formal' | 'de-informal' | 'en-formal' | 'en-informal
 
 @Component({
     selector: 'toolbar-locale-selector',
-    standalone: true,
     imports: [FormsModule, NgbDropdownModule],
     template: `
         <div ngbDropdown class="d-inline-block">

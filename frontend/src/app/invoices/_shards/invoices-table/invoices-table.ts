@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Invoice } from '@models/invoice/invoice.model';
 import { FileService } from '@models/file/file.service';
@@ -16,9 +16,8 @@ import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
     selector: 'invoices-table',
+    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './invoices-table.html',
-    styleUrls: ['./invoices-table.scss'],
-    standalone: true,
     imports: [DatePipe, Nx, NComponent, AvatarComponent, ProgressBarComponent, MoneyPipe, ContinuousMarkerComponent, NgbTooltipModule],
 })
 export class InvoicesTable {
@@ -40,7 +39,7 @@ export class InvoicesTable {
     maxPaymentDuration = computed(() => {
         let max = 1;
         for (const i of this._invoices()) {
-            if (i.paid_at) max = Math.max(max, i.time_paid().diff(i.momentCreated(), 'day'));
+            if (i.paid_at) max = Math.max(max, i.time_paid().diff(i.createdAt(), 'day'));
         }
         return max;
     });
@@ -64,8 +63,8 @@ export class InvoicesTable {
         this._invoices.update((inv) => [...inv, ...data]);
     }
 
-    openFile = (inv: Invoice | InvoiceReminder) => this.#fileService.show(inv);
-    percentForPaid = (_: Invoice) => _.time_paid().diff(_.momentCreated(), 'day') / this.maxPaymentDuration();
+    openFile = (inv: Invoice | InvoiceReminder) => this.#fileService.download(inv);
+    percentForPaid = (_: Invoice) => _.time_paid().diff(_.createdAt(), 'day') / this.maxPaymentDuration();
     getCancellationName = (_: Invoice) => (_.cancelles ? this.#global.setting('INVOICE_CANCEL_TITLE') + ' von ' + _.cancelles.name : '');
     getCancelledByName = (_: Invoice) => (_.cancelled_by ? this.#global.setting('INVOICE_CANCEL_TITLE') + ': ' + _.cancelled_by.name : '');
 }

@@ -1,18 +1,18 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ModalBaseComponent } from '../modal-base.component';
 import { SearchInputComponent } from '@app/_shards/search-input/search-input.component';
+import { Serializable } from '@models/serializable';
 
 @Component({
     selector: 'modal-search',
-    standalone: true,
     imports: [SearchInputComponent],
     templateUrl: './modal-search.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ModalSearchComponent extends ModalBaseComponent<any> {
+export class ModalSearchComponent extends ModalBaseComponent<Serializable> {
     onlyClass = '';
     label = 'select';
-    #result?: any;
+    #result?: Serializable;
 
     init(onlyClass: string, label = 'select') {
         this.onlyClass = onlyClass;
@@ -20,10 +20,10 @@ export class ModalSearchComponent extends ModalBaseComponent<any> {
     }
 
     onSuccess() {
-        return this.#result;
+        return this.#result!;
     }
 
-    onSelected(item: any) {
+    onSelected(item: Serializable) {
         this.#result = item;
         this.accept();
     }

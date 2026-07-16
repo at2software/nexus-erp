@@ -9,8 +9,10 @@ use App\Collections\CompanyCollection;
 use App\Enums\InvoiceItemType;
 use App\Enums\Recurrence;
 use App\Helpers\NLog;
+use App\Queries\FociTimelineQuery;
 use App\Traits\CanMakeInvoiceTrait;
 use App\Traits\HasAssignmentsTrait;
+use App\Traits\HasAvatarProjection;
 use App\Traits\HasFilesTrait;
 use App\Traits\HasFociTrait;
 use App\Traits\HasI18nTrait;
@@ -18,6 +20,7 @@ use App\Traits\HasInvoiceItemsTrait;
 use App\Traits\HasParams;
 use App\Traits\PrecomputedTrait;
 use App\Traits\VcardTrait;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Artisan;
@@ -26,6 +29,7 @@ use Illuminate\Support\Facades\Auth;
 class Company extends BaseModel {
     use CanMakeInvoiceTrait;
     use HasAssignmentsTrait;
+    use HasAvatarProjection;
     use HasFilesTrait;
     use HasFociTrait;
     use HasI18nTrait;
@@ -35,7 +39,7 @@ class Company extends BaseModel {
     use SoftDeletes;
     use VcardTrait;
 
-    protected $fillable = ['vcard', 'created_at', 'updated_at', 'customer_number', 'company_id', 'contact_id', 'net', 'flags'];
+    protected $fillable = ['vcard', 'created_at', 'updated_at', 'customer_number', 'company_id', 'contact_id', 'net', 'flags', 'vat_id'];
     protected $appends  = ['icon', 'class', 'path', 'name', 'needs_vat_handling', 'address', 'has_time_budget'];
     protected $hidden   = ['deleted_at'];
 
@@ -54,20 +58,14 @@ class Company extends BaseModel {
             'has_time_budget'      => 'boolean',
         ];
     }
-
-    protected $access = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'r'];
-
     public function newCollection(array $models = []) {
         return new CompanyCollection($models);
-    }
-    public function onlyAvatar(): array {
-        return $this->only(['id', 'name', 'icon']);
     }
     public function getIconAttribute() {
         return 'companies/'.$this->id.'/icon?'.($this->updated_at ? $this->updated_at->timestamp : '');
     }
     public function getRevenueAttribute() {
-        return $this->invoicedInvoiceItems()->get()->sum('net');
+        return $this->invoicedInvoiceItems()->sum('invoice_items.net');
     }
     public function getProjectCountAttribute() {
         return $this->projects()->count();
@@ -86,6 +84,70 @@ class Company extends BaseModel {
     }
     public function getUnpaidInvoiceValueAttribute() {
         return $this->invoicesUnpaid()->count();
+    }
+
+    /** Convenience accessor: the raw ML_PREDICTED_REVENUE_12M param value, or null (Model A). */
+    public function getMlPredictedRevenue12mAttribute(): ?float {
+        return $this->getFloatParam('ML_PREDICTED_REVENUE_12M');
+    }
+
+    /** Convenience accessor: the raw ML_PREDICTED_INTERVAL_DAYS param value, or null (Model B). */
+    public function getMlPredictedIntervalDaysAttribute(): ?float {
+        return $this->getFloatParam('ML_PREDICTED_INTERVAL_DAYS');
+    }
+
+    /** Convenience accessor: the raw ML_CHURN_PROBABILITY_12M param value [0,1], or null (Model C). */
+    public function getMlChurnProbability12mAttribute(): ?float {
+        return $this->getFloatParam('ML_CHURN_PROBABILITY_12M');
+    }
+
+    /** Convenience accessor: the raw ML_PREDICTED_SUPPORT_HOURS param value, or null (support-load forecast). */
+    public function getMlPredictedSupportHoursAttribute(): ?float {
+        return $this->getFloatParam('ML_PREDICTED_SUPPORT_HOURS');
+    }
+
+    /**
+     * Model B ("when to contact again") derived prediction: ML_PREDICTED_INTERVAL_DAYS
+     * (written by cron:refresh-customer-predictions) added to the company's most
+     * recent invoice date. Deliberately NOT persisted anywhere — always derived on
+     * read from the param + latestInvoice, so it can never go stale independent of
+     * them. Null if there's no trained prediction or no invoice history yet.
+     */
+    public function getMlPredictedNextPurchaseAtAttribute(): ?Carbon {
+        $intervalDays = $this->ml_predicted_interval_days;
+        if ($intervalDays === null) {
+            return null;
+        }
+
+        $lastInvoiceAt = $this->latestInvoice?->created_at;
+        if (! $lastInvoiceAt) {
+            return null;
+        }
+
+        return $lastInvoiceAt->copy()->addDays((int)round($intervalDays));
+    }
+
+    /** True once the ML-predicted next-purchase date is in the past — a "contact this customer now" signal. */
+    public function getMlOverdueForContactAttribute(): bool {
+        $predicted = $this->ml_predicted_next_purchase_at;
+        return $predicted !== null && $predicted->isPast();
+    }
+
+    /**
+     * Date-only string form of ml_predicted_next_purchase_at, safe to append() onto
+     * a JSON list payload. Appending the Carbon-typed accessor directly would
+     * serialize through toJSON()/UTC, which can display a day off from the
+     * Europe/Berlin app timezone (the same toArray() date-shift pitfall other
+     * date-range code in this codebase works around) — this pre-converts to a
+     * plain 'Y-m-d' string instead, same as indexOverdueForContact() already does.
+     */
+    public function getMlPredictedNextPurchaseDateAttribute(): ?string {
+        return $this->ml_predicted_next_purchase_at?->toDateString();
+    }
+
+    public function getFloatParam(string $key): ?float {
+        $value = $this->param($key)->value;
+        return $value === null ? null : (float)$value;
     }
     public function getAddressAttribute() {
         $din = Document::getDin5008Address($this, false);
@@ -180,6 +242,9 @@ class Company extends BaseModel {
     public function earliestInvoice() {
         return $this->hasOne(Invoice::class)->orderBy('created_at', 'asc');
     }
+    public function latestInvoice() {
+        return $this->hasOne(Invoice::class)->orderBy('created_at', 'desc');
+    }
     public function invoices() {
         return $this->hasMany(Invoice::class);
     }
@@ -212,6 +277,12 @@ class Company extends BaseModel {
     }
     public function timeBasedProjects() {
         return $this->hasMany(Project::class)->where('is_time_based', true);
+    }
+    public function projectFoci() {
+        return $this->hasManyThrough(Focus::class, Project::class, 'company_id', 'parent_id')->where('parent_type', Project::class);
+    }
+    public function getTimelineChartAttribute() {
+        return (new FociTimelineQuery(fn () => $this->projectFoci()))->get();
     }
 
     // API functions
@@ -263,6 +334,11 @@ class Company extends BaseModel {
     }
     public function preparedInvoiceItems() {
         return $this->invoiceItems()->whereStage(0)->whereIn('type', [...Invoice::ITEMS_ADDING_TO_INVOICE, InvoiceItemType::Header])->whereInvoiceId(null)->oldest('position');
+    }
+
+    // companies have no draft-quote workflow, so both regular (0) and support (1) stage items count as prepared
+    public function supportItems() {
+        return $this->invoiceItems()->whereIn('stage', [0, 1])->whereIn('type', InvoiceItemType::TotalRemaining)->whereInvoiceId(null);
     }
 
     /**

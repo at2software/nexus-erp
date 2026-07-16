@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, OnChanges, OnDestroy, afterNextRender, ElementRef, inject, input, computed, signal, viewChildren } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, computed, effect, ElementRef, inject, input, signal, viewChildren } from '@angular/core';
 import { VcardRow } from '@models/vcard/VcardRow';
 import { Company } from '@models/company/company.model';
 import { CompanyContact } from '@models/company/company-contact.model';
@@ -14,51 +14,66 @@ import { FormsModule } from '@angular/forms';
 import { Nx } from '@app/nx/nx.directive';
 import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
-import * as L from 'leaflet';
+import * as Leaflet from 'leaflet';
 import { DB_COUNTRIES } from '../db.countries';
-import { DB_PLZ } from '../db.plz';
+import { CountryEntry } from '@models/api-response';
+import { PlzDbService } from '../plz-db.service';
+import { NComponent } from '@shards/n/n.component';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'app-vcard',
     templateUrl: './vcard.component.html',
     styleUrls: ['./vcard.component.scss'],
-    standalone: true,
-    imports: [NgTemplateOutlet, FormsModule, Nx, NgbDropdownModule, NgbTooltipModule, SpinnerComponent],
+    imports: [NgTemplateOutlet, FormsModule, NComponent, Nx, NgbDropdownModule, NgbTooltipModule, SpinnerComponent],
 })
-export class VcardComponent implements OnInit, OnChanges, OnDestroy {
+export class VcardComponent {
     object = input.required<VcardClass>();
     type = input<string>('work');
 
-    isCompany = computed(() => this.object() instanceof Company);
+    isCompany        = computed(() => this.object() instanceof Company);
     isCompanyContact = computed(() => this.object() instanceof CompanyContact);
-    isContact = computed(() => this.object() instanceof Contact);
-    isUser = computed(() => this.object() instanceof User);
-    isProspect = computed(() => this.object() instanceof MarketingProspect);
+    isContact        = computed(() => this.object() instanceof Contact);
+    isUser           = computed(() => this.object() instanceof User);
+    isProspect       = computed(() => this.object() instanceof MarketingProspect);
 
     private readonly mapContainers = viewChildren<ElementRef<HTMLElement>>('mapContainer');
 
     liClass: string = 'list-group-item pe-9 px-3 py-1';
 
-    db_countries: any[] = DB_COUNTRIES;
-    db_plz: any[] = DB_PLZ;
+    db_countries: CountryEntry[] = DB_COUNTRIES;
     showNameDetails = signal(false);
-    smtypes: Record<string, string> = SOCIAL_MEDIA_TYPES;
+    smtypes = SOCIAL_MEDIA_TYPES;
     smtypekeys: string[] = Object.keys(this.smtypes);
     singleGeoLoad: boolean = false;
     isImportingImprint = signal(false);
 
     #nominatim = inject(NominatimHttpWrapper);
-    #mapInstances = new Map<HTMLElement, L.Map>();
+    #plzDb = inject(PlzDbService);
+    #mapInstances = new Map<HTMLElement, Leaflet.Map>();
+    #destroyRef = inject(DestroyRef);
     src_string: string = '';
 
     constructor() {
-        delete (L.Icon.Default.prototype as any)._getIconUrl;
-        L.Icon.Default.mergeOptions({
+        delete (Leaflet.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
+        Leaflet.Icon.Default.mergeOptions({
             iconRetinaUrl: 'assets/leaflet/marker-icon-2x.png',
             iconUrl: 'assets/leaflet/marker-icon.png',
             shadowUrl: 'assets/leaflet/marker-shadow.png',
         });
+        effect(() => {
+            this.object();
+            this.resetDirty();
+            this.ensureI18nFields();
+            // Re-initialize maps when object changes.
+            setTimeout(() => this.initializeMaps(), 0);
+        });
+
+        this.#destroyRef.onDestroy(() => {
+            this.#mapInstances.forEach((map) => map.remove());
+            this.#mapInstances.clear();
+        });
+
         afterNextRender(() => this.initializeMaps());
     }
 
@@ -88,30 +103,20 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy {
             }
         }
     };
-    useName = (event: any) => {
+    useName = (event: Event & { ctrlKey?: boolean }) => {
         if (event.ctrlKey) {
             this.onOrgChange(event);
         }
     };
-    ngOnInit(): void {
-        this.resetDirty();
-        this.ensureI18nFields();
-    }
 
-    ngOnChanges(): void {
-        this.resetDirty();
-        this.ensureI18nFields();
-        // Re-initialize maps when object changes
-        setTimeout(() => this.initializeMaps(), 0);
-    }
     isDirty = (): boolean => this.src_string != this.object().card.toString();
 
-    delete = (r: any) => {
-        this.object().card()?.rows.splice(r as number, 1);
+    delete = (r: number) => {
+        this.object().card()?.rows.splice(r, 1);
     };
-    removeRow = (_: any) => {
+    removeRow = (_: VcardRow) => {
         const card = this.object().card();
-        card?.rows.splice(card.rows.indexOf(_ as VcardRow), 1);
+        card?.rows.splice(card.rows.indexOf(_), 1);
     };
     addRow = (s: string) => {
         const row = VcardRow.fromString(s);
@@ -128,9 +133,10 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy {
     updateVcard = () => {
         if (this.isDirty()) {
             const obj = this.object();
-            obj.update({ vcard: obj.card()?.toString() }).subscribe((response) => {
+            obj.update({ vcard: obj.card()?.toString() }).subscribe(() => {
                 if (obj instanceof CompanyContact) {
-                    (obj as CompanyContact).contact = Contact.fromJson(response.contact);
+                    const rawContact = obj.contact;
+                    if (rawContact) obj.patch({ contact: Contact.fromJson(rawContact) });
                 }
             });
         }
@@ -141,7 +147,7 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy {
 
         this.isImportingImprint.set(true);
         (obj as Company).importImprint().subscribe({
-            next: (_: any) => {
+            next: (_) => {
                 Object.assign(obj, _);
                 this.isImportingImprint.set(false);
             },
@@ -195,25 +201,27 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy {
     };
 
     org = () => this.object().card()?.first('ORG')?.vals[0] ?? '';
-    onOrgChange = ($event: any) => {
+    onOrgChange = ($event: Event) => {
         const card = this.object().card();
         if (card) {
-            card.get('FN')[0].vals[0] = $event.target.value;
-            card.get('ORG')[0].vals[0] = $event.target.value;
+            const value = ($event.target as HTMLInputElement).value;
+            card.get('FN')[0].vals[0] = value;
+            card.get('ORG')[0].vals[0] = value;
         }
     };
     fn = () => this.object().card()?.get('FN')[0].vals[0] ?? '';
-    onFnChange($event: any) {
+    onFnChange($event: Event) {
         const card = this.object().card();
         if (card) {
-            card.get('FN')[0].vals[0] = $event.target.value;
+            const value = ($event.target as HTMLInputElement).value;
+            card.get('FN')[0].vals[0] = value;
             const n = card.get('N');
             if (n?.length) {
-                const parts = $event.target.value.split(' ');
+                const parts = value.split(' ');
                 const ref = n[0].vals;
-                if (parts.length > 0) ref[1] = parts.shift();
+                if (parts.length > 0) ref[1] = parts.shift()!;
                 else ref[1] = '';
-                if (parts.length > 0) ref[0] = parts.pop();
+                if (parts.length > 0) ref[0] = parts.pop()!;
                 else ref[0] = '';
                 if (parts.length > 0) ref[2] = parts.join(' ');
                 else ref[2] = '';
@@ -226,13 +234,12 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy {
         const card = this.object()?.card();
         if (card) card.get('FN')[0].vals[0] = fn;
     }
-    onPlzUpdate(o: VcardRow) {
+    async onPlzUpdate(o: VcardRow): Promise<void> {
         if (o.vals[6] != 'DE') return;
         if (o.vals[5].length != 5) return;
         //if (o.vals[3].length > 0) return
-        const plz = parseInt(o.vals[5]);
-        const res: any[] = this.db_plz.filter((x: any) => x.plz == plz);
-        if (res.length) {
+        const res = await this.#plzDb.lookup(o.vals[5]);
+        if (res.length > 0) {
             o.vals[3] = res[0].ort;
         }
     }
@@ -254,7 +261,7 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy {
     }
     singleActionResolved(a: ActionEmitterType) {
         if (a.action.title === 'Remove') {
-            this.removeRow(a.object.nx());
+            this.removeRow(a.object.nx() as VcardRow);
             this.updateVcard();
         }
     }
@@ -294,7 +301,7 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy {
         container.innerHTML = '';
 
         // Create map
-        const map = L.map(container, {
+        const map = Leaflet.map(container, {
             zoomControl: false,
             attributionControl: false,
             dragging: true,
@@ -306,17 +313,25 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy {
 
         // Choose tile layer based on theme
         const tileLayer = isDarkMode
-            ? L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
+            ? Leaflet.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
                   attribution: '© <a href="https://carto.com/">CARTO</a> © <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
                   subdomains: 'abcd',
                   maxZoom: 19,
               })
-            : L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            : Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                   attribution: '© <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
                   maxZoom: 19,
               });
 
         tileLayer.addTo(map);
+
+        const pinIcon = Leaflet.divIcon({
+            className: 'map-pin',
+            html: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>',
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+        });
+        Leaflet.marker([lat, lon], { icon: pinIcon }).addTo(map);
 
         // Store map instance
         this.#mapInstances.set(container, map);
@@ -337,12 +352,6 @@ export class VcardComponent implements OnInit, OnChanges, OnDestroy {
         if (!rows) return null;
         const geoRows = rows.filter((row) => row.key === 'GEO');
         return geoRows.length > 0 ? geoRows[0] : null;
-    }
-
-    ngOnDestroy() {
-        // Clean up map instances
-        this.#mapInstances.forEach((map) => map.remove());
-        this.#mapInstances.clear();
     }
 
     isRealCompany(): boolean {

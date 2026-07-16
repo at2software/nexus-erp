@@ -13,7 +13,7 @@
     @if (activityRows().length > 0) {
         <ul class="list-group list-group-flush">
             @for (activity of activityRows(); track activity.id) {
-                <li class="list-group-item d-flex align-items-center gap-2 py-2" [nx]="activity" [tables]="activityRows()">
+                <li class="list-group-item d-flex align-items-center gap-2 py-2" [nx]="activity" [tables]="activityRows()" (actionsResolved)="onActionResolved()">
                     <i [class]="statusClass(activity.status)" [ngbTooltip]="activity.status">{{ statusIcon(activity.status) }}</i>
                     <span class="small text-nowrap" [class.text-danger]="activity.isOverdue()" [class.text-muted]="!activity.isOverdue()">{{ activity.scheduled_at | date: 'dd.MM.' }}</span>
                     <span class="text-truncate small flex-fill">{{ activity.marketing_prospect?.company_contact?.getName() }}</span>

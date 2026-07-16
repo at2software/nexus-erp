@@ -41,5 +41,6 @@ return [
     'page' => 'Page',
 
     // Document titles
-    'quote' => 'Quote',
+    'quote'         => 'Quote',
+    'draft_invoice' => 'Draft Invoice',
 ];

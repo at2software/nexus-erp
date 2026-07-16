@@ -5,12 +5,11 @@ namespace App\Http\Controllers;
 use App\Enums\InvoiceItemType;
 use App\Helpers\NLog;
 use App\Http\Controllers\Traits\HasFociController;
+use App\Http\Requests\Company\StoreConnectionRequest;
 use App\Models\Company;
 use App\Models\Connection;
-use App\Models\Invoice;
 use App\Models\Param;
 use App\Services\FocusStatisticsService;
-use App\Traits\ControllerHasPermissionsTrait;
 use App\Traits\HasParams;
 use Illuminate\Console\Command;
 use Illuminate\Http\JsonResponse;
@@ -19,11 +18,8 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 
 class CompanyController extends Controller {
-    use ControllerHasPermissionsTrait, HasFociController;
+    use HasFociController;
 
-    /**
-     * Get companies with valid coordinates for map display.
-     */
     public function indexWithCoordinates(Request $request) {
         $myCompany = Param::get('ME_ID')->value;
 
@@ -32,15 +28,13 @@ class CompanyController extends Controller {
             ->where('vcard', 'REGEXP', '(^|\n)GEO:')
             ->get()
             ->map(function ($company) {
-                // Extract GEO coordinates from vcard using VcardTrait method
                 $geoData = $company->vcard->getFirstAttr('GEO');
                 if ($geoData && count($geoData) >= 2 && ! empty($geoData[0]) && ! empty($geoData[1])) {
                     $lat = floatval($geoData[0]);
                     $lng = floatval($geoData[1]);
 
-                    // Only include if coordinates are valid numbers and not zero
                     if (is_numeric($geoData[0]) && is_numeric($geoData[1]) && $lat != 0 && $lng != 0) {
-                        // Calculate pin properties based on net value
+                        
                         $net      = floatval($company->net ?? 0);
                         $pinSize  = 'small';
                         $pinColor = 'grey';
@@ -77,14 +71,9 @@ class CompanyController extends Controller {
             ->filter();
         return response()->json($companies->values());
     }
-
     public function indexFoci(Request $request, Company $_) {
         return $this->_indexFoci($request, $_);
     }
-
-    /**
-     * Display a listing of the companies.
-     */
     public function index(Request $request) {
         $myCompany = Param::get('ME_ID')->value;
         $query     = Company::select()->whereNot('id', $myCompany);
@@ -168,10 +157,6 @@ class CompanyController extends Controller {
         });
         return $replies;
     }
-
-    /**
-     * Show a company by phone number.
-     */
     public function showByPhone(Request $request): ?JsonResponse {
         $phoneNumber = $request->input('phone_number');
         $company     = Company::searchByPhone($phoneNumber);
@@ -190,29 +175,53 @@ class CompanyController extends Controller {
         }
         return response()->json($company);
     }
-
     public function indexUnbilledFoci() {
         $widgetController = new WidgetController;
         return $widgetController->GET_CASHFLOW_CUSTOMER_SUPPORT()->getAndAppend();
     }
+    private function companiesWithChurnPredictions() {
+        $myCompany     = Param::get('ME_ID')->value;
+        $churnParamIds = Param::whereIn('key', ['ML_PREDICTED_INTERVAL_DAYS', 'ML_CHURN_PROBABILITY_12M'])->pluck('id');
 
-    /**
-     * Display a listing of the assignees for a company.
-     */
-    public function indexAssignees(Company $_) {
-        return $_->assignees()->latest('role_id')->load('parent');
+        return Company::whereActive()
+            ->whereNot('id', $myCompany)
+            ->whereHas('floatParams', fn ($q) => $q->whereIn('param_id', $churnParamIds))
+            ->whereHas('invoices', fn ($q) => $q->where('created_at', '>=', now()->subYears(2)))
+            ->with(['latestInvoice', ...HasParams::$WITH])
+            ->get();
     }
+    public function indexOverdueForContact() {
+        $companies = $this->companiesWithChurnPredictions()
+            ->filter(fn (Company $company) => $company->ml_overdue_for_contact || ($company->ml_churn_probability_12m ?? 0) >= 0.5)
+            ->map(fn (Company $company) => [
+                'id'                            => $company->id,
+                'name'                          => $company->name,
+                'path'                          => $company->path,
+                'ml_predicted_interval_days'    => $company->ml_predicted_interval_days,
+                'ml_predicted_next_purchase_at' => $company->ml_predicted_next_purchase_at?->toDateString(),
+                'ml_overdue_for_contact'        => $company->ml_overdue_for_contact,
+                'ml_churn_probability_12m'      => $company->ml_churn_probability_12m,
+                'ml_predicted_revenue_12m'      => $company->ml_predicted_revenue_12m,
+                'last_invoice_at'               => $company->latestInvoice?->created_at?->toDateString(),
+            ])
+            ->sortByDesc('ml_churn_probability_12m')
+            ->values();
 
-    /**
-     * Display a listing of the comments for a company.
-     */
+        return response()->json($companies);
+    }
+    public function indexByChurnRisk() {
+        return $this->companiesWithChurnPredictions()
+            ->filter(fn (Company $company) => $company->ml_churn_probability_12m !== null)
+            ->each(fn (Company $company) => $company->append(['ml_churn_probability_12m', 'ml_predicted_next_purchase_date', 'ml_overdue_for_contact']))
+            ->sortByDesc('ml_churn_probability_12m')
+            ->values();
+    }
+    public function indexAssignees(Company $_) {
+        return $_->assignees()->latest('role_id')->get()->load('parent');
+    }
     public function indexComments(Company $_) {
         return $_->comments;
     }
-
-    /**
-     * Display a listing of the connections for a company.
-     */
     public function indexConnections(Company $_) {
         $connections1 = Connection::where('company1_id', $_->id)
             ->with(['company1', 'company2'])
@@ -225,23 +234,14 @@ class CompanyController extends Controller {
             ->get();
         return Connection::obfuscateNet($connections1->merge($connections2));
     }
-
-    /**
-     * Display a listing of all connections.
-     */
     public function indexAllConnections() {
         return Connection::obfuscateNet(
             Connection::with(['company1', 'company2'])->withCount('projects')->get()
         );
     }
-
-    /**
-     * Display a listing of the employees for a company.
-     */
     public function indexEmployees(Company $_) {
         return $_->employees;
     }
-
     public function indexInvoiceItems(Request $request, Company $_) {
         $query = $_->indexedItems()->whereNull('invoice_id');
 
@@ -253,10 +253,6 @@ class CompanyController extends Controller {
     public function showPredictionAccuracy(Company $_) {
         return response()->json(FocusStatisticsService::getCompanyMonthlyPredictionAccuracy($_));
     }
-
-    /**
-     * Display the specified company.
-     */
     public function show(Company $company) {
         $company->appendRequest();
         $company->withRequest();
@@ -288,17 +284,13 @@ class CompanyController extends Controller {
 
         $company->setAttribute('available_connections', $availableConnections);
         $company->baseProjects->each(fn ($_) => $_->append('hours_invested', 'work_estimated'));
-        $company->append('address', 'desicion_duration');
+        $company->append('address', 'desicion_duration', 'timeline_chart');
         if (Auth::user()->hasAnyRole(['admin', 'financial'])) {
             $company->append('params', 'billing_considerations');
             $company->upcomingRepeatingInvoiceItems;
         }
         return $company->toJson();
     }
-
-    /**
-     * Store a newly created company.
-     */
     public function store(Request $request) {
         $data = $this->getBody();
         if (preg_match("/^https?:\/\//is", $data->name)) {
@@ -316,7 +308,6 @@ class CompanyController extends Controller {
         } // Add missing customer numbers
         return $new;
     }
-
     public function storeProject(Request $request, Company $_) {
         return $_->createProject(
             $request->input('name', 'New project'),
@@ -324,31 +315,15 @@ class CompanyController extends Controller {
             $request->user()->id
         );
     }
-
-    /**
-     * Store a newly created assignee for a company.
-     */
     public function storeAssignee(Request $request, Company $_) {
         return $_->addAssigneeFromRequest($request);
     }
-
-    /**
-     * Store a newly created employee for a company.
-     */
     public function storeEmployee(Company $_) {
         return $_->createEmployee();
     }
-
-    /**
-     * Store a new connection between two companies.
-     */
-    public function storeConnection() {
-        request()->validate([
-            'company1_id' => 'required|exists:App\Models\Company,id',
-            'company2_id' => 'required|exists:App\Models\Company,id',
-        ]);
-        $q  = ['company1_id' => request('company1_id'), 'company2_id' => request('company2_id')];
-        $q2 = ['company1_id' => request('company2_id'), 'company2_id' => request('company1_id')];
+    public function storeConnection(StoreConnectionRequest $request) {
+        $q  = ['company1_id' => $request->validated('company1_id'), 'company2_id' => $request->validated('company2_id')];
+        $q2 = ['company1_id' => $request->validated('company2_id'), 'company2_id' => $request->validated('company1_id')];
         if (Connection::where($q)->exists()) {
             return response('connection already exists', 405);
         }
@@ -363,10 +338,6 @@ class CompanyController extends Controller {
         $con->company2;
         return $con;
     }
-
-    /**
-     * Import imprint data from the company's website.
-     */
     public function importImprint(Request $request, Company $_) {
         NLog::info('ImportImprint: Starting imprint import for company', ['company_id' => $_->id, 'company_name' => $_->name]);
 
@@ -408,32 +379,16 @@ class CompanyController extends Controller {
         }
         return $_;
     }
-
-    /**
-     * Update the specified company.
-     */
     public function update(Request $request, int $id) {
         return Company::findOrFail($id)->applyAndSave($request);
     }
-
-    /**
-     * Remove the specified company.
-     */
     public function destroy(Request $request, Company $company) {
         $company->delete();
         return response()->make('success', 202);
     }
-
-    /**
-     * Create an invoice for the specified company.
-     */
     public function makeInvoice(Company $_) {
         return $_->makeInvoiceFor();
     }
-
-    /**
-     * Activate all inactive repeating invoice items for a company.
-     */
     public function updateActivateRepeatingItems(Company $_) {
         $updated = $_->invoiceItems()
             ->whereIn('type', InvoiceItemType::Repeating)
@@ -444,10 +399,6 @@ class CompanyController extends Controller {
         Artisan::call('cron:standing-orders');
         return response()->json(['activated_count' => $updated]);
     }
-
-    /**
-     * Display a listing of the companies with missing commercial register information.
-     */
     public function maintenanceCommercialRegister() {
         return Company::whereActive()->whereCorporation()->whereMissingCommercialRegister()->get();
     }

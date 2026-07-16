@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
@@ -17,39 +17,41 @@ export interface PaymentPlanTier {
     selector: 'payment-plan-tiers-editor',
     templateUrl: './payment-plan-tiers-editor.component.html',
     styleUrls: ['./payment-plan-editor.component.scss'],
-    standalone: true,
     imports: [FormsModule, NgbTooltipModule, EmptyStateComponent],
     host: { style: 'display:contents' },
 })
-export class PaymentPlanTiersEditorComponent implements OnInit {
-    tiers: PaymentPlanTier[] = [];
+export class PaymentPlanTiersEditorComponent {
+    tiers = signal<PaymentPlanTier[]>([]);
 
     #paramService = inject(ParamService);
 
-    ngOnInit() {
+    constructor() {
         this.load();
     }
 
     load() {
-        this.#paramService.show('params/PROJECT_PAYMENT_PLAN_TIERS').subscribe((data: any) => {
-            this.tiers = this.#parseTiers(data?.value);
-            for (const tier of this.tiers) tier.steps = sortSteps(tier.steps);
+        this.#paramService.show('params/PROJECT_PAYMENT_PLAN_TIERS').subscribe((data) => {
+            const tiers = this.#parseTiers(data?.value);
+            for (const tier of tiers) tier.steps = sortSteps(tier.steps);
+            this.tiers.set(tiers);
         });
     }
 
     save() {
-        for (const tier of this.tiers) tier.steps = sortSteps(tier.steps);
-        const json = JSON.stringify(this.tiers);
+        const tiers = this.tiers();
+        for (const tier of tiers) tier.steps = sortSteps(tier.steps);
+        const json = JSON.stringify(tiers);
         this.#paramService.update('params/PROJECT_PAYMENT_PLAN_TIERS', { value: json }).subscribe();
+        this.#touch();
     }
 
     addTier() {
-        this.tiers.push({ label: '', threshold: null, steps: [{ percentage: 100, trigger: 'acceptance' }] });
+        this.tiers().push({ label: '', threshold: null, steps: [{ percentage: 100, trigger: 'acceptance' }] });
         this.save();
     }
 
     removeTier(index: number) {
-        this.tiers.splice(index, 1);
+        this.tiers().splice(index, 1);
         this.save();
     }
 
@@ -61,6 +63,7 @@ export class PaymentPlanTiersEditorComponent implements OnInit {
 
     removeStep(tier: PaymentPlanTier, index: number) {
         tier.steps.splice(index, 1);
+        this.#touch();
     }
 
     onTriggerChange(step: PaymentPlanStep) {
@@ -69,6 +72,11 @@ export class PaymentPlanTiersEditorComponent implements OnInit {
         } else if (step.trigger !== 'monthly') {
             delete step.months;
         }
+        this.#touch();
+    }
+
+    #touch() {
+        this.tiers.update((tiers) => [...tiers]);
     }
 
     totalPercentage(tier: PaymentPlanTier): number {
@@ -90,7 +98,7 @@ export class PaymentPlanTiersEditorComponent implements OnInit {
         }
     }
 
-    #parseTiers(value: any): PaymentPlanTier[] {
+    #parseTiers(value: unknown): PaymentPlanTier[] {
         if (!value) return [];
         if (typeof value === 'string') {
             try {

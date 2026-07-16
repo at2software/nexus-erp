@@ -1,11 +1,15 @@
 import { inject } from '@angular/core';
-import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
+import { NgbActiveModal, NgbModalOptions } from '@ng-bootstrap/ng-bootstrap';
 
 export abstract class ModalBaseComponent<T> {
-    abstract init(...args: any): void;
+    static modalOptions: NgbModalOptions = { size: 'xl' };
+    // Each modal defines its own concrete init() signature; this base only needs the looser shape.
+    abstract init(...args: unknown[]): void;
     abstract onSuccess(): T;
+
     #activeModal = inject(NgbActiveModal);
-    decline = () => this.#activeModal.dismiss();
+
     accept = () => this.#activeModal.close(this.onSuccess());
-    dismiss = () => this.#activeModal.dismiss();
+    decline = () => this.#activeModal.close(undefined);
+    dismiss = () => this.#activeModal.close(undefined);
 }

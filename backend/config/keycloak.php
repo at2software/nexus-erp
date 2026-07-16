@@ -1,6 +1,9 @@
 <?php
 
 return [
+    'base_url'                             => env('KEYCLOAK_BASE_URL', ''),
+    'realm'                                => env('KEYCLOAK_REALM', ''),
+    'client_id'                            => env('KEYCLOAK_CLIENT_ID', ''),
     'realm_public_key'                     => env('KEYCLOAK_REALM_PUBLIC_KEY', null),
     'load_user_from_database'              => env('KEYCLOAK_LOAD_USER_FROM_DATABASE', true),
     'user_provider_custom_retrieve_method' => null,

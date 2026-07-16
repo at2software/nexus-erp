@@ -19,7 +19,8 @@ class InvoicePdfService {
         Company $company,
         string $documentType = ZugferdInvoiceType::INVOICE,
         ?Invoice $invoice = null,
-        ?Project $project = null
+        ?Project $project = null,
+        bool $draft = false
     ): array {
         $invoiceNumber                                     = Invoice::getCurrentInvoiceNumber()['value'];
         [$enhancedItems, $footer, $all, $discounts, $lang] = Invoice::enhancedItemsForPdf($items, $company);
@@ -35,7 +36,7 @@ class InvoicePdfService {
             $lang
         );
 
-        $pdfTitle   = $this->buildPdfTitle($title, $invoiceNumber);
+        $pdfTitle   = $draft ? __('pdf.draft_invoice', [], $lang) : $this->buildPdfTitle($title, $invoiceNumber);
         $zugferdPdf = $this->generatePdfWithZugferd(
             $content,
             $pdfTitle,
@@ -45,10 +46,13 @@ class InvoicePdfService {
             $invoiceNumber,
             $documentType,
             $footer,
-            $project
+            $project,
+            $draft
         );
 
-        $filename = Invoice::MakeFileName($invoiceNumber);
+        $filename = $draft
+            ? __('pdf.draft_invoice', [], $lang).' '.date('Y-m-d').'.pdf'
+            : Invoice::MakeFileName($invoiceNumber);
         $filename = File::filename_safe($filename);
         return [$zugferdPdf, $filename, $invoiceNumber];
     }
@@ -93,7 +97,8 @@ class InvoicePdfService {
         string $invoiceNumber,
         string $documentType,
         array $footer,
-        ?Project $project
+        ?Project $project,
+        bool $draft = false
     ): string {
         $headers = [];
         if ($project) {
@@ -113,6 +118,12 @@ class InvoicePdfService {
 
         $pdf       = Pdf::loadHTML($template);
         $pdfString = $pdf->stream()->getContent();
+
+        // A draft is a non-binding preview: never embed a ZUGFeRD e-invoice (it would
+        // carry the next real invoice number as if it were issued).
+        if ($draft) {
+            return $pdfString;
+        }
         return Document::makeZUGFeRD($pdfString, $items, $company, $invoiceNumber, $documentType, $footer, $project);
     }
 }

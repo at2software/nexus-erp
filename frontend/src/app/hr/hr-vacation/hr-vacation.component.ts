@@ -17,8 +17,6 @@ import { SpinnerComponent } from "@shards/spinner/spinner.component";
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'hr-vacation',
     templateUrl: './hr-vacation.component.html',
-    styleUrls: ['./hr-vacation.component.scss'],
-    standalone: true,
     imports: [DecimalPipe, DatePipe, Nx, NgbDropdownModule, NgbTooltipModule, SaldoChartComponent, EmptyStateComponent, SpinnerComponent],
 })
 export class HrVacationComponent {
@@ -48,7 +46,7 @@ export class HrVacationComponent {
         });
     }
     onVacationAdd(grant: VacationGrant) {
-        this.#modal.open(ModalEditVacationComponent, Vacation.fromJson({}), this.user()).then((a: any) => {
+        this.#modal.open(ModalEditVacationComponent, Vacation.fromJson({}), this.user()).then((a) => {
             if (a) {
                 a.vacation_grant_id = grant.id;
                 a.approved_by_id = this.#global.user!.id;
@@ -58,12 +56,12 @@ export class HrVacationComponent {
         });
     }
     onFreeDayAdd(grant: VacationGrant) {
-        this.#modal.open(ModalEditVacationComponent, Vacation.fromJson({}), this.user()).then((a: any) => {
+        this.#modal.open(ModalEditVacationComponent, Vacation.fromJson({}), this.user()).then((a) => {
             if (a) {
                 a.vacation_grant_id = grant.id;
                 a.approved_by_id = this.#global.user!.id;
                 a.started_at = a.var.date;
-                a.ended_at = a.time_started().add(a.var.amount, 'days');
+                a.ended_at = a.time_started().add(a.var.amount, 'days').format('YYYY-MM-DD');
                 a.amount = 0;
                 this.#vacationService.storeManual(a).subscribe(() => this.reload());
             }

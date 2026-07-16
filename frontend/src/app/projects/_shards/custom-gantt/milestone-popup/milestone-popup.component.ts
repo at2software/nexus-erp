@@ -1,8 +1,9 @@
+import { Dictionary } from '@constants/constants';
 import { ChangeDetectionStrategy, Component, effect, inject, input, output, signal, computed } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { ReactiveFormsModule, FormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NgbDropdownModule, NgbProgressbarModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
+import { DaterangepickerDirective, NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
 import { Milestone } from '@models/milestones/milestone.model';
 import { Project } from '@models/project/project.model';
 import { User } from '@models/user/user.model';
@@ -11,28 +12,30 @@ import { MilestoneState, MILESTONE_STATES } from '@models/milestones/milestone-s
 import { MilestoneService } from '@models/milestones/milestone.service';
 import { ProjectService } from '@models/project/project.service';
 import { Toast } from '@shards/toast/toast';
-import moment from 'moment';
+import { dayjs, Dayjs } from '@constants/dates';
 import { AffixInputDirective } from '@directives/affix-input.directive';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
 import { Nx } from '@app/nx/nx.directive';
 import { TaskService } from '@models/tasks/task.service';
 import { tracked } from '@constants/tracked';
 
+type TimePeriod = NonNullable<DaterangepickerDirective['value']>;
+type DateRanges = DaterangepickerDirective['ranges'];
+
 @Component({
     selector: 'milestone-popup',
     templateUrl: './milestone-popup.component.html',
     styleUrls: ['./milestone-popup.component.scss'],
-    standalone: true,
     imports: [DecimalPipe, ReactiveFormsModule, FormsModule, NgbDropdownModule, NgbProgressbarModule, NgxDaterangepickerMd, NgbTooltipModule, AffixInputDirective, Nx],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MilestonePopupComponent {
-    readonly milestoneIn = input.required<Milestone>({ alias: 'milestone' });
-    readonly milestone = tracked(this.milestoneIn);
-    readonly projectIn = input<Project>(undefined, { alias: 'project' });
-    readonly project = tracked(this.projectIn);
-    position = input<{ x: number; y: number }>({ x: 0, y: 0 });
-    visible = input<boolean>(false);
+    readonly milestone = input.required<Milestone>();
+    readonly trackedMilestone = tracked(this.milestone);
+    readonly project = input<Project | undefined>(undefined);
+    readonly trackedProject = tracked(this.project);
+    /** Selectable projects for the project field; falls back to the single `project` input when empty. */
+    readonly projects = input<Project[]>([]);
 
     closed = output<void>();
     updated = output<Milestone>();
@@ -42,20 +45,32 @@ export class MilestonePopupComponent {
     MilestoneState = MilestoneState;
 
     projectUsers = signal<User[]>([]);
-    dateRangeModel = signal<{ startDate: any; endDate: any } | null>(null);
+    dateRangeModel = signal<TimePeriod | null>(null);
+    /** Kept outside the reactive form, mirroring dateRangeModel — it drives projectUsers and isn't validated like the other fields. */
+    selectedProjectId = signal<string | null>(null);
     milestoneForm!: FormGroup;
 
-    readonly dateRanges: any = {
-        Today: [moment(), moment()],
-        Tomorrow: [moment().add(1, 'day'), moment().add(1, 'day')],
-        'This Week': [moment(), moment().add(6, 'day')],
-        'Next Week': [moment().add(7, 'day'), moment().add(13, 'day')],
+    /** projects() when supplied by the caller; otherwise just the single current project, so the selector always has at least one option. */
+    readonly selectableProjects = computed<Project[]>(() => {
+        const list = this.projects();
+        if (list.length) return list;
+        const project = this.project();
+        return project ? [project] : [];
+    });
+
+    readonly selectedProject = computed<Project | undefined>(() => this.selectableProjects().find((p) => String(p.id) === this.selectedProjectId()));
+
+    readonly dateRanges: DateRanges = {
+        Today: [dayjs(), dayjs()],
+        Tomorrow: [dayjs().add(1, 'day'), dayjs().add(1, 'day')],
+        'This Week': [dayjs(), dayjs().add(6, 'day')],
+        'Next Week': [dayjs().add(7, 'day'), dayjs().add(13, 'day')],
     };
 
-    readonly hasInvoiceItems = computed(() => !!this.milestone()?.invoice_items?.length);
+    readonly hasInvoiceItems = computed(() => !!this.trackedMilestone()?.invoice_items?.length);
 
     readonly totalInvoiceItemDuration = computed(() => {
-        const items = this.milestone()?.invoice_items;
+        const items = this.trackedMilestone()?.invoice_items;
         if (!Array.isArray(items)) return 0;
         return items.reduce((total, item) => total + (item.qty || 0), 0);
     });
@@ -68,12 +83,12 @@ export class MilestonePopupComponent {
 
     constructor() {
         effect(() => {
-            const project = this.project();
-            if (project) this.projectUsers.set(project.assignedUsers().map((a) => a.assignee as User));
+            const project = this.selectedProject();
+            this.projectUsers.set(project ? project.assignedUsers().map((a) => a.assignee as User) : []);
         });
 
         effect(() => {
-            const milestone = this.milestone();
+            const milestone = this.trackedMilestone();
             if (milestone) this.#initializeForm(milestone);
         });
     }
@@ -81,7 +96,9 @@ export class MilestonePopupComponent {
     #initializeForm(milestone: Milestone) {
         milestone.tasks.forEach((task) => (task.httpService = this.#taskService));
 
-        this.dateRangeModel.set(milestone.started_at && milestone.due_at ? { startDate: milestone.time_started(), endDate: milestone.time_due() } : null);
+        this.dateRangeModel.set(milestone.started_at && milestone.due_at ? { startDate: dayjs(milestone.time_started().toDate()), endDate: dayjs(milestone.time_due().toDate()) } : null);
+        const projectId = milestone.project_id ?? this.project()?.id ?? null;
+        this.selectedProjectId.set(projectId !== null ? String(projectId) : null);
 
         const value = {
             name: milestone.name || '',
@@ -106,13 +123,38 @@ export class MilestonePopupComponent {
         }
     }
 
+    /** Mirrors Milestone::getComputedWorkloadPercentAttribute() so the modal can preview the effect of an in-progress edit before saving. */
+    dailyWorkloadPercent(): number | null {
+        // A manually entered value always takes priority; invoice items are only a fallback estimate, same as the backend.
+        const hours = this.milestoneForm?.get('workload_hours')?.value || this.totalInvoiceItemDuration();
+        const range = this.dateRangeModel();
+        if (!hours || hours <= 0 || !range) return null;
+
+        const workingDays = this.#countWorkingDays(range.startDate, range.endDate);
+        const dailyHours = hours / workingDays;
+        const avgDailyHours = this.getSelectedUser()?.getAverageHpd() || 8;
+        return Math.round((dailyHours / avgDailyHours) * 1000) / 10;
+    }
+
+    /** Inclusive Mon–Fri day count between two dates, same rule as the backend's countWorkingDaysBetween(). */
+    #countWorkingDays(start: Dayjs, end: Dayjs): number {
+        let count = 0;
+        for (let cursor = start.startOf('day'); !cursor.isAfter(end, 'day'); cursor = cursor.add(1, 'day')) {
+            if (cursor.isoWeekday() <= 5) count++;
+        }
+        return Math.max(count, 1);
+    }
+
     getSelectedUser(): User | null {
         const userId = this.milestoneForm?.get('user_id')?.value;
         if (!userId) return null;
-        return this.projectUsers().find((u) => u.id === userId) ?? null;
+        // The assignee may not be a member of the project's current assignee list (e.g. removed since); fall back
+        // to the milestone's own user relation so an already-assigned milestone never shows as "unassigned".
+        const milestoneUser = this.trackedMilestone()?.user;
+        return this.projectUsers().find((u) => u.id === userId) ?? (milestoneUser && milestoneUser.id === userId ? milestoneUser : null);
     }
 
-    onDateRangeChange = (event: any) => {
+    onDateRangeChange = (event: TimePeriod) => {
         if (event.startDate && event.endDate) this.dateRangeModel.set({ startDate: event.startDate, endDate: event.endDate });
     };
 
@@ -120,28 +162,33 @@ export class MilestonePopupComponent {
 
     selectUser = (user: User | null) => this.milestoneForm.patchValue({ user_id: user?.id ?? null });
 
+    selectProject = (project: Project) => this.selectedProjectId.set(String(project.id));
+
     onSave() {
         if (!this.milestoneForm.valid) return;
 
         const { name, progress, state, user_id, comments, workload_hours } = this.milestoneForm.value;
-        const milestone = this.milestone();
+        const milestone = this.trackedMilestone();
         const dateRange = this.dateRangeModel();
 
-        const updateData: Record<string, any> = { name, progress, state, user_id, comments };
+        const updateData: Dictionary<unknown> = { name, progress, state, user_id, comments };
         if (dateRange) {
             updateData['started_at'] = dateRange.startDate.format('YYYY-MM-DD');
             updateData['due_at'] = dateRange.endDate.format('YYYY-MM-DD');
         }
-        if (!this.hasInvoiceItems()) updateData['workload_hours'] = workload_hours;
+        updateData['workload_hours'] = workload_hours;
+        const newProject = this.selectedProject();
+        if (newProject && String(newProject.id) !== String(milestone.project_id)) updateData['project_id'] = newProject.id;
 
         this.#milestoneService.update(Number(milestone.id), updateData).subscribe({
             next: () => {
                 Toast.success($localize`:@@i18n.milestone.updated:Milestone updated successfully`);
                 Object.assign(milestone, updateData);
+                if (newProject && updateData['project_id']) milestone.project = newProject;
                 this.updated.emit(milestone);
                 this.closed.emit();
             },
-            error: (error: any) => {
+            error: (error: unknown) => {
                 Toast.error($localize`:@@i18n.milestone.updateError:Failed to update milestone`);
                 console.error('Error updating milestone:', error);
             },
@@ -152,14 +199,14 @@ export class MilestonePopupComponent {
 
     onDeleteMilestone() {
         if (!confirm($localize`:@@i18n.milestone.deleteConfirm:Are you sure you want to delete this milestone?`)) return;
-        const milestone = this.milestone();
+        const milestone = this.trackedMilestone();
         milestone.delete().subscribe({
             next: () => {
                 Toast.success($localize`:@@i18n.milestone.deleted:Milestone deleted successfully`);
                 this.deleted.emit(milestone);
                 this.closed.emit();
             },
-            error: (error: any) => {
+            error: (error: unknown) => {
                 Toast.error($localize`:@@i18n.milestone.deleteFailed:Failed to delete milestone`);
                 console.error('Error deleting milestone:', error);
             },
@@ -170,21 +217,21 @@ export class MilestonePopupComponent {
         this.#inputModalService
             .open($localize`:@@i18n.task.addTask:Add Task`)
             .then((result) => {
-                const milestone = this.milestone();
-                if (!result?.text?.trim() || !milestone?.id || !this.project()?.id) return;
+                const milestone = this.trackedMilestone();
+                if (!result?.text?.trim() || !milestone?.id || !this.trackedProject()?.id) return;
                 this.#projectService
-                    .createTaskForProject(this.project()!.id, {
+                    .createTaskForProject(this.trackedProject()!.id, {
                         name: result.text.trim(),
                         parent_type: 'App\\Models\\Milestone',
                         parent_id: milestone.id,
                     })
                     .subscribe({
-                        next: (newTask: Task) => {
+                        next: (newTask) => {
                             Toast.success($localize`:@@i18n.task.created:Task created`);
                             milestone.tasks ??= [];
                             milestone.tasks.push(newTask);
                         },
-                        error: (error: any) => {
+                        error: (error: unknown) => {
                             Toast.error($localize`:@@i18n.task.createError:Failed to create task`);
                             console.error('Error creating task:', error);
                         },
@@ -198,10 +245,10 @@ export class MilestonePopupComponent {
         task.delete().subscribe({
             next: () => {
                 Toast.success($localize`:@@i18n.task.deleted:Task deleted successfully`);
-                const milestone = this.milestone();
+                const milestone = this.trackedMilestone();
                 if (milestone.tasks) milestone.tasks = milestone.tasks.filter((t) => t.id !== task.id);
             },
-            error: (error: any) => {
+            error: (error: unknown) => {
                 Toast.error($localize`:@@i18n.task.deleteFailed:Failed to delete task`);
                 console.error('Error deleting task:', error);
             },

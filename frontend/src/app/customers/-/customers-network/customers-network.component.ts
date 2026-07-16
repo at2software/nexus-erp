@@ -7,13 +7,13 @@ import { NetworkChart } from '@shards/network-chart/network-chart.component';
 import { NxGlobal } from '@app/nx/nx.global';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { Page } from '@models/http/http.nexus';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'customers-network',
     templateUrl: './customers-network.component.html',
     styleUrls: ['./customers-network.component.scss'],
-    standalone: true,
     imports: [NetworkChart, EmptyStateComponent, SpinnerComponent],
 })
 export class CustomersNetworkComponent {
@@ -33,7 +33,9 @@ export class CustomersNetworkComponent {
     reload() {
         this.loading.set(true);
         this.#companyService.indexAllConnections().subscribe({
-            next: (data: any) => {
+            // `aget` is declared to return Connection[], but the framework's deserializer keeps
+            // Laravel-paginator envelopes ({ data: [...] }) intact rather than flattening them
+            next: (data: Connection[] | Page<Connection>) => {
                 this.connections.set(Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : []);
                 this.loading.set(false);
             },

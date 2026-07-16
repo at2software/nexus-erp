@@ -1,5 +1,6 @@
 ﻿import { ChangeDetectionStrategy, Component, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Dictionary } from '@constants/constants';
 
 import { GlobalService } from '@models/global.service';
 
@@ -14,7 +15,6 @@ export interface FieldValue {
     selector: 'model-field-editor',
     templateUrl: './model-field-editor.component.html',
     styleUrl: './model-field-editor.component.scss',
-    standalone: true,
     imports: [FormsModule],
 })
 export class ModelFieldEditorComponent {
@@ -55,7 +55,7 @@ export class ModelFieldEditorComponent {
         if (!table) return;
         const existing = this.getExistingValues();
         this.fields.set(
-            table.columns.map((col: any) => ({
+            table.columns.map((col) => ({
                 field: col.Field,
                 enabled: existing[col.Field] !== undefined,
                 value: existing[col.Field] || '',
@@ -63,7 +63,7 @@ export class ModelFieldEditorComponent {
         );
     }
 
-    getExistingValues(): Record<string, string> {
+    getExistingValues(): Dictionary<string> {
         try {
             return JSON.parse(this.fieldsJson() || '{}');
         } catch {
@@ -78,7 +78,7 @@ export class ModelFieldEditorComponent {
     }
 
     emitChanges() {
-        const result: Record<string, string> = {};
+        const result: Dictionary<string> = {};
         this.fields()
             .filter((f) => f.enabled)
             .forEach((f) => (result[f.field] = f.value));
@@ -170,20 +170,23 @@ export class ModelFieldEditorComponent {
             const relationship = this.#relationshipMap.find((r) => r.table === tableName);
             if (!table) return [];
 
+            const _filter = (name: string) => name.toLowerCase().startsWith(prefix);
             if (i === parts.length - 1) {
                 return [
-                    ...(table.columns?.map((c: any) => c.Field) ?? []).filter((c: any) => c.toLowerCase().startsWith(prefix)).map((c: any) => ({ name: c, type: 'column' })),
+                    ...table.columns.map((c) => c.Field)
+                        .filter(_filter)
+                        .map((c) => ({ name: c, type: 'column' })),
                     ...Object.keys(this.#accessorMap[tableName] ?? {})
-                        .filter((a: any) => a.toLowerCase().startsWith(prefix))
-                        .map((a: any) => ({ name: a, type: 'accessor' })),
+                        .filter(_filter)
+                        .map((a) => ({ name: a, type: 'accessor' })),
                     ...Object.keys(relationship?.relations ?? {})
-                        .filter((r: any) => r.toLowerCase().startsWith(prefix))
-                        .map((r: any) => ({ name: r, type: 'relation' })),
+                        .filter(_filter)
+                        .map((r) => ({ name: r, type: 'relation' })),
                 ];
             }
             const nextRelation = relationship?.relations?.[parts[i]];
             if (!nextRelation) return [];
-            tableName = nextRelation.model.toLowerCase();
+            tableName = (nextRelation.model ?? '').toLowerCase();
         }
         return [];
     }

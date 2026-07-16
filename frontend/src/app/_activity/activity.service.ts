@@ -44,7 +44,7 @@ export class ActivityService {
         }, 250);
     }
 
-    buttonFor = (tab: ActivityTabComponent) => this.#container.buttons().find((button: any) => button.nativeElement.dataset.bsTarget === '#' + tab.el.nativeElement.id);
+    buttonFor = (tab: ActivityTabComponent) => this.#container.buttons().find((button) => button.nativeElement.dataset.bsTarget === '#' + tab.el.nativeElement.id);
 
     focus(tab: ActivityTabComponent) {
         const index = this.tabs().indexOf(tab);
@@ -61,7 +61,7 @@ export class ActivityService {
         }
     }
 
-    switchToTabByComponent(componentType: Type<any>): boolean {
+    switchToTabByComponent(componentType: Type<unknown>): boolean {
         const index = this.tabs().findIndex((tab) => tab.componentType() === componentType);
         if (index !== -1) { this.setActiveTab(index); return true; }
         return false;

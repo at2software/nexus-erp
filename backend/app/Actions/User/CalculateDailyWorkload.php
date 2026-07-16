@@ -43,17 +43,18 @@ class CalculateDailyWorkload {
 
         if ($isBreak) {
             return [
-                'date'             => $dateStr,
-                'day_of_week'      => $dayOfWeek,
-                'total_percent'    => 0,
-                'available_hours'  => 0,
-                'assignment_hours' => 0,
-                'milestone_hours'  => 0,
-                'total_hours'      => 0,
-                'is_break'         => true,
-                'break_type'       => $breakDays[$dateStr]['type'] ?? 'weekend',
-                'break_name'       => $breakDays[$dateStr]['name'] ?? null,
-                'elements'         => [],
+                'date'                   => $dateStr,
+                'day_of_week'            => $dayOfWeek,
+                'total_percent'          => 0,
+                'available_hours'        => 0,
+                'assignment_hours'       => 0,
+                'milestone_hours'        => 0,
+                'total_hours'            => 0,
+                'is_break'               => true,
+                'break_type'             => $breakDays[$dateStr]['type'] ?? 'weekend',
+                'break_name'             => $breakDays[$dateStr]['name'] ?? null,
+                'elements'               => [],
+                'distinct_project_count' => 0,
             ];
         }
 
@@ -77,12 +78,12 @@ class CalculateDailyWorkload {
         }
 
         $activeMilestones = $milestones->filter(function ($milestone) use ($date) {
-            $dueAt = $milestone->due_at ? Carbon::parse($milestone->due_at)->endOfDay() : null;
+            $dueAt = $milestone->due_at ? $milestone->due_at->copy()->endOfDay() : null;
             if (! $dueAt || $date->gt($dueAt)) {
                 return false;
             }
             if ($milestone->started_at) {
-                $startedAt = Carbon::parse($milestone->started_at)->startOfDay();
+                $startedAt = $milestone->started_at->copy()->startOfDay();
             } else {
                 $startedAt = $dueAt->copy()->subDays($milestone->duration ?? 1)->startOfDay();
             }
@@ -104,18 +105,20 @@ class CalculateDailyWorkload {
             ];
         }
 
-        $totalHours   = $assignmentHours + $milestoneHours;
-        $totalPercent = $availableHours > 0 ? ($totalHours / $availableHours) * 100 : 0;
+        $totalHours       = $assignmentHours + $milestoneHours;
+        $totalPercent     = $availableHours > 0 ? ($totalHours / $availableHours) * 100 : 0;
+        $distinctProjects = collect($elements)->pluck('project_id')->filter()->unique()->count();
         return [
-            'date'             => $dateStr,
-            'day_of_week'      => $dayOfWeek,
-            'total_percent'    => round($totalPercent, 1),
-            'available_hours'  => $availableHours,
-            'assignment_hours' => round($assignmentHours, 2),
-            'milestone_hours'  => round($milestoneHours, 2),
-            'total_hours'      => round($totalHours, 2),
-            'is_break'         => false,
-            'elements'         => $elements,
+            'date'                   => $dateStr,
+            'day_of_week'            => $dayOfWeek,
+            'total_percent'          => round($totalPercent, 1),
+            'available_hours'        => $availableHours,
+            'assignment_hours'       => round($assignmentHours, 2),
+            'milestone_hours'        => round($milestoneHours, 2),
+            'total_hours'            => round($totalHours, 2),
+            'is_break'               => false,
+            'elements'               => $elements,
+            'distinct_project_count' => $distinctProjects,
         ];
     }
 }

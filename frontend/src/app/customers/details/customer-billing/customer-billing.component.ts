@@ -7,16 +7,15 @@ import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { REPEATING_TYPES } from '@enums/invoice-item.type';
 import { Invoice } from '@models/invoice/invoice.model';
-import { TBillingConsideration } from '@models/company/company.model';
+import { BillingConsideration } from '@models/api-response';
 import { InvoicePrepareWrapper } from '@app/invoices/_shards/invoice-prepare-wrapper/invoice-prepare-wrapper';
 import { NComponent } from '@shards/n/n.component';
+import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
     selector: 'customer-billing',
     templateUrl: './customer-billing.component.html',
-    styleUrls: ['./customer-billing.component.scss'],
-    standalone: true,
-    imports: [ToolbarComponent, ScrollbarComponent, InvoicePrepareWrapper, NComponent],
+    imports: [ToolbarComponent, ScrollbarComponent, InvoicePrepareWrapper, NComponent, NgbDropdownModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CustomerBillingComponent {
@@ -26,20 +25,27 @@ export class CustomerBillingComponent {
 
     readonly invoiceNumber = Invoice.formattedInvoiceNumber();
     company = tracked(this.#parent.object);
-    backendConsiderations = computed<TBillingConsideration[]>(() => this.company().billing_considerations || []);
+    backendConsiderations = computed<BillingConsideration[]>(() => this.company().billing_considerations || []);
     invoicingContent = viewChild.required(InvoicePrepareWrapper);
 
     hasInactiveRepeatingItems = computed(() => {
         const items = this.company().invoice_items;
         if (!items) return false;
-        return items.some((item: any) => (REPEATING_TYPES as readonly number[]).includes(item.type) && !item.next_recurrence_at);
+        return items.some((item) => (REPEATING_TYPES as readonly number[]).includes(item.type) && !item.next_recurrence_at);
     });
 
-    makeInvoice = () => {
+    makeDraftInvoice = () => this.makeInvoice(true);
+    makeInvoice = (draft = false) => {
         this.invoicingContent().table()?.clear();
-        this.#companyService.makeInvoice(this.company(), () => {
-            this.#router.navigate(['customers/' + this.company().id + '/invoices']);
-        });
+        this.#companyService.makeInvoice(
+            this.company(),
+            () => {
+                // A draft is just a downloaded preview — no invoice is created to navigate to.
+                if (draft) return;
+                this.#router.navigate(['customers/' + this.company().id + '/invoices/prepare']);
+            },
+            draft,
+        );
     };
 
     activateRepeatingItems = () => {

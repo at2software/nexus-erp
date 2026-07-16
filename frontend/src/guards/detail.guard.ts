@@ -4,12 +4,15 @@ import { firstValueFrom, Observable, tap } from 'rxjs';
 import { GlobalService } from '@models/global.service';
 import { NexusHttpService } from '@models/http/http.nexus';
 import { Serializable } from '@models/serializable';
+import { LiveModelRegistry } from '@models/live-model-registry';
+import { WebSocketService } from 'src/services/websocket.service';
 
 @Injectable({ providedIn: 'root' })
 export abstract class DetailGuard<T extends Serializable> {
 
     #global = inject(GlobalService);
     #router = inject(Router);
+    #ws = inject(WebSocketService);
 
     abstract service: NexusHttpService<any>;
     abstract observable: (id: string) => Observable<T>;
@@ -18,8 +21,21 @@ export abstract class DetailGuard<T extends Serializable> {
 
     static lastTitle: string;
 
-    #objectSignal = signal<T>(null as unknown as T);
+    #objectSignal = signal<T>(null as unknown as T, { equal: () => false });
     readonly object: Signal<T> = this.#objectSignal.asReadonly();
+
+    touch = () => this.#objectSignal.set(this.object());
+
+    constructor() {
+        // LiveSyncService applies refetched attributes in place onto the same instance -
+        // re-signal so guard-held pages (and their relations, e.g. project.invoice_items) re-render.
+        LiveModelRegistry.updated$.subscribe((instance) => {
+            if (instance === this.object()) this.touch();
+        });
+        // A dropped socket may have missed events entirely - only the guard-held root object is
+        // worth refetching on reconnect; refetching every live instance would storm the API.
+        this.#ws.reconnected$.subscribe(() => this.reload());
+    }
 
     show = (id: string): Observable<T> => {
         this.onBeforeLoad();
@@ -32,9 +48,10 @@ export abstract class DetailGuard<T extends Serializable> {
     };
 
     reload = () =>
-        this.object()?.refresh().subscribe((_: T) => {
-            this.#objectSignal.set(_);
-            this.onLoaded(_);
+        this.object()?.refresh().subscribe((_) => {
+            const result = _ as T;
+            this.#objectSignal.set(result);
+            this.onLoaded(result);
         });
 
     async canActivate(route: ActivatedRouteSnapshot): Promise<boolean> {

@@ -14,7 +14,6 @@ class Cash extends BaseModel {
     }
 
     protected $fillable = ['occured_at', 'value', 'approver', 'description'];
-    protected $access   = ['admin' => '*', 'project_manager' => '', 'user' => ''];
 
     public function entries() {
         return $this->belongsTo(CashRegister::class);

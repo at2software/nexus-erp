@@ -5,13 +5,13 @@ import { FormsModule } from '@angular/forms';
 import { UptimeMonitor } from '@models/uptime/uptime-monitor.model';
 import { UptimeMonitorService } from '@models/uptime/uptime-monitor.service';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { Dictionary } from '@constants/constants';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'modal-uptime-monitor',
     templateUrl: './modal-uptime-monitor.component.html',
     styleUrls: ['./modal-uptime-monitor.component.scss'],
-    standalone: true,
     imports: [FormsModule, SpinnerComponent],
 })
 export class ModalUptimeMonitorComponent {
@@ -34,7 +34,7 @@ export class ModalUptimeMonitorComponent {
         }
 
         // Extract only the necessary fields for the API
-        const payload: any = {
+        const payload: Dictionary = {
             name: this.monitor.name,
             url: this.monitor.url,
             method: this.monitor.method,

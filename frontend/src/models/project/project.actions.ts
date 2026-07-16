@@ -1,4 +1,4 @@
-import { NxActionType } from '@app/nx/nx.actions';
+import { NxAction, NxActionType } from '@app/nx/nx.actions';
 import { NxGlobal, TBroadcast } from '@app/nx/nx.global';
 const i18n1Week = $localize`:@@i18n.common.1week:1 week`;
 const i18nNWeeks = (count: number) => $localize`:@@i18n.common.nweeks:${count} weeks`;
@@ -9,7 +9,7 @@ import { ConnectionProjects } from '@models/company/connection-projects.model';
 import { CompanyContact } from '@models/company/company-contact.model';
 import { VcardRow } from '@models/vcard/VcardRow';
 import { Project } from './project.model';
-import { ModalInputComponent } from '@app/_modals/modal-input/modal-input.component';
+import { ModalInputComponent, ModalInputResult } from '@app/_modals/modal-input/modal-input.component';
 
 const POSTPONE_DURATIONS = [
     { title: i18n1Week, duration: 1 },
@@ -21,9 +21,19 @@ const POSTPONE_DURATIONS = [
     { title: i18nNMonths(12), duration: 7 },
 ];
 
-export const getProjectActions = (self: any) => [
-    { title: $localize`:@@i18n.common.open:open`, action: () => self.navigate(self.frontendUrl()) },
+export const getProjectActions = (self: Project) => [
+    { title: $localize`:@@i18n.common.open:open`, action: () => self.navigateTo(self.frontendUrl()) },
     ...NxGlobal.clipboardActions(self),
+    {
+        title: $localize`:@@i18n.project.duplicate:duplicate project`,
+        group: true,
+        roles: 'project_manager',
+        interrupt: { service: ModalInputComponent, args: { title: $localize`:@@i18n.project.duplicateName:name for the duplicated project`, get initialValue() { return self.name; } } },
+        action: (_a: unknown, _b: unknown, interruptResult: ModalInputResult | undefined) => {
+            const name = interruptResult?.text?.trim();
+            if (name) self.duplicate(name);
+        },
+    },
     {
         title: $localize`:@@i18n.common.makeRootProject:make root project`,
         group: true,
@@ -55,7 +65,7 @@ export const getProjectActions = (self: any) => [
                 title: title + ' 💬',
                 group: true,
                 interrupt: { service: ModalInputComponent, args: { title: $localize`:@@i18n.project.postponeComment:Comment for postponing` } },
-                action: (_a:any, _b:any, interruptResult:{ text: string }) => self.postpone(duration, undefined, interruptResult.text),
+                action: (_a: unknown, _b: unknown, interruptResult: { text: string }) => self.postpone(duration, undefined, interruptResult.text),
             }));
         },
     },
@@ -101,7 +111,7 @@ export const getProjectActions = (self: any) => [
     {
         title: $localize`:@@i18n.project.removeFromWidget:remove from widget`,
         context: 'widgetPreparedInvoices',
-        action: () => self.confirm('do you really want to ignore this project from invoice preparation?').then(() => self.update({ is_ignored_from_prepared: true }).subscribe()),
+        action: () => self.modalConfirm('Attention', 'do you really want to ignore this project from invoice preparation?').then(() => self.update({ is_ignored_from_prepared: true }).subscribe()),
         group: true,
         type: NxActionType.Destructive,
         roles: 'admin',
@@ -127,7 +137,7 @@ export const getProjectActions = (self: any) => [
     ...self.markerActions(),
     {
         title: $localize`:@@i18n.common.delete:delete`,
-        action: () => self.confirm().then(() => self.delete().subscribe()),
+        action: () => self.modalConfirm().then(() => self.delete().subscribe()),
         group: true,
         type: NxActionType.Destructive,
         hotkey: 'CTRL+DELETE',
@@ -135,11 +145,11 @@ export const getProjectActions = (self: any) => [
     },
 ];
 
-function getContactActions(self: any): any[] {
+function getContactActions(self: Project): NxAction[] {
     const contacts: CompanyContact[] = self.assigned_contacts ?? [];
     const projectName: string = self.name;
     return contacts.flatMap((cc: CompanyContact) => {
-        const actions: any[] = [];
+        const actions: NxAction[] = [];
         const name: string = cc.getName() || cc.contact.card()?.name || 'Contact';
         const card = cc.card();
         // Phone numbers

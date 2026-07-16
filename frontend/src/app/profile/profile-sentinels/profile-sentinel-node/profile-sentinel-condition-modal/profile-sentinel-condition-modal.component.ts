@@ -1,19 +1,28 @@
 ﻿import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { NgbActiveModal, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
-import { Sentinel } from '@models/sentinel.model';
-import { SENTINEL_CONDITIONS, SentinelCondition } from '../../sentinel-condition.model';
+import { Sentinel } from '@models/sentinels/sentinel.model';
+import { SENTINEL_CONDITIONS, SentinelCondition, SentinelConditionInstance } from '../../sentinel-condition.model';
+import { SentinelOptionInstance } from '../../sentinel-condition-option-field.model';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { ColumnRelationAutocompleteComponent } from './column-relation-autocomplete/column-relation-autocomplete.component';
 import { VariableAutocompleteComponent } from '../profile-sentinel-command-modal/variable-autocomplete/variable-autocomplete.component';
+
+interface IInitOptions { 
+    column?: number; 
+    row?: number; 
+    nested?: boolean; 
+    nestedData?: SentinelConditionInstance; 
+    onSave?: (c: SentinelConditionInstance) => void; 
+    variableContext?: { name: string; table: string } 
+}
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'sentinel-condition-edit-modal',
     templateUrl: './profile-sentinel-condition-modal.component.html',
     styleUrls: ['./profile-sentinel-condition-modal.component.scss'],
-    standalone: true,
     imports: [ColumnRelationAutocompleteComponent, VariableAutocompleteComponent, FormsModule, NgTemplateOutlet, NgbDropdownModule],
 })
 export class ProfileSentinelConditionModalComponent extends ModalBaseComponent<boolean> {
@@ -21,14 +30,14 @@ export class ProfileSentinelConditionModalComponent extends ModalBaseComponent<b
     column = 0;
     row = 0;
     nested = false;
-    onSave?: (condition: any) => void;
+    onSave?: (condition: SentinelConditionInstance) => void;
     variableContext?: { name: string; table: string };
     #activeModal = inject(NgbActiveModal);
 
     allConditions = SENTINEL_CONDITIONS;
     selectedCondition!: SentinelCondition;
 
-    init(sentinel: Sentinel, index: { column?: number; row?: number; nested?: boolean; nestedData?: any; onSave?: (c: any) => void; variableContext?: { name: string; table: string } }): void {
+    init(sentinel: Sentinel, index: IInitOptions): void {
         this.sentinel = sentinel;
         this.column = index.column ?? 0;
         this.row = index.row ?? 0;
@@ -53,7 +62,7 @@ export class ProfileSentinelConditionModalComponent extends ModalBaseComponent<b
         const condition = {
             key: this.selectedCondition.key,
             inverted: this.selectedCondition.inverted ?? false,
-            options: this.selectedCondition.options?.map((o) => ({ key: o.key, value: o.value })) || [],
+            options: this.selectedCondition.options?.map((o) => ({ key: o.key, value: o.value !== undefined ? String(o.value) : undefined })) || [],
         };
 
         if (this.nested && this.onSave) {
@@ -75,13 +84,13 @@ export class ProfileSentinelConditionModalComponent extends ModalBaseComponent<b
     decline = () => this.#activeModal.close(undefined);
     dismiss = () => this.#activeModal.close(undefined);
 
-    parseCondition(data: any) {
+    parseCondition(data: SentinelConditionInstance) {
         const index = this.allConditions.findIndex((c) => c.key == data.key);
         if (index == -1) return new SentinelCondition();
 
-        if (this.allConditions[index].options && data?.options?.length > 0) {
-            this.allConditions[index].options.forEach((opt) => {
-                const match = data.options.find((o: any) => o.key == opt.key);
+        if (this.allConditions[index].options && (data?.options?.length ?? 0) > 0) {
+            this.allConditions[index].options!.forEach((opt) => {
+                const match = data.options!.find((o: SentinelOptionInstance) => o.key == opt.key);
                 if (match) opt.value = match.value;
             });
         }

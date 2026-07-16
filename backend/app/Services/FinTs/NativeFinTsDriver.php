@@ -45,7 +45,7 @@ class NativeFinTsDriver implements FinTsDriverInterface {
         $dialogId = $this->openDialog($systemId);
         $msgno    = 2;
 
-        $ibanKti = HbciSegment::escape($this->iban) . ':::::';
+        $ibanKti = HbciSegment::escape($this->iban).':::::';
 
         // Attempt 1: HKSAL v6 with IBAN-only Kti (BPD: HISALS v6, sec-class 0)
         $msg  = HbciMessage::buildWrapped($dialogId, $msgno++, $systemId, $this->blz, $this->username, $this->pin, ["HKSAL:3:6+{$ibanKti}+N'"]);
@@ -56,9 +56,9 @@ class NativeFinTsDriver implements FinTsDriverInterface {
             // Attempt 2: HKSAL v5 with national Kto DEG (BPD: HISALS v5)
             $kontonummer = strlen($this->iban) === 22 ? ltrim(substr($this->iban, 12, 10), '0') : '';
             $ktoNational = implode(':', array_map([HbciSegment::class, 'escape'], [$kontonummer, '', '280', $this->blz]));
-            $msg  = HbciMessage::buildWrapped($dialogId, $msgno++, $systemId, $this->blz, $this->username, $this->pin, ["HKSAL:3:5+{$ktoNational}+N'"]);
-            $resp = $this->conn->send($msg);
-            $segs = HbciMessage::parseAll($resp);
+            $msg         = HbciMessage::buildWrapped($dialogId, $msgno++, $systemId, $this->blz, $this->username, $this->pin, ["HKSAL:3:5+{$ktoNational}+N'"]);
+            $resp        = $this->conn->send($msg);
+            $segs        = HbciMessage::parseAll($resp);
         }
 
         $this->endDialog($dialogId, $systemId, $msgno);
@@ -68,11 +68,10 @@ class NativeFinTsDriver implements FinTsDriverInterface {
         }
         return $this->extractBalance($segs);
     }
-
     public function fetchTransactionsSince(\DateTime $since): array {
         $acctStr = $this->acctStr();
         $from    = $since->format('Ymd');
-        $to      = (new \DateTime())->format('Ymd');
+        $to      = (new \DateTime)->format('Ymd');
 
         $systemId = $this->getSystemId();
         $dialogId = $this->openDialog($systemId);
@@ -81,7 +80,7 @@ class NativeFinTsDriver implements FinTsDriverInterface {
         // IBAN-only Kti DEG (no legacy Kontonummer/BLZ sub-fields) for HKCAZ and HKKAZ v6.
         // Deutsche Bank's v6 implementation returns 9150 "Inhalt zu lang" when the full Kti
         // DEG (IBAN + account# + BLZ) is sent — IBAN-only avoids that.
-        $ibanKti = HbciSegment::escape($this->iban) . ':::::';
+        $ibanKti = HbciSegment::escape($this->iban).':::::';
 
         // Attempt 1: HKCAZ (CAMT.052.001.08 — only URN advertised in HICAZS BPD)
         $c052  = HbciSegment::escape('urn:iso:std:iso:20022:tech:xsd:camt.052.001.08');
@@ -103,10 +102,10 @@ class NativeFinTsDriver implements FinTsDriverInterface {
             // v5 uses the old 4-field format: kontonummer::kik-land:kik-blz
             $kontonummer = strlen($this->iban) === 22 ? ltrim(substr($this->iban, 12, 10), '0') : '';
             $ktoNational = implode(':', array_map([HbciSegment::class, 'escape'], [$kontonummer, '', '280', $this->blz]));
-            $hkkaz5 = "HKKAZ:3:5+{$ktoNational}+N+{$from}+{$to}'";
-            $msg    = HbciMessage::buildWrapped($dialogId, $msgno++, $systemId, $this->blz, $this->username, $this->pin, [$hkkaz5]);
-            $resp   = $this->conn->send($msg);
-            $segs   = HbciMessage::parseAll($resp);
+            $hkkaz5      = "HKKAZ:3:5+{$ktoNational}+N+{$from}+{$to}'";
+            $msg         = HbciMessage::buildWrapped($dialogId, $msgno++, $systemId, $this->blz, $this->username, $this->pin, [$hkkaz5]);
+            $resp        = $this->conn->send($msg);
+            $segs        = HbciMessage::parseAll($resp);
         }
 
         $this->endDialog($dialogId, $systemId, $msgno);
@@ -205,7 +204,7 @@ class NativeFinTsDriver implements FinTsDriverInterface {
             foreach (array_slice($des, 1) as $de) {
                 // Saldo DEG format: <C|D>:<amount>:<currency>:<date>[:<time>]
                 if (preg_match('/^(C|D):([\d,]+):[A-Z]{3}:\d{8}/', $de, $m)) {
-                    $amount = (float) str_replace(',', '.', $m[2]);
+                    $amount = (float)str_replace(',', '.', $m[2]);
                     return $m[1] === 'D' ? -$amount : $amount;
                 }
             }
@@ -235,7 +234,7 @@ class NativeFinTsDriver implements FinTsDriverInterface {
                     }
                 } else {
                     // MT940 from German banks is ISO-8859-1; convert to UTF-8 if needed
-                    if (!mb_check_encoding($data, 'UTF-8')) {
+                    if (! mb_check_encoding($data, 'UTF-8')) {
                         $data = mb_convert_encoding($data, 'UTF-8', 'ISO-8859-1');
                     }
                 }
@@ -257,11 +256,9 @@ class NativeFinTsDriver implements FinTsDriverInterface {
         $msg    = $errors[0]['text'] ?? 'Unknown FinTS error';
         throw new \RuntimeException("Native FinTS {$context} failed: {$msg}");
     }
-
     private function cred(string $key): string {
-        return (string) ($this->credentials["FINTS_{$key}"] ?? '');
+        return (string)($this->credentials["FINTS_{$key}"] ?? '');
     }
-
     private function resolveBundle(): string {
         $configured = ini_get('curl.cainfo');
         if ($configured && file_exists($configured)) {

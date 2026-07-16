@@ -11,8 +11,6 @@ import { SmartLinkDirective } from '@directives/smart-link.directive';
 @Component({
     selector: 'invoice',
     templateUrl: './invoice.component.html',
-    styleUrls: ['./invoice.component.scss'],
-    standalone: true,
     imports: [HeaderComponent, HeaderLinkItemComponent, RouterModule, HotkeyDirective, NgbDropdownModule, SmartLinkDirective],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

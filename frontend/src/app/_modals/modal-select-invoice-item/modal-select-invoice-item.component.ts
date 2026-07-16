@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { InvoiceItemService } from '@models/invoice/invoice-item.service';
+import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { InvoiceItemType, getInvoiceItemTypeRepeatColor } from '@enums/invoice-item.type';
 
@@ -16,21 +17,20 @@ const TYPE_LABELS: Record<number, string> = {
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'modal-select-invoice-item',
-    standalone: true,
     imports: [DecimalPipe, SpinnerComponent],
     templateUrl: './modal-select-invoice-item.component.html',
 })
-export class ModalSelectInvoiceItemComponent implements OnInit {
-    items: any[] = [];
+export class ModalSelectInvoiceItemComponent {
+    items = signal<InvoiceItem[]>([]);
     loading = signal(true);
 
     activeModal = inject(NgbActiveModal);
     #service = inject(InvoiceItemService);
 
-    ngOnInit() {
+    constructor() {
         this.#service.indexStandingOrders().subscribe({
-            next: (items: any) => {
-                this.items = items;
+            next: (items: InvoiceItem[]) => {
+                this.items.set(items);
                 this.loading.set(false);
             },
             error: () => {
@@ -46,7 +46,7 @@ export class ModalSelectInvoiceItemComponent implements OnInit {
         return getInvoiceItemTypeRepeatColor(type as InvoiceItemType);
     }
 
-    select(item: any) {
+    select(item: InvoiceItem) {
         this.activeModal.close(item);
     }
 }

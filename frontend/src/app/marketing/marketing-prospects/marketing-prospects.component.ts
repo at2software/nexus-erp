@@ -1,3 +1,4 @@
+import { Dictionary } from '@constants/constants';
 import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { from, mergeMap, switchMap, tap, toArray } from 'rxjs';
@@ -14,14 +15,15 @@ import { NxGlobal } from '@app/nx/nx.global';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
-import { MarketingCsvImportModalComponent, parseCsv, type CsvColumnMapping, type CsvImportResult } from './marketing-csv-import-modal/marketing-csv-import-modal.component';
+import { MarketingCsvImportModalComponent, parseCsv } from './marketing-csv-import-modal/marketing-csv-import-modal.component';
+import type { CsvColumnMapping, CsvImportResult } from '@models/api-response';
+import { storageGet, storageSet } from '@constants/storage';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'marketing-prospects',
     templateUrl: './marketing-prospects.component.html',
     styleUrls: ['./marketing-prospects.component.scss'],
-    standalone: true,
     imports: [FormsModule, RouterModule, NgbDropdownModule, NgbTooltipModule, Nx, AvatarComponent, EmptyStateComponent, ToolbarComponent, SpinnerComponent],
 })
 export class MarketingProspectsComponent {
@@ -59,7 +61,7 @@ export class MarketingProspectsComponent {
     selectedInitiativeOverdueCount = computed(() => this.initiatives().find(i => String(i.id) === this.initiativeFilter())?.overdue_prospects_count ?? 0);
 
     statusCounts = computed(() => {
-        const counts: Record<string, number> = {};
+        const counts: Dictionary<number> = {};
         this.prospects().forEach(p => counts[p.status] = (counts[p.status] ?? 0) + 1);
         return counts;
     });
@@ -103,25 +105,28 @@ export class MarketingProspectsComponent {
     }
 
     #loadInitiatives() {
-        const params: any = this.userFilter() ? { user_id: parseInt(this.userFilter()) } : {};
+        const params: Dictionary = this.userFilter() ? { user_id: parseInt(this.userFilter()) } : {};
         this.#marketingService
             .indexInitiatives({ status: 'active' })
             .pipe(
-                tap((response: any) => this.initiatives.set(response.data || response)),
+                tap((response) => this.initiatives.set(response.data)),
                 switchMap(() => this.#marketingService.indexProspects(params)),
             )
-            .subscribe((prospects: MarketingProspect[]) => {
-                const counts = new Map<string, number>();
-                prospects.forEach(p => {
-                    if (p.has_overdue_activities && p.marketing_initiative?.id && !['unresponsive', 'disqualified', 'on_hold'].includes(p.status)) {
-                        const key = String(p.marketing_initiative.id);
-                        counts.set(key, (counts.get(key) || 0) + 1);
-                    }
-                });
-                this.initiatives.update(inits => {
-                    inits.forEach(i => i.overdue_prospects_count = counts.get(String(i.id)) ?? 0);
-                    return [...inits];
-                });
+            .subscribe({
+                next: (prospects: MarketingProspect[]) => {
+                    const counts = new Map<string, number>();
+                    prospects.forEach(p => {
+                        if (p.has_overdue_activities && p.marketing_initiative?.id && !['unresponsive', 'disqualified', 'on_hold'].includes(p.status)) {
+                            const key = String(p.marketing_initiative.id);
+                            counts.set(key, (counts.get(key) || 0) + 1);
+                        }
+                    });
+                    this.initiatives.update(inits => {
+                        inits.forEach(i => i.overdue_prospects_count = counts.get(String(i.id)) ?? 0);
+                        return [...inits];
+                    });
+                },
+                error: () => { /** no-op */},
             });
     }
 
@@ -131,13 +136,16 @@ export class MarketingProspectsComponent {
             ...(this.initiativeFilter() && { marketing_initiative_id: parseInt(this.initiativeFilter()) }),
             ...(this.userFilter() && { user_id: parseInt(this.userFilter()) }),
         };
-        this.#marketingService.indexProspects(params).subscribe((response: any) => {
-            this.prospects.set(response.data || response);
-            this.isLoading.set(false);
-            if (!this.#route.firstChild) {
-                const first = this.filteredProspects()[0];
-                if (first) this.#router.navigate(['/marketing/prospects', first.id]);
-            }
+        this.#marketingService.indexProspects(params).subscribe({
+            next: (response) => {
+                this.prospects.set(response);
+                this.isLoading.set(false);
+                if (!this.#route.firstChild) {
+                    const first = this.filteredProspects()[0];
+                    if (first) this.#router.navigate(['/marketing/prospects', first.id]);
+                }
+            },
+            error: () => this.isLoading.set(false),
         });
     }
 
@@ -146,14 +154,14 @@ export class MarketingProspectsComponent {
         this.#saveFiltersToLocalStorage();
     }
 
-    setUserFilter(id: any) {
+    setUserFilter(id: string | number | null) {
         this.userFilter.set(id ? String(id) : '');
         this.#saveFiltersToLocalStorage();
         this.#loadInitiatives();
         this.#loadProspects();
     }
 
-    setInitiativeFilter(id: any) {
+    setInitiativeFilter(id: string | number | null) {
         this.initiativeFilter.set(id ? String(id) : '');
         this.#saveFiltersToLocalStorage();
         this.#loadProspects();
@@ -166,15 +174,17 @@ export class MarketingProspectsComponent {
 
     actionsResolved = () => this.prospects.update(p => [...p]);
 
-    navigateToProspect(event: MouseEvent, prospect: MarketingProspect) {
-        if (!event.ctrlKey && !event.shiftKey) this.#router.navigate(['/marketing/prospects', prospect.id]);
+    navigateToProspect(event: Event, prospect: MarketingProspect) {
+        // `(keydown.enter)` types $event as the generic Event; both MouseEvent and KeyboardEvent carry the modifier flags.
+        const e = event as MouseEvent | KeyboardEvent;
+        if (!e.ctrlKey && !e.shiftKey) this.#router.navigate(['/marketing/prospects', prospect.id]);
     }
 
     createNewProspect() {
         const initiative = this.initiatives().find(i => String(i.id) === this.initiativeFilter());
         if (!initiative) return;
 
-        const primaryChannel = initiative.channels?.find((c: any) => c.pivot?.is_primary);
+        const primaryChannel = initiative.channels?.find((c) => c.pivot?.is_primary);
         const leadSourceId: number | null = primaryChannel?.id ?? initiative.channels?.[0]?.id ?? null;
 
         if (!leadSourceId) {
@@ -194,11 +204,16 @@ export class MarketingProspectsComponent {
             this.#marketingService.storeProspect({
                 name: prospectName, vcard, email: '', status: 'new', added_via: 'manual',
                 marketing_initiative_id: this.initiativeFilter(), lead_source_id: leadSourceId,
-            }).subscribe((created: MarketingProspect) => {
-                this.prospects.update(p => [created, ...p]);
-                this.#router.navigate(['/marketing/prospects', created.id]);
+            }).subscribe({
+                next: (created: MarketingProspect) => {
+                    this.prospects.update(p => [created, ...p]);
+                    this.#router.navigate(['/marketing/prospects', created.id]);
+                },
+                error: () => this.#loadProspects(),
             });
-        }).catch(() => {});
+        }).catch(() => {
+            // no action
+        });
     }
 
     exportCsv() {
@@ -248,7 +263,9 @@ export class MarketingProspectsComponent {
                 currentInitiativeId: this.initiativeFilter(),
                 existingNames,
             });
-            modalRef.result.then((result: CsvImportResult) => this.#doImport(result)).catch(() => {});
+            modalRef.result.then((result: CsvImportResult) => this.#doImport(result)).catch(() => {
+                // no action
+            });
         };
         reader.readAsText(file);
         (event.target as HTMLInputElement).value = '';
@@ -305,26 +322,22 @@ export class MarketingProspectsComponent {
     }
 
     #saveFiltersToLocalStorage() {
-        localStorage.setItem(this.#STORAGE_KEY, JSON.stringify({
+        storageSet(this.#STORAGE_KEY, {
             initiativeFilter: this.initiativeFilter(),
             userFilter: this.userFilter(),
             statusFilters: this.statusFilters().map(f => ({ key: f.key, selected: f.selected })),
-        }));
+        });
     }
 
     #restoreFiltersFromLocalStorage() {
-        try {
-            const saved = localStorage.getItem(this.#STORAGE_KEY);
-            if (!saved) return;
-            const filters = JSON.parse(saved);
-            if (filters.initiativeFilter !== undefined) this.initiativeFilter.set(filters.initiativeFilter);
-            if (filters.userFilter !== undefined) this.userFilter.set(filters.userFilter);
-            if (Array.isArray(filters.statusFilters)) {
-                this.statusFilters.update(current => current.map(f => {
-                    const s = filters.statusFilters.find((x: any) => x.key === f.key);
-                    return s ? { ...f, selected: s.selected } : f;
-                }));
-            }
-        } catch {}
+        const filters = storageGet<{ initiativeFilter?: string; userFilter?: string; statusFilters?: { key: string; selected: boolean }[] }>(this.#STORAGE_KEY, {});
+        if (filters.initiativeFilter !== undefined) this.initiativeFilter.set(filters.initiativeFilter);
+        if (filters.userFilter !== undefined) this.userFilter.set(filters.userFilter);
+        if (Array.isArray(filters.statusFilters)) {
+            this.statusFilters.update(current => current.map(f => {
+                const s = filters.statusFilters!.find((x) => x.key === f.key);
+                return s ? { ...f, selected: s.selected } : f;
+            }));
+        }
     }
 }

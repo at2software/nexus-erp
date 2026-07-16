@@ -587,6 +587,146 @@
         <source>save</source>
       </segment>
     </unit>
+    <unit id="i18n.common.remove">
+      <segment>
+        <source>remove</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.unsavedChanges">
+      <segment>
+        <source>unsaved changes</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.title">
+      <segment>
+        <source>PDF template</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.saved">
+      <segment>
+        <source>PDF template saved</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.reverted">
+      <segment>
+        <source>Reverted to original template</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.logoUpdated">
+      <segment>
+        <source>Logo updated</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.replaceLogo">
+      <segment>
+        <source>replace logo</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.revert">
+      <segment>
+        <source>revert to original</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.renderPdf">
+      <segment>
+        <source>render real PDF</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.element">
+      <segment>
+        <source>element</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.code">
+      <segment>
+        <source>code</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.text">
+      <segment>
+        <source>text</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.fontSize">
+      <segment>
+        <source>font size</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.color">
+      <segment>
+        <source>color</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.style">
+      <segment>
+        <source>style</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.marginTop">
+      <segment>
+        <source>margin top</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.marginBottom">
+      <segment>
+        <source>margin bottom</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.paddingTop">
+      <segment>
+        <source>padding top</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.paddingBottom">
+      <segment>
+        <source>padding bottom</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.clickHint">
+      <segment>
+        <source>Click an element in the preview to edit its text and styling.</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.add">
+      <segment>
+        <source>add</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.addText">
+      <segment>
+        <source>text block</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.addDivider">
+      <segment>
+        <source>divider</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.addSpacer">
+      <segment>
+        <source>spacer</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.editFull">
+      <segment>
+        <source>edit full document</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.htmlCode">
+      <segment>
+        <source>HTML (template.html)</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.cssCode">
+      <segment>
+        <source>CSS (styles.css)</source>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.realPdf">
+      <segment>
+        <source>real PDF (DomPDF)</source>
+      </segment>
+    </unit>
     <unit id="i18n.common.select_mantis_project">
       <notes>
         <note category="location">src/app/_modals/mantis-project-selection/mantis-project-selection.component.html:5,6</note>
@@ -697,6 +837,31 @@
       </notes>
       <segment>
         <source>select</source>
+      </segment>
+    </unit>
+    <unit id="i18n.invoices.assignProductQty">
+      <notes>
+        <note category="location">src/app/_modals/modal-assign-product/modal-assign-product.component.html:7</note>
+        <note category="location">src/models/invoice/invoice-item.actions.ts:82</note>
+      </notes>
+      <segment>
+        <source>assign product &amp; qty</source>
+      </segment>
+    </unit>
+    <unit id="i18n.invoices.qtyFactor">
+      <notes>
+        <note category="location">src/app/_modals/modal-assign-product/modal-assign-product.component.html:21</note>
+      </notes>
+      <segment>
+        <source>multiply quantity by</source>
+      </segment>
+    </unit>
+    <unit id="i18n.invoices.roundQtyTo">
+      <notes>
+        <note category="location">src/app/_modals/modal-assign-product/modal-assign-product.component.html:28</note>
+      </notes>
+      <segment>
+        <source>round up to nearest</source>
       </segment>
     </unit>
     <unit id="i18n.invoices.assignToExpense">
@@ -1142,6 +1307,46 @@
       </notes>
       <segment>
         <source>date &amp; time</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.review">
+      <notes>
+        <note category="location">src/models/vacation/vacation.actions.ts</note>
+      </notes>
+      <segment>
+        <source>review</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.leaveAllowance">
+      <notes>
+        <note category="location">src/app/_modals/modal-review-vacation/modal-review-vacation.component.html:60</note>
+      </notes>
+      <segment>
+        <source>leave allowance</source>
+      </segment>
+    </unit>
+    <unit id="i18n.vacation.currentBalance">
+      <notes>
+        <note category="location">src/app/_modals/modal-review-vacation/modal-review-vacation.component.html:63</note>
+      </notes>
+      <segment>
+        <source>current balance</source>
+      </segment>
+    </unit>
+    <unit id="i18n.vacation.balanceIfApproved">
+      <notes>
+        <note category="location">src/app/_modals/modal-review-vacation/modal-review-vacation.component.html:68</note>
+      </notes>
+      <segment>
+        <source>balance if approved</source>
+      </segment>
+    </unit>
+    <unit id="i18n.vacation.withdraw">
+      <notes>
+        <note category="location">src/app/_modals/modal-review-vacation/modal-review-vacation.component.html:87</note>
+      </notes>
+      <segment>
+        <source>withdraw</source>
       </segment>
     </unit>
     <unit id="i18n.common.duration">
@@ -3253,6 +3458,78 @@
         <source>desicion duration</source>
       </segment>
     </unit>
+    <unit id="i18n.customers.mlForecast">
+      <notes>
+        <note category="location">src/app/customers/details/customer-dashboard/customer-dashboard.html:151</note>
+      </notes>
+      <segment>
+        <source>ML forecast</source>
+      </segment>
+    </unit>
+    <unit id="i18n.customers.mlInsights">
+      <notes>
+        <note category="location">src/app/customers/details/customer-dashboard/customer-dashboard.html:172</note>
+      </notes>
+      <segment>
+        <source>ML insights</source>
+      </segment>
+    </unit>
+    <unit id="i18n.customers.attentionNeeded">
+      <notes>
+        <note category="location">src/app/customers/details/customer-dashboard/customer-dashboard.html:174</note>
+      </notes>
+      <segment>
+        <source>attention needed</source>
+      </segment>
+    </unit>
+    <unit id="i18n.customers.mlRevenue12m">
+      <notes>
+        <note category="location">src/app/customers/details/customer-dashboard/customer-dashboard.html:180</note>
+      </notes>
+      <segment>
+        <source>predicted revenue (12m)</source>
+      </segment>
+    </unit>
+    <unit id="i18n.customers.mlNextPurchase">
+      <notes>
+        <note category="location">src/app/customers/details/customer-dashboard/customer-dashboard.html:186</note>
+      </notes>
+      <segment>
+        <source>predicted next purchase</source>
+      </segment>
+    </unit>
+    <unit id="i18n.customers.contactNowTip">
+      <notes>
+        <note category="location">src/app/customers/details/customer-dashboard/customer-dashboard.html:190</note>
+      </notes>
+      <segment>
+        <source>predicted next purchase date is in the past — contact this customer</source>
+      </segment>
+    </unit>
+    <unit id="i18n.customers.mlChurnRisk">
+      <notes>
+        <note category="location">src/app/customers/details/customer-dashboard/customer-dashboard.html:201</note>
+      </notes>
+      <segment>
+        <source>churn risk (12m)</source>
+      </segment>
+    </unit>
+    <unit id="i18n.customers.mlSupportHours">
+      <notes>
+        <note category="location">src/app/customers/details/customer-dashboard/customer-dashboard.html:214</note>
+      </notes>
+      <segment>
+        <source>predicted support (next quarter)</source>
+      </segment>
+    </unit>
+    <unit id="i18n.customers.mlNextQuarter">
+      <notes>
+        <note category="location">src/app/dashboard/widgets/widget-customer-support/widget-customer-support.component.html:20</note>
+      </notes>
+      <segment>
+        <source>next quarter</source>
+      </segment>
+    </unit>
     <unit id="i18n.customers.daysUntilProjectIsEither">
       <notes>
         <note category="location">src/app/customers/_shards/customer-quickstats/customer-quickstats.component.html:23</note>
@@ -3571,6 +3848,15 @@
       </notes>
       <segment>
         <source>activate recurring items</source>
+      </segment>
+    </unit>
+    <unit id="i18n.invoice.draftInvoice">
+      <notes>
+        <note category="location">src/app/customers/details/customer-billing/customer-billing.component.html</note>
+        <note category="location">src/app/projects/id/project-invoicing/project-invoicing.component.html</note>
+      </notes>
+      <segment>
+        <source>draft invoice</source>
       </segment>
     </unit>
     <unit id="i18n.customers.customerclausesWorks">
@@ -3950,6 +4236,40 @@
         <source>uptime monitoring</source>
       </segment>
     </unit>
+    <unit id="i18n.widget-customer-churn">
+      <notes>
+        <note category="location">src/app/dashboard/availableWidgets.ts:70</note>
+        <note category="location">src/app/dashboard/widgets/widget-customer-churn/widget-customer-churn.component.html:4</note>
+      </notes>
+      <segment>
+        <source>customer churn</source>
+      </segment>
+    </unit>
+    <unit id="i18n.widget-overrun-risk">
+      <notes>
+        <note category="location">src/app/dashboard/availableWidgets.ts:71</note>
+        <note category="location">src/app/dashboard/widgets/widget-overrun-risk/widget-overrun-risk.component.html:4</note>
+      </notes>
+      <segment>
+        <source>overrun risk</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.quoted">
+      <notes>
+        <note category="location">src/app/dashboard/widgets/widget-overrun-risk/widget-overrun-risk.component.html:22</note>
+      </notes>
+      <segment>
+        <source>quoted</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.predicted">
+      <notes>
+        <note category="location">src/app/dashboard/widgets/widget-overrun-risk/widget-overrun-risk.component.html:22</note>
+      </notes>
+      <segment>
+        <source>predicted</source>
+      </segment>
+    </unit>
     <unit id="i18n.common.newDashboard">
       <notes>
         <note category="location">src/app/dashboard/dashboard.component.html:11,14</note>
@@ -4215,12 +4535,36 @@
         <source>nicht genug</source>
       </segment>
     </unit>
-    <unit id="i18n.hr.timeVacationOrWeekend">
+    <unit id="i18n.hr.timeVacation">
       <notes>
         <note category="location">src/app/dashboard/widgets/widget-my-working-time/widget-my-working-time.component.ts:66</note>
       </notes>
       <segment>
-        <source>vacation / weekend</source>
+        <source>vacation</source>
+      </segment>
+    </unit>
+    <unit id="i18n.hr.timeSick">
+      <notes>
+        <note category="location">src/app/dashboard/widgets/widget-my-working-time/widget-my-working-time.component.ts:67</note>
+      </notes>
+      <segment>
+        <source>sick</source>
+      </segment>
+    </unit>
+    <unit id="i18n.hr.timeHoliday">
+      <notes>
+        <note category="location">src/app/dashboard/widgets/widget-my-working-time/widget-my-working-time.component.ts:68</note>
+      </notes>
+      <segment>
+        <source>public holiday</source>
+      </segment>
+    </unit>
+    <unit id="i18n.hr.timeWeekend">
+      <notes>
+        <note category="location">src/app/dashboard/widgets/widget-my-working-time/widget-my-working-time.component.ts:69</note>
+      </notes>
+      <segment>
+        <source>weekend</source>
       </segment>
     </unit>
     <unit id="i18n.common.probability">
@@ -6782,6 +7126,84 @@
         <source>completed</source>
       </segment>
     </unit>
+    <unit id="i18n.common.issue">
+      <notes>
+        <note category="location">src/app/projects/id/project-support/project-support.component.html:36,37</note>
+      </notes>
+      <segment>
+        <source>issue</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.tracker">
+      <segment>
+        <source>tracker</source>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.linkExternalIssue">
+      <segment>
+        <source>link external issue</source>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.noTrackersLinked">
+      <segment>
+        <source>no issue trackers linked to this project</source>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.noTokenManualHint">
+      <segment>
+        <source>no credentials for this tracker — enter the issue id manually below</source>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.searchIssues">
+      <segment>
+        <source>search issues...</source>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.noIssuesFound">
+      <segment>
+        <source>no issues found</source>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.issueIdManual">
+      <segment>
+        <source>issue id</source>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.removeLink">
+      <segment>
+        <source>remove link</source>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.hideCompleted">
+      <segment>
+        <source>hide completed issues</source>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.importUnresolvedIssues">
+      <segment>
+        <source>import unresolved issues</source>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.importFrom">
+      <segment>
+        <source>import from</source>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.alreadyImportedSkipped">
+      <segment>
+        <source><ph id="0" equiv="INTERPOLATION" disp="{{ skippedCount() }}"/> issue(s) already imported — skipped</source>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.selectAll">
+      <segment>
+        <source>select all</source>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.deselectAll">
+      <segment>
+        <source>deselect all</source>
+      </segment>
+    </unit>
     <unit id="i18n.marketing.no_initiatives_found">
       <notes>
         <note category="location">src/app/marketing/marketing-initiatives/marketing-initiatives.component.html:44,45</note>
@@ -7912,6 +8334,22 @@
       </notes>
       <segment>
         <source>package multiplier</source>
+      </segment>
+    </unit>
+    <unit id="i18n.product.basePrice">
+      <notes>
+        <note category="location">src/app/products/product-detail/product-detail-overview/product-detail-overview.component.html</note>
+      </notes>
+      <segment>
+        <source>base price</source>
+      </segment>
+    </unit>
+    <unit id="i18n.product.priceMultiplier">
+      <notes>
+        <note category="location">src/app/products/product-detail/product-detail-overview/product-detail-overview.component.html</note>
+      </notes>
+      <segment>
+        <source>price multiplier</source>
       </segment>
     </unit>
     <unit id="i18n.common.weightG">
@@ -9439,28 +9877,108 @@
         <source>Statistics will appear once projects with tracked time and budgets are recorded.</source>
       </segment>
     </unit>
-    <unit id="i18n.projects.leadSuccessByDesicionDuration">
+    <unit id="i18n.projects.acceptanceRateBySignal">
       <notes>
-        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.html:26,28</note>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.html:93</note>
       </notes>
       <segment>
-        <source>lead success by desicion duration</source>
+        <source>acceptance rate by signal</source>
       </segment>
     </unit>
-    <unit id="i18n.projects.leadSuccessByBudgetSize">
+    <unit id="i18n.projects.signalDaysPending">
       <notes>
-        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.html:35,37</note>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.ts:64</note>
       </notes>
       <segment>
-        <source>lead success by budget size</source>
+        <source>decision duration</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.signalNet">
+      <notes>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.ts:65</note>
+      </notes>
+      <segment>
+        <source>quote value</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.signalItemCount">
+      <notes>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.ts:66</note>
+      </notes>
+      <segment>
+        <source>item count</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.signalDiscountPct">
+      <notes>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.ts:67</note>
+      </notes>
+      <segment>
+        <source>discount</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.signalPrefixLength">
+      <notes>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.ts:68</note>
+      </notes>
+      <segment>
+        <source>prefix length</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.signalCompanyAcceptanceRate">
+      <notes>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.ts:69</note>
+      </notes>
+      <segment>
+        <source>customer acceptance rate</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.signalCompanyPriorDecidedCount">
+      <notes>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.ts:70</note>
+      </notes>
+      <segment>
+        <source>customer quote history</source>
       </segment>
     </unit>
     <unit id="i18n.projects.infoRealWorkingTimeVsQuoteEstimation">
       <notes>
-        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.html:46,48</note>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.html:107,109</note>
       </notes>
       <segment>
         <source>real working time vs. quote estimation (only finished projects)</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.finishedProjectsByGroup">
+      <notes>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.html:14</note>
+      </notes>
+      <segment>
+        <source>finished projects by product group</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.revenueByGroup">
+      <notes>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.html:26</note>
+      </notes>
+      <segment>
+        <source>revenue by product group</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.successRate">
+      <notes>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.html:38</note>
+      </notes>
+      <segment>
+        <source>success rate</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.finishedProjectsOverTime">
+      <notes>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.html:50</note>
+      </notes>
+      <segment>
+        <source>finished projects over time</source>
       </segment>
     </unit>
     <unit id="i18n.uptime.addMonitor">
@@ -9547,9 +10065,34 @@
       <notes>
         <note category="location">src/app/projects/_shards/custom-gantt/custom-gantt.component.html:264,265</note>
         <note category="location">src/app/projects/_shards/custom-gantt/milestone-popup/milestone-popup.component.html:76,77</note>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.ts:130</note>
       </notes>
       <segment>
         <source>unassigned</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.noData">
+      <notes>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.html:19</note>
+      </notes>
+      <segment>
+        <source>no data available</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.successful">
+      <notes>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.ts:186</note>
+      </notes>
+      <segment>
+        <source>successful</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.unsuccessful">
+      <notes>
+        <note category="location">src/app/projects/-/projects-stats/projects-stats.component.ts:187</note>
+      </notes>
+      <segment>
+        <source>unsuccessful</source>
       </segment>
     </unit>
     <unit id="i18n.milestone.updated">
@@ -10233,6 +10776,118 @@
         <source>move to customer</source>
       </segment>
     </unit>
+    <unit id="i18n.projects.quoteAcceptance">
+      <notes>
+        <note category="location">src/app/projects/id/project-invoicing/project-invoicing.component.html:209</note>
+      </notes>
+      <segment>
+        <source>quote acceptance</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteOutcome">
+      <notes>
+        <note category="location">src/app/projects/id/project-invoicing/project-invoicing.component.html:214</note>
+      </notes>
+      <segment>
+        <source>outcome</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteAccepted">
+      <notes>
+        <note category="location">src/app/projects/id/project-invoicing/project-invoicing.component.html:216</note>
+      </notes>
+      <segment>
+        <source>accepted</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteRejected">
+      <notes>
+        <note category="location">src/app/projects/id/project-invoicing/project-invoicing.component.html:218</note>
+      </notes>
+      <segment>
+        <source>rejected</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.acceptanceProbability">
+      <notes>
+        <note category="location">src/app/projects/id/project-invoicing/project-invoicing.component.html:223</note>
+      </notes>
+      <segment>
+        <source>acceptance probability</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteSuggestions">
+      <notes>
+        <note category="location">src/app/projects/id/project-invoicing/project-invoicing.component.html:228</note>
+      </notes>
+      <segment>
+        <source>could improve the odds</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteSuggestion.moreItems">
+      <notes>
+        <note category="location">src/app/projects/id/project-invoicing/project-invoicing.component.ts:278</note>
+      </notes>
+      <segment>
+        <source>split into <ph id="0" equiv="PH" disp="to"/> items (currently <ph id="1" equiv="PH_1" disp="from"/>)</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteSuggestion.fewerItems">
+      <notes>
+        <note category="location">src/app/projects/id/project-invoicing/project-invoicing.component.ts:279</note>
+      </notes>
+      <segment>
+        <source>combine into <ph id="0" equiv="PH" disp="to"/> items (currently <ph id="1" equiv="PH_1" disp="from"/>)</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteSuggestion.higherNet">
+      <notes>
+        <note category="location">src/app/projects/id/project-invoicing/project-invoicing.component.ts:282</note>
+      </notes>
+      <segment>
+        <source>increase the quote value</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteSuggestion.lowerNet">
+      <notes>
+        <note category="location">src/app/projects/id/project-invoicing/project-invoicing.component.ts:283</note>
+      </notes>
+      <segment>
+        <source>lower the quote value</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteSuggestion.discount">
+      <notes>
+        <note category="location">src/app/projects/id/project-invoicing/project-invoicing.component.ts:285</note>
+      </notes>
+      <segment>
+        <source>offer <ph id="0" equiv="PH" disp="points"/> more discount</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteSuggestion.addIntro">
+      <notes>
+        <note category="location">src/app/projects/id/project-invoicing/project-invoicing.component.ts:288</note>
+      </notes>
+      <segment>
+        <source>write a personalized introduction</source>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteSuggestion.longerIntro">
+      <notes>
+        <note category="location">src/app/projects/id/project-invoicing/project-invoicing.component.ts:289</note>
+      </notes>
+      <segment>
+        <source>write a longer introduction</source>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.f1Recall">
+      <notes>
+        <note category="location">src/directives/ml-reliability.directive.ts:152</note>
+      </notes>
+      <segment>
+        <source>F1 <ph id="0" equiv="PH" disp="summary.value"/> · recall <ph id="1" equiv="PH_1" disp="summary.recall"/></source>
+      </segment>
+    </unit>
     <unit id="i18n.common.quote">
       <notes>
         <note category="location">src/app/projects/id/project-invoicing/project-invoicing.component.html:87,89</note>
@@ -10511,6 +11166,21 @@
         <source>my prediction</source>
       </segment>
     </unit>
+    <unit id="i18n.project.overrunPredicted">
+      <segment>
+        <source>overrun predicted</source>
+      </segment>
+    </unit>
+    <unit id="i18n.project.mlPredictedDuration">
+      <segment>
+        <source>ML predicted duration</source>
+      </segment>
+    </unit>
+    <unit id="i18n.project.mlPredictedRemainingDuration">
+      <segment>
+        <source>ML predicted remaining</source>
+      </segment>
+    </unit>
     <unit id="i18n.projects.useAllPredictionsFromThis">
       <notes>
         <note category="location">src/app/projects/id/project-planning/project-planning.component.html:40</note>
@@ -10576,9 +11246,33 @@
         <source>you need to specify a default product first to add new items</source>
       </segment>
     </unit>
+    <unit id="i18n.project.newHeaderTitle">
+      <notes>
+        <note category="location">src/app/projects/id/project-planning/project-planning.component.ts:120</note>
+      </notes>
+      <segment>
+        <source>New section header</source>
+      </segment>
+    </unit>
+    <unit id="i18n.project.newHeaderInfo">
+      <notes>
+        <note category="location">src/app/projects/id/project-planning/project-planning.component.ts:121</note>
+      </notes>
+      <segment>
+        <source>Headers group the items below them. Enter a title for the new section.</source>
+      </segment>
+    </unit>
+    <unit id="i18n.project.newItemTitle">
+      <notes>
+        <note category="location">src/app/projects/id/project-planning/project-planning.component.ts:126</note>
+      </notes>
+      <segment>
+        <source>New item</source>
+      </segment>
+    </unit>
     <unit id="i18n.project.newItemDefaultProductInfo">
       <notes>
-        <note category="location">src/app/projects/id/project-planning/project-planning.component.ts:113</note>
+        <note category="location">src/app/projects/id/project-planning/project-planning.component.ts:127</note>
       </notes>
       <segment>
         <source>All items created here are assigned to the default product (see project settings).</source>
@@ -12027,6 +12721,22 @@
         <source>notice</source>
       </segment>
     </unit>
+    <unit id="i18n.comment.makeSticky">
+      <notes>
+        <note category="location">src/models/comment/comment.actions.ts:19</note>
+      </notes>
+      <segment>
+        <source>make sticky</source>
+      </segment>
+    </unit>
+    <unit id="i18n.comment.unstick">
+      <notes>
+        <note category="location">src/models/comment/comment.actions.ts:20</note>
+      </notes>
+      <segment>
+        <source>unstick</source>
+      </segment>
+    </unit>
     <unit id="i18n.common.retire">
       <notes>
         <note category="location">src/models/company/company-contact.actions.ts:14</note>
@@ -12141,6 +12851,14 @@
       </notes>
       <segment>
         <source>download</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.preview">
+      <notes>
+        <note category="location">src/models/file/file.actions.ts:11</note>
+      </notes>
+      <segment>
+        <source>preview</source>
       </segment>
     </unit>
     <unit id="i18n.invoices.reallyDeleteThisFile">
@@ -12805,6 +13523,30 @@
         <source>reminder extended</source>
       </segment>
     </unit>
+    <unit id="i18n.project.duplicated">
+      <notes>
+        <note category="location">src/models/project/project.model.ts:157</note>
+      </notes>
+      <segment>
+        <source>project duplicated</source>
+      </segment>
+    </unit>
+    <unit id="i18n.project.duplicate">
+      <notes>
+        <note category="location">src/models/project/project.actions.ts:29</note>
+      </notes>
+      <segment>
+        <source>duplicate project</source>
+      </segment>
+    </unit>
+    <unit id="i18n.project.duplicateName">
+      <notes>
+        <note category="location">src/models/project/project.actions.ts:32</note>
+      </notes>
+      <segment>
+        <source>name for the duplicated project</source>
+      </segment>
+    </unit>
     <unit id="i18n.project.participantAdded">
       <notes>
         <note category="location">src/models/project/project.model.ts:160</note>
@@ -12996,6 +13738,352 @@
       </notes>
       <segment>
         <source>vacation</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.requestDeletion">
+      <notes>
+        <note category="location">src/app/nx/nx.global.ts:88</note>
+      </notes>
+      <segment>
+        <source>request deletion</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.requestDeletionReason">
+      <notes>
+        <note category="location">src/app/nx/nx.global.ts:92</note>
+      </notes>
+      <segment>
+        <source>Why should this be deleted?</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.deletionRequested">
+      <notes>
+        <note category="location">src/app/nx/nx.global.ts:99</note>
+      </notes>
+      <segment>
+        <source>Deletion requested</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.deletionRequests">
+      <notes>
+        <note category="location">src/app/_activity/tab-tasks/_shards/tab-tasks-deletion-requests/tab-tasks-deletion-requests.component.html:5</note>
+      </notes>
+      <segment>
+        <source>deletion requests</source>
+      </segment>
+    </unit>
+    <unit id="i18n.deletionRequest.reallyReject">
+      <notes>
+        <note category="location">src/app/_activity/tab-tasks/_shards/tab-tasks-deletion-requests/tab-tasks-deletion-requests.component.ts:54</note>
+      </notes>
+      <segment>
+        <source>Reject this deletion request?</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.due">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/external-issues/modal-convert-issue/modal-convert-issue.component.html:20</note>
+      </notes>
+      <segment>
+        <source>due</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.projectsThisWeek">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/capacity-calendar/capacity-calendar.component.html:13</note>
+      </notes>
+      <segment>
+        <source><ph id="0" equiv="INTERPOLATION"/> projects this week</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.totalWorkload">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/capacity-calendar/capacity-calendar.component.html:71</note>
+      </notes>
+      <segment>
+        <source>total workload</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.noWorkScheduled">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/capacity-calendar/capacity-calendar.component.html:85</note>
+      </notes>
+      <segment>
+        <source>no work scheduled</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.unconfigured">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/planner-backlog/planner-backlog.component.html:3</note>
+      </notes>
+      <segment>
+        <source>unconfigured</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.nothingToPlan">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/planner-backlog/planner-backlog.component.html:13</note>
+      </notes>
+      <segment>
+        <source>nothing to plan</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.undated">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/planner-backlog/planner-backlog.component.html:20</note>
+      </notes>
+      <segment>
+        <source>undated</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.externalIssues">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/planner-backlog/planner-backlog.component.html:36</note>
+      </notes>
+      <segment>
+        <source>external issues</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.noExternalIssues">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/planner-backlog/planner-backlog.component.html:51</note>
+      </notes>
+      <segment>
+        <source>no open issues assigned to you</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.issueUnresolvedTooltip">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/planner-backlog/planner-backlog.component.html:53</note>
+      </notes>
+      <segment>
+        <source>no project related to this repository</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.projects">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/planner-backlog/planner-backlog.component.html:59</note>
+      </notes>
+      <segment>
+        <source>projects</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.scheduleIssue">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/external-issues/modal-convert-issue/modal-convert-issue.component.html:5</note>
+      </notes>
+      <segment>
+        <source>schedule issue</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.estimateHours">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/external-issues/modal-convert-issue/modal-convert-issue.component.html:13</note>
+      </notes>
+      <segment>
+        <source>estimate (hours)</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.scheduleError">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/profile-milestones.component.ts:105</note>
+      </notes>
+      <segment>
+        <source>failed to schedule milestone</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.issueConverted">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/profile-milestones.component.ts:118</note>
+      </notes>
+      <segment>
+        <source>issue converted to milestone</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.convertError">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/profile-milestones.component.ts:120</note>
+      </notes>
+      <segment>
+        <source>failed to convert issue</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.milestoneOverdue">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/capacity-calendar/capacity-calendar.component.ts:120</note>
+      </notes>
+      <segment>
+        <source><ph id="0" equiv="PH" disp="milestone.name"/> — overdue</source>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.milestoneLateStart">
+      <notes>
+        <note category="location">src/app/profile/profile-milestones/capacity-calendar/capacity-calendar.component.ts:121</note>
+      </notes>
+      <segment>
+        <source><ph id="0" equiv="PH" disp="milestone.name"/> — not started yet, planned start date has passed</source>
+      </segment>
+    </unit>
+    <unit id="i18n.foci.openIssues">
+      <notes>
+        <note category="location">src/app/projects/id/timetracking/timetracking.component.html:38</note>
+      </notes>
+      <segment>
+        <source>open issues</source>
+      </segment>
+    </unit>
+    <unit id="i18n.foci.createEntry">
+      <notes>
+        <note category="location">src/app/projects/id/timetracking/timetracking.component.html:52</note>
+      </notes>
+      <segment>
+        <source>create entry</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.missing_related_metric">
+      <notes>
+        <note category="location">src/app/marketing/shared/activity-table/activity-table.component.ts:45</note>
+      </notes>
+      <segment>
+        <source>no preceding activity found for related metric: "<ph id="0" equiv="PH" disp="relatedName"/>"</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.kpi_metric">
+      <notes>
+        <note category="location">src/app/marketing/shared/activity-detail/marketing-activity-detail.component.html:85</note>
+      </notes>
+      <segment>
+        <source>KPI / metric</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.external_dependency">
+      <notes>
+        <note category="location">src/app/marketing/shared/activity-detail/marketing-activity-detail.component.html:113</note>
+      </notes>
+      <segment>
+        <source>external dependency</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.parent_activity">
+      <notes>
+        <note category="location">src/app/marketing/shared/activity-detail/marketing-activity-detail.component.html:65</note>
+      </notes>
+      <segment>
+        <source>parent activity</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.activity_not_found">
+      <notes>
+        <note category="location">src/app/marketing/shared/activity-detail/marketing-activity-detail.component.html:132</note>
+      </notes>
+      <segment>
+        <source>activity not found</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.search_icons_placeholder">
+      <notes>
+        <note category="location">src/app/marketing/marketing-metrics/marketing-metrics.component.html:200</note>
+      </notes>
+      <segment>
+        <source>search icons...</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.icon_name_placeholder">
+      <notes>
+        <note category="location">src/app/marketing/marketing-metrics/marketing-metrics.component.html:209</note>
+      </notes>
+      <segment>
+        <source>or type icon name directly</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.icon">
+      <notes>
+        <note category="location">src/app/marketing/marketing-metrics/marketing-metrics.component.html:194</note>
+      </notes>
+      <segment>
+        <source>icon</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.related_metric">
+      <notes>
+        <note category="location">src/app/marketing/marketing-metrics/marketing-metrics.component.html:159</note>
+      </notes>
+      <segment>
+        <source>related denominator metric (optional)</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.related_metric_none">
+      <notes>
+        <note category="location">src/app/marketing/marketing-metrics/marketing-metrics.component.html:165,173</note>
+      </notes>
+      <segment>
+        <source>none — use own activity total</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.importCsvTooltip">
+      <notes>
+        <note category="location">src/app/marketing/marketing-prospects/marketing-prospects.component.html:140</note>
+      </notes>
+      <segment>
+        <source>Import prospects from CSV file</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.exportCsvTooltip">
+      <notes>
+        <note category="location">src/app/marketing/marketing-prospects/marketing-prospects.component.html:144</note>
+      </notes>
+      <segment>
+        <source>Export filtered prospects as CSV</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.bumps_tooltip">
+      <notes>
+        <note category="location">src/app/marketing/marketing-prospects/marketing-prospect-detail/marketing-prospect-detail.component.html:108,176</note>
+      </notes>
+      <segment>
+        <source>call attempts</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.git">
+      <notes>
+        <note category="location">src/app/customers/_shards/vcard/vcard.component.html:327</note>
+      </notes>
+      <segment>
+        <source>git</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.mantis">
+      <notes>
+        <note category="location">src/app/customers/_shards/vcard/vcard.component.html:335</note>
+      </notes>
+      <segment>
+        <source>mantis</source>
+      </segment>
+    </unit>
+    <unit id="i18n.plugins.linkToPluginUser">
+      <notes>
+        <note category="location">src/models/assignee/assignee.actions.ts:34</note>
+        <note category="location">src/models/company/company-contact.actions.ts:9</note>
+        <note category="location">src/models/user/user.actions.ts:18</note>
+      </notes>
+      <segment>
+        <source>link to plugin user</source>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.bump">
+      <notes>
+        <note category="location">src/models/marketing/marketing-prospect-activity.model.ts:73</note>
+      </notes>
+      <segment>
+        <source>bump</source>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.noCredentials">
+      <notes>
+        <note category="location">src/app/_shards/issue-picker/issue-picker.component.html:41</note>
+      </notes>
+      <segment>
+        <source>no credentials for this tracker</source>
       </segment>
     </unit>
   </file>

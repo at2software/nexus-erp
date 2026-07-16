@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Middleware\Auth;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Models\Role;
 

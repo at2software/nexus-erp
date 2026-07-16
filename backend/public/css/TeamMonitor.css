@@ -109,12 +109,21 @@ body {
     background-color: rgba(0, 0, 0, 0.9);
 }
 
-.work-bar-holiday {
+.work-bar-holiday,
+.work-bar-weekend {
     background-color: rgba(0, 0, 0, 0.3);
 }
 
 .work-bar-danger {
     background-color: #F9001D;
+}
+
+.work-bar-vacation {
+    background-color: #135BCD;
+}
+
+.work-bar-sick {
+    background-color: #0A8BC9;
 }
 
 .work-stats {
@@ -246,6 +255,7 @@ body {
     background-color: rgba(153, 153, 153, 0.9) !important;
 }
 
-.user-pill.user-offline .work-bar-holiday {
+.user-pill.user-offline .work-bar-holiday,
+.user-pill.user-offline .work-bar-weekend {
     background-color: rgba(153, 153, 153, 0.3) !important;
 }

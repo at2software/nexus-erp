@@ -1,6 +1,6 @@
 @let _annotationType = annotationType();
-@let _item = item();
-@let _company = company();
+@let _item = trackedItem();
+@let _company = trackedCompany();
 @let _annotationMode = annotationMode();
 @if (_item) {
     @switch (_item.type) {
@@ -10,7 +10,7 @@
         @case (1) {
             <!-- Inactive -->
             @if (_annotationType !== 'none') {
-                <td tr-annotation [mode]="_annotationMode" [company]="_company" [item]="_item"></td>
+                <td tr-annotation [mode]="_annotationMode" [company]="_company" [item]="_item" [extIssues]="extIssues()"></td>
             } @else {
                 <td></td>
             }
@@ -23,11 +23,11 @@
         @case (2) {
             <!-- Optional -->
             @if (_annotationType !== 'none') {
-                <td tr-annotation [mode]="_annotationMode" [company]="_company" [item]="_item"></td>
+                <td tr-annotation [mode]="_annotationMode" [company]="_company" [item]="_item" [extIssues]="extIssues()"></td>
             } @else {
                 <td></td>
             }
-            <td class="text-end text-muted small">({{ _item.var?.pos }})</td>
+            <td class="text-end text-muted small">({{ _item.var.pos }})</td>
             <td [innerHTML]="_item.text | safe: 'html'"></td>
             <ng-container [ngTemplateOutlet]="priceCol" [ngTemplateOutletContext]="{ $implicit: _item }"></ng-container>
             <ng-container [ngTemplateOutlet]="changeableQty" [ngTemplateOutletContext]="{ $implicit: _item }"></ng-container>
@@ -36,11 +36,11 @@
         @case (10) {
             <!-- Paydown -->
             @if (_annotationType !== 'none') {
-                <td tr-annotation [mode]="_annotationMode" [company]="_company" [item]="_item" text="paydown"></td>
+                <td tr-annotation [mode]="_annotationMode" [company]="_company" [item]="_item" [extIssues]="extIssues()" text="paydown"></td>
             } @else {
                 <td></td>
             }
-            <td class="text-end text-muted small">{{ _item.var?.pos }}</td>
+            <td class="text-end text-muted small">{{ _item.var.pos }}</td>
             <td [innerHTML]="_item.text | safe: 'html'"></td>
             <ng-container [ngTemplateOutlet]="priceCol" [ngTemplateOutletContext]="{ $implicit: _item }"></ng-container>
             @if (_item.qty !== -1) {
@@ -53,11 +53,11 @@
         @case (11) {
             <!-- Manual Discount -->
             @if (_annotationType !== 'none') {
-                <td tr-annotation [mode]="_annotationMode" [company]="_company" [item]="_item" text="manual discount"></td>
+                <td tr-annotation [mode]="_annotationMode" [company]="_company" [item]="_item" [extIssues]="extIssues()" text="manual discount"></td>
             } @else {
                 <td></td>
             }
-            <td class="text-end text-muted small">{{ _item.var?.pos }}</td>
+            <td class="text-end text-muted small">{{ _item.var.pos }}</td>
             <td [innerHTML]="_item.text | safe: 'html'"></td>
             <ng-container [ngTemplateOutlet]="priceCol" [ngTemplateOutletContext]="{ $implicit: _item }"></ng-container>
             <td class="text-end">
@@ -69,8 +69,8 @@
             <!-- Group -->
             <td class="header" colspan="2"></td>
             <td class="header" colspan="2">{{ _item.text }}</td>
-            <td class="header small text-end">{{ _item.var?.pt | number }} PT</td>
-            <td class="header small text-end">{{ _item.var?.sum | money }}</td>
+            <td class="header small text-end">{{ _item.var.pt | number }} PT</td>
+            <td class="header small text-end">{{ _item.var.sum | money }}</td>
         }
         @case (30) {
             <ng-container [ngTemplateOutlet]="repeating" [ngTemplateOutletContext]="{ $implicit: _item }"></ng-container>
@@ -97,11 +97,11 @@
 
 <ng-template #activeItemTemplate>
     @if (_annotationType !== 'none') {
-        <td tr-annotation [mode]="_annotationMode" [company]="_company" [item]="_item"></td>
+        <td tr-annotation [mode]="_annotationMode" [company]="_company" [item]="_item" [extIssues]="extIssues()"></td>
     } @else {
         <td></td>
     }
-    <td class="text-end text-muted small">{{ _item.var?.pos }}</td>
+    <td class="text-end text-muted small">{{ _item.var.pos }}</td>
     <td [innerHTML]="_item.text | safe: 'html'"></td>
     <ng-container [ngTemplateOutlet]="priceCol" [ngTemplateOutletContext]="{ $implicit: _item }"></ng-container>
     <ng-container [ngTemplateOutlet]="changeableQty" [ngTemplateOutletContext]="{ $implicit: _item }"></ng-container>

@@ -11,8 +11,8 @@ class HbciConnection {
     public function __construct(
         private string $url,
         private string $caBundle = '',
-        private int    $timeoutConnect = 15,
-        private int    $timeoutResponse = 30,
+        private int $timeoutConnect = 15,
+        private int $timeoutResponse = 30,
     ) {}
 
     public function send(string $message): string {
@@ -43,7 +43,7 @@ class HbciConnection {
 
         if ($response === false) {
             throw new \RuntimeException(
-                'FinTS cURL error for ' . $this->url . ': ' . curl_error($this->curlHandle)
+                'FinTS cURL error for '.$this->url.': '.curl_error($this->curlHandle)
             );
         }
 
@@ -54,7 +54,6 @@ class HbciConnection {
 
         return base64_decode($response);
     }
-
     public function __destruct() {
         if ($this->curlHandle !== null) {
             curl_close($this->curlHandle);

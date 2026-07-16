@@ -1,0 +1,264 @@
+@use 'var' as *;
+
+$meta-width: 64px;
+$number-band: 34px;
+$lane-height: 24px;
+
+.capacity-calendar {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    touch-action: pan-y;
+}
+
+.overdue-milestones {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.overdue-milestone-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background-color: var(--bs-danger);
+    color: #000;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: liquid-glass(), 0 1px 2px rgba(0, 0, 0, 0.35);
+
+    .due-date {
+        flex: 0 0 auto;
+        opacity: 0.8;
+    }
+}
+
+.day-of-week-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    // Align the labels with the day columns: meta width + the .week-row column gap.
+    padding-left: calc(#{$meta-width} + 6px);
+
+    .day-of-week-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--bs-secondary-color);
+        text-align: center;
+    }
+}
+
+.week-row {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+}
+
+.week-meta {
+    width: $meta-width;
+    flex: 0 0 $meta-width;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    font-size: 11px;
+    line-height: 1.3;
+
+    .month-label {
+        font-weight: 700;
+        font-size: 13px;
+    }
+
+    .projects-this-week {
+        font-size: 10px;
+    }
+}
+
+.week-body {
+    position: relative;
+    flex: 1;
+    min-height: calc(#{$number-band} + (var(--lanes, 0) * #{$lane-height}) + 8px);
+}
+
+.week-days {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: 1fr;
+}
+
+.day-cell {
+    position: relative;
+    overflow: hidden;
+    border-radius: 6px;
+    background: var(--bs-tertiary-bg);
+    box-shadow: inset 0 0 0 1px var(--bs-border-color);
+    cursor: pointer;
+    transition: box-shadow 0.15s ease;
+
+    &:not(.day-empty):hover {
+        box-shadow: inset 0 0 0 1px var(--bs-primary);
+    }
+
+    &.today {
+        box-shadow: inset 0 0 0 2px var(--bs-primary);
+    }
+
+    // Hide the CDK drop placeholder so dropping a chip never reflows the grid.
+    ::ng-deep .cdk-drag-placeholder {
+        display: none;
+    }
+}
+
+.day-empty {
+    background: transparent;
+    box-shadow: none;
+    cursor: default;
+}
+
+.capacity-fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: color-mix(in srgb, var(--bs-primary) 5%, transparent);
+    pointer-events: none;
+
+    &.overflow {
+        background: color-mix(in srgb, var(--bs-danger) 10%, transparent);
+    }
+}
+
+.day-percent {
+    position: absolute;
+    top: 4px;
+    left: 6px;
+    z-index: 2;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--bs-secondary-color);
+}
+
+.day-number {
+    font-family: 'BrunoAce', sans-serif;
+    font-size: 20px;
+    position: absolute;
+    top: 2px;
+    right: 6px;
+    z-index: 2;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #fff6;
+    text-shadow: liquid-glass();
+}
+
+.fragmentation-dots {
+    position: absolute;
+    bottom: 4px;
+    right: 5px;
+    z-index: 2;
+    display: flex;
+    gap: 2px;
+
+    .dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--bs-primary);
+    }
+}
+
+.event-lanes {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: $number-band;
+    bottom: 4px;
+    pointer-events: none;
+}
+
+.event-bar {
+    position: absolute;
+    height: 21px;
+    padding: 0 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    color: #000;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: grab;
+    pointer-events: auto;
+    background-color: var(--bs-primary);
+    box-shadow: liquid-glass(), 0 1px 2px rgba(0, 0, 0, 0.35);
+    user-select: none;
+    touch-action: none;
+
+    &:active {
+        cursor: grabbing;
+    }
+
+    &.continues-left {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+
+    &.continues-right {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    &.bg-danger {
+        background-color: var(--bs-danger) !important;
+        border-color: var(--bs-danger) !important;
+    }
+
+    &.bg-warning {
+        background-color: var(--bs-warning) !important;
+        border-color: var(--bs-warning) !important;
+    }
+
+    &.bg-success {
+        background-color: var(--bs-success) !important;
+        border-color: var(--bs-success) !important;
+    }
+
+    &.bg-not-started {
+        background-color: #666 !important;
+        border-color: #666 !important;
+    }
+
+    .bar-label {
+        flex: 1;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+        >avatar {
+            margin-top: 4px;
+        }
+    }
+
+    .resize-handle {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 7px;
+        cursor: ew-resize;
+
+        &.start {
+            left: 0;
+        }
+        &.end {
+            right: 0;
+        }
+    }
+}
+
+.day-popup {
+    min-width: 220px;
+    max-width: 300px;
+    font-size: 13px;
+}

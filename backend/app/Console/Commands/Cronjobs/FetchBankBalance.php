@@ -33,7 +33,7 @@ class FetchBankBalance extends Command {
 
     private function updateBalance(): void {
         try {
-            $controller = new PluginFintsController();
+            $controller = new PluginFintsController;
             $balance    = $controller->fetchBalance();
 
             if ($balance === null) {
@@ -43,7 +43,7 @@ class FetchBankBalance extends Command {
 
             $param    = Param::get('CASHFLOW_BANK_BALANCE');
             $previous = $param->value ?? 0;
-            $diff     = $previous == 0 ? '0%' : round(100 * ($balance - $previous) / $previous, 0) . '%';
+            $diff     = $previous == 0 ? '0%' : round(100 * ($balance - $previous) / $previous, 0).'%';
 
             $history = $param ? $param->history() : null;
             if ($history && $history->whereDate('created_at', today())->exists()) {
@@ -59,7 +59,7 @@ class FetchBankBalance extends Command {
             );
         } catch (\Exception $e) {
             NLog::error('Bank balance fetch failed', ['error' => $e->getMessage()]);
-            $this->error('Balance fetch failed: ' . $e->getMessage());
+            $this->error('Balance fetch failed: '.$e->getMessage());
         }
     }
 
@@ -74,20 +74,20 @@ class FetchBankBalance extends Command {
                 $this->error("Invalid --since value: \"{$sinceOption}\"");
                 return;
             }
-            $since = new \DateTime('@' . $ts);
+            $since = new \DateTime('@'.$ts);
         } else {
             $since = $lastCheckParam->value
                 ? new \DateTime($lastCheckParam->value)
                 : new \DateTime('-30 days');
         }
 
-        $this->line('Checking payments since ' . $since->format('Y-m-d') . '…');
+        $this->line('Checking payments since '.$since->format('Y-m-d').'…');
 
-        $controller = new PluginFintsController();
+        $controller = new PluginFintsController;
         try {
             $transactions = $controller->fetchTransactionsSince($since);
         } catch (\Exception $e) {
-            $this->error('Statement fetch failed: ' . $e->getMessage());
+            $this->error('Statement fetch failed: '.$e->getMessage());
             return;
         }
 
@@ -96,7 +96,7 @@ class FetchBankBalance extends Command {
             fn (Transaction $t) => $t->getCreditDebit() === Transaction::CD_CREDIT && ! $t->isStorno()
         );
 
-        $this->line('Fetched ' . count($transactions) . ' transactions (' . count($credits) . ' incoming credits).');
+        $this->line('Fetched '.count($transactions).' transactions ('.count($credits).' incoming credits).');
 
         if (empty($credits)) {
             $this->line('No new incoming payments.');
@@ -115,7 +115,7 @@ class FetchBankBalance extends Command {
             $this->warn('No notification recipient found — MATTERMOST_DEFAULT_USER_ID not set or not linked to a NEXUS user.');
         }
 
-        $matched      = 0;
+        $matched       = 0;
         $discrepancies = 0;
 
         foreach ($credits as $tx) {
@@ -135,23 +135,23 @@ class FetchBankBalance extends Command {
                     $this->line("✓ {$byName->name} matched by ref, marked paid");
                     ChatSendMessageJob::dispatch(
                         "**Invoice Paid ✓**\n\n"
-                        . "📅 **Date:** {$date}\n"
-                        . "👤 **Sender:** {$sender}\n"
-                        . "📄 **Invoice:** {$byName->name}\n"
-                        . "💰 **Amount:** €" . number_format($amount, 2),
+                        ."📅 **Date:** {$date}\n"
+                        ."👤 **Sender:** {$sender}\n"
+                        ."📄 **Invoice:** {$byName->name}\n"
+                        .'💰 **Amount:** €'.number_format($amount, 2),
                         user: $notifyUser,
                     );
                 } else {
                     $discrepancies++;
-                    $this->warn("     ⚠ discrepancy: expected €" . number_format($byName->gross_remaining, 2) . ", got €" . number_format($amount, 2));
+                    $this->warn('     ⚠ discrepancy: expected €'.number_format($byName->gross_remaining, 2).', got €'.number_format($amount, 2));
                     ChatSendMessageJob::dispatch(
                         "**Payment Discrepancy – Action Required**\n\n"
-                        . "📅 **Date:** {$date}\n"
-                        . "👤 **Sender:** {$sender}\n"
-                        . "📝 **Reference:** {$reference}\n"
-                        . "💰 **Received:** €" . number_format($amount, 2) . "\n"
-                        . "📄 **Invoice:** {$byName->name} (expected €" . number_format($byName->gross_remaining, 2) . ")\n\n"
-                        . 'Please reconcile manually.',
+                        ."📅 **Date:** {$date}\n"
+                        ."👤 **Sender:** {$sender}\n"
+                        ."📝 **Reference:** {$reference}\n"
+                        .'💰 **Received:** €'.number_format($amount, 2)."\n"
+                        ."📄 **Invoice:** {$byName->name} (expected €".number_format($byName->gross_remaining, 2).")\n\n"
+                        .'Please reconcile manually.',
                         user: $notifyUser,
                     );
                 }
@@ -162,32 +162,32 @@ class FetchBankBalance extends Command {
             $byAmount = $unpaid->filter(fn (Invoice $inv) => abs($inv->gross_remaining - $amount) < 0.02);
 
             if ($byAmount->count() === 1) {
-                $invoice = $byAmount->first();
+                $invoice          = $byAmount->first();
                 $invoice->paid_at = now();
                 $invoice->save();
                 $matched++;
-                $this->line("✓ {$invoice->name} matched by amount €" . number_format($amount, 2) . ', marked paid');
+                $this->line("✓ {$invoice->name} matched by amount €".number_format($amount, 2).', marked paid');
                 ChatSendMessageJob::dispatch(
                     "**Invoice Paid ✓**\n\n"
-                    . "📅 **Date:** {$date}\n"
-                    . "👤 **Sender:** {$sender}\n"
-                    . "📄 **Invoice:** {$invoice->name}\n"
-                    . "💰 **Amount:** €" . number_format($amount, 2),
+                    ."📅 **Date:** {$date}\n"
+                    ."👤 **Sender:** {$sender}\n"
+                    ."📄 **Invoice:** {$invoice->name}\n"
+                    .'💰 **Amount:** €'.number_format($amount, 2),
                     user: $notifyUser,
                 );
             } elseif ($byAmount->count() > 1) {
                 $discrepancies++;
-                $list = $byAmount->map(fn ($inv) => "- {$inv->name} (€" . number_format($inv->gross_remaining, 2) . ')')
+                $list = $byAmount->map(fn ($inv) => "- {$inv->name} (€".number_format($inv->gross_remaining, 2).')')
                     ->join("\n");
-                $this->warn("⚠ Ambiguous match €" . number_format($amount, 2) . ': ' . $byAmount->count() . ' invoices');
+                $this->warn('⚠ Ambiguous match €'.number_format($amount, 2).': '.$byAmount->count().' invoices');
                 ChatSendMessageJob::dispatch(
                     "**Ambiguous Payment – Action Required**\n\n"
-                    . "📅 **Date:** {$date}\n"
-                    . "👤 **Sender:** {$sender}\n"
-                    . "📝 **Reference:** {$reference}\n"
-                    . "💰 **Amount:** €" . number_format($amount, 2) . "\n\n"
-                    . "Matches multiple invoices:\n{$list}\n\n"
-                    . 'Please reconcile manually.',
+                    ."📅 **Date:** {$date}\n"
+                    ."👤 **Sender:** {$sender}\n"
+                    ."📝 **Reference:** {$reference}\n"
+                    .'💰 **Amount:** €'.number_format($amount, 2)."\n\n"
+                    ."Matches multiple invoices:\n{$list}\n\n"
+                    .'Please reconcile manually.',
                     user: $notifyUser,
                 );
             }
@@ -199,7 +199,6 @@ class FetchBankBalance extends Command {
             $this->saveLastCheck($lastCheckParam);
         }
     }
-
     private function extractInvoiceRef(string $reference, Collection $unpaid): ?Invoice {
         // Derive prefix from first unpaid invoice name (e.g. "AT2-" from "AT2-0058-26")
         $prefix = null;
@@ -214,7 +213,7 @@ class FetchBankBalance extends Command {
         }
 
         // Allow any number of digits on both sides to handle mis-typed invoice names
-        $pattern = '/' . preg_quote($prefix, '/') . '\d+-\d+/i';
+        $pattern = '/'.preg_quote($prefix, '/').'\d+-\d+/i';
         if (! preg_match_all($pattern, $reference, $matches)) {
             return null;
         }
@@ -228,7 +227,6 @@ class FetchBankBalance extends Command {
 
         return null;
     }
-
     private function saveLastCheck(Param $param): void {
         $param->value = now()->toIso8601String();
         $param->save();

@@ -1,9 +1,12 @@
-﻿import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Dictionary } from '@constants/constants';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { NgbActiveModal, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
-import { Sentinel } from '@models/sentinel.model';
+import { Sentinel } from '@models/sentinels/sentinel.model';
 import { GlobalService } from '@models/global.service';
-import { SENTINEL_COMMANDS, SentinelCommand } from '../../sentinel-command.model';
+import { SENTINEL_COMMANDS, SentinelCommand, SentinelCommandInstance } from '../../sentinel-command.model';
+import { SentinelConditionInstance } from '../../sentinel-condition.model';
+import { SentinelOptionInstance } from '../../sentinel-condition-option-field.model';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { ModelFieldEditorComponent } from './model-field-editor/model-field-editor.component';
@@ -15,7 +18,6 @@ import { VariableAutocompleteComponent } from './variable-autocomplete/variable-
     selector: 'sentinel-command-edit-modal',
     templateUrl: './profile-sentinel-command-modal.component.html',
     styleUrls: ['./profile-sentinel-command-modal.component.scss'],
-    standalone: true,
     imports: [FormsModule, NgTemplateOutlet, NgbDropdownModule, ModelFieldEditorComponent, RelationPathAutocompleteComponent, VariableAutocompleteComponent],
 })
 export class ProfileSentinelCommandModalComponent extends ModalBaseComponent<boolean> {
@@ -26,16 +28,16 @@ export class ProfileSentinelCommandModalComponent extends ModalBaseComponent<boo
 
     allCommands = SENTINEL_COMMANDS;
     selectedCommand!: SentinelCommand;
-    existingConditions: any[] = [];
-    existingActions: any[] = [];
+    existingConditions: SentinelConditionInstance[][] = [];
+    existingActions: SentinelCommandInstance[] = [];
     nested = false;
-    onSave?: (action: any) => void;
+    onSave?: (action: SentinelCommandInstance) => void;
     loopVariable?: string;
     loopTable?: string;
     tables: { name: string; columns: { Field: string }[] }[] = [];
-    relations: { table: string; relations: Record<string, { type: string; model?: string }> }[] = [];
+    relations: { table: string; relations: Dictionary<{ type: string; model?: string }> }[] = [];
     getTableColumns = (name: string) => this.tables.find((t) => t.name == name)?.columns;
-    getTargetTable = () => this.selectedCommand?.options?.find((o) => o.key === 'table')?.value || '';
+    getTargetTable = () => String(this.selectedCommand?.options?.find((o) => o.key === 'table')?.value ?? '');
 
     onRelationSelected(finalRelationName: string) {
         const variableOpt = this.selectedCommand?.options?.find((o) => o.key === 'variable');
@@ -48,7 +50,7 @@ export class ProfileSentinelCommandModalComponent extends ModalBaseComponent<boo
         }
     }
 
-    init(sentinel: Sentinel, index: number | { nested?: boolean; nestedData?: any; onSave?: (a: any) => void; loopVariable?: string; loopTable?: string }): void {
+    init(sentinel: Sentinel, index: number | { nested?: boolean; nestedData?: SentinelCommandInstance; onSave?: (a: SentinelCommandInstance) => void; loopVariable?: string; loopTable?: string }): void {
         this.sentinel = sentinel;
         this.tables = this.#global.tables;
         this.relations = this.#global.relations;
@@ -84,9 +86,9 @@ export class ProfileSentinelCommandModalComponent extends ModalBaseComponent<boo
     onSuccess = () => true;
 
     accept = () => {
-        const command: any = {
+        const command: SentinelCommandInstance = {
             key: this.selectedCommand.key,
-            options: this.selectedCommand.options?.map((o) => ({ key: o.key, value: o.value })) || [],
+            options: this.selectedCommand.options?.map((o) => ({ key: o.key, value: o.value !== undefined ? String(o.value) : undefined })) || [],
         };
 
         // Handle nested mode
@@ -116,13 +118,13 @@ export class ProfileSentinelCommandModalComponent extends ModalBaseComponent<boo
     decline = () => this.#activeModal.close(undefined);
     dismiss = () => this.#activeModal.close(undefined);
 
-    parseCommand(data: any) {
+    parseCommand(data: SentinelCommandInstance) {
         const index = this.allCommands.findIndex((c) => c.key == data.key);
         if (index == -1) return new SentinelCommand();
 
-        if (this.allCommands[index].options && data?.options?.length > 0) {
-            this.allCommands[index].options.forEach((opt) => {
-                const match = data.options.find((o: any) => o.key == opt.key);
+        if (this.allCommands[index].options && (data?.options?.length ?? 0) > 0) {
+            this.allCommands[index].options!.forEach((opt) => {
+                const match = data.options!.find((o: SentinelOptionInstance) => o.key == opt.key);
                 if (match) opt.value = match.value;
             });
         }

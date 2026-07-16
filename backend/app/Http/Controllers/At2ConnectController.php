@@ -28,10 +28,10 @@ class At2ConnectController extends Controller {
         $this->client         = $this->getClient();
         $this->mattermost     = PluginMattermostController::createInstance();
         $this->defaultChannel = [
-            'id'           => env('AT2CONNECT_DEFAULT_CHANNEL_ID', ''),
-            'display_name' => env('AT2CONNECT_DEFAULT_CHANNEL_NAME', 'Support'),
+            'id'           => config('services.at2connect.channel_id'),
+            'display_name' => config('services.at2connect.channel_name'),
         ];
-        $this->userId = env('AT2CONNECT_USER_ID', '');
+        $this->userId = config('services.at2connect.user_id');
     }
     private function getClient() {
         if (! $this->client) {
@@ -79,12 +79,7 @@ class At2ConnectController extends Controller {
         if (empty($token)) {
             return null;
         }
-        $contact = Contact::where('at2_connect_token', $token)->get();
-        if ($contact->count() == 0) {
-            return null;
-        }
-        $contact = $contact->first();
-        return $contact;
+        return Contact::where('at2_connect_token', $token)->first();
     }
     public function showUser(Request $request) {
         $contact  = $this->getContact($request);
@@ -503,7 +498,7 @@ class At2ConnectController extends Controller {
     }
     public function getProps(?Contact $contact): array {
         $iconSubUrl = $contact->companies[0]?->icon ?? null;
-        $iconUrl    = $iconSubUrl ? env('API_URL').$iconSubUrl : null;
+        $iconUrl    = $iconSubUrl ? config('app.api_url').$iconSubUrl : null;
         return [
             'from_webhook'         => 'true',
             'webhook_display_name' => $contact?->name ?? 'NEXUS',

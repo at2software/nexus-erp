@@ -7,32 +7,32 @@ import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { AvatarComponent } from '@app/_shards/avatar/avatar.component';
 import { CompanyContact } from '@models/company/company-contact.model';
 import { Contact } from '@models/company/contact.model';
-import { REFLECTION } from '@constants/constants';
+import { Dictionary, REFLECTION } from '@constants/constants';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { Serializable } from '@models/serializable';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'marketing-link-contact-modal',
     templateUrl: './marketing-link-contact-modal.component.html',
     styleUrls: ['./marketing-link-contact-modal.component.scss'],
-    standalone: true,
     imports: [FormsModule, ScrollbarComponent, AvatarComponent, SpinnerComponent],
 })
 export class MarketingLinkContactModalComponent extends ModalBaseComponent<{ company_contact_id: string } | null> {
     prospect!: MarketingProspect;
-    searchQuery: string = '';
-    contactResults: CompanyContact[] = [];
-    selectedContact: CompanyContact | null = null;
+    searchQuery = signal('');
+    contactResults = signal<CompanyContact[]>([]);
+    selectedContact = signal<CompanyContact | null>(null);
     isLoading = signal(false);
 
     #searchService = inject(SearchService);
-    #searchDelay: any;
+    #searchDelay: ReturnType<typeof setTimeout> | undefined;
 
-    init(...args: any): void {
-        this.prospect = args[0].prospect;
+    init(args: { prospect: MarketingProspect }): void {
+        this.prospect = args.prospect;
         // Pre-fill search with prospect name
         if (this.prospect.getName()) {
-            this.searchQuery = this.prospect.getName();
+            this.searchQuery.set(this.prospect.getName());
             this.#searchContacts();
         }
     }
@@ -40,18 +40,18 @@ export class MarketingLinkContactModalComponent extends ModalBaseComponent<{ com
     onSearchInput() {
         if (this.#searchDelay) clearTimeout(this.#searchDelay);
 
-        if (this.searchQuery.length >= 2) {
+        if (this.searchQuery().length >= 2) {
             this.#searchDelay = setTimeout(() => this.#searchContacts(), 300);
         } else {
-            this.contactResults = [];
+            this.contactResults.set([]);
         }
     }
 
     #searchContacts() {
         this.isLoading.set(true);
-        this.#searchService.search(this.searchQuery, { only: 'Contact,CompanyContact' }).subscribe({
-            next: (results: any) => {
-                const reflected = Object.values(results).map((x: any) => REFLECTION(x));
+        this.#searchService.search(this.searchQuery(), { only: 'Contact,CompanyContact' }).subscribe({
+            next: (results: Dictionary) => {
+                const reflected = Object.values(results).map((x) => REFLECTION<Serializable>(x));
                 const contacts: CompanyContact[] = [];
 
                 // Process results - could be Contact or CompanyContact objects
@@ -64,24 +64,24 @@ export class MarketingLinkContactModalComponent extends ModalBaseComponent<{ com
                     }
                 }
 
-                this.contactResults = contacts;
+                this.contactResults.set(contacts);
                 this.isLoading.set(false);
             },
             error: () => {
                 this.isLoading.set(false);
-                this.contactResults = [];
+                this.contactResults.set([]);
             },
         });
     }
 
     selectContact(contact: CompanyContact) {
-        this.selectedContact = contact;
+        this.selectedContact.set(contact);
     }
 
     onSuccess() {
-        if (this.selectedContact) {
+        if (this.selectedContact()) {
             return {
-                company_contact_id: this.selectedContact.id,
+                company_contact_id: this.selectedContact()!.id,
             };
         }
         return null;

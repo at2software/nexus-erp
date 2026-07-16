@@ -10,7 +10,6 @@ import { SpinnerComponent } from '@shards/spinner/spinner.component';
 
 @Component({
     selector: 'debrief-positive-autocomplete',
-    standalone: true,
     imports: [FormsModule, NgbDropdownModule, SpinnerComponent],
     templateUrl: './debrief-positive-autocomplete.component.html',
     styleUrls: ['./debrief-positive-autocomplete.component.scss'],

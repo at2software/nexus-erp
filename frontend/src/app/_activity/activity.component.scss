@@ -37,7 +37,8 @@
                 color: #ffffff;
                 margin-right: 5px;
                 transition: all .2s ease;
-
+                padding: var(--bs-nav-link-padding-y) 12px;
+                
                 &.active {
                     background: radial-gradient(ellipse 80% 50% at bottom center, 
                         rgba($primary-4, 0.9) 0%, 

@@ -13,8 +13,6 @@ import { SafePipe } from '@pipes/safe.pipe';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'vacation-details',
     templateUrl: './vacation-details.component.html',
-    styleUrls: ['./vacation-details.component.scss'],
-    standalone: true,
     imports: [HeaderComponent, HeaderLinkItemComponent, ScrollbarComponent, RouterModule, DatePipe, NgbTooltipModule, SafePipe],
 })
 export class VacationDetailsComponent {

@@ -12,6 +12,7 @@ use App\Enums\InvoiceItemType;
 use App\Jobs\SendInvoiceMailJob;
 use App\Jobs\SendInvoiceReminderJob;
 use App\Services\InvoiceItemEnhancementService;
+use App\Services\InvoicePdfService;
 use App\Traits\HasInvoiceItemsTrait;
 use App\Traits\PrecomputedTrait;
 use horstoeko\zugferd\codelists\ZugferdInvoiceType;
@@ -33,9 +34,10 @@ class Invoice extends BaseModel {
     const ITEMS_ADDING_TO_INVOICE = [InvoiceItemType::Default, InvoiceItemType::Discount, InvoiceItemType::Paydown];
     const ITEMS_NEED_INFO         = [...self::ITEMS_ADDING_TO_INVOICE, InvoiceItemType::Optional];
 
-    protected $touches  = ['company'];
-    protected $appends  = ['class', 'icon', 'path', 'net', 'gross', 'gross_remaining'];
-    protected $fillable = ['due_at', 'remind_at', 'company_id', 'default_interest', 'file_dir', 'name', 'stage'];
+    protected $touches           = ['company'];
+    protected $appends           = ['class', 'icon', 'path', 'net', 'gross', 'gross_remaining'];
+    protected $fillable          = ['due_at', 'remind_at', 'company_id', 'default_interest', 'file_dir', 'name', 'stage'];
+    public array $allowedFilters = ['company_id'];
 
     protected function casts(): array {
         return [
@@ -50,9 +52,6 @@ class Invoice extends BaseModel {
             'is_cancelled'    => 'boolean',
         ];
     }
-
-    protected $access = ['admin' => '*', 'project_manager' => '', 'developer' => ''];
-
     public function precomputeNetAttribute() {
         return $this->invoiceItems()->whereIn('type', InvoiceItemType::Total)->sum('net');
     }
@@ -189,6 +188,11 @@ class Invoice extends BaseModel {
             default => ZugferdInvoiceType::INVOICE,
         };
 
+        if (request()->boolean('draft')) {
+            Invoice::enablePropagation();
+            return self::makeDraftInvoiceFor($items, $prefix, $suffix, $company, $documentType, $project);
+        }
+
         [$invoice, $zugferdPdf, $filename] = app(CreateInvoiceAction::class)->execute(
             $items,
             'Rechnung',
@@ -216,6 +220,27 @@ class Invoice extends BaseModel {
         $company->propagateDirty();
         return response($zugferdPdf)->withHeaders(File::headers($filename, 'application/pdf'));
     }
+
+    /**
+     * Render a non-binding draft PDF: same content as the real invoice but with a
+     * "draft" header instead of an invoice number. Nothing is persisted, the invoice
+     * number is not incremented and items are not assigned to any invoice.
+     */
+    private static function makeDraftInvoiceFor($items, string $prefix, string $suffix, Company $company, string $documentType, ?Project $project) {
+        [$pdf, $filename] = app(InvoicePdfService::class)->generateInvoicePdf(
+            $items,
+            'Rechnung',
+            $prefix,
+            $suffix,
+            $company,
+            $documentType,
+            null,
+            $project,
+            draft: true
+        );
+        return response($pdf)->withHeaders(File::headers($filename, 'application/pdf'));
+    }
+
     private static function extractContext($entity): array {
         if ($entity instanceof Project) {
             $project = $entity;

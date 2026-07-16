@@ -10,7 +10,6 @@ import { Project } from '@models/project/project.model';
     templateUrl: './project.component.html',
     styleUrls: ['./project.component.scss'],
     imports: [NgbTooltip, SmartLinkDirective],
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectComponent {

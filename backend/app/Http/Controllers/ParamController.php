@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Param\StoreRequest;
 use App\Models\FloatParam;
 use App\Models\Param;
 use App\Models\StringParam;
 use App\Models\TextParam;
-use App\Traits\ControllerHasPermissionsTrait;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
 class ParamController extends Controller {
-    use ControllerHasPermissionsTrait;
-
     private function paramFor($key, $type, $id): ?Model {
         if (! $key) {
             return null;
@@ -61,11 +59,8 @@ class ParamController extends Controller {
     public function history($key, $type = null, $id = null) {
         return $this->multiKeyHistory($key, fn ($singleKey) => $this->paramFor($singleKey, $type, $id));
     }
-    public function store($key, $type = null, $id = null) {
-        request()->validate([
-            'value' => 'required',
-        ]);
-        return $this->saveParam($key, $type, $id, request('value'));
+    public function store(StoreRequest $request, $key, $type = null, $id = null) {
+        return $this->saveParam($key, $type, $id, $request->validated('value'));
     }
     public function update($key, $type = null, $id = null) {
         $value = request('value');

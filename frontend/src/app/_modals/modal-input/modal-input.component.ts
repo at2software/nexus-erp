@@ -1,59 +1,63 @@
 import { ChangeDetectionStrategy, Component, ElementRef, Injectable, afterNextRender, inject, signal, viewChild } from '@angular/core';
-import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { NgbActiveModal, NgbModalOptions } from '@ng-bootstrap/ng-bootstrap';
 import { FormsModule } from '@angular/forms';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { SafePipe } from '@pipes/safe.pipe';
 import { ModalBaseComponent } from '../modal-base.component';
+import { ModalBaseService } from '../modal-base-service';
+
+export interface ModalInputArgs {
+    title: string;
+    message?: string;
+    initialValue?: string;
+    hasMore?: boolean;
+}
+export interface ModalInputResult {
+    text: string;
+    more: boolean;
+}
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'modal-input',
     templateUrl: './modal-input.component.html',
-    styleUrls: ['./modal-input.component.scss'],
-    standalone: true,
     imports: [FormsModule, HotkeyDirective, SafePipe],
 })
-export class ModalInputComponent extends ModalBaseComponent<string> {
+export class ModalInputComponent extends ModalBaseComponent<ModalInputResult> {
+    static override modalOptions: NgbModalOptions = { size: 'lg' };
+
     readonly inputField = viewChild.required<ElementRef>('inputField');
 
-    modalTitle: string = '';
-    result: string = '';
+    modalTitle = '';
+    result = '';
     hasMore = signal(false);
     infoMessage?: string;
 
-    activeModal: NgbActiveModal = inject(NgbActiveModal);
+    #activeModal = inject(NgbActiveModal);
 
     constructor() {
         super();
         afterNextRender(() => this.inputField().nativeElement.focus());
     }
 
-    init(args: any): void {
+    init(args: ModalInputArgs): void {
         this.modalTitle = args.title;
         this.infoMessage = args.message;
+        if (args.hasMore !== undefined) this.hasMore.set(args.hasMore);
         if (args.initialValue !== undefined) this.result = args.initialValue;
     }
-    onSuccess() {
-        return this.result;
+    onSuccess(): ModalInputResult {
+        return { text: this.result, more: false };
     }
-    decline = () => this.activeModal.close(undefined);
-    accept = () => this.activeModal.close({ text: this.result, more: false });
-    more = () => this.activeModal.close({ text: this.result, more: true });
-    dismiss = () => this.activeModal.dismiss();
+    // `accept` (ok) and `decline`/`dismiss` (cancel -> undefined) come from the base.
+    more = () => this.#activeModal.close({ text: this.result, more: true });
 }
 
 @Injectable({ providedIn: 'root' })
 export class InputModalService {
-    modalService = inject(NgbModal);
+    #modal = inject(ModalBaseService);
 
-    open(text: string, hasMore: boolean = false, infoMessage?: string, initialValue?: string): Promise<{ text: string; more: boolean } | undefined> {
-        const modalRef = this.modalService.open(ModalInputComponent, { size: 'lg' });
-        modalRef.componentInstance.modalTitle = text;
-        modalRef.componentInstance.hasMore.set(hasMore);
-        modalRef.componentInstance.infoMessage = infoMessage;
-        if (initialValue !== undefined) {
-            modalRef.componentInstance.result = initialValue;
-        }
-        return modalRef.result;
+    open(text: string, hasMore = false, infoMessage?: string, initialValue?: string): Promise<ModalInputResult | undefined> {
+        return this.#modal.open(ModalInputComponent, { title: text, message: infoMessage, initialValue, hasMore });
     }
 }

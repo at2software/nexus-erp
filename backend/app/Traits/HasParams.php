@@ -19,24 +19,24 @@ trait HasParams {
 
     // Relations
     public function floatParams() {
-        return $this->hasMany(FloatParam::class, 'parent_id')->where('parent_type', get_class($this));
+        return $this->hasMany(FloatParam::class, 'parent_id')->where('parent_type', $this::class);
     }
     public function stringParams() {
-        return $this->hasMany(StringParam::class, 'parent_id')->where('parent_type', get_class($this));
+        return $this->hasMany(StringParam::class, 'parent_id')->where('parent_type', $this::class);
     }
     public function textParams() {
-        return $this->hasMany(TextParam::class, 'parent_id')->where('parent_type', get_class($this));
+        return $this->hasMany(TextParam::class, 'parent_id')->where('parent_type', $this::class);
     }
 
     // Latest parameter relations - pick latest entry for each param_id
     public function latestFloatParams($orderBy = 'id') {
-        return $this->floatParams()->pickLatestWithConditions('param_id', get_class($this), $orderBy)->with('base');
+        return $this->floatParams()->pickLatestWithConditions('param_id', $this::class, $orderBy)->with('base');
     }
     public function latestStringParams($orderBy = 'id') {
-        return $this->stringParams()->pickLatestWithConditions('param_id', get_class($this), $orderBy)->with('base');
+        return $this->stringParams()->pickLatestWithConditions('param_id', $this::class, $orderBy)->with('base');
     }
     public function latestTextParams($orderBy = 'id') {
-        return $this->textParams()->pickLatestWithConditions('param_id', get_class($this), $orderBy)->with('base');
+        return $this->textParams()->pickLatestWithConditions('param_id', $this::class, $orderBy)->with('base');
     }
     public function getParamsAttribute() {
         return collect()

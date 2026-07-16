@@ -1,21 +1,21 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Project } from '@models/project/project.model';
 import { BaseWidgetComponent, WidgetOptions } from '../base.widget.component';
-import { WidgetsModule } from '../widgets.module';
+import { WIDGET_SHARED } from '../widgets.shared';
 import { PermissionsDirective } from '@directives/permissions.directive';
 import { WidgetService } from '@models/widget.service';
+import { ParamChartSeries } from '@models/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'widget-project-acquisitions',
     templateUrl: './widget-project-acquisitions.component.html',
-    styleUrls: ['./widget-project-acquisitions.component.scss', './../base.widget.component.scss'],
-    standalone: true,
-    imports: [WidgetsModule, PermissionsDirective],
+    styleUrls: ['./../base.widget.component.scss'],
+    imports: [...WIDGET_SHARED, PermissionsDirective],
 })
 export class WidgetProjectAcquisitionsComponent extends BaseWidgetComponent {
     data = signal<Project[]>([]);
-    chartData = signal<any>(undefined);
+    chartData = signal<ParamChartSeries[] | undefined>(undefined);
     #widgetService = inject(WidgetService);
 
     defaultOptions = () => ({
@@ -27,11 +27,11 @@ export class WidgetProjectAcquisitionsComponent extends BaseWidgetComponent {
 
     reload(): void {
         const options = { ...this.getOptionsURI() };
-        if (this.hasInvoicesModule) options['withChart'] = '1';
-        this.#widgetService.indexCashflow('PROJECTS_ACQUISITIONS', options, Project).subscribe((response: any) => {
-            const data = (response.objects || []).sort((a: any, b: any) => b.net - a.net);
+        if (this.hasInvoicesModule()) options['withChart'] = '1';
+        this.#widgetService.indexCashflow('PROJECTS_ACQUISITIONS', options, Project).subscribe((response) => {
+            const data = response.objects.sort((a, b) => (b.net ?? 0) - (a.net ?? 0));
             this.data.set(data);
-            this.value.set(data.reduce((a: any, b: any) => a + b.net, 0));
+            this.value.set(data.reduce((a, b) => a + (b.net ?? 0), 0));
             this.chartData.set(response.history);
         });
     }

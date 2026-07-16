@@ -7,7 +7,7 @@ import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { Nx } from '@app/nx/nx.directive';
 import { NgbDateAdapter, NgbDatepickerModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { SaldoChartComponent } from '@shards/saldo-chart/saldo-chart.component';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { NgbDateCarbonAdapter } from '@directives/ngb-date.adapter';
 import { Cash } from '@models/cash/cash.model';
 import { CashService } from '@models/cash/cash.servcie';
@@ -21,7 +21,6 @@ import { HotkeyDirective } from '@directives/hotkey.directive';
     templateUrl: './invoices-cash-register-detail.component.html',
     styleUrls: ['./invoices-cash-register-detail.component.scss'],
     providers: [{ provide: NgbDateAdapter, useClass: NgbDateCarbonAdapter }],
-    standalone: true,
     imports: [ToolbarComponent, Nx, SaldoChartComponent, NgbDatepickerModule, FormsModule, MoneyPipe, DatePipe, HotkeyDirective],
 })
 export class InvoicesCashRegisterDetailComponent {
@@ -39,7 +38,7 @@ export class InvoicesCashRegisterDetailComponent {
     currencySymbol = computed(() => this.#global.currencySymbol() ?? '€');
 
     modalData = signal({
-        occured_at: moment().toISOString(),
+        occured_at: dayjs().toISOString(),
         description: '',
         approver: '',
         value: 0,
@@ -51,7 +50,7 @@ export class InvoicesCashRegisterDetailComponent {
         effect(() => {
             if (!this.id()) return;
             this.modalData.set({
-                occured_at: moment().toISOString(),
+                occured_at: dayjs().toISOString(),
                 description: '',
                 approver: this.#global.user?.getName() ?? '',
                 value: 0,
@@ -71,7 +70,7 @@ export class InvoicesCashRegisterDetailComponent {
         });
     }
 
-    addExpense(content: TemplateRef<any>) {
+    addExpense(content: TemplateRef<unknown>) {
         this.#modalService
             .open(content, { ariaLabelledBy: 'modal-basic-title' })
             .result.then(() => {

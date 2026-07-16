@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { environment } from 'src/environments/environment';
-import { Role, UserRoleEntry } from '@models/user/role.model';
+import { Role } from '@models/user/role.model';
 import { User } from '@models/user/user.model';
 import { RoleService } from '@models/user/role.service';
 import { GlobalService } from '@models/global.service';
@@ -21,7 +21,6 @@ const SPECIALIZED_ROLES = ['project_manager', 'invoicing', 'financial', 'marketi
     selector: 'settings-users',
     templateUrl: './roles.component.html',
     styleUrls: ['./roles.component.scss'],
-    standalone: true,
     imports: [FormsModule, NgbTooltipModule, RolePipe, ScrollbarComponent, ToolbarComponent, Nx, SpinnerComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -46,7 +45,7 @@ export class UsersComponent {
     constructor() {
         this.#roleService.loadRoleManagement().then((data) => {
             this.roles.set(this.#sortRoles(data.roles));
-            this.users.set(data.users.map((u: UserRoleEntry) => User.fromJson(u)));
+            this.users.set(data.users);
             this.selectedRole.set(this.roles()[0] ?? null);
             this.isLoading.set(false);
         });
@@ -73,7 +72,7 @@ export class UsersComponent {
         const fn = this.hasRole(user, role.name) ? 'removeRole' : 'assignRole';
         const data = await this.#roleService[fn](role.id, user.id);
         this.roles.set(this.#sortRoles(data.roles));
-        this.users.set(data.users.map((u: UserRoleEntry) => User.fromJson(u)));
+        this.users.set(data.users);
     }
 
     async addUser() {
@@ -82,7 +81,7 @@ export class UsersComponent {
         this.#userService.create(data).subscribe(async () => {
             const result = await this.#roleService.loadRoleManagement();
             this.roles.set(this.#sortRoles(result.roles));
-            this.users.set(result.users.map((u: UserRoleEntry) => User.fromJson(u)));
+            this.users.set(result.users);
         });
     }
 

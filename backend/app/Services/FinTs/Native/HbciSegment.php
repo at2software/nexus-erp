@@ -14,26 +14,26 @@ class HbciSegment {
     /**
      * Builds a segment string.
      *
-     * @param string $name     Segment name (e.g. "HKSAL")
-     * @param int    $seq      Segment sequence number
-     * @param int    $version  Segment version
-     * @param array  $elements Array of DE/DEG values. A nested array becomes a DEG (colon-separated).
-     *                         Pass '' for an empty/omitted element.
+     * @param string $name Segment name (e.g. "HKSAL")
+     * @param int $seq Segment sequence number
+     * @param int $version Segment version
+     * @param array $elements Array of DE/DEG values. A nested array becomes a DEG (colon-separated).
+     *                        Pass '' for an empty/omitted element.
      */
     public static function build(string $name, int $seq, int $version, array $elements = []): string {
         $head = "{$name}:{$seq}:{$version}";
         if (empty($elements)) {
-            return $head . "'";
+            return $head."'";
         }
         $parts = array_map(fn ($e) => self::encodeElement($e), $elements);
-        return $head . '+' . implode('+', $parts) . "'";
+        return $head.'+'.implode('+', $parts)."'";
     }
 
     private static function encodeElement(mixed $value): string {
         if (is_array($value)) {
-            return implode(':', array_map(fn ($v) => self::escape((string) $v), $value));
+            return implode(':', array_map(fn ($v) => self::escape((string)$v), $value));
         }
-        return self::escape((string) $value);
+        return self::escape((string)$value);
     }
 
     /** Escapes special HBCI characters inside a data value. */
@@ -46,6 +46,6 @@ class HbciSegment {
      * Used for HNVSD content.
      */
     public static function binaryElement(string $data): string {
-        return '@' . strlen($data) . '@' . $data;
+        return '@'.strlen($data).'@'.$data;
     }
 }

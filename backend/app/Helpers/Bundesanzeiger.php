@@ -30,7 +30,6 @@ class Bundesanzeiger {
                 'User-Agent'                => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             ]);
     }
-
     public function process($companyName) {
         $html = $this->fetchSearchResults($companyName);
         if (empty($html)) {
@@ -38,7 +37,6 @@ class Bundesanzeiger {
         }
         return $this->parseReports($html);
     }
-
     private function fetchSearchResults($companyName) {
         $initialResponse = $this->http()->get('https://www.bundesanzeiger.de');
         if ($initialResponse->failed()) {
@@ -68,7 +66,6 @@ class Bundesanzeiger {
         }
         return $searchResponse->body();
     }
-
     private function parseReports($html) {
         $crawler = new Crawler($html);
         $reports = [];

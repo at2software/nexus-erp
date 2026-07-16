@@ -3,19 +3,20 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { ProductService } from '@models/product/product.service';
 import { Product } from '@models/product/product.model';
+import { Serializable } from '@models/serializable';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
 import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
-import { IAIPlugin } from '@models/ai/ai.plugin.interface';
+import { IAIPlugin } from '@models/http/ai.plugin.interface';
 import { PluginInstance } from '@models/http/plugin.instance';
 import { SafePipe } from '@pipes/safe.pipe';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { filter, map, switchMap } from 'rxjs/operators';
+import { AISuggestion, ProductSplitItem } from '@models/api-response';
 
 @Component({
     selector: 'app-product-refactor',
     templateUrl: './product-split.component.html',
     styleUrls: ['./product-split.component.scss'],
-    standalone: true,
     imports: [SearchInputComponent, SafePipe, SpinnerComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -26,7 +27,7 @@ export class ProductRefactorComponent {
 
     readonly #productId$ = this.#route.parent!.params.pipe(map(p => Number(p['id'])), filter(id => id > 0));
 
-    readonly splitItems = toSignal<any[]>(this.#productId$.pipe(switchMap(id => this.#productService.getSplit(id))));
+    readonly splitItems = toSignal<ProductSplitItem[]>(this.#productId$.pipe(switchMap(id => this.#productService.getSplit(id))));
     readonly currentProduct = toSignal(this.#productId$.pipe(switchMap(id => this.#productService.show(id.toString()))));
 
     readonly productSuggestions = signal<string[]>([]);
@@ -70,7 +71,7 @@ export class ProductRefactorComponent {
                         if (Array.isArray(suggestions)) {
                             this.productSuggestions.set(
                                 suggestions.length > 0 && typeof suggestions[0] === 'object' && suggestions[0].name
-                                    ? suggestions.map((item: any) => `${item.name} (${item.itemIds?.length || 0} items)`)
+                                    ? (suggestions as AISuggestion[]).map((item) => `${item.name} (${item.itemIds?.length || 0} items)`)
                                     : suggestions,
                             );
                         }
@@ -88,14 +89,15 @@ export class ProductRefactorComponent {
         const product = this.currentProduct();
         if (!product) return;
         const cleanName = suggestion.replace(/\s*\(\d+\s*items?\)$/, '').trim();
-        Product.createWithParentId(cleanName, (product as any).product_group_id).subscribe({
+        Product.createWithParentId(cleanName, product.product_group_id).subscribe({
             next: () => this.productSuggestions.update(s => s.filter(x => x !== suggestion)),
         });
     };
 
-    readonly getSelectedProductName = (item: any) => item.selectedProduct?.name || '';
+    readonly getSelectedProductName = (item: ProductSplitItem) => item.selectedProduct?.name || '';
 
-    readonly onProductSelected = (item: any, selectedProduct: any) => {
+    readonly onProductSelected = (item: ProductSplitItem, selected: Serializable) => {
+        const selectedProduct = selected.assert(Product);
         if (selectedProduct?.id) {
             item.selectedProduct = selectedProduct;
             item.product_source_id = selectedProduct.id;
@@ -139,11 +141,11 @@ export class ProductRefactorComponent {
         this.productSuggestions.set(lines.slice(0, 10));
     }
 
-    #setSuggestions(suggestions: any[]): void {
+    #setSuggestions(suggestions: unknown[]): void {
         this.productSuggestions.set(
-            suggestions.length > 0 && typeof suggestions[0] === 'object' && suggestions[0].name
-                ? suggestions.map((item: any) => `${item.name} (${item.itemIds?.length || 0} items)`)
-                : suggestions,
+            suggestions.length > 0 && typeof suggestions[0] === 'object' && (suggestions[0] as AISuggestion)?.name
+                ? (suggestions as AISuggestion[]).map((item) => `${item.name} (${item.itemIds?.length || 0} items)`)
+                : (suggestions as string[]),
         );
     }
 }

@@ -1,4 +1,5 @@
 import { NxAction } from '@app/nx/nx.actions';
+import { Dictionary } from '@constants/constants';
 import { Serializable } from '../serializable';
 import { NexusHttpService } from '@models/http/http.nexus';
 import * as forge from 'node-forge';
@@ -14,37 +15,38 @@ export class Encryption extends Serializable {
     key: string = '';
     my_id?: string;
 
-    /** Encrypted string received from the API, stored as-is. */
-    #encryptedValue: any;
+    /** Encrypted string or plain object stored from the API / direct assignment. */
+    #encryptedValue: string | Dictionary<unknown> | undefined;
     /** Returns the decrypted value on demand — no lifecycle hook needed. */
+     
     get value(): any {
         if (!this.#encryptedValue || !NxGlobal.global.user?.keyPair) return undefined;
         try {
-            return JSON.parse(NxGlobal.global.user.keyPair.privateKey.decrypt(this.#encryptedValue));
+            return JSON.parse(NxGlobal.global.user.keyPair.privateKey.decrypt(this.#encryptedValue as string));
         } catch {
             return undefined;
         }
     }
-    set value(v: any) { this.#encryptedValue = v; }
+    set value(v: string | Dictionary<unknown>) { this.#encryptedValue = v; }
 
     actions: NxAction[] = getEncryptisingleActionResolveds(this);
 
     getMyIdKey = () => 'MY_' + this.key + '_' + this.value.url.replace(/(^https?:\/\/|\/|\\)/i, '');
 
-    loadJson(x: any) {
+    loadJson(x: Dictionary) {
         this.fromJson(x);
         return this;
     }
 
     // ************** parent overrides **************
-    override dirtyFields(): any {
+    override dirtyFields(): Dictionary {
         const changes = super.dirtyFields();
         if ('value' in changes && NxGlobal.global.user!.keyPair) {
             changes['value'] = NxGlobal.global.user!.keyPair.publicKey.encrypt(JSON.stringify(changes['value']));
         }
         return changes;
     }
-    protected updateMyself = (x: any) => this.loadJson(x);
+    protected updateMyself = (x: Dictionary) => this.loadJson(x);
 
     // New RSA encryption - async with callback for non-blocking generation
     static createRsaKeypair = (): Promise<forge.pki.rsa.KeyPair> => {

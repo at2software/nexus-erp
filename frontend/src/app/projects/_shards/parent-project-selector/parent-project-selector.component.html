@@ -1,0 +1,40 @@
+@let _project = parent.object();
+@if (global.user?.hasAnyRole(['admin', 'project_manager'])) {
+    <li class="list-group-item">
+        <div class="input-group">
+            <div class="input-group-text input-group-text-darker">
+                <i i18n-ngbTooltip="@@i18n.common.parent" ngbTooltip="parent">supervisor_account</i>
+            </div>
+            <div ngbDropdown class="form-control">
+                <div ngbDropdownToggle id="btnGroupDrop1" class="dropdown-toggle text-truncate cursor-pointer dropdown-toggle-simple" style="font-weight: normal" [class.text-primary]="parent.parent ? true : false">
+                    @if (parent.parent) {
+                        <span>{{ parent.parent.name }}</span>
+                    }
+                    @if (!parent.parent) {
+                        <span i18n="@@i18n.project.noParentProject">no parent project</span>
+                    }
+                </div>
+                <ul ngbDropdownMenu class="dropdown-menu">
+                    @if (parent.parent) {
+                        <li class="cursor-pointer">
+                            <a class="dropdown-item text-primary border-bottom" smartLink="/projects/{{ parent.parent.id }}">
+                                <i>link</i>
+                                {{ parent.parent.name }}
+                            </a>
+                        </li>
+                    }
+                    @for (_ of _project.companys_base_projects; track _.id) {
+                        @if (_.id !== _project.id) {
+                            <li class="cursor-pointer">
+                                <a class="dropdown-item" (click)="parent.setParent(_)" (keyup.enter)="parent.setParent(_)" tabindex="0">{{ _.name }}</a>
+                            </li>
+                        }
+                    }
+                    <li class="cursor-pointer">
+                        <a class="dropdown-item" (click)="parent.setParent(undefined)" tabindex="0" (keydown.enter)="parent.setParent(undefined)" i18n="@@i18n.project.noParentProject">no parent project</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </li>
+}

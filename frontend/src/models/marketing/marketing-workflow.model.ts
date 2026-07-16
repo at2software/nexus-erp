@@ -2,10 +2,11 @@ import { Serializable } from '../serializable';
 import { MarketingService } from './marketing.service';
 import { NxActionType } from '@app/nx/nx.actions';
 import { Type } from 'class-transformer';
-import { MarketingActivity, TActivityStats } from './marketing-activity.model';
+import { MarketingActivity } from './marketing-activity.model';
 import { MarketingInitiative } from './marketing-initiative.model';
 import { TPivot } from './marketing-performance-metrics.model';
 import { Model } from '@constants/type-discriminators';
+import type { ActivityStats } from '@models/api-response';
 
 export interface TProspectStats {
     new: number;
@@ -25,7 +26,7 @@ export class MarketingWorkflow extends Serializable {
     name!: string;
     description?: string;
     is_active!: boolean;
-    stats?: TActivityStats;
+    stats?: ActivityStats;
     prospects_count?: number;
     prospect_stats?: TProspectStats;
     pivot?: TPivot<'marketing_initiative', 'marketing_workflow'> & { is_active?: boolean };

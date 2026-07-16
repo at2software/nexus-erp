@@ -7,10 +7,10 @@
     -ms-user-select: none;
     -moz-user-select: none;
     user-select: none;
-    -webkit-transition: background-color 0.2s linear;
-    -ms-transition: background-color 0.2s linear;
-    -moz-transition: background-color 0.2s linear;
-    transition: background-color 0.2s linear;
+    -webkit-transition: background-color 0.05s linear;
+    -ms-transition: background-color 0.05s linear;
+    -moz-transition: background-color 0.05s linear;
+    transition: background-color 0.05s linear;
     cursor: context-menu;
     &:hover { background-color: rgba(colors.$primary, 0.1) !important; }
     &.active { background-color: rgba(colors.$primary, 0.2) !important; }

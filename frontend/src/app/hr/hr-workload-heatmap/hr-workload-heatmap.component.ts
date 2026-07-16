@@ -5,7 +5,7 @@ import { NgbPopoverModule } from '@ng-bootstrap/ng-bootstrap';
 import { RouterModule } from '@angular/router';
 import { User } from '@models/user/user.model';
 import { UserService } from '@models/user/user.service';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { Milestone } from '@models/milestones/milestone.model';
 import { Project } from '@models/project/project.model';
 import { Nx } from '@app/nx/nx.directive';
@@ -13,42 +13,7 @@ import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { CompactItemDirective } from '@shards/ul-compact/CompactItemDirective';
 import { UlCompactComponent } from '@shards/ul-compact/ul-compact.component';
 import { tracked } from '@constants/tracked';
-
-interface DailyWorkloadElement {
-    type: 'assignment' | 'milestone';
-    id: string;
-    name: string;
-    hours: number;
-    project_id?: string;
-    project_path?: string;
-    project?: Project;
-    project_name?: string;
-    workload_percent?: number;
-}
-
-interface DailyWorkload {
-    date: string;
-    day_of_week: number;
-    total_percent: number;
-    available_hours: number;
-    assignment_hours: number;
-    milestone_hours: number;
-    total_hours: number;
-    is_break: boolean;
-    break_type?: string;
-    break_name?: string;
-    elements: DailyWorkloadElement[];
-}
-
-interface WorkloadData {
-    user_id: string;
-    start_date: string;
-    end_date: string;
-    hpw: number;
-    hpw_array: number[];
-    daily_workload: DailyWorkload[];
-    unconfigured_milestones: Milestone[];
-}
+import { DailyWorkload, DailyWorkloadElement, WorkloadData } from '@models/api-response';
 
 interface WeekColumn {
     weekNumber: number;
@@ -60,13 +25,12 @@ interface WeekColumn {
     selector: 'hr-workload-heatmap',
     templateUrl: './hr-workload-heatmap.component.html',
     styleUrls: ['./hr-workload-heatmap.component.scss'],
-    standalone: true,
     imports: [DecimalPipe, FormsModule, NgbPopoverModule, RouterModule, UlCompactComponent, CompactItemDirective, AvatarComponent, Nx, AvatarComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HrWorkloadHeatmapComponent {
-    readonly userIn = input.required<User>({ alias: 'user' });
-    readonly user = tracked(this.userIn);
+    readonly user = input.required<User>();
+    readonly trackedUser = tracked(this.user);
 
     #userService = inject(UserService);
 
@@ -78,28 +42,26 @@ export class HrWorkloadHeatmapComponent {
 
     constructor() {
         effect(() => {
-            if (this.userIn()) this.#loadData();
+            if (this.user()) this.#loadData();
         });
     }
 
     #loadData(): void {
-        const start = moment().startOf('day').format('YYYY-MM-DD');
-        const end = moment().add(3, 'months').format('YYYY-MM-DD');
+        const start = dayjs().startOf('day').format('YYYY-MM-DD');
+        const end = dayjs().add(3, 'months').format('YYYY-MM-DD');
 
-        this.#userService.showDailyWorkload(this.userIn(), start, end).subscribe((data: any) => {
-            data.daily_workload.forEach((day: any) => {
-                day.elements = day.elements.map((el: any) => {
-                    el.project = el.project ? Project.fromJson(el.project) : undefined;
-                    return el;
-                });
-            });
-            data.unconfigured_milestones = data.unconfigured_milestones.map((milestone: any) => {
-                const n = Milestone.fromJson(milestone);
-                n.var.project_name = milestone.project_name;
-                return n;
-            });
-            this.data.set(data as WorkloadData);
-            this.weekColumns.set(this.#buildWeekColumns(data as WorkloadData));
+        this.#userService.showDailyWorkload(this.user(), start, end).subscribe((data: WorkloadData) => {
+            const dailyWorkload: DailyWorkload[] = data.daily_workload.map((day) => ({
+                ...day,
+                elements: day.elements.map((el): DailyWorkloadElement => ({
+                    ...el,
+                    project: el.project ? Project.fromJson(el.project) : undefined,
+                })),
+            }));
+            const unconfiguredMilestones = data.unconfigured_milestones.map((milestone) => Milestone.fromJson(milestone));
+            const result: WorkloadData = { ...data, daily_workload: dailyWorkload, unconfigured_milestones: unconfiguredMilestones };
+            this.data.set(result);
+            this.weekColumns.set(this.#buildWeekColumns(result));
         });
     }
 
@@ -107,10 +69,10 @@ export class HrWorkloadHeatmapComponent {
         const workloadMap = new Map<string, DailyWorkload>();
         data.daily_workload.forEach((day) => workloadMap.set(day.date, day));
 
-        const startDate = moment(data.start_date);
-        const endDate = moment(data.end_date);
+        const startDate = dayjs(data.start_date);
+        const endDate = dayjs(data.end_date);
         const weeks: WeekColumn[] = [];
-        const currentWeekStart = startDate.clone().startOf('isoWeek');
+        let currentWeekStart = startDate.startOf('isoWeek');
         let currentMonth = '';
 
         while (currentWeekStart.isSameOrBefore(endDate)) {
@@ -119,7 +81,7 @@ export class HrWorkloadHeatmapComponent {
             let monthLabel: string | undefined;
 
             for (let i = 0; i < 7; i++) {
-                const day = currentWeekStart.clone().add(i, 'days');
+                const day = currentWeekStart.add(i, 'days');
                 const dayStr = day.format('YYYY-MM-DD');
                 weekDays.push(day.isBefore(startDate) || day.isAfter(endDate) ? null : (workloadMap.get(dayStr) || null));
 
@@ -133,7 +95,7 @@ export class HrWorkloadHeatmapComponent {
             }
 
             weeks.push({ weekNumber, monthLabel, days: weekDays });
-            currentWeekStart.add(1, 'week');
+            currentWeekStart = currentWeekStart.add(1, 'week');
         }
 
         return weeks;
@@ -151,8 +113,8 @@ export class HrWorkloadHeatmapComponent {
         return 'workload-purple';
     }
 
-    isToday = (day: DailyWorkload | null): boolean => day?.date === moment().format('YYYY-MM-DD');
-    formatDate = (dateStr: string): string => moment(dateStr).format('ddd, MMM D, YYYY');
+    isToday = (day: DailyWorkload | null): boolean => day?.date === dayjs().format('YYYY-MM-DD');
+    formatDate = (dateStr: string): string => dayjs(dateStr).format('ddd, MMM D, YYYY');
     selectDay = (day: DailyWorkload | null): void => this.selectedDay.set(day);
     getProjectPath = (element: DailyWorkloadElement): string => element.project_id ? `/projects/${element.project_id}/milestones` : (element.project_path || '');
 

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, EventEmitter, HostBinding, inject, input, OnChanges, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { OptionType } from './widget-options/widget-options.component';
 import { Dictionary } from '@constants/constants';
@@ -6,7 +6,11 @@ import { Serializable } from '@models/serializable';
 import { BaseWidgetListener } from './base.widget.listener';
 import { GlobalService } from '@models/global.service';
 
-export type TOptions = Record<string, { type: OptionType; value: any; i18n?: string }>;
+export type TOptions = Dictionary<{ type: OptionType; value: unknown; i18n?: string }>;
+export interface TWidgetConfig {
+    widget: string;
+    options: TOptions;
+}
 
 export const WidgetOptions = {
     maxItems: { 'max-items': { type: OptionType.Number, value: 999, i18n: $localize`:@@i18n.common.maxItems:max items` } },
@@ -18,58 +22,57 @@ export const WidgetOptions = {
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     template: '',
-    standalone: true,
+    host: {
+        '[class.is-editing]': 'is_editing()'
+    },
 })
-export abstract class BaseWidgetComponent implements OnInit, OnChanges {
-    defaultOptions: () => TOptions = () => ({});
-    reload(): void {
-        // to be overridden
-    }
+export abstract class BaseWidgetComponent {
 
     protected listener = inject(BaseWidgetListener);
     protected global = inject(GlobalService);
-    protected isReloading = false;
-    #destroyRef = inject(DestroyRef);
-    #reloadSub?: { unsubscribe(): void };
+
+    defaultOptions: () => TOptions = () => ({});
+    reload(): void { /** overwritten in subclasses */ }
+
+    is_editing = input<boolean>();
+    options    = input<TOptions>({});
+    i          = input<number>();
+    j          = input<number>();
+    widget     = input<TWidgetConfig>();
+    onlyChart  = input<boolean>(false);
 
     value = signal<number | undefined>(undefined);
 
-    get hasInvoicesModule() { return this.global.user?.hasRole('invoicing') ?? false; }
-    get hasInvoicesValues() { return this.global.user?.hasRole('financial') ?? false; }
-    get hasInvoicesExpenses() { return this.global.user?.hasRole('financial') ?? false; }
-    get hasSettingsModule() { return this.global.user?.hasRole('admin') ?? false; }
-    get hasCrudProjectUpdate() { return this.global.user?.hasRole('project_manager') ?? false; }
+    readonly hasInvoicesModule    = computed(() => this.global.user?.hasRole('invoicing') ?? false);
+    readonly hasInvoicesValues    = computed(() => this.global.user?.hasRole('financial') ?? false);
+    readonly hasInvoicesExpenses  = computed(() => this.global.user?.hasRole('financial') ?? false);
+    readonly hasSettingsModule    = computed(() => this.global.user?.hasRole('admin') ?? false);
+    readonly hasCrudProjectUpdate = computed(() => this.global.user?.hasRole('project_manager') ?? false);
 
-    is_editing = input<boolean>();
-    options = input<any>();
-    i = input<number>();
-    j = input<number>();
-    widget = input<any>();
-    onReload = input<EventEmitter<any>>();
-    onlyChart = input<boolean>(false);
+    protected isReloading = false;
 
-    @HostBinding('class.is-editing') get classEdit() { return this.is_editing(); }
-
-    ngOnInit() { this.reload(); }
-
-    ngOnChanges(a: any) {
-        if ('onReload' in a) {
-            this.#reloadSub?.unsubscribe();
-            this.#reloadSub = this.onReload()
-                ?.pipe(takeUntilDestroyed(this.#destroyRef))
-                .subscribe(() => this.reload());
-        }
-        if ('options' in a && !a['options'].firstChange) {
+    constructor() {
+        this.listener.reloadRequested.pipe(takeUntilDestroyed()).subscribe(() => this.reload());
+        effect(() => {
+            this.options();
             this.reload();
-        }
+        });
     }
 
-    _onUpdate = ($event: any) => {
+    _onUpdate = ($event: TOptions) => {
         if (!this.isReloading) {
-            this.listener.updated.next([$event, this.i()!, this.j()!]);
+            const i = this.i();
+            const j = this.j();
+            if (i === undefined || j === undefined) return;
+            this.listener.updated.next([$event, i, j]);
         }
     };
-    onDelete = ($event: any) => this.listener.deleted.next([$event, this.i()!, this.j()!]);
+    onDelete = (_: unknown) => {
+        const i = this.i();
+        const j = this.j();
+        if (i === undefined || j === undefined) return;
+        this.listener.deleted.next([_, i, j]);
+    };
 
     getI18n = () => 'WIDGET';
     getOptions = () => ({ ...this.defaultOptions(), ...this.options() });
@@ -79,6 +82,6 @@ export abstract class BaseWidgetComponent implements OnInit, OnChanges {
         for (const key of Object.keys(opt)) m[key] = opt[key].value;
         return m;
     };
-    indexExceedsSettings = (i: number) => ('max-items' in this.getOptions() && 'value' in this.getOptions()['max-items'] ? (this.getOptions()['max-items']?.value ?? 0) <= i : true);
+    indexExceedsSettings = (i: number) => ('max-items' in this.getOptions() && 'value' in this.getOptions()['max-items'] ? ((this.getOptions()['max-items']?.value as number) ?? 0) <= i : true);
     badgeCount = (data: Serializable[]) => data.filter((_) => _.badge()).length;
 }

@@ -1,4 +1,4 @@
-@for (entry of instances(); track entry.instance.id) {
+﻿@for (entry of instances(); track entry.instance.id) {
     @let _tasks = entry.tasks();
     <div class="header hstack gap-2">
         <n>{{ entry.instance.icon() }}</n>
@@ -6,7 +6,7 @@
         @if (entry.instance.canCreateTasks()) {
             <i class="text-primary pointer" (click)="onNewTask(entry)" (keyup.enter)="onNewTask(entry)" tabindex="0">add</i>
         }
-        <i class="pointer" (click)="toggle(entry.key)">{{ isCollapsed(entry.key) ? 'expand_less' : 'expand_more' }}</i>
+        <i class="pointer" tabindex="0" (click)="toggle(entry.key)" (keyup.enter)="toggle(entry.key)">{{ isCollapsed(entry.key) ? 'expand_less' : 'expand_more' }}</i>
     </div>
     @if (!isCollapsed(entry.key)) {
         <ul class="list-group">

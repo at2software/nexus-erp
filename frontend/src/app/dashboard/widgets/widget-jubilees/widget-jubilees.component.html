@@ -7,14 +7,14 @@
     <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
 
     @if (jubilees().length) {
-        <ul class="list-group">
+        <ul revealList class="list-group">
             @for (j of jubilees(); track $index) {
                 <li class="list-group-item hstack gap-2" [class.today]="isToday(j)">
                     <div class="text-nowrap">
                         <img [src]="env.envApi + j.path + '/icon'" class="avatar avatar-sm" alt="" />
                     </div>
                     <div class="flex-fill text-truncate">{{ j.name }}</div>
-                    <span class="label text-muted text-nowrap">{{ j.next | date }}</span>
+                    <span class="label text-muted text-nowrap">{{ j.next.toDate() | date }}</span>
                     @if (j.type === 0) {
                         <i class="cursor-default" [ngbTooltip]="j.label">cake</i>
                     }

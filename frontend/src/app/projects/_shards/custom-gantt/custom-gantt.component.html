@@ -133,18 +133,18 @@
                 >
                     <div xmlns="http://www.w3.org/1999/xhtml" class="header-content-wrapper">
                         <div class="project-label" [style.left.px]="_viewportLeft + 16" style="text-shadow: 0 0 3px #000" (click)="navigateToProject(row.project!)" (keydown.enter)="navigateToProject(row.project!)" (keydown.space)="navigateToProject(row.project!)" tabindex="0" role="button">
-                            {{ row.project?.name }}
+                            {{ row.project.name }}
                         </div>
                         <div class="header-add-button" [style.left.px]="_viewportRight - 50" ngbDropdown #dropdown="ngbDropdown" placement="bottom-end" container="body" (openChange)="onDropdownOpenChange()">
                             <button class="btn-add" ngbDropdownToggle type="button">
                                 <i>add</i>
                             </button>
                             <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
-                                <button class="dropdown-item" type="button" (click)="onAddMilestoneClick(row.project!, dropdown)">
+                                <button class="dropdown-item" type="button" (click)="onAddMilestoneClick(row.project!, dropdown, $event)">
                                     <i class="me-2">schedule</i>
                                     Add Milestone
                                 </button>
-                                <button class="dropdown-item" type="button" (click)="onAddTaskClick(row.project!, dropdown)">
+                                <button class="dropdown-item" type="button" (click)="onAddTaskClick(row.project!, dropdown, $event)">
                                     <i class="me-2">task</i>
                                     Add Task
                                 </button>
@@ -326,7 +326,7 @@
                         (contextmenu)="onTaskContextMenu($event, row.data)"
                     >
                         <div xmlns="http://www.w3.org/1999/xhtml" class="task-content-wrapper">
-                            <div class="task-label" [class.completing]="isTaskCompleting(row.data.id)">
+                            <div class="task-label" [class.completing]="isTaskCompleting(row.data.id)" [class.disappearing]="isTaskCompleting(row.data.id)" (animationend)="onTaskLabelAnimationEnd(row.data.id, $event)">
                                 <input
                                     type="checkbox"
                                     class="task-checkbox"

@@ -3,7 +3,8 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgbTooltipModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { forkJoin } from 'rxjs';
-import { DebriefService, CategoryBreakdown } from '@models/project/debrief.service';
+import { DebriefService } from '@models/project/debrief.service';
+import { CategoryBreakdown } from '@models/api-response';
 import { DebriefProjectDebrief } from '@models/project/debrief-project-debrief.model';
 import { DebriefProblem } from '@models/project/debrief-problem.model';
 import { DebriefProblemCategory } from '@models/project/debrief-problem-category.model';
@@ -14,6 +15,7 @@ import { DebriefProblemAutocompleteComponent } from '@app/projects/_shards/debri
 import { DebriefPositiveAutocompleteComponent } from '@app/projects/_shards/debrief-positive-autocomplete/debrief-positive-autocomplete.component';
 import { DebriefSolutionInlineComponent } from '@app/projects/_shards/debrief-solution-inline/debrief-solution-inline.component';
 import { DebriefRadarChartComponent } from '@app/projects/_shards/debrief-radar-chart/debrief-radar-chart.component';
+import { ProjectFeaturesListComponent } from '@app/projects/_shards/project-features-list/project-features-list.component';
 import { Nx } from '@app/nx/nx.directive';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { Toast } from '@shards/toast/toast';
@@ -22,6 +24,7 @@ import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
 import { LocalAIPlugin } from '@models/http/plugin.localai';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { Dictionary } from '@constants/constants';
 
 type Severity = 'low' | 'medium' | 'high' | 'critical';
 
@@ -35,8 +38,7 @@ interface AISuggestion {
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'project-debriefing',
-    standalone: true,
-    imports: [DatePipe, FormsModule, NgbTooltipModule, NgbDropdownModule, Nx, ToolbarComponent, DebriefProblemAutocompleteComponent, DebriefPositiveAutocompleteComponent, DebriefSolutionInlineComponent, DebriefRadarChartComponent, AutosaveDirective, EmptyStateComponent, SpinnerComponent],
+    imports: [DatePipe, FormsModule, NgbTooltipModule, NgbDropdownModule, Nx, ToolbarComponent, DebriefProblemAutocompleteComponent, DebriefPositiveAutocompleteComponent, DebriefSolutionInlineComponent, DebriefRadarChartComponent, ProjectFeaturesListComponent, AutosaveDirective, EmptyStateComponent, SpinnerComponent],
     templateUrl: './project-debriefing.component.html',
     styleUrls: ['./project-debriefing.component.scss'],
 })
@@ -47,14 +49,15 @@ export class ProjectDebriefingComponent {
     categories = signal<DebriefProblemCategory[]>([]);
     expandedProblemId = signal<string | null>(null);
 
-    severityMap = signal<Record<string, Severity>>({});
-    aiLoadingMap = signal<Record<string, boolean>>({});
-    aiSuggestionsMap = signal<Record<string, AISuggestion[]>>({});
+    severityMap = signal<Dictionary<Severity>>({});
+    aiLoadingMap = signal<Dictionary<boolean>>({});
+    aiSuggestionsMap = signal<Dictionary<AISuggestion[]>>({});
 
     #service = inject(DebriefService);
     #guard = inject(ProjectDetailGuard);
     #pluginFactory = inject(PluginInstanceFactory);
 
+    project = computed(() => this.#guard.object());
     projectId = computed(() => this.#guard.object()?.id || '');
     projectUsers = computed(() => this.#guard.object()?.assignedUsers().map(a => a.assignee as User) || []);
     #categoryMap = computed(() => new Map(this.categories().map(c => [c.id, c])));
@@ -73,14 +76,18 @@ export class ProjectDebriefingComponent {
     loadData() {
         this.loading.set(true);
 
-        forkJoin([this.#service.indexCategories(), this.#service.indexProjectDebriefs(this.projectId())]).subscribe({
-            next: ([categories, debriefs]: [DebriefProblemCategory[], DebriefProjectDebrief[]]) => {
+        this.#fetchData().subscribe({
+            next: ([categories, debriefs]) => {
                 this.categories.set(categories || []);
                 this.debriefs.set(debriefs || []);
                 this.loading.set(false);
             },
             error: () => this.loading.set(false),
         });
+    }
+
+    #fetchData() {
+        return forkJoin([this.#service.indexCategories(), this.#service.indexProjectDebriefs(this.projectId())]);
     }
 
     createDebrief() {
@@ -96,7 +103,7 @@ export class ProjectDebriefingComponent {
     }
 
     getCategoryBreakdown(debrief: DebriefProjectDebrief): CategoryBreakdown[] {
-        const weights: Record<string, number> = { low: 1, medium: 2, high: 3, critical: 4 };
+        const weights: Dictionary<number> = { low: 1, medium: 2, high: 3, critical: 4 };
         return this.categories().map(cat => {
             const problems = debrief.problems.filter(p => p.debrief_problem_category_id === cat.id);
             const severityCounts = { low: 0, medium: 0, high: 0, critical: 0 };
@@ -236,7 +243,7 @@ export class ProjectDebriefingComponent {
     }
 
     getSeverityClass(severity: string): string {
-        const map: Record<string, string> = { critical: 'bg-red', high: 'bg-orange', medium: 'bg-cyan', low: 'bg-grey' };
+        const map: Dictionary<string> = { critical: 'bg-red', high: 'bg-orange', medium: 'bg-cyan', low: 'bg-grey' };
         return map[severity] ?? 'bg-grey';
     }
 

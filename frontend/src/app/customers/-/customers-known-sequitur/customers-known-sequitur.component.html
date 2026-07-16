@@ -18,7 +18,7 @@
             <ul class="list-group" #company>
                 @for (c of _cust?.employees; track c.id) {
                     @if (!c.is_retired) {
-                        <list-group-item-contact [nx]="c" [tables]="_cust?.employees" [contact]="c" [showQuickContact]="true" [subject]="_cust?.getName()" (click)="selectItem(c, $event)" tabindex="0" (keydown.enter)="selectItem(c, $event)" (actionsResolved)="onAssignmentActions($event)">
+                        <list-group-item-contact [nx]="c" [tables]="_cust?.employees" [contact]="c" [showQuickContact]="true" [subject]="_cust?.getName() ?? ''" (click)="selectItem(c, $event)" tabindex="0" (keydown.enter)="selectItem(c, $event)" (actionsResolved)="onAssignmentActions($event)">
                             <div class="hstack gap-1">
                                 @if (birthdayMissing(c)) {
                                     <div>
@@ -105,26 +105,23 @@
 
         <div id="notesContainer">
             @for (note of _notes; track note.id) {
-                @if (getItem(note); as item) {
-                    @if (note.var.active && isInstanceOf(item, 'Project')) {
+                @if (note.var.active && getItem(note); as item) {
+                    @if (item.assert(Project); as project) {
                         <div class="card mb-3">
                             <div class="card-header d-flex justify-content-between align-items-center">
-                                <div>{{ asProject(item).getName() }}</div>
+                                <div>{{ project.getName() }}</div>
                             </div>
-                            <rte [object]="item" key="description" [class.compact]="true"></rte>
+                            <rte [object]="project" key="description" [class.compact]="true"></rte>
                         </div>
+                        <media-preview [parent]="project"></media-preview>
                     }
-                    @if (note.var.active && (isInstanceOf(item, 'Company') || isInstanceOf(item, 'Project'))) {
-                        <media-preview [parent]="item"></media-preview>
+                    @if (item.assert(Company); as company) {
+                        <media-preview [parent]="company"></media-preview>
+                        <app-vcard [object]="company"></app-vcard>
                     }
-                }
-                @if (getItem(note); as item) {
-                    @if (note.var.active && isCompanyContact(item)) {
-                        <app-vcard [object]="item.contact" type="home"></app-vcard>
-                        <app-vcard [object]="item"></app-vcard>
-                    }
-                    @if (note.var.active && isInstanceOf(item, 'Company')) {
-                        <app-vcard [object]="item"></app-vcard>
+                    @if (item.assert(CompanyContact); as contact) {
+                        <app-vcard [object]="contact.contact" type="home"></app-vcard>
+                        <app-vcard [object]="contact"></app-vcard>
                     }
                 }
             }

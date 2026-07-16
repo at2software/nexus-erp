@@ -11,9 +11,10 @@ import { User } from '../user/user.model';
 @Injectable({ providedIn: 'root' })
 export class FocusService extends NexusHttpService<Focus> {
     public apiPath = 'foci';
-    public TYPE = () => Focus;
+    override readonly model = Focus;
     indexFor = (_: Serializable) => this.aget(`${_.apiPathWithId()}/foci`);
-    storeFor = (date: string, duration: number, user: User) => this.post('foci', { date: date, duration: duration, user_id: user.id }, Focus);
+    storeFor = (date: string, duration: number, user: User, parentPath?: string) =>
+        this.post('foci', { date: date, duration: duration, user_id: user.id, ...(parentPath ? { parent_path: parentPath } : {}) }, Focus);
     getFociFor(project: Project, userIds?: string[], sortField?: string, sortDirection?: string, notYetInvoiced?: boolean, startDate?: string, endDate?: string): Observable<Focus[]>;
     getFociFor(company: Company, userIds?: string[], sortField?: string, sortDirection?: string, notYetInvoiced?: boolean, startDate?: string, endDate?: string): Observable<Focus[]>;
     getFociFor(_: Project | Company, userIds?: string[], sortField?: string, sortDirection?: string, notYetInvoiced?: boolean, startDate?: string, endDate?: string): Observable<Focus[]> {
@@ -42,6 +43,9 @@ export class FocusService extends NexusHttpService<Focus> {
         return this.aget(`${_.apiPathWithId()}/foci`, params);
     }
     uninvoicedFoci = (_: Serializable) => this.aget(`foci/uninvoiced/${_.apiPathWithId()}`);
+
+    createForProject = (project: Project, payload: { duration: number; started_at: string; comment?: string; ext_issue_plugin_link_id?: string; ext_issue_id?: string }) =>
+        this.post('timetracker', { project_id: project.id, ...payload }, Focus);
 
     createInvoiceItemsFor = (_: Serializable, itemIds: string[], desc: string, duration: number, productId: string) =>
         this.post(

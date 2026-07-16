@@ -10,7 +10,6 @@ return new class extends Migration {
             $table->unsignedInteger('bumps')->default(0)->after('performance_value');
         });
     }
-
     public function down(): void {
         Schema::table('marketing_prospect_activities', function (Blueprint $table) {
             $table->dropColumn('bumps');

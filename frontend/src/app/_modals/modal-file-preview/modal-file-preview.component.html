@@ -1,0 +1,17 @@
+<div class="modal-header hstack gap-2">
+    <span class="modal-title flex-fill">{{ file()?.name }}</span>
+    <button type="button" class="btn btn-sm btn-outline-primary me-2" (click)="download()">
+        <i class="material-icons file-preview-download-icon">download</i>
+        <span i18n="@@i18n.common.download">download</span>
+    </button>
+    <button type="button" class="btn-close" (click)="decline()" i18n-aria-label="@@i18n.common.close" aria-label="Close"></button>
+</div>
+<div class="modal-body file-preview-body">
+    @if (!blobUrl()) {
+        <spinner [centered]="true"></spinner>
+    } @else if (isImage()) {
+        <img [src]="blobUrl()" [alt]="file()?.name" class="file-preview-image" />
+    } @else if (isPdf()) {
+        <iframe [src]="blobUrl() | safe" class="file-preview-pdf"></iframe>
+    }
+</div>

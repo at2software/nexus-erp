@@ -1,3 +1,4 @@
+import { Dictionary } from '@constants/constants';
 import { afterNextRender, Directive, effect, ElementRef, inject, Injector, input, OnInit, Renderer2 } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -12,7 +13,6 @@ import { filter } from 'rxjs';
  */
 @Directive({
     selector: '[smartLink]',
-    standalone: true,
 })
 export class SmartLinkDirective implements OnInit {
     readonly smartLink = input.required<string>();
@@ -26,7 +26,7 @@ export class SmartLinkDirective implements OnInit {
     readonly #injector = inject(Injector);
 
     static singleton: SmartLinkDirective;
-    static routes: Record<string, string | undefined> = {};
+    static routes: Dictionary<string | undefined> = {};
 
     constructor() {
         if (!SmartLinkDirective.singleton) SmartLinkDirective.singleton = this;

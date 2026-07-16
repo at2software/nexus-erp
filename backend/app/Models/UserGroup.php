@@ -8,7 +8,6 @@ class UserGroup extends BaseModel {
     use HasFactory;
 
     protected $fillable = ['access'];
-    protected $access   = ['admin' => '*'];
 
     public function users() {
         return $this->hasMany(User::class);

@@ -13,6 +13,7 @@ import { NxGlobal } from '@app/nx/nx.global';
 import { EchartsRangeCardComponent } from '@charts/echarts-card/echarts-range-card.component';
 import { Comment } from '@models/comment/comment.model';
 import { Company } from '@models/company/company.model';
+import { CompanyContact } from '@models/company/company-contact.model';
 import { CompanyService } from '@models/company/company.service';
 import { Connection } from '@models/company/connection.model';
 import { Project } from '@models/project/project.model';
@@ -23,7 +24,7 @@ import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
 import { RteComponent } from '@shards/rte/rte.component';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { forkJoin, Observable, of, switchMap } from 'rxjs';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { MoneyPipe } from '@pipes/money.pipe';
@@ -43,7 +44,6 @@ import { UlCompactComponent } from '@shards/ul-compact/ul-compact.component';
     selector: 'customers-known-sequitur',
     templateUrl: './customers-known-sequitur.component.html',
     styleUrls: ['./customers-known-sequitur.component.scss'],
-    standalone: true,
     imports: [ToolbarComponent, ListGroupItemContactComponent, Nx, AvatarComponent, ProjectComponent, NgbPopoverModule, NgbDropdownModule, SearchInputComponent, NgTemplateOutlet, EchartsRangeCardComponent, VcardComponent, CustomerQuickstatsComponent, EmptyStateComponent, UlCompactComponent, CompactItemDirective, FormsModule, HotkeyDirective, MoneyPipe, MediaPreviewComponent, AvatarComponent, RteComponent, SafePipe],
 })
 export class CustomersKnownSequiturComponent {
@@ -59,7 +59,12 @@ export class CustomersKnownSequiturComponent {
     projects = signal<Project[]>([]);
     notes = signal<Comment[]>([]);
     connections = signal<Connection[]>([]);
-    selectedItem: any = null;
+    selectedItem: Serializable | null = null;
+
+    // Class references for type-safe `assert` narrowing in the template.
+    protected readonly Project = Project;
+    protected readonly Company = Company;
+    protected readonly CompanyContact = CompanyContact;
 
     constructor() {
         effect(() => {
@@ -74,16 +79,16 @@ export class CustomersKnownSequiturComponent {
     }
 
     // Helper to compare items by their API path
-    isSameItem = (a: any, b: any) => a?.apiPathWithId?.() === b?.apiPathWithId?.();
+    isSameItem = (a: Serializable | null | undefined, b: Serializable | null | undefined) => a?.apiPathWithId() === b?.apiPathWithId();
 
-    onSearchResultSelect(_: any) {
+    onSearchResultSelect(_: Serializable & { company?: Company }) {
         let customerId = '';
         switch (_.class) {
             case 'Company':
                 customerId = _.id;
                 break;
             case 'CompanyContact':
-                customerId = _.company.id;
+                customerId = _.company!.id;
                 break;
         }
         if (customerId != '') this.#companyService.show(customerId).subscribe((_) => this.setCustomer(_));
@@ -157,9 +162,7 @@ export class CustomersKnownSequiturComponent {
         this.notes.update(notes => notes.filter(n => !this.isSameItem(n, item)));
     }
 
-    getItem(item: Serializable): any {
-        const itemAsAny = item as any;
-        if (itemAsAny._parent) return itemAsAny._parent;
+    getItem(item: Serializable): Project | CompanyContact | Company | undefined {
 
         const projects = this.projects();
         const cust = this.customer();
@@ -183,14 +186,14 @@ export class CustomersKnownSequiturComponent {
     createProject = (event: Event) => {
         event.stopPropagation();
         this.#inputModalService.open($localize`:@@i18n.customers.project_name:Project name`).confirmed(({ text }) => {
-            this.#projectService.addProject(this.customer()!.id, text).subscribe((x: any) => this.projects.update(p => [...p, x]));
+            this.#projectService.addProject(this.customer()!.id, text).subscribe((x) => this.projects.update(p => [...p, x]));
         });
     };
 
     createSubProject = (event: Event, parentProject: Project) => {
         event.stopPropagation();
         this.#inputModalService.open($localize`:@@i18n.customers.project_name:Project name`).confirmed(({ text }) => {
-            this.#projectService.post(`companies/${this.customer()!.id}/projects`, { name: text, project_id: parentProject.id }).subscribe((x: any) => this.projects.update(p => [...p, x]));
+            this.#projectService.post(`companies/${this.customer()!.id}/projects`, { name: text, project_id: parentProject.id }).subscribe((x) => this.projects.update(p => [...p, x]));
         });
     };
 
@@ -200,16 +203,18 @@ export class CustomersKnownSequiturComponent {
 
     createCompany = () => {
         this.#inputModalService.open($localize`:@@i18n.customers.company_name:company name`).confirmed(({ text }) => {
-            this.#companyService.create(text).subscribe((x: any) => {
+            this.#companyService.create(text).subscribe((x) => {
                 this.onCompanySelect(x);
             });
         });
     };
 
-    onCompanySelect(x: Company) {
+    onCompanySelect(x: Serializable) {
+        const company = x.assert(Company);
+        if (!company) return;
         Connection.fromJson({
             company1_id: this.customer()!.id,
-            company2_id: x.id,
+            company2_id: company.id,
         })
             .store()
             .subscribe((_) => {
@@ -217,22 +222,23 @@ export class CustomersKnownSequiturComponent {
             });
     }
 
-    asProject = (_: any) => _ as Project;
-    birthdayMissing = (item: any) => this.isInstanceOf(item, 'CompanyContact') && !item.contact?.card?.get?.('BDAY')?.length;
-    linkedinMissing = (item: any) => this.isInstanceOf(item, 'CompanyContact') && !item.contact?.card?.get?.('URL')?.filter((row: VcardRow) => row.getType() == 'linkedin')?.length;
+    asProject = (_: Serializable) => _ as Project;
+    birthdayMissing = (item: Serializable) => this.isInstanceOf(item, 'CompanyContact') && !(item as unknown as { contact?: { card?: { get?: (k: string) => unknown[] } } }).contact?.card?.get?.('BDAY')?.length;
+    linkedinMissing = (item: Serializable) => this.isInstanceOf(item, 'CompanyContact') && !(item as unknown as { contact?: { card?: { get?: (k: string) => VcardRow[] } } }).contact?.card?.get?.('URL')?.filter((row: VcardRow) => row.getType() == 'linkedin')?.length;
 
-    webUrlMissing = (item: any) => this.isInstanceOf(item, 'Company') && item.card.get('URL').every((row: VcardRow) => row.isSocialMedia());
-    commercialRegisterNumberMissing = (item: any) => this.isInstanceOf(item, 'Company') && (item.name.includes('GmbH') || item.name.includes('AG')) && !item.commercial_register;
+    // `.card` is a signal function, not called here, matching the original (pre-typing) runtime behavior
+    webUrlMissing = (item: Serializable) => this.isInstanceOf(item, 'Company') && (item as unknown as { card: { get: (k: string) => VcardRow[] } }).card.get('URL').every((row: VcardRow) => row.isSocialMedia());
+    commercialRegisterNumberMissing = (item: Serializable) => {
+        const company = item as Company & { name: string };
+        return this.isInstanceOf(item, 'Company') && (company.name.includes('GmbH') || company.name.includes('AG')) && !company.commercial_register;
+    };
 
-    isCompanyContact(item: any) {
-        return this.isInstanceOf(item, 'CompanyContact');
-    }
-    isInstanceOf(item: any, className: string) {
+    isInstanceOf(item: Serializable | null | undefined, className: string) {
         return item?.class == className;
     }
 
     saveComments() {
-        const subs: Observable<any>[] = [];
+        const subs: Observable<null>[] = [];
         this.notes().forEach((note) => {
             if (note.text != null && note.text != '') {
                 const item = this.getItem(note);
@@ -243,7 +249,7 @@ export class CustomersKnownSequiturComponent {
                             switchMap((_) => {
                                 this.projects.update(ps => {
                                     const index = ps.findIndex(p => p.id === _.id);
-                                    if (index > -1) ps[index].description = _;
+                                    if (index > -1) ps[index].description = _.description;
                                     return [...ps];
                                 });
                                 return of(null);
@@ -311,7 +317,7 @@ export class CustomersKnownSequiturComponent {
         const comment = textareaElement.value.trim();
         if (!comment) return;
 
-        const now = moment().format('YYYY-MM-DD HH:mm');
+        const now = dayjs().format('YYYY-MM-DD HH:mm');
         const userName = NxGlobal.global.user?.getName() || 'Unknown User';
 
         // Convert newlines to <br> tags
@@ -336,20 +342,20 @@ export class CustomersKnownSequiturComponent {
     }
 
     // User Assignment Methods for individual items
-    availableUsersForItem(item: any): User[] {
-        const assignedUserIds = item.assignees?.map((a: any) => a.assignee.id) || [];
+    availableUsersForItem(item: Company | Project): User[] {
+        const assignedUserIds = item.assignees?.map((a) => a.assignee.id) || [];
         return this.#global.team.filter((user: User) => !assignedUserIds.includes(user.id));
     }
 
-    addUserToItem(item: any, user: User) {
-        if (this.isInstanceOf(item, 'Company')) {
+    addUserToItem(item: Company | Project, user: User) {
+        if (item instanceof Company) {
             this.#assignmentService.addToCompany(item, { id: user.id, class: 'user' }).subscribe((response) => {
                 if (!item.assignees) {
                     item.assignees = [];
                 }
                 item.assignees.push(response);
             });
-        } else if (this.isInstanceOf(item, 'Project')) {
+        } else if (item instanceof Project) {
             this.#assignmentService.addToProject(item, { id: user.id, class: 'user' }).subscribe((response) => {
                 if (!item.assignees) {
                     item.assignees = [];

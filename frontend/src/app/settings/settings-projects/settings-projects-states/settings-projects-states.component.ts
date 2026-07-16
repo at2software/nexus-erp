@@ -11,7 +11,6 @@ import { ProjectState } from '@models/project/project-state.model';
     selector: 'settings-projects-states',
     templateUrl: './settings-projects-states.component.html',
     styleUrls: ['./settings-projects-states.component.scss'],
-    standalone: true,
     imports: [FormsModule, AutosaveDirective, ColorPickerDirective, ProjectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

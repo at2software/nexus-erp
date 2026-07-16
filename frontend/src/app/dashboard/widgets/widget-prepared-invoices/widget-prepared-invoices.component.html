@@ -12,9 +12,9 @@
     <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
 
     @if (!getOptions()['chart-only']?.value) {
-        <ul-compact>
+        <ul-compact revealList>
             @for (_ of data(); track _.id; let i = $index) {
-                <li class="list-group-item d-flex text-nowrap" [compact]="i >= (options()['max-items']?.value ?? 0)" [nx]="_" context="widgetPreparedInvoices" [tables]="data()">
+                <li class="list-group-item d-flex text-nowrap" [compact]="exceedsMaxItems(i)" [nx]="_" context="widgetPreparedInvoices" [tables]="data()">
                     @if (_.class === 'Company') {
                         <div>
                             <avatar [object]="_"></avatar>

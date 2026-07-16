@@ -7,6 +7,7 @@ import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { User } from '@models/user/user.model';
 import { Vacation } from '@models/vacation/vacation.model';
 import { VacationService } from '@models/vacation/vacation.service';
+import { Dayjs } from '@constants/dates';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -14,18 +15,17 @@ import { VacationService } from '@models/vacation/vacation.service';
     templateUrl: './hr-sick-note-modal.component.html',
     styleUrls: ['./hr-sick-note-modal.component.scss'],
     providers: [{ provide: NgbDateAdapter, useClass: NgbDateCarbonAdapter }],
-    standalone: true,
     imports: [FormsModule, NgxDaterangepickerMd],
 })
 export class HrSickNoteModalComponent extends ModalBaseComponent<void> {
-    sickPeriod!: { startDate: any; endDate: any };
+    sickPeriod!: { startDate: Dayjs; endDate: Dayjs };
     hasESickNote = signal(false);
     user!: User;
 
     vacationService = inject(VacationService);
 
-    init(...args: any): void {
-        this.user = args[0].user;
+    init(args: { user: User }): void {
+        this.user = args.user;
     }
 
     onSuccess(): void {

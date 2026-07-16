@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CommentType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
@@ -9,8 +10,12 @@ class Comment extends BaseModel {
     use HasFactory;
 
     protected $fillable = ['path', 'text', 'user_id', 'parent_id', 'parent_type', 'is_mini', 'type'];
+
+    protected function casts(): array {
+        return ['type' => CommentType::class];
+    }
+
     protected $touches  = ['user', 'parent'];
-    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
     public function getIconAttribute() {
         return 'users/'.$this->user_id.'/icon';

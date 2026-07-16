@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Dictionary } from '@constants/constants';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { InvoiceService } from '@models/invoice/invoice.service';
 import { MoneyPipe } from '@pipes/money.pipe';
@@ -8,16 +9,7 @@ import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS } from '@app/_charts/echarts-presets';
 import type { EChartsOption } from 'echarts';
 import { Color } from '@constants/Color';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-
-export interface LiquidityEvent {
-    date: string;
-    amount: number;
-    type: 'expense' | 'standing_order' | 'open_invoice' | 'budget_project' | 'support' | 'downpayment';
-    label: string;
-    balance_after: number;
-    invoice_date?: string;
-    payment_days?: number;
-}
+import { LiquidityEvent, LiquidityResponse } from '@models/api-response';
 
 interface DayGroup {
     date: string;
@@ -28,7 +20,7 @@ interface DayGroup {
 
 const fmt = (v: number) => ShortPipe.shorten(v);
 
-const TYPE_CONFIG: Record<string, { label: string; badge: string }> = {
+const TYPE_CONFIG: Dictionary<{ label: string; badge: string }> = {
     expense:        { label: $localize`:@@i18n.invoices.expense:Expense`,               badge: 'text-bg-danger'  },
     standing_order: { label: $localize`:@@i18n.invoices.standingOrder:Standing order`,  badge: 'text-bg-warning' },
     open_invoice:   { label: $localize`:@@i18n.invoices.openInvoice:Open invoice`,      badge: 'text-bg-info'    },
@@ -41,11 +33,10 @@ const TYPE_CONFIG: Record<string, { label: string; badge: string }> = {
     selector: 'financial-liquidity',
     templateUrl: './financial-liquidity.component.html',
     styleUrls: ['./financial-liquidity.component.scss'],
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [NgxEchartsDirective, MoneyPipe, DatePipe, NgClass, NgbTooltipModule],
 })
-export class FinancialLiquidityComponent implements OnInit {
+export class FinancialLiquidityComponent {
     readonly #invoiceService = inject(InvoiceService);
 
     isLoading      = signal(true);
@@ -69,9 +60,9 @@ export class FinancialLiquidityComponent implements OnInit {
         }));
     });
 
-    ngOnInit() {
+    constructor() {
         this.#invoiceService.getLiquidity().subscribe({
-            next: (data: any) => {
+            next: (data: LiquidityResponse) => {
                 this.balance.set(data.balance);
                 this.events.set(data.events ?? []);
                 this.chartOptions.set(this.#buildChartOptions(data.balance, data.events ?? []));
@@ -98,7 +89,7 @@ export class FinancialLiquidityComponent implements OnInit {
     toggleDay(date: string) {
         this.expandedDates.update(s => {
             const next = new Set(s);
-            next.has(date) ? next.delete(date) : next.add(date);
+            if (next.has(date)) next.delete(date); else next.add(date);
             return next;
         });
     }
@@ -162,8 +153,8 @@ export class FinancialLiquidityComponent implements OnInit {
             tooltip: {
                 trigger: 'axis',
                 ...ECHARTS_DEFAULT_TOOLTIP_OPTIONS,
-                formatter: (params: any) => {
-                    const p = Array.isArray(params) ? params[0] : params;
+                formatter: (params) => {
+                    const p = (Array.isArray(params) ? params[0] : params) as { data?: unknown; value?: unknown; name?: string };
                     const raw = p?.data ?? p?.value;
                     if (!raw) return '';
                     const [open, close, low, high] = raw as number[];

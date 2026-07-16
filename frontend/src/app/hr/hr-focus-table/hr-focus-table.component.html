@@ -1,12 +1,11 @@
 @let _user = user();
 
-<toolbar>
-    <button class="btn btn-primary" roles="admin" (click)="openAddFocusModal(addFocus)" ngbTooltip="CTRL+ALT+N" hotkey="CTRL+ALT+N"><i>add</i> focus</button>
-</toolbar>
-
 <div class="card">
-    <div class="card-header">
-        {{ _user.getName() }}
+    <div class="card-header hstack gap-2">
+        <div class="flex-fill">{{ _user.getName() }}</div>
+        <div>
+            <i class="cursor-pointer text-primary" roles="admin" (click)="openAddFocusModal(addFocus)" ngbTooltip="CTRL+ALT+N" hotkey="CTRL+ALT+N">add</i>
+        </div>
     </div>
     <ul class="list-group">
         @for (x of days; track x.date) {
@@ -70,9 +69,15 @@
     <div class="modal-body">
         <div class="input-group mb-2">
             <div class="input-group-prepend">
+                <span class="input-group-text" i18n="@@i18n.common.project">project</span>
+            </div>
+            <search-input class="flex-fill" only="Project,Company" [(selected)]="addFocusParent" [has_icon]="true"></search-input>
+        </div>
+        <div class="input-group mb-2">
+            <div class="input-group-prepend">
                 <span class="input-group-text" i18n="@@i18n.common.date">date</span>
             </div>
-            <input ngbDatepicker #d="ngbDatepicker" placeholder="yyyy-mm-dd" (click)="d.open()" class="form-control" tabindex="-1" [startDate]="addFocusDate" (dateSelect)="d.close()" [(ngModel)]="addFocusDate" [autoClose]="'outside'" />
+            <input ngbDatepicker #d="ngbDatepicker" placeholder="yyyy-mm-dd" (click)="d.open()" class="form-control" tabindex="-1" [startDate]="addFocusDate ?? defaultFocusDate" (dateSelect)="d.close()" [(ngModel)]="addFocusDate" [autoClose]="'outside'" />
             <button class="btn btn-outline-primary" (click)="d.toggle()" type="button"><i>calendar_month</i></button>
         </div>
         <div class="input-group mb-2">

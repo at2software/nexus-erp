@@ -1,10 +1,10 @@
-@let _vacationRequests = vacationRequests();
+﻿@let _vacationRequests = vacationRequests();
 @let _sickNotes = sickNotes();
 
 @if (_vacationRequests.length) {
     <div class="header hstack gap-2">
         <span class="flex-fill" i18n="@@i18n.common.timeOffRequests">time off requests</span>
-        <i class="pointer" (click)="toggle('vacationRequests')">{{ isCollapsed('vacationRequests') ? 'expand_less' : 'expand_more' }}</i>
+        <i class="pointer" tabindex="0" (click)="toggle('vacationRequests')" (keyup.enter)="toggle('vacationRequests')">{{ isCollapsed('vacationRequests') ? 'expand_less' : 'expand_more' }}</i>
     </div>
     @if (!isCollapsed('vacationRequests')) {
         <ul class="list-group">
@@ -24,7 +24,7 @@
 @if (_sickNotes.length) {
     <div class="header hstack gap-2">
         <span class="flex-fill" i18n="@@i18n.common.sickNotes">sick notes</span>
-        <i class="pointer" (click)="toggle('sickNotes')">{{ isCollapsed('sickNotes') ? 'expand_less' : 'expand_more' }}</i>
+        <i class="pointer" tabindex="0" (click)="toggle('sickNotes')" (keyup.enter)="toggle('sickNotes')">{{ isCollapsed('sickNotes') ? 'expand_less' : 'expand_more' }}</i>
     </div>
     @if (!isCollapsed('sickNotes')) {
         <ul class="list-group">

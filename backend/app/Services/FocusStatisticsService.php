@@ -7,6 +7,7 @@ use App\Models\Focus;
 use App\Models\Param;
 use App\Models\Project;
 use App\Models\User;
+use Carbon\Carbon;
 
 class FocusStatisticsService {
     public static function getFocusCategories(): array {
@@ -58,7 +59,47 @@ class FocusStatisticsService {
     public static function getFocusAccuracy(): array {
         $startDate = now()->subYears(2);
         $users     = User::whereHas('activeEmployments')->get();
-        return $users->map(fn ($user) => $user->getFocusAccuracyData($startDate))->toArray();
+
+        // Single query for all users - avoids N+1 (was: 1 aggregated + N per-month queries per user)
+        $allFoci = Focus::query()
+            ->whereIn('foci.user_id', $users->pluck('id'))
+            ->where('foci.started_at', '>=', $startDate)
+            ->whereBudgetProject()
+            ->select(['foci.user_id', 'foci.started_at', 'foci.invoice_item_id', 'foci.duration'])
+            ->get();
+
+        $fociByUser = $allFoci->groupBy('user_id');
+
+        return $users->map(function ($user) use ($fociByUser) {
+            $userFoci = $fociByUser->get($user->id, collect());
+            $grouped  = $userFoci->groupBy(fn ($f) => Carbon::parse($f->started_at)->format('Y-m'));
+
+            $monthlyAccuracy = $grouped->sortKeys()->map(function ($foci, $month) {
+                $totalCount      = $foci->count();
+                $focusedCount    = $foci->whereNotNull('invoice_item_id')->count();
+                $totalDuration   = $foci->sum('duration');
+                $focusedDuration = $foci->whereNotNull('invoice_item_id')->sum('duration');
+
+                if ($totalCount === 0) {
+                    return null;
+                }
+                return [
+                    'month'                       => $month,
+                    'focused_percentage_count'    => round(($focusedCount / $totalCount) * 100, 1),
+                    'focused_percentage_duration' => round($totalDuration > 0 ? ($focusedDuration / $totalDuration) * 100 : 0, 1),
+                    'total_foci_count'            => $totalCount,
+                    'focused_foci_count'          => $focusedCount,
+                    'total_duration'              => round($totalDuration, 2),
+                    'focused_duration'            => round($focusedDuration, 2),
+                ];
+            })->filter()->values()->toArray();
+
+            return [
+                'id'                     => $user->id,
+                'name'                   => $user->name,
+                'monthly_focus_accuracy' => $monthlyAccuracy,
+            ];
+        })->toArray();
     }
     public static function getCompanyPredictionAccuracy(): array {
         $startDate = now()->subMonths(24);
@@ -167,13 +208,13 @@ class FocusStatisticsService {
                 continue;
             }
             $result[] = [
-                'month'          => $month,
-                'bias_factor'    => round($data['weighted_sum'] / $data['total_weight'], 4),
+                'period'         => $month,
+                'value'          => round($data['weighted_sum'] / $data['total_weight'], 4),
                 'projects_count' => count($data['projects']),
             ];
         }
 
-        usort($result, fn ($a, $b) => strcmp($a['month'], $b['month']));
+        usort($result, fn ($a, $b) => strcmp($a['period'], $b['period']));
         return $result;
     }
 

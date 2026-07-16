@@ -4,12 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\PluginLink;
 use App\Models\Project;
-use App\Traits\ControllerHasPermissionsTrait;
 use Illuminate\Http\Request;
 
 class PluginLinkController extends Controller {
-    use ControllerHasPermissionsTrait;
-
     public function store(Request $request) {
         return (new PluginLink)->applyAndSave($request);
     }

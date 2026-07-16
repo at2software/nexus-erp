@@ -14,8 +14,11 @@
                     <colgroup>
                         <col style="width: 30px" />
                         <col style="width: 100px" />
-                        <col style="width: 75px" />
                         <col />
+                        @if (hasIssueTracker()) {
+                            <col style="width: 30px" />
+                        }
+                        <col style="width: 75px" />
                     </colgroup>
                     <ng-container cdkColumnDef="user_id">
                         <th cdk-header-cell *cdkHeaderCellDef class="text-end"></th>
@@ -33,11 +36,27 @@
                         <th cdk-header-cell *cdkHeaderCellDef class="text-truncate" i18n="@@i18n.common.comment">comment</th>
                         <td cdk-cell *cdkCellDef="let x" class="text-truncate small">{{ x.comment }}</td>
                     </ng-container>
+                    <ng-container cdkColumnDef="ext_issue">
+                        <th cdk-header-cell *cdkHeaderCellDef class="text-center" i18n="@@i18n.common.issue">issue</th>
+                        <td cdk-cell *cdkCellDef="let x" class="text-center small">
+                            @if (extIssues()[x.id]; as ei) {
+                                <a [href]="ei.href" ngbTooltip="#{{ x.ext_issue_id }}" target="_blank" class="text-primary text-nowrap" (click)="$event.stopPropagation()">                                     
+                                    @if (ei.state === 1) {
+                                        <n class="text-success">{{ ei.icon }}</n>
+                                    } @else if (ei.state === 0) {
+                                        <n class="text-cyan">{{ ei.icon }}</n>
+                                    }
+                                </a>
+                            } @else if (x.ext_issue_id) {
+                                <spinner [size]="20" [centered]="true" [visible]="true"></spinner>
+                            }
+                        </td>
+                    </ng-container>
                     <ng-container cdkColumnDef="duration">
                         <th cdk-header-cell *cdkHeaderCellDef class="text-end text-truncate"><i>timer</i></th>
                         <td cdk-cell *cdkCellDef="let x" class="text-end small">{{ x.duration | number: '1.1-1' }} h</td>
                     </ng-container>
-                    <tr cdk-row class="align-middle border-black text-truncate {{ row.markerClass() }}" [nx]="row" *cdkRowDef="let row; columns: fociColumns"></tr>
+                    <tr cdk-row class="align-middle border-black text-truncate {{ row.markerClass() }}" [nx]="row" (actionsResolved)="onFociActionsResolved()" *cdkRowDef="let row; columns: fociColumns()"></tr>
                 </table>
             </div>
         </div>
@@ -90,7 +109,7 @@
                 <span i18n="@@i18n.invoice.supportItems">support items</span>
                 @if (supportItems().length > 0) {
                     <div class="card-header-actions">
-                        <a [routerLink]="['..', invoicingRoute()]" class="btn btn-sm text-primary" ngbTooltip="go to invoicing" i18n-ngbTooltip="@@i18n.projects.goToInvoicing">
+                        <a [routerLink]="invoicingRoute()" class="btn btn-sm text-primary" ngbTooltip="go to invoicing" i18n-ngbTooltip="@@i18n.projects.goToInvoicing">
                             <i>arrow_forward</i>
                         </a>
                     </div>

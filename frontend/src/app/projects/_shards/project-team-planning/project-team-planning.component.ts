@@ -25,13 +25,12 @@ import { AvatarComponent } from '@shards/avatar/avatar.component';
     selector: 'project-team-planning',
     templateUrl: './project-team-planning.component.html',
     styleUrls: ['./project-team-planning.component.scss'],
-    standalone: true,
     imports: [PermissionsDirective, DecimalPipe, FormsModule, AutosaveDirective, AvatarComponent, Nx, NComponent, AvatarComponent, NgbDropdownModule, NgbTooltipModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectTeamPlanningComponent {
-    readonly entityIn = input.required<IHasAssignees>({ alias: 'entity' });
-    readonly entity = tracked(this.entityIn);
+    readonly entity = input.required<IHasAssignees>();
+    readonly trackedEntity = tracked(this.entity);
 
     assignees = signal<Assignee[]>([]);
 
@@ -39,9 +38,16 @@ export class ProjectTeamPlanningComponent {
     #global = inject(GlobalService);
     #factory = inject(PluginInstanceFactory);
     #cdr = inject(ChangeDetectorRef);
+    tooltipText = computed(() => {
+        const progress = this.forecastProgress();
+        if (!progress) return '';
+        return `invested: ${progress.invested.toFixed(1)}h ` +
+            `forecast: ${progress.forecast.toFixed(1)}h ` +
+            `estimated: ${progress.estimated.toFixed(1)}h`;
+    });
 
     constructor() {
-        effect(() => this.assignees.set(this.entityIn().assignees.filter((_) => _.assignee?.class == 'User')));
+        effect(() => this.assignees.set(this.trackedEntity().assignees.filter((_) => _.assignee?.class == 'User')));
 
         effect((onCleanup) => {
             const instances = [this.mantisInstance(), this.gitInstance(), this.mattermostInstance()].filter(Boolean) as PluginInstance[];
@@ -58,7 +64,7 @@ export class ProjectTeamPlanningComponent {
     }
 
     addUser(x: User) {
-        const entity = this.entity();
+        const entity = this.trackedEntity();
         if (entity instanceof Project) {
             this.#assignmentService.addToProject(entity, { id: x.id, class: 'user' }).subscribe((response: Assignee) => {
                 entity.assignees.push(response);
@@ -75,7 +81,7 @@ export class ProjectTeamPlanningComponent {
     canBeAssigned = computed(() =>
         this.#global.team.filter(
             (x) =>
-                !this.entity()
+                !this.trackedEntity()
                     .assignedUsers()
                     .map((a) => a.assignee.id)
                     .contains(x.id),
@@ -83,7 +89,7 @@ export class ProjectTeamPlanningComponent {
     );
 
     asProject = computed(() => {
-        const _ = this.entity();
+        const _ = this.trackedEntity();
         return _ instanceof Project ? (_ as Project) : undefined;
     });
 
@@ -120,9 +126,9 @@ export class ProjectTeamPlanningComponent {
 
     isProjectManager = computed(() => this.#global.user?.hasRole('project_manager') ?? false);
 
-    mantisInstance = computed(() => this.#factory.instancesFor(this.entity(), MantisPlugin));
-    gitInstance = computed(() => this.#factory.instancesFor(this.entity(), GitLabPlugin));
-    mattermostInstance = computed(() => this.#factory.instancesFor(this.entity(), MattermostPlugin));
+    mantisInstance = computed(() => this.#factory.instancesFor(this.trackedEntity(), MantisPlugin));
+    gitInstance = computed(() => this.#factory.instancesFor(this.trackedEntity(), GitLabPlugin));
+    mattermostInstance = computed(() => this.#factory.instancesFor(this.trackedEntity(), MattermostPlugin));
 
     openMantisLink(event: Event) {
         event.preventDefault();

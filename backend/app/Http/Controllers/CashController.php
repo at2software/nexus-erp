@@ -4,11 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Cash;
 use App\Models\CashRegister;
-use App\Traits\ControllerHasPermissionsTrait;
 
 class CashController extends Controller {
-    use ControllerHasPermissionsTrait;
-
     public function indexRegisters() {
         return CashRegister::get();
     }

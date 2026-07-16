@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, NgZone } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterModule } from '@angular/router';
 import { NxContextMenu } from '@app/nx/nx.contextmenu';
 import { NgbTooltipConfig } from '@ng-bootstrap/ng-bootstrap';
 import { fromEvent, map } from 'rxjs';
 import { GlobalService } from '@models/global.service';
+import { LiveSyncService } from '@models/live-sync.service';
 import { NavigationComponent } from './navigation/navigation.component';
 import { ActivityComponent } from '@activity/activity.component';
 import { TabAttentionComponent } from '@activity/tab-attention/tab-attention.component';
@@ -21,7 +22,6 @@ const BREAKPOINT_ACTIVITY = 1700;
     selector: 'app-root',
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.scss'],
-    standalone: true,
     imports: [NxContextMenu, RouterModule, NavigationComponent, ActivityComponent, TabAttentionComponent, TabCopypasteComponent, TabTasksComponent, TabInvoicingComponent, TabWidgetsComponent, ToastsContainer],
 })
 export class AppComponent {
@@ -36,12 +36,25 @@ export class AppComponent {
     );
 
     constructor() {
+        // root services are lazy - construct LiveSyncService at startup so it listens from the first event
+        inject(LiveSyncService);
+
         this.#tooltipConfig.container = 'body';
         this.#tooltipConfig.animation = false;
 
         effect(() => {
             document.body.classList.toggle('activity-hidden', this.#narrow());
             document.body.classList.toggle('activity-collapsed', this.#narrow());
+        });
+
+        // Prevent Firefox from navigating to dropped files.
+        // Capture phase fires before element handlers and before Firefox's navigation decision.
+        inject(NgZone).runOutsideAngular(() => {
+            // Capture phase: lets dragover reach every element so the copy cursor shows everywhere.
+            window.addEventListener('dragover', (e) => e.preventDefault(), true);
+            // Bubble phase: fallback for drops that land outside a [dnd] zone.
+            // Drops inside a [dnd] zone are stopped by stopPropagation() in onDrop and never reach here.
+            window.addEventListener('drop', (e) => e.preventDefault(), false);
         });
     }
 }

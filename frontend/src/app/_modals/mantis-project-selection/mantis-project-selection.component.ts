@@ -1,7 +1,6 @@
 ﻿import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-
-import { MantisPlugin } from '@models/http/plugin.mantis';
+import { MantisPlugin, MantisProject } from '@models/http/plugin.mantis';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 
 @Component({
@@ -9,7 +8,6 @@ import { ModalBaseComponent } from '@app/_modals/modal-base.component';
     selector: 'mantis-project-selection',
     templateUrl: './mantis-project-selection.component.html',
     styleUrls: ['./mantis-project-selection.component.scss'],
-    standalone: true,
     imports: [FormsModule],
 })
 export class MantisProjectSelectionComponent extends ModalBaseComponent<string> {
@@ -26,12 +24,9 @@ export class MantisProjectSelectionComponent extends ModalBaseComponent<string> 
     getMantisProjects = () => {
         const projects = this.mantisPlugin?.projects || [];
         if (!this.searchTerm) return projects;
-        return projects.filter((p: any) => p.name.toLowerCase().includes(this.searchTerm.toLowerCase()) || p.description?.toLowerCase().includes(this.searchTerm.toLowerCase()));
+        return projects.filter((p: MantisProject) => p.name.toLowerCase().includes(this.searchTerm.toLowerCase()) || p.description?.toLowerCase().includes(this.searchTerm.toLowerCase()));
     };
 
-    selectProject = (projectId: string) => {
-        this.id = projectId;
-    };
-
+    selectProject = (projectId: string) => this.id = projectId;
     isSelected = (projectId: string) => this.id === projectId;
 }

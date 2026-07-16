@@ -21,7 +21,7 @@ class UptimeCheckService {
             $requestConfig = [
                 'timeout'         => $monitor->timeout,
                 'connect_timeout' => 10,
-                'verify'          => false, // Disable SSL verification for uptime checks
+                'verify'          => ! $monitor->skip_ssl_verification,
             ];
 
             if ($monitor->request_headers) {

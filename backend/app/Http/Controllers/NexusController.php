@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Invoice;
 use App\Models\Project;
+use App\Models\ProjectState;
 use Illuminate\Http\Request;
 
 /**
@@ -36,7 +37,7 @@ class NexusController extends Controller {
             'Overdue invoice'
         );
         // add overdue projects
-        $fnMerge($return, Project::where('due_at', '<', now())->where('state', 'in_progress'),
+        $fnMerge($return, Project::where('due_at', '<', now())->whereState('progress', ProjectState::Running),
             function ($x) {
                 return $x->name;
             },
@@ -55,7 +56,7 @@ class NexusController extends Controller {
             ->header('Cache-Control', 'private, max-age='.$browserCache)
             ->header('Expires', gmdate('D, d M Y H:i:s', time() + $browserCache).' GMT')
             ->header('Content-Length', strlen($photo))
-            ->header('Last-Modified', $this->modified_at)
+            ->header('Last-Modified', gmdate('D, d M Y H:i:s', filemtime(resource_path('icons/synapse.png'))).' GMT')
             ->header('ETag', hash('sha256', $photo));
     }
     public function populateClipboard(Request $request) {

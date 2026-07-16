@@ -23,7 +23,7 @@
                                 <div class="input-group-prepend col-3">
                                     <span class="input-group-text" i18n="@@i18n.profile.sickPeriod">sick period</span>
                                 </div>
-                                <input type="text" class="form-control" ngxDaterangepickerMd [(ngModel)]="sickPeriod" [alwaysShowCalendars]="true" [locale]="{ applyLabel: 'ok', format: 'YYYY-MM-DD' }" />
+                                <input type="text" class="form-control" ngxDaterangepickerMd [(ngModel)]="sickPeriod" [alwaysShowCalendars]="true" [autoApply]="true" [locale]="{ format: 'YYYY-MM-DD' }" />
                             </div>
                         </li>
                         <li class="list-group-item">

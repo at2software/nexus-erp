@@ -2,13 +2,13 @@
 
 namespace App\Traits;
 
-use App\Http\Middleware\Auth;
 use App\Jobs\ChatAddUsersJob;
 use App\Models\Assignment;
 use App\Models\CompanyContact;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 trait HasAssignmentsTrait {

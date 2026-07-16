@@ -11,7 +11,6 @@ const TYPES = ['Festanstellung', 'Praktikum', 'Werkstudent'];
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'hr-add-employee-modal',
-    standalone: true,
     imports: [FormsModule, NgbDatepickerModule],
     providers: [{ provide: NgbDateAdapter, useClass: NgbDateCarbonAdapter }],
     template: `

@@ -1,0 +1,69 @@
+<div class="modal d-block" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">
+                    <n>{{ tracker.instance.icon() }}</n>
+                    <span class="ms-1" i18n="@@i18n.issues.importUnresolvedIssues">import unresolved issues</span>
+                </span>
+                <button type="button" class="btn-close" (click)="decline()" tabindex="0" (keydown.enter)="decline()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <spinner [size]="36" [centered]="true" [visible]="loading()"></spinner>
+
+                @if (!loading()) {
+                    @if (availableLabels().length > 0) {
+                        <div class="hstack gap-2 flex-wrap mb-3">
+                            @for (label of availableLabels(); track label) {
+                                <button type="button" class="btn btn-sm" [class.btn-primary]="selectedLabels().has(label)" [class.btn-outline-primary]="!selectedLabels().has(label)" (click)="toggleLabel(label)">
+                                    {{ label }}
+                                </button>
+                            }
+                        </div>
+                    }
+
+                    @if (skippedCount() > 0) {
+                        <div class="text-muted small mb-2" i18n="@@i18n.issues.alreadyImportedSkipped">{{ skippedCount() }} issue(s) already imported — skipped</div>
+                    }
+
+                    @if (filteredTasks().length === 0) {
+                        <div class="text-center text-muted py-4" i18n="@@i18n.issues.noIssuesFound">no issues found</div>
+                    } @else {
+                        <div class="hstack gap-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" (click)="toggleSelectAll()">
+                                @if (allFilteredSelected()) {
+                                    <span i18n="@@i18n.issues.deselectAll">deselect all</span>
+                                } @else {
+                                    <span i18n="@@i18n.issues.selectAll">select all</span>
+                                }
+                            </button>
+                        </div>
+                        <div style="max-height: 360px; overflow-y: auto">
+                            @for (task of filteredTasks(); track task.id) {
+                                <div class="card mb-2" [class.border-primary]="isSelected(task)" (click)="toggleSelected(task)" tabindex="0" (keydown.enter)="toggleSelected(task)" role="button">
+                                    <div class="card-body hstack gap-2 py-1 align-items-center justify-content-between">
+                                        <input type="checkbox" class="form-check-input" [checked]="isSelected(task)" (click)="$event.stopPropagation()" (change)="toggleSelected(task)" />
+                                        <div class="flex-grow-1 text-truncate">
+                                            <span class="text-truncate">{{ task.name }}</span>
+                                        </div>
+                                        @if (task.labels.length > 0) {
+                                            <div class="ms-3 text-nowrap">
+                                                @for (label of task.labels; track label) {
+                                                    <span class="badge bg-darker text-muted ms-1">{{ label }}</span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" (click)="decline()" tabindex="0" (keydown.enter)="decline()" i18n="@@i18n.common.cancel">cancel</button>
+                <button type="button" class="btn btn-primary" (click)="accept()" [disabled]="!canSubmit()" hotkey="CTRL+ENTER" i18n="@@i18n.common.ok">ok</button>
+            </div>
+        </div>
+    </div>
+</div>

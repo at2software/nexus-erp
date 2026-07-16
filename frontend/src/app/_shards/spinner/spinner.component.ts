@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, input, model } from '@angular/core'
 
 @Component({
     selector: 'spinner',
-    standalone: true,
     imports: [],
     templateUrl: './spinner.component.html',
     styleUrl: './spinner.component.scss',

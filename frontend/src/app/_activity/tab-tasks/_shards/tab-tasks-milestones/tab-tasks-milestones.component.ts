@@ -14,15 +14,11 @@ import { TabTasksBaseComponent } from '../tab-tasks-base.component';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'tab-tasks-milestones',
     templateUrl: './tab-tasks-milestones.component.html',
-    standalone: true,
     imports: [NgTemplateOutlet, Nx, NComponent, AvatarComponent, NgbTooltipModule],
 })
 export class TabTasksMilestonesComponent extends TabTasksBaseComponent {
     milestonesOverdue = signal<Milestone[]>([]);
 
-    readonly #collapsed = signal<Set<string>>(new Set());
-    toggle = (key: string) => this.#collapsed.update(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
-    isCollapsed = (key: string) => this.#collapsed().has(key);
     milestonesNeedStarting = signal<Milestone[]>([]);
     milestonesRunning = signal<Milestone[]>([]);
     milestonesNeedAssignment = signal<Milestone[]>([]);
@@ -41,9 +37,8 @@ export class TabTasksMilestonesComponent extends TabTasksBaseComponent {
                 const running: Milestone[] = [];
                 const noDuration: Milestone[] = [];
                 data.forEach((group) => {
-                    const project = Project.fromJson((group as any).project);
-                    group.milestones.forEach((ms: any) => {
-                        const milestone = Milestone.fromJson(ms.milestone);
+                    const project = group.project;
+                    group.milestones.forEach((milestone) => {
                         milestone.project = project;
                         const hasNoDuration = (!milestone.workload_hours || milestone.workload_hours === 0) && (!milestone.invoice_items || milestone.invoice_items.length === 0) && !milestone.project?.is_time_based;
                         if (hasNoDuration && milestone.state !== 2) noDuration.push(milestone);
@@ -65,14 +60,11 @@ export class TabTasksMilestonesComponent extends TabTasksBaseComponent {
         this.#milestoneService
             .indexPmMilestones(this.global.user?.id || '')
             .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe((data: any) => {
+            .subscribe((data) => {
                 const needAssignment: Milestone[] = [];
-                const noCoverage: Project[] = data.projectsNoCoverage || [];
-                (data.milestones || []).forEach((group: any) => {
-                    const project = Project.fromJson(group.project);
-                    group.milestones.forEach((ms: any) => {
-                        const milestone = Milestone.fromJson(ms.milestone);
-                        milestone.project = project;
+                data.milestones.forEach((group) => {
+                    group.milestones.forEach((milestone) => {
+                        milestone.project = group.project;
                         if (milestone.user_id === this.global.user?.id) return;
                         if (milestone.user_id === null) {
                             needAssignment.push(milestone);
@@ -86,7 +78,7 @@ export class TabTasksMilestonesComponent extends TabTasksBaseComponent {
                     });
                 });
                 this.milestonesNeedAssignment.set(needAssignment);
-                this.projectsNoCoverage.set(noCoverage);
+                this.projectsNoCoverage.set(data.projectsNoCoverage);
             });
     }
 }

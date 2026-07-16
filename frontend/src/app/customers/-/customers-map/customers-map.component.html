@@ -1,7 +1,8 @@
 @let _loading = loading();
+@let _customers = customers();
 <toolbar>
     @if (!_loading) {
-        <span class="badge bg-primary me-2"> {{ customers.length }} customers with locations </span>
+        <span class="badge bg-primary me-2"> {{ _customers.length }} customers with locations </span>
     }
     @if (_loading) {
         <spinner [size]="20" [inline]="true"></spinner>
@@ -25,7 +26,7 @@
         }
     </div>
 
-    @if (!_loading && customers.length === 0) {
+    @if (!_loading && _customers.length === 0) {
         <div class="empty-state text-center py-5">
             <i class="display-4 text-muted mb-3">location_off</i>
             <span class="text-muted" i18n="@@i18n.customers.noCustomersWithCoordinatesFound">no customers with coordinates found</span>

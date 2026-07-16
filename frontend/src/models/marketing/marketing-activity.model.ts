@@ -5,22 +5,7 @@ import { Type } from 'class-transformer';
 import { MarketingPerformanceMetric } from './marketing-performance-metrics.model';
 import { IActivityBase } from './activity-base.interface';
 import { Model } from '@constants/type-discriminators';
-
-/**
- * Centralized type for activity statistics
- * Used by both MarketingActivity.stats and MarketingPerformanceMetric.activity_stats
- */
-export interface TActivityStats {
-    total: number;
-    pending: number;
-    overdue: number;
-    completed: number;
-    skipped: number;
-    pending_percentage: number;
-    overdue_percentage: number;
-    completed_percentage: number;
-    skipped_percentage: number;
-}
+import type { ActivityStats } from '@models/api-response';
 
 export type QuickActionType = 'EMAIL' | 'LINKEDIN' | 'LINKEDIN_SEARCH' | 'CALL' | null;
 
@@ -46,7 +31,7 @@ export class MarketingActivity extends Serializable implements IActivityBase {
     quick_action?: QuickActionType;
 
     // Stats added dynamically by backend
-    stats?: TActivityStats;
+    stats?: ActivityStats;
 
     @Type(()=>MarketingPerformanceMetric) performance_metrics?: MarketingPerformanceMetric[];
     @Type(()=>MarketingActivity) child_activities?: MarketingActivity[];

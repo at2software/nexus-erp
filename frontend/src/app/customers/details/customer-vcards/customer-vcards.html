@@ -5,7 +5,7 @@
             <div class="card mb-3">
                 <div class="card-header p-1 d-flex">
                     <list-group-item-contact class="flex-fill text-truncate" [contact]="_company" [nx]="_company" [showQuickContact]="true" routerLink="."> </list-group-item-contact>
-                    <div>
+                    <div roles="project_manager|marketing">
                         <button class="card-header-action btn text-primary" type="submit" (click)="onAddEmployee()" title="add" i18n-title="@@i18n.common.add">
                             <i class="text-primary">add</i>
                         </button>

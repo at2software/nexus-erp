@@ -22,7 +22,7 @@ class AddMissingGitWebhooksCommand extends Command {
             NLog::error('<AddMissingGitWebhooksCommand> No GitLab credentials set');
             return;
         }
-        if (preg_match('/(localhost|127.0.0.1)/is', env('API_URL'))) {
+        if (preg_match('/(localhost|127.0.0.1)/is', config('app.api_url'))) {
             NLog::error('<AddMissingGitWebhooksCommand> Cannot use this command from local environment');
             return;
         }
@@ -42,8 +42,8 @@ class AddMissingGitWebhooksCommand extends Command {
         }
     }
     public function parsePluginLink(PluginLink $link): bool {
-        if (! str_starts_with($link->url, env('GITLAB_URL'))) {
-            NLog::error("<AddMissingGitWebhooksCommand> NEXUS does not support linking another GitLab instance '$link->url' != '".env('APP_URL')."'");
+        if (! str_starts_with($link->url, config('services.gitlab.url'))) {
+            NLog::error("<AddMissingGitWebhooksCommand> NEXUS does not support linking another GitLab instance '$link->url' != '".config('app.url')."'");
             return true;
         }
         try {
@@ -58,7 +58,7 @@ class AddMissingGitWebhooksCommand extends Command {
             }
             $hasHook = false;
             foreach ($hooks as $hook) {
-                if (str_starts_with($hook->url, env('API_URL'))) {
+                if (str_starts_with($hook->url, config('app.api_url'))) {
                     $hasHook = true;
                 }
             }

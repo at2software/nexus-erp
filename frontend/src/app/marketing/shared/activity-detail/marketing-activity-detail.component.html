@@ -1,6 +1,7 @@
 @let _activity = activity();
 @let _isLoading = isLoading();
 @let _isSaving = isSaving();
+@let _availableMetrics = availableMetrics();
 
 @if (_isLoading) {
     <div class="card mb-2">
@@ -23,13 +24,13 @@
          <div class="card-body pt-2">
             <form>
                 <div class="mb-2">
-                    <label class="form-label small mb-1" i18n="@@i18n.common.name">name</label>
-                    <input type="text" class="form-control form-control-sm" [(ngModel)]="editName" name="name" />
+                    <label class="form-label small mb-1" for="actDetailName" i18n="@@i18n.common.name">name</label>
+                    <input id="actDetailName" type="text" class="form-control form-control-sm" [(ngModel)]="editName" name="name" />
                 </div>
 
                 <div class="mb-2">
-                    <label class="form-label small mb-1" i18n="@@i18n.marketing.dayOffset">day offset</label>
-                    <input type="number" class="form-control form-control-sm" [(ngModel)]="editDayOffset" name="dayOffset" />
+                    <label class="form-label small mb-1" for="actDetailDayOffset" i18n="@@i18n.marketing.dayOffset">day offset</label>
+                    <input id="actDetailDayOffset" type="number" class="form-control form-control-sm" [(ngModel)]="editDayOffset" name="dayOffset" />
                 </div>
 
                 <div class="mb-2">
@@ -37,14 +38,22 @@
                 </div>
 
                 <div class="mb-2">
-                    <label class="form-label small mb-1" i18n="@@i18n.marketing.quick_action">quick action</label>
+                    <label class="form-label small mb-1" for="actDetailQuickAction" i18n="@@i18n.marketing.quick_action">quick action</label>
                     <div ngbDropdown class="d-block">
-                        <button type="button" class="btn btn-sm btn-dark w-100 text-start dropdown-toggle-simple" ngbDropdownToggle>
-                            {{ selectedQuickActionLabel }}
+                        <button id="actDetailQuickAction" type="button" class="btn btn-sm btn-simple w-100 text-start dropdown-toggle-simple" ngbDropdownToggle>
+                            @if (selectedQuickAction().icon) {
+                                <i class="me-1">{{ selectedQuickAction().icon }}</i>
+                            }
+                            {{ selectedQuickAction().label }}
                         </button>
                         <div ngbDropdownMenu class="w-100">
                             @for (qa of quickActions; track $index) {
-                                <button ngbDropdownItem (click)="editQuickAction = qa.value">{{ qa.label }}</button>
+                                <button ngbDropdownItem (click)="editQuickAction.set(qa.value)">
+                                    @if (qa.icon) {
+                                        <i class="me-1">{{ qa.icon }}</i>
+                                    }
+                                    {{ qa.label }}
+                                </button>
                             }
                         </div>
                     </div>
@@ -53,16 +62,16 @@
                 @let siblings = siblingActivities();
                 @if (siblings.length > 1) {
                     <div class="mb-2">
-                        <label class="form-label small mb-1" i18n="@@i18n.marketing.parent_activity">parent activity</label>
+                        <label class="form-label small mb-1" for="actDetailParentActivity" i18n="@@i18n.marketing.parent_activity">parent activity</label>
                         <div ngbDropdown class="d-block">
-                            <button type="button" class="btn btn-sm btn-dark w-100 text-start dropdown-toggle-simple" ngbDropdownToggle>
-                                {{ selectedParentActivityLabel }}
+                            <button id="actDetailParentActivity" type="button" class="btn btn-sm btn-simple w-100 text-start dropdown-toggle-simple" ngbDropdownToggle>
+                                {{ selectedParentActivityLabel() }}
                             </button>
                             <div ngbDropdownMenu class="w-100">
-                                <button ngbDropdownItem (click)="editParentActivityId = ''" i18n="@@i18n.common.none">none</button>
+                                <button ngbDropdownItem (click)="editParentActivityId.set('')" i18n="@@i18n.common.none">none</button>
                                 @for (sibling of siblings; track sibling.id) {
                                     @if (sibling.id !== _activity.id) {
-                                        <button ngbDropdownItem (click)="editParentActivityId = sibling.id.toString()">
+                                        <button ngbDropdownItem (click)="editParentActivityId.set(sibling.id.toString())">
                                             D{{ sibling.day_offset }} – {{ sibling.name }}
                                         </button>
                                     }
@@ -73,15 +82,22 @@
                 }
 
                 <div class="mb-2">
-                    <label class="form-label small mb-1" i18n="@@i18n.marketing.kpi_metric">KPI / metric</label>
+                    <label class="form-label small mb-1" for="actDetailKpiMetric" i18n="@@i18n.marketing.kpi_metric">KPI / metric</label>
                     <div ngbDropdown class="d-block">
-                        <button type="button" class="btn btn-sm btn-dark w-100 text-start dropdown-toggle-simple" ngbDropdownToggle>
-                            {{ selectedMetricLabel }}
+                        <button id="actDetailKpiMetric" type="button" class="btn btn-sm btn-simple w-100 text-start dropdown-toggle-simple" ngbDropdownToggle>
+                            @let _selectedMetric = selectedMetric();
+                            @if (_selectedMetric) {
+                                <i class="me-1" [style.color]="_selectedMetric.getIconColor()">{{ _selectedMetric.getIcon() }}</i>
+                            }
+                            {{ _selectedMetric?.name ?? 'none' }}
                         </button>
                         <div ngbDropdownMenu class="w-100">
-                            <button ngbDropdownItem (click)="selectedKpiId = ''" i18n="@@i18n.common.none">none</button>
-                            @for (metric of availableMetrics; track metric.id) {
-                                <button ngbDropdownItem (click)="selectedKpiId = metric.id.toString()">{{ metric.name }}</button>
+                            <button ngbDropdownItem (click)="selectedKpiId.set('')" i18n="@@i18n.common.none">none</button>
+                            @for (metric of _availableMetrics; track metric.id) {
+                                <button ngbDropdownItem (click)="selectedKpiId.set(metric.id.toString())">
+                                    <i class="me-1" [style.color]="metric.getIconColor()">{{ metric.getIcon() }}</i>
+                                    {{ metric.name }}
+                                </button>
                             }
                         </div>
                     </div>

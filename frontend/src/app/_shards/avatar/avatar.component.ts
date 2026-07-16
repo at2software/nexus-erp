@@ -13,7 +13,6 @@ import { User } from '@models/user/user.model';
     templateUrl: './avatar.component.html',
     styleUrls: ['./avatar.component.scss'],
     imports: [SmartLinkDirective, NgbTooltipModule],
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AvatarComponent {

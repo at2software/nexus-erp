@@ -1,3 +1,5 @@
+import { Dictionary } from '@constants/constants';
+
 export class Role {
     constructor(
         public id: number,
@@ -5,16 +7,7 @@ export class Role {
         public description: string,
     ) {}
 
-    static fromJson(data: any): Role {
-        return new Role(data.id, data.name, data.description ?? '');
+    static fromJson(data: Dictionary): Role {
+        return new Role(data['id'] as number, data['name'] as string, (data['description'] as string | undefined) ?? '');
     }
-}
-
-export interface UserRoleEntry {
-    id: string;
-    name: string;
-    email: string;
-    icon: string;
-    is_retired: boolean;
-    role_names: string[];
 }

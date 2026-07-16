@@ -1,13 +1,14 @@
-﻿import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { Dictionary } from '@constants/constants';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { MarketingService } from '@models/marketing/marketing.service';
-import moment from 'moment';
+import { dayjs, Dayjs } from '@constants/dates';
 import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
 import { FormsModule } from '@angular/forms';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { forkJoin } from 'rxjs';
-import { SankeyChartComponent, SankeyData } from '@charts/sankey-chart/sankey-chart.component';
+import { SankeyChartComponent } from '@charts/sankey-chart/sankey-chart.component';
 import { ChartProgressComponent } from '@charts/chart-progress/chart-progress.component';
 
 import { GlobalService } from '@models/global.service';
@@ -15,31 +16,34 @@ import { LeadSourceService } from '@models/project/lead_source.service';
 import { LeadSource } from '@models/project/lead_source.model';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { MarketingDashboardStats, RemarketingResponse, SankeyData } from '@models/api-response';
+import { MarketingPerformanceMetric } from '@models/marketing/marketing-performance-metrics.model';
+import { File } from '@models/file/file.model';
+import { storageGet, storageSet } from '@constants/storage';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'marketing-dashboard',
     templateUrl: './marketing-dashboard.component.html',
     styleUrls: ['./marketing-dashboard.component.scss'],
-    standalone: true,
     imports: [NgxDaterangepickerMd, FormsModule, NgbTooltipModule, SankeyChartComponent, ChartProgressComponent, SpinnerComponent],
 })
-export class MarketingDashboardComponent implements OnInit {
+export class MarketingDashboardComponent {
     #destroyRef = inject(DestroyRef);
 
     funnelMode: 'count' | 'money' = 'count';
     funnelData = signal<SankeyData | undefined>(undefined);
     loadingFunnel = signal(false);
-    creation_span?: { startDate: any; endDate: any };
+    creation_span?: { startDate: Dayjs; endDate: Dayjs };
 
-    presetRanges: any = {
-        'Last 12 Months': [moment().subtract(12, 'months').startOf('month'), moment().endOf('month')],
-        'Last 36 Months': [moment().subtract(36, 'months').startOf('month'), moment().endOf('month')],
-        'Last Year': [moment().subtract(1, 'year').startOf('year'), moment().subtract(1, 'year').endOf('year')],
-        'This Year': [moment().startOf('year'), moment().endOf('year')],
-        'Last 3 Years': [moment().subtract(3, 'years').startOf('year'), moment().endOf('year')],
-        'Last 5 Years': [moment().subtract(5, 'years').startOf('year'), moment().endOf('year')],
-    };
+    presetRanges = {
+        'Last 12 Months': [dayjs().subtract(12, 'months').startOf('month'), dayjs().endOf('month')],
+        'Last 36 Months': [dayjs().subtract(36, 'months').startOf('month'), dayjs().endOf('month')],
+        'Last Year': [dayjs().subtract(1, 'year').startOf('year'), dayjs().subtract(1, 'year').endOf('year')],
+        'This Year': [dayjs().startOf('year'), dayjs().endOf('year')],
+        'Last 3 Years': [dayjs().subtract(3, 'years').startOf('year'), dayjs().endOf('year')],
+        'Last 5 Years': [dayjs().subtract(5, 'years').startOf('year'), dayjs().endOf('year')],
+    } satisfies Record<string, [Dayjs, Dayjs]>;
     service = inject(MarketingService);
     router = inject(Router);
     #global = inject(GlobalService);
@@ -47,26 +51,26 @@ export class MarketingDashboardComponent implements OnInit {
     #input = inject(InputModalService);
 
     // Assets properties
-    assetCategories: any[] = [];
+    assetCategories: { name: string; icon: string; color: string; count: number }[] = [];
     loadingAssets = signal(false);
 
     // Overview stats
-    stats = {
+    stats = signal({
         initiatives: { total: 0, active: 0 },
         prospects: { total: 0, new: 0, engaged: 0, converted: 0, unresponsive: 0, disqualified: 0, on_hold: 0 },
         activities: { pending: 0, overdue: 0 },
-    };
+    });
 
     // Extended dashboard data
-    dashboardStats: any = null;
+    dashboardStats = signal<MarketingDashboardStats | null>(null);
     loadingDashboard = signal(true);
-    remarketing: any = null;
+    remarketing = signal<RemarketingResponse | null>(null);
     loadingRemarketing = signal(true);
-    kpiMetrics: any[] = [];
+    kpiMetrics: MarketingPerformanceMetric[] = [];
     loadingMetrics = signal(true);
-    activitySchedule: any[] = [];
+    activitySchedule = signal<{ day: string; date: string; total: number; completed: number; pending: number; isToday: boolean }[]>([]);
 
-    ngOnInit() {
+    constructor() {
         this.reload();
         this.loadAssetStats();
         this.loadOverviewStats();
@@ -82,7 +86,7 @@ export class MarketingDashboardComponent implements OnInit {
         this.reloadFunnel();
     }
     getFilters() {
-        const filters: any = {};
+        const filters: Dictionary = {};
         if (this.creation_span?.startDate && this.creation_span?.endDate) {
             filters.created_after = this.creation_span.startDate.format('DD.MM.YYYY');
             filters.created_before = this.creation_span.endDate.add(1, 'day').format('DD.MM.YYYY');
@@ -93,7 +97,7 @@ export class MarketingDashboardComponent implements OnInit {
         this.funnelData.set(undefined);
         this.loadingFunnel.set(true);
         this.service.getFunnel(this.getFilters()).subscribe({
-            next: (response: any) => {
+            next: (response) => {
                 this.funnelData.set(response);
                 this.loadingFunnel.set(false);
             },
@@ -110,26 +114,28 @@ export class MarketingDashboardComponent implements OnInit {
         })
             .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe({
-                next: (response: any) => {
-                    const initiatives = response.initiatives.data || response.initiatives;
-                    this.stats.initiatives = {
-                        total: initiatives.length,
-                        active: initiatives.filter((i: any) => i.status === 'active').length,
-                    };
+                next: (response) => {
+                    const initiatives = response.initiatives.data;
                     const p = response.prospects;
-                    this.stats.prospects = {
-                        total: p.total || 0,
-                        new: p.by_status?.new || 0,
-                        engaged: p.by_status?.engaged || 0,
-                        converted: p.by_status?.converted || 0,
-                        unresponsive: p.by_status?.unresponsive || 0,
-                        disqualified: p.by_status?.disqualified || 0,
-                        on_hold: p.by_status?.on_hold || 0,
-                    };
-                    this.stats.activities = {
-                        pending: p.activities_pending || 0,
-                        overdue: p.activities_overdue || 0,
-                    };
+                    this.stats.set({
+                        initiatives: {
+                            total: initiatives.length,
+                            active: initiatives.filter((i) => i.status === 'active').length,
+                        },
+                        prospects: {
+                            total: p.total || 0,
+                            new: p.by_status?.new || 0,
+                            engaged: p.by_status?.engaged || 0,
+                            converted: p.by_status?.converted || 0,
+                            unresponsive: p.by_status?.unresponsive || 0,
+                            disqualified: p.by_status?.disqualified || 0,
+                            on_hold: p.by_status?.on_hold || 0,
+                        },
+                        activities: {
+                            pending: p.activities_pending || 0,
+                            overdue: p.activities_overdue || 0,
+                        },
+                    });
                 },
                 error: (err) => console.error('Error loading overview stats:', err),
             });
@@ -141,8 +147,8 @@ export class MarketingDashboardComponent implements OnInit {
             .getDashboardStats()
             .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe({
-                next: (data: any) => {
-                    this.dashboardStats = data;
+                next: (data) => {
+                    this.dashboardStats.set(data);
                     this.buildActivitySchedule();
                     this.loadingDashboard.set(false);
                 },
@@ -158,8 +164,8 @@ export class MarketingDashboardComponent implements OnInit {
             .getRemarketing()
             .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe({
-                next: (data: any) => {
-                    this.remarketing = data;
+                next: (data) => {
+                    this.remarketing.set(data);
                     this.loadingRemarketing.set(false);
                 },
                 error: () => {
@@ -174,7 +180,7 @@ export class MarketingDashboardComponent implements OnInit {
             .indexMetrics()
             .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe({
-                next: (data: any) => {
+                next: (data) => {
                     this.kpiMetrics = data;
                     this.loadingMetrics.set(false);
                 },
@@ -193,7 +199,7 @@ export class MarketingDashboardComponent implements OnInit {
             const d = new Date(today);
             d.setDate(d.getDate() + i);
             const dateStr = d.toISOString().split('T')[0];
-            const entry = (this.dashboardStats?.heatmap || []).find((h: any) => h.date === dateStr);
+            const entry = (this.dashboardStats()?.heatmap || []).find((h) => h.date === dateStr);
             schedule.push({
                 day: i === 0 ? 'Today' : dayNames[d.getDay()],
                 date: dateStr,
@@ -203,12 +209,13 @@ export class MarketingDashboardComponent implements OnInit {
                 isToday: i === 0,
             });
         }
-        this.activitySchedule = schedule;
+        this.activitySchedule.set(schedule);
     }
 
-    get agingBars() {
-        if (!this.dashboardStats?.aging) return [];
-        const { fresh = 0, warm = 0, cooling = 0, stale = 0 } = this.dashboardStats.aging;
+    agingBars = computed(() => {
+        const aging = this.dashboardStats()?.aging;
+        if (!aging) return [];
+        const { fresh = 0, warm = 0, cooling = 0, stale = 0 } = aging;
         const max = Math.max(fresh, warm, cooling, stale) || 1;
         return [
             { label: 'fresh', value: fresh, h: Math.round((fresh / max) * 52) },
@@ -216,18 +223,18 @@ export class MarketingDashboardComponent implements OnInit {
             { label: 'cooling', value: cooling, h: Math.round((cooling / max) * 52) },
             { label: 'stale', value: stale, h: Math.round((stale / max) * 52) },
         ];
-    }
+    });
 
-    get conversionRate(): number {
-        const total = this.stats.prospects.total;
+    conversionRate = computed<number>(() => {
+        const total = this.stats().prospects.total;
         if (!total) return 0;
-        return Math.round((this.stats.prospects.converted / total) * 100);
-    }
+        return Math.round((this.stats().prospects.converted / total) * 100);
+    });
 
     onNewLeadSource() {
         this.#input.open('Please enter the name of the new source').then((response) => {
             if (response) {
-                this.#leadSourceSvc.store(response.text).subscribe((_) => this.#global.lead_sources.push(LeadSource.fromJson(_)));
+                this.#leadSourceSvc.store(response.text).subscribe((_) => this.#global.lead_sources.update((sources) => [...sources, LeadSource.fromJson(_)]));
             }
         });
     }
@@ -245,15 +252,15 @@ export class MarketingDashboardComponent implements OnInit {
         this.router.navigate(['/marketing/remarketing']);
     }
     navigateToMemberProspects(userId: number) {
-        const existing = JSON.parse(localStorage.getItem('marketing-prospects-filters') || '{}');
-        localStorage.setItem('marketing-prospects-filters', JSON.stringify({ ...existing, userFilter: String(userId) }));
+        const existing = storageGet<Dictionary<unknown>>('marketing-prospects-filters', {});
+        storageSet('marketing-prospects-filters', { ...existing, userFilter: String(userId) });
         this.router.navigate(['/marketing/prospects']);
     }
 
     loadAssetStats() {
         this.loadingAssets.set(true);
         this.service.indexMarketingAssets('', '', '').subscribe(
-            (assets: any) => {
+            (assets) => {
                 const defaultCategories = [
                     { name: 'Brand Assets', icon: 'branding_watermark', color: 'primary' },
                     { name: 'Social Media', icon: 'share', color: 'info' },
@@ -263,8 +270,8 @@ export class MarketingDashboardComponent implements OnInit {
                     { name: 'Video Content', icon: 'videocam', color: 'danger' },
                     { name: 'Documents', icon: 'description', color: 'dark' },
                 ];
-                const categoryCounts: Record<string, number> = {};
-                assets.forEach((asset: any) => {
+                const categoryCounts: Dictionary<number> = {};
+                assets.forEach((asset: File) => {
                     if (asset.category) categoryCounts[asset.category] = (categoryCounts[asset.category] || 0) + 1;
                 });
                 this.assetCategories = defaultCategories.map((c) => ({ ...c, count: categoryCounts[c.name] || 0 })).filter((c) => c.count > 0);

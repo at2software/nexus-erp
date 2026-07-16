@@ -1,6 +1,5 @@
 import { ModalInputComponent } from '@app/_modals/modal-input/modal-input.component';
-import { NxGlobal } from '@app/nx/nx.global';
-import moment, { Moment } from 'moment';
+import { dayjs, Dayjs } from '@constants/dates';
 
 export enum RequestType {
     GET,
@@ -12,28 +11,30 @@ export enum RequestType {
 
 export const nxInput = (title:string) => ({ service: ModalInputComponent, args: { title: title } });
 
-export const filtered = (o: Dictionary): Dictionary => {
-    const n: Dictionary = {};
+export type Dictionary<T = unknown> = Record<string, T>;
+
+export const filtered = <T extends Dictionary>(o: T): Partial<T> => {
+    const n: Partial<T> = {};
     for (const k in o) {
-        if (o[k] !== undefined) n[k] = o[k];
+        const value = o[k];
+        if (value !== undefined) n[k] = value;
     }
     return n;
 };
 export const span = (o?: StartEnd): string | undefined => (o?.startDate?.format ? o.startDate.format('DD.MM.YYYY') + ',' + o.endDate!.format('DD.MM.YYYY') : undefined);
 
-export type Dictionary = Record<string, any>;
 export class StartEnd {
-    startDate: Moment | null = null;
-    endDate: Moment | null = null;
+    startDate: Dayjs | null = null;
+    endDate: Dayjs | null = null;
     toString = () => (this.startDate?.format && this.endDate?.format ? { startDate: this.startDate, endDate: this.endDate } : undefined);
 
-    constructor(_: any | undefined = undefined) {
+    constructor(_: { startDate?: Dayjs | string | null; endDate?: Dayjs | string | null } | undefined = undefined) {
         if (_) {
-            this.startDate = typeof _.startDate != 'string' ? _.startDate : moment(_.startDate);
-            this.endDate = typeof _.endDate != 'string' ? _.endDate : moment(_.endDate);
+            this.startDate = typeof _.startDate != 'string' ? (_.startDate ?? null) : dayjs(_.startDate);
+            this.endDate = typeof _.endDate != 'string' ? (_.endDate ?? null) : dayjs(_.endDate);
         }
     }
-    static forceObject = (_: any) => {
+    static forceObject = (_: StartEnd | { startDate?: Dayjs | string | null; endDate?: Dayjs | string | null } | undefined) => {
         if (_ instanceof StartEnd) {
             return _;
         }
@@ -44,11 +45,11 @@ export class StartEnd {
     };
 }
 
-export const indexed = (a: any[], key: string): Dictionary =>
-    Object.assign(
-        {},
-        a.map((x: any) => ({ [key]: x })),
-    );
+export const indexed = <T extends Dictionary>(a: T[], key: keyof T & string): Dictionary =>
+    a.reduce<Dictionary>((acc, x) => {
+        acc[String(x[key])] = x;
+        return acc;
+    }, {});
 /**
  * Converts an array of ISO objects to be used in typeahead param of <input-group> (unique keys only)
  * @param a The array to be converted
@@ -56,7 +57,10 @@ export const indexed = (a: any[], key: string): Dictionary =>
  * @param nameColumn name of the param to be used as name
  * @returns
  */
-export const typeahead = (a: any[], keyColumn: string, nameColumn: string): { key: string; name: string }[] => a.map((x) => ({ key: x[keyColumn] ?? '', name: x[nameColumn] ?? '' })).filter((v: any, index, self) => index === self.findIndex((y: any) => y.key === v.key));
+export const typeahead = <T extends Dictionary>(a: T[], keyColumn: keyof T & string, nameColumn: keyof T & string): { key: string; name: string }[] =>
+    a
+        .map((x) => ({ key: String(x[keyColumn] ?? ''), name: String(x[nameColumn] ?? '') }))
+        .filter((v, index, self) => index === self.findIndex((y) => y.key === v.key));
 
 // Re-export REFLECTION for backward compatibility
 export { REFLECTION } from './reflection';

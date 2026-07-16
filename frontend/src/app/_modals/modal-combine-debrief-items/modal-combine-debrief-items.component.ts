@@ -11,7 +11,6 @@ export interface CombineDebriefItemsResult {
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'modal-combine-debrief-items',
     templateUrl: './modal-combine-debrief-items.component.html',
-    standalone: true,
     imports: [FormsModule, HotkeyDirective],
 })
 export class ModalCombineDebriefItemsComponent extends ModalBaseComponent<CombineDebriefItemsResult> {

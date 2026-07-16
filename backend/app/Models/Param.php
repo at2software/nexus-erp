@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Param extends BaseModel {
     protected $fillable = ['key', 'value', 'has_history', 'type'];
-    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
     protected function casts(): array {
         return [
@@ -348,8 +347,15 @@ class Param extends BaseModel {
      * If value is a plain string, returns it as-is.
      */
     public function localizedValue(?string $language = 'de', ?string $formality = 'formal'): ?string {
-        $value = $this->value;
+        return self::localizeI18nValue($this->value, $language, $formality);
+    }
 
+    /**
+     * Same variant-picking logic as localizedValue(), extracted so callers
+     * that already have a raw (I18n-cast) value in hand — e.g. from a bulk
+     * query — can reuse it without instantiating a Param wrapper per row.
+     */
+    public static function localizeI18nValue($value, ?string $language = 'de', ?string $formality = 'formal'): ?string {
         if (! is_array($value)) {
             return $value;
         }

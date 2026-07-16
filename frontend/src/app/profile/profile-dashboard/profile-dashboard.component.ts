@@ -14,8 +14,6 @@ import { RouterModule } from '@angular/router';
 @Component({
     selector: 'profile-dashboard',
     templateUrl: './profile-dashboard.component.html',
-    styleUrls: ['./profile-dashboard.component.scss'],
-    standalone: true,
     imports: [ScrollbarComponent, ProfileVacationWidgetComponent, ColorPickerDirective, FormsModule, HrWorkloadComponent, HrWorkloadHeatmapComponent, RouterModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -31,6 +29,6 @@ export class ProfileDashboardComponent {
         this.#userService.showVacationStats(this.global.user!).subscribe();
     }
 
-    saveColor = (e: any) => this.global.user!.update({ color: e }).subscribe();
+    saveColor = (e: string) => this.global.user!.update({ color: e }).subscribe();
     toggleLiveSharing = (event: Event) => this.#liveSharingService.toggleFeature((event.target as HTMLInputElement).checked);
 }

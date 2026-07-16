@@ -8,7 +8,6 @@ class UserPaidTime extends BaseModel {
     use HasFactory;
 
     protected $fillable = ['paid_at', 'user_id', 'granted_by_user_id', 'raw', 'description', 'vacation'];
-    protected $access   = ['admin' => '*'];
 
     public function user() {
         return $this->belongsTo(User::class);

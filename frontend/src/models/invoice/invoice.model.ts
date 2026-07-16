@@ -1,4 +1,5 @@
-import moment from 'moment';
+import { dayjs, Dayjs } from '@constants/dates';
+import { Dictionary } from '@constants/constants';
 import { InvoiceService } from '@models/invoice/invoice.service';
 import { Company } from '../company/company.model';
 import { Serializable } from '../serializable';
@@ -38,10 +39,10 @@ export class Invoice extends Serializable implements HasInvoiceItems, IHasMarker
     stage: number = 0;
     sent: number = 0;
 
-    is_overdue = computed(() => moment(this.snapshot().remind_at).isBefore(moment()) && !this.snapshot().paid_at);
-    needs_reminder = computed(() => !this.snapshot().paid_at && moment(this.snapshot().remind_at).isBefore(moment()));
-    since = computed(() => -moment(this.snapshot().created_at).diff(moment(), 'days'));
-    span = computed(() => moment(this.snapshot().remind_at).diff(moment(this.snapshot().created_at), 'days'));
+    is_overdue = computed(() => dayjs(this.snapshot().remind_at).isBefore(dayjs()) && !this.snapshot().paid_at);
+    needs_reminder = computed(() => !this.snapshot().paid_at && dayjs(this.snapshot().remind_at).isBefore(dayjs()));
+    since = computed(() => -dayjs(this.snapshot().created_at).diff(dayjs(), 'days'));
+    span = computed(() => dayjs(this.snapshot().remind_at).diff(dayjs(this.snapshot().created_at), 'days'));
     progress = computed(() => { const s = this.since(), sp = this.span(); return this.snapshot().paid_at ? 1 : s / sp; });
     progress_abs = computed(() => '' + 100 * this.progress());
     css = computed(() => this.#getColorCss());
@@ -62,12 +63,12 @@ export class Invoice extends Serializable implements HasInvoiceItems, IHasMarker
     setPaid = () => this.update({ paid: true });
     setUnpaid = () => this.update({ paid: false });
     getName = () => this.name;
-    time_due = (): moment.Moment => moment(this.due_at);
-    time_remind = (): moment.Moment => moment(this.remind_at);
-    time_paid = (): moment.Moment => moment(this.paid_at);
+    time_due = (): Dayjs => dayjs(this.due_at);
+    time_remind = (): Dayjs => dayjs(this.remind_at);
+    time_paid = (): Dayjs => dayjs(this.paid_at);
 
     getOverdueColor(): string {
-        const daysOverdue = moment().diff(this.time_remind(), 'days');
+        const daysOverdue = dayjs().diff(this.time_remind(), 'days');
         if (daysOverdue < NxGlobal.global.setting('INVOICE_GRACE_PERIOD')) return 'orange';
         return 'danger';
     }
@@ -92,26 +93,26 @@ export class Invoice extends Serializable implements HasInvoiceItems, IHasMarker
         return 'teal';
     }
 
-    d_left = (): number => (this.paid_at ? this.time_paid().diff(this.momentCreated(), 'days') : this.time_remind().diff(moment(), 'days'));
+    d_left = (): number => (this.paid_at ? this.time_paid().diff(this.createdAt(), 'days') : this.time_remind().diff(dayjs(), 'days'));
     s_due = (): string => this.time_due().format('DD.MM.YYYY');
     state = (): string => {
         if (this.is_cancelled) return 'cancelled';
         if (this.paid_at) return 'paid';
-        if (this.time_remind().diff(moment()) > 0) return 'unpaid';
+        if (this.time_remind().diff(dayjs()) > 0) return 'unpaid';
         return 'unpaid (overdue)';
     };
 
     cancel = () => NxGlobal.service.post('invoices/' + this.id + '/cancel');
     undo = () => NxGlobal.service.put(`invoices/${this.id}/undo`);
     updateValues = () => NxGlobal.service.put(`invoices/${this.id}/update-values`);
-    sendToDatev = () => NxGlobal.service.post(`invoices/${this.id}/datev`).pipe(map((_: any) => this.fromJson(_)));
-    sendMail = () => NxGlobal.service.post(`invoices/${this.id}/send-mail`).pipe(map((_: any) => this.fromJson(_)));
-    sendReminder = () => NxGlobal.service.post(`invoices/${this.id}/send-reminder`).pipe(map((_: any) => this.fromJson(_)));
+    sendToDatev = () => NxGlobal.service.post(`invoices/${this.id}/datev`).pipe(map((d) => this.fromJson(d as Dictionary)));
+    sendMail = () => NxGlobal.service.post(`invoices/${this.id}/send-mail`).pipe(map((d) => this.fromJson(d as Dictionary)));
+    sendReminder = () => NxGlobal.service.post(`invoices/${this.id}/send-reminder`).pipe(map((d) => this.fromJson(d as Dictionary)));
 
     // static helpers
-    static aggregate = (_: Invoice[], format: string = 'YYYY'): Record<string, number> =>
-        _.reduce((x: any, i: Invoice) => {
-            const f = i.momentCreated().format(format);
+    static aggregate = (_: Invoice[], format: string = 'YYYY'): Dictionary<number> =>
+        _.reduce((x: Dictionary<number>, i: Invoice) => {
+            const f = i.createdAt().format(format);
             x[f] = (x[f] || 0) + i.net;
             return x;
         }, {});

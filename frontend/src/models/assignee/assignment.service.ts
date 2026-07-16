@@ -11,7 +11,7 @@ import { NexusHttpService } from '../http/http.nexus';
 })
 export class AssignmentService extends NexusHttpService<Assignee> {
     override apiPath = 'assignees';
-    override TYPE = () => Assignee;
+    override readonly model = Assignee;
 
     assigneesFor = (obj: Company | Project): Observable<Assignee[]> => {
         if (obj instanceof Company) return this.#company(obj!);

@@ -1,4 +1,5 @@
 import { getInvoiceItemTypeRepeatColor, InvoiceItemType, InvoiceItemTypeRepeating } from '@enums/invoice-item.type';
+import { Dictionary } from '@constants/constants';
 import { InvoiceVatHandling } from '@enums/invoice.vat-handling';
 import { InvoiceItemService } from '@models/invoice/invoice-item.service';
 import { Product } from '../product/product.model';
@@ -22,9 +23,10 @@ import { Milestone } from '../milestones/milestone.model';
 import { IHasMarker } from '@enums/marker';
 import { Model } from '@constants/type-discriminators';
 import { computed } from '@angular/core';
+import { IHasExtIssue, effectiveExtIssueOf } from '../ext-issue/ext-issue.interface';
 
 @Model('InvoiceItem')
-export class InvoiceItem extends Serializable implements IHasMarker {
+export class InvoiceItem extends Serializable implements IHasMarker, IHasExtIssue {
     static API_PATH = (): string => 'invoice_items';
     SERVICE = InvoiceItemService;
 
@@ -33,6 +35,8 @@ export class InvoiceItem extends Serializable implements IHasMarker {
     company_id?: string;
     invoice_id?: string;
     product_source_id?: string;
+    ext_issue_plugin_link_id?: string;
+    ext_issue_id?: string;
     position: number = 0;
     text: string = '';
     vat_rate: number = 19;
@@ -72,6 +76,7 @@ export class InvoiceItem extends Serializable implements IHasMarker {
 
     @Type(()=>Product) product_source!: Product;
     @Type(()=>Company) company!: Company;
+    @Type(()=>Project) project?: Project;
     @Type(()=>Milestone) milestones!: Milestone[];
 
     get _mult() {
@@ -93,10 +98,12 @@ export class InvoiceItem extends Serializable implements IHasMarker {
     doubleClickAction: number = 0;
     actions = getInvoiceItemActions(this);
 
-    setParent = (_: Serializable): any => {
-        if (_ instanceof Company) return this.update({ company_id: _.id, invoice_id: null, project_id: null }).subscribe(() => _.invoice_items.push(this));
-        if (_ instanceof Project) return this.update({ company_id: null, invoice_id: null, project_id: _.id }).subscribe(() => _.invoice_items.push(this));
-        if (_ instanceof Invoice) return this.update({ company_id: null, invoice_id: _.id, project_id: null }).subscribe(() => _.invoice_items.push(this));
+    setParent = (_: Serializable): void => {
+        // patch({}) after the push bumps Serializable#state so signal-based template consumers
+        // (e.g. computed()s over parent.object().invoice_items) re-render under zoneless CD.
+        if (_ instanceof Company) { this.update({ company_id: _.id, invoice_id: null, project_id: null }).subscribe(() => { _.invoice_items.push(this); _.patch({}); }); return; }
+        if (_ instanceof Project) { this.update({ company_id: null, invoice_id: null, project_id: _.id }).subscribe(() => { _.invoice_items.push(this); _.patch({}); }); return; }
+        if (_ instanceof Invoice) { this.update({ company_id: null, invoice_id: _.id, project_id: null }).subscribe(() => { _.invoice_items.push(this); _.patch({}); }); return; }
         console.error('setting parent class ' + _.class + ' is not implemented yet for model InvoiceItem');
     };
 
@@ -111,6 +118,8 @@ export class InvoiceItem extends Serializable implements IHasMarker {
     frontendEqualsBackend = (): boolean => this._total == this.total;
     frontendEqualsBackendHover = () => (this.frontendEqualsBackend() ? '' : `frontend value (${this._total} not equal to backend value (${this.total})`);
 
+    effectiveExtIssue = () => effectiveExtIssueOf(this);
+
     getName = () => this.text;
     getRepeatString = () => InvoiceItemType[this.type];
     getYearlyPrice = (): number => {
@@ -120,15 +129,15 @@ export class InvoiceItem extends Serializable implements IHasMarker {
     getRepeatColor = (): string => getInvoiceItemTypeRepeatColor(this.type);
     deletePrediction = () =>
         NxGlobal.service.delete(`invoice_items/${this.id}/predict`).pipe(
-            map((x: InvoiceItem) => {
-                x.my_prediction = null;
+            map(() => {
+                this.my_prediction = null;
                 Toast.success('Successfully deleted');
-                return x;
+                return this;
             }),
         );
 
-    getTemplate = (...args: any) => {
-        return deepMerge(InvoiceItem.fromJson(NxGlobal.payloadFor(deepCopy(this), InvoiceItem, ['product_id'])), ...args);
+    getTemplate = (...args: unknown[]) => {
+        return deepMerge(InvoiceItem.fromJson(NxGlobal.payloadFor(deepCopy(this), InvoiceItem, ['product_id'])) as unknown as Dictionary, ...(args as Dictionary[]));
     };
     updateDynamicAttributes() {
         this.price_discounted = Math.round(this.price * (100 - this.discount)) * 0.01;
@@ -139,19 +148,23 @@ export class InvoiceItem extends Serializable implements IHasMarker {
         this.gross = this.vat_calculation === 1 ? this.total : Math.round(100 * this.total * (1 + this.vat_rate_dec)) * 0.01;
         this.vat = this.gross - this.net;
     }
-    onEdit(success?: (v: any) => void, nxContext?: any) {
-        const editItem = InvoiceItem.fromJson(this);
+    onEdit(success?: (v: unknown) => void, nxContext?: { company?: Company }) {
+        const editItem = InvoiceItem.fromJson(this.snapshot());
         switch (editItem.type) {
             case InvoiceItemType.Header: {
                 const inputModal = NxGlobal.getService<InputModalService>(InputModalService);
                 inputModal.open('@i18n.common.title').confirmed(({ text }) => {
                     editItem.text = text;
                     if (!this.isNonPersistantRecord) {
-                        editItem?.update().subscribe();
-                        editItem.refresh();
-                        NxGlobal.broadcast({ type: TBroadcast.Update, data: editItem });
+                        editItem?.update().subscribe(() => {
+                            this.fromJson(editItem.snapshot());
+                            NxGlobal.broadcast({ type: TBroadcast.Update, data: this });
+                            success?.(editItem);
+                        });
                     } else {
-                        this.fromJson(editItem);
+                        this.fromJson(editItem.snapshot());
+                        NxGlobal.broadcast({ type: TBroadcast.Update, data: this });
+                        success?.(editItem);
                     }
                 });
                 break;
@@ -160,24 +173,62 @@ export class InvoiceItem extends Serializable implements IHasMarker {
                 // Use company from nxContext if available, otherwise fall back to this.company
                 const company = nxContext?.company || this.company;
                 ModalBaseService.open(ModalEditInvoiceItemComponent, editItem, company, 'Save')
-                    .then((_: any) => {
+                    .then((result: unknown) => {
+                        const _ = result as { item?: InvoiceItem } | undefined;
                         if (_ && _.item instanceof InvoiceItem) {
                             if (!this.isNonPersistantRecord) {
                                 _.item.update().subscribe(() => {
-                                    editItem.refresh();
+                                    this.fromJson(_.item!.snapshot());
+                                    this.updateDynamicAttributes();
                                     NxGlobal.broadcast({ type: TBroadcast.Update, data: this });
+                                    success?.(_);
                                 });
                             } else {
-                                this.fromJson(_.item);
+                                this.fromJson(_.item!.snapshot());
                                 this.updateDynamicAttributes();
                                 NxGlobal.broadcast({ type: TBroadcast.Update, data: this });
+                                success?.(_);
                             }
                         }
-                    })
-                    .catch();
+                    });
                 break;
             }
         }
+    }
+
+    applyProduct(product: Product, company?: Company): void {
+        // Clone via .snapshot() (plain JSON), not the live instance — the product's own template
+        // items can have their product_source eager-loaded back to this very product, and cloning
+        // the live object graph (getClone()/fromJson(instance)) would recurse into that cycle forever.
+        if (!product.invoice_items.length) {
+            this.product_source_id = product.id;
+            this.product_source = Product.fromJson(product.snapshot());
+            return;
+        }
+        const template = InvoiceItem.fromJson(product.getInvoiceItem()!.snapshot());
+        if (company) {
+            template.discount = parseFloat(company.getParam('INVOICE_DISCOUNT') ?? '0');
+            if (company.isVatExcempt()) template.vat_rate = 0;
+        }
+        if (product.time_based > 0) {
+            template.price = parseFloat(NxGlobal.global.setting('INVOICE_HOURLY_WAGE'));
+            template.unit_name = NxGlobal.global.setting('INVOICE_HOUR_UNIT');
+            if (product.time_based == 8) {
+                template.price *= parseFloat(NxGlobal.global.setting('INVOICE_HPD'));
+                template.unit_name = NxGlobal.global.setting('INVOICE_DAY_UNIT');
+            }
+            template.price *= product.price_multiplier || 1;
+            if (company) template.vat_rate = company.vatRate();
+        }
+        this.product_source_id = product.id;
+        this.price = template.price;
+        this.unit_name = template.unit_name;
+        this.vat_rate = template.vat_rate;
+        this.discount = template.discount;
+        this.is_discountable = template.is_discountable;
+        this.vat_calculation = template.vat_calculation;
+        if (!this.text) this.text = template.text || product.name;
+        this.product_source = Product.fromJson(product.snapshot());
     }
 
     static parentField(_: Serializable): string | undefined {

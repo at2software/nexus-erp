@@ -27,7 +27,7 @@ trait HasI18nTrait {
                             ];
                             foreach ($allVariants as $v) {
                                 I18n::create([
-                                    'parent_type' => get_class($model),
+                                    'parent_type' => $model::class,
                                     'parent_id'   => $model->getKey(),
                                     'language'    => $v['language'],
                                     'formality'   => $v['formality'],
@@ -36,7 +36,7 @@ trait HasI18nTrait {
                             }
                         } else {
                             I18n::create([
-                                'parent_type' => get_class($model),
+                                'parent_type' => $model::class,
                                 'parent_id'   => $model->getKey(),
                                 'language'    => $variant['language'],
                                 'formality'   => $variant['formality'] ?? 'formal',

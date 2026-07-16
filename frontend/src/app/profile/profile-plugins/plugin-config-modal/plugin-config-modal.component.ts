@@ -4,17 +4,18 @@ import { ConfirmationService } from '@app/_modals/modal-confirm/confirmation.ser
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
 import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
 import { MantisPlugin } from '@models/http/plugin.mantis';
-import { IAIPlugin } from '@models/ai/ai.plugin.interface';
+import { IAIPlugin } from '@models/http/ai.plugin.interface';
+import { AiModel } from '@models/api-response';
 import { PluginInstance } from '@models/http/plugin.instance';
-
+import { Encryption } from '@models/encryption/encryption.model';
 import { FormsModule } from '@angular/forms';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { PluginEntry } from '@models/api-response';
 
 @Component({
     selector: 'plugin-config-modal',
     templateUrl: './plugin-config-modal.component.html',
     styleUrls: ['./plugin-config-modal.component.scss'],
-    standalone: true,
     imports: [FormsModule, SpinnerComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -24,9 +25,9 @@ export class PluginConfigModalComponent {
     #confirmationService = inject(ConfirmationService);
     #inputModalService = inject(InputModalService);
 
-    plugin: any;
+    plugin!: PluginEntry;
     isNewPlugin = signal(false);
-    availableModels = signal<any[]>([]);
+    availableModels = signal<AiModel[]>([]);
     isLoadingModels = signal(false);
     isTestingConnection = signal(false);
 
@@ -44,7 +45,7 @@ export class PluginConfigModalComponent {
         }
     }
 
-    #getDefaultValuesForType(type: string): any {
+    #getDefaultValuesForType(type: string): Record<string, string | undefined> {
         switch (type) {
             case 'mattermost': return { url: '', team: '', token: '' };
             case 'git': return { url: '', token: '' };
@@ -103,8 +104,8 @@ export class PluginConfigModalComponent {
 
             originalEncryption.value = { ...this.plugin.value };
             originalEncryption.update().subscribe({
-                next: (updatedPlugin: any) => {
-                    this.plugin.value = updatedPlugin.value;
+                next: (updatedPlugin: Encryption) => {
+                    this.plugin.value = updatedPlugin.value as Record<string, unknown>;
                     if (this.plugin.value?.url && this.factory.instances[this.plugin.value.url]) {
                         delete this.factory.instances[this.plugin.value.url];
                     }
@@ -117,10 +118,11 @@ export class PluginConfigModalComponent {
     loadAvailableModels = () => {
         if (!this.plugin || this.plugin.type !== 'local_ai' || !this.plugin.value?.url || this.isNewPlugin()) return;
 
-        let encryption = this.plugin;
+        let encryption: Encryption = this.plugin;
         if (!this.plugin.key) {
-            encryption = this.factory.getPluginEncryptionsOfType('local_ai').find((p) => p.id === this.plugin.id);
-            if (!encryption) return;
+            const found = this.factory.getPluginEncryptionsOfType('local_ai').find((p) => p.id === this.plugin.id);
+            if (!found) return;
+            encryption = found;
         }
 
         try {
@@ -154,10 +156,11 @@ export class PluginConfigModalComponent {
     onMantisConnectionTest = () => {
         if (!this.plugin?.value?.url || !this.plugin?.value?.token || this.isNewPlugin()) return;
 
-        let encryption = this.plugin;
+        let encryption: Encryption = this.plugin;
         if (!this.plugin.key) {
-            encryption = this.factory.getPluginEncryptionsOfType('mantis').find((p) => p.id === this.plugin.id);
-            if (!encryption) return;
+            const found = this.factory.getPluginEncryptionsOfType('mantis').find((p) => p.id === this.plugin.id);
+            if (!found) return;
+            encryption = found;
         }
 
         this.isTestingConnection.set(true);
@@ -174,7 +177,7 @@ export class PluginConfigModalComponent {
                 if (mantisPlugin.state === 'connected') {
                     clearTimeout(timeout);
                     this.isTestingConnection.set(false);
-                    this.plugin = { ...this.plugin };
+                    /* isTestingConnection signal triggers re-render */
                 } else if (mantisPlugin.state === 'connection fail') {
                     clearTimeout(timeout);
                     this.isTestingConnection.set(false);
@@ -188,7 +191,7 @@ export class PluginConfigModalComponent {
                 next: () => {
                     clearTimeout(timeout);
                     this.isTestingConnection.set(false);
-                    this.plugin = { ...this.plugin };
+                    /* isTestingConnection signal triggers re-render */
                 },
             });
         } catch {

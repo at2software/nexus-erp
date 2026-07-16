@@ -1,4 +1,4 @@
-import { EventEmitter, Injectable, OnDestroy } from '@angular/core';
+import { DestroyRef, EventEmitter, Injectable, inject } from '@angular/core';
 import { Observable, Subscription } from 'rxjs';
 // import { AuthenticationService } from '@app/services/authentication.service';
 
@@ -31,13 +31,12 @@ export class BaseObject {
 }
 
 @Injectable({ providedIn: 'root' })
-export abstract class BaseComponent extends BaseObject implements OnDestroy {
+export abstract class BaseComponent extends BaseObject {
+    readonly #destroyRef = inject(DestroyRef);
+
     constructor() {
         super();
         this.setSubscriptions();
-    }
-
-    ngOnDestroy(): void {
-        this.clearSubscriptions();
+        this.#destroyRef.onDestroy(() => this.clearSubscriptions());
     }
 }

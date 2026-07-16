@@ -6,8 +6,6 @@ import { ToolbarLocaleSelectorComponent, LocaleKey } from '@shards/toolbar-local
 @Component({
     selector: 'settings-projects-quote',
     templateUrl: './settings-projects-quote.component.html',
-    styleUrls: ['./settings-projects-quote.component.scss'],
-    standalone: true,
     imports: [TextParamEditorComponent, ToolbarComponent, ToolbarLocaleSelectorComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

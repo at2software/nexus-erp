@@ -13,15 +13,14 @@ import { tracked } from '@constants/tracked';
 
 @Component({
     selector: 'debrief-solution-inline',
-    standalone: true,
     imports: [FormsModule, NgbTooltipModule, Nx, DecimalPipe, SpinnerComponent],
     templateUrl: './debrief-solution-inline.component.html',
     styleUrls: ['./debrief-solution-inline.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DebriefSolutionInlineComponent {
-    readonly problemIn = input.required<DebriefProblem>({ alias: 'problem' });
-    readonly problem = tracked(this.problemIn);
+    readonly problem = input.required<DebriefProblem>();
+    readonly trackedProblem = tracked(this.problem);
     debriefId = input<string>();
     readonly = input(false);
     solutionLinked = output<void>();
@@ -37,7 +36,7 @@ export class DebriefSolutionInlineComponent {
     #service = inject(DebriefService);
     #searchSubject = new Subject<string>();
 
-    #linkedIds = computed(() => this.problem().solutions.map((s) => s.id));
+    #linkedIds = computed(() => this.trackedProblem().solutions.map((s) => s.id));
 
     constructor() {
         this.#searchSubject
@@ -72,7 +71,7 @@ export class DebriefSolutionInlineComponent {
     }
 
     linkSolution(solution: DebriefSolution) {
-        this.#service.linkSolution(this.problem().id, solution.id, this.debriefId()).subscribe(() => {
+        this.#service.linkSolution(this.trackedProblem().id, solution.id, this.debriefId()).subscribe(() => {
             this.searchTerm.set('');
             this.searchResults.set([]);
             this.showDropdown.set(false);
@@ -84,7 +83,7 @@ export class DebriefSolutionInlineComponent {
         const title = this.newSolutionTitle().trim();
         if (!title) return;
         this.#service.storeSolution({ title }).subscribe((solution) => {
-            this.#service.linkSolution(this.problem().id, solution.id, this.debriefId()).subscribe(() => {
+            this.#service.linkSolution(this.trackedProblem().id, solution.id, this.debriefId()).subscribe(() => {
                 this.newSolutionTitle.set('');
                 this.showCreateForm.set(false);
                 this.solutionLinked.emit();
@@ -93,13 +92,13 @@ export class DebriefSolutionInlineComponent {
     }
 
     rateSolution(solution: DebriefSolution, rating: number) {
-        this.#service.rateSolution(this.problem().id, solution.id, rating).subscribe(() => {
+        this.#service.rateSolution(this.trackedProblem().id, solution.id, rating).subscribe(() => {
             this.solutionRated.emit();
         });
     }
 
     unlinkSolution(solution: DebriefSolution) {
-        this.#service.unlinkSolution(this.problem().id, solution.id).subscribe(() => {
+        this.#service.unlinkSolution(this.trackedProblem().id, solution.id).subscribe(() => {
             this.solutionLinked.emit();
         });
     }

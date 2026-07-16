@@ -1,16 +1,5 @@
 @let _project = parent.object();
 <toolbar>
-    @if (_project.state.progress === 0 && _project.invoice_items.length) {
-        <div role="group" class="d-flex align-items-center gap-2" container="body">
-            <!-- <button id="btnGroupDrop2" type="button" class="btn btn-dark" data-bs-toggle="dropdown" aria-expanded="false" ngbTooltip="predictions" i18n-ngbTooltip="@@i18n.common.predictions">
-      <i>schema</i>
-    </button>
-    <ul class="dropdown-menu">
-      <li class="cursor-pointer"><a class="dropdown-item d-flex" (click)="onMyPrediction()"><span i18n="@@i18n.project.predictionUseMine" class="flex-fill">use my predictions</span><span class="text-muted"></span></a></li>
-      <li class="cursor-pointer"><a class="dropdown-item d-flex" (click)="onMyPrediction()"><span i18n="@@i18n.common.predictionUseSuggested" class="flex-fill">use suggested predictions</span><span class="text-muted"></span></a></li>
-    </ul> -->
-        </div>
-    }
     @if (_project.state.progress === 0) {
         @if (!warningMissingContact()) {
             <button id="btnGroupDrop2" type="button" class="btn btn-primary" ngbTooltip="create quote" i18n-ngbTooltip="@@i18n.project.createQuote" (click)="onQuote()" hotkey="CTRL+ALT+Q">

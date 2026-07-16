@@ -27,9 +27,6 @@ class CompanyContact extends BaseModel {
     protected function casts(): array {
         return ['is_retired' => 'boolean', 'is_favorite' => 'boolean', 'is_invoicing_address' => 'boolean'];
     }
-
-    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
-
     public function getIconAttribute() {
         return 'companies/'.$this->company_id.'/icon?'.($this->updated_at ? $this->updated_at->timestamp : '');
     }

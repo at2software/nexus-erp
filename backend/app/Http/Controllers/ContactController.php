@@ -5,12 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\CompanyContact;
 use App\Models\Contact;
-use App\Traits\ControllerHasPermissionsTrait;
 use Illuminate\Http\Request;
 
 class ContactController extends Controller {
-    use ControllerHasPermissionsTrait;
-
     public function update(Request $request, int $id) {
         return Contact::findOrFail($id)->applyAndSave($request);
     }

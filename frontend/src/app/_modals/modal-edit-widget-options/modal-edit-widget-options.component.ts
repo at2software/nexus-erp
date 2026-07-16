@@ -8,8 +8,6 @@ import { FormsModule } from '@angular/forms';
 @Component({
     selector: 'paydown-modal',
     templateUrl: './modal-edit-widget-options.component.html',
-    styleUrls: ['./modal-edit-widget-options.component.scss'],
-    standalone: true,
     imports: [FormsModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -17,16 +15,17 @@ export class ModalEditWidgetOptionsComponent extends ModalBaseComponent<boolean>
     #activeModal = inject(NgbActiveModal);
 
     options!: TOptions;
-    onUpdate: { emit(v: any): void } = { emit: (_v: any) => void 0 };
+    onUpdate: { emit(v: TOptions): void } = { emit: (_v: TOptions) => void 0 };
 
-    _onUpdate($event: any, key: string) {
-        let v = $event.target.value;
+    _onUpdate($event: Event, key: string) {
+        const target = $event.target as HTMLInputElement;
+        let v: string | number | boolean = target.value;
         if (this.options[key].type == OptionType.Number) v = parseFloat(v);
-        if (this.options[key].type == OptionType.Boolean) v = $event.target.checked;
+        if (this.options[key].type == OptionType.Boolean) v = target.checked;
         this.options[key].value = v;
         this.onUpdate.emit(this.options);
     }
-    init(options: TOptions, onUpdate: { emit(v: any): void }): void {
+    init(options: TOptions, onUpdate: { emit(v: TOptions): void }): void {
         this.options = options;
         this.onUpdate = onUpdate;
     }

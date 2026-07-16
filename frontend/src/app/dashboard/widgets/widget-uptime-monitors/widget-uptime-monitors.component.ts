@@ -2,17 +2,16 @@
 import { BaseWidgetComponent } from '../base.widget.component';
 import { UptimeMonitor } from '@models/uptime/uptime-monitor.model';
 import { UptimeMonitorService } from '@models/uptime/uptime-monitor.service';
-import { WidgetsModule } from '../widgets.module';
+import { WIDGET_SHARED } from '../widgets.shared';
 import { EChartsRangeAreaOptions } from '@charts/echarts-presets';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'widget-uptime-monitors',
     templateUrl: './widget-uptime-monitors.component.html',
     styleUrls: ['./widget-uptime-monitors.component.scss', './../base.widget.component.scss'],
-    standalone: true,
-    imports: [WidgetsModule],
+    imports: [...WIDGET_SHARED],
 })
 export class WidgetUptimeMonitorsComponent extends BaseWidgetComponent {
     monitors = signal<UptimeMonitor[]>([]);
@@ -37,9 +36,9 @@ export class WidgetUptimeMonitorsComponent extends BaseWidgetComponent {
     }
 
     #initChartOptions() {
-        const now = moment();
+        const now = dayjs();
         const last30Days = Array.from({ length: 30 }, (_, i) => ({
-            date: now.clone().subtract(29 - i, 'days').format('YYYY-MM-DD'),
+            date: now.subtract(29 - i, 'days').format('YYYY-MM-DD'),
             upCount: 0,
             total: 0,
         }));

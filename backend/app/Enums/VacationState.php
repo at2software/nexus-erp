@@ -2,12 +2,10 @@
 
 namespace App\Enums;
 
-use BenSampo\Enum\Enum;
-
-final class VacationState extends Enum {
-    const Open        = 0;
-    const Approved    = 1;
-    const NotApproved = 2;
-    const Sick        = 3;
-    const Cancelled   = 4;
+enum VacationState: int {
+    case Open        = 0;
+    case Approved    = 1;
+    case NotApproved = 2;
+    case Sick        = 3;
+    case Cancelled   = 4;
 }

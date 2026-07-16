@@ -11,12 +11,12 @@ import { tracked } from '@constants/tracked';
     templateUrl: './tab-comment.component.html',
     styleUrls: ['./tab-comment.component.scss'],
     imports: [DatePipe, Nx, NComponent, SafePipe],
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TabCommentComponent {
-    readonly commentIn = input.required<Comment>({ alias: 'comment' });
-    readonly comment = tracked(this.commentIn);
+    
+    readonly comment = input.required<Comment>();
+    readonly trackedComment = tracked(this.comment);
     nicon = input<string | undefined>();
 
     formatFileSize(bytes: number): string {
@@ -26,7 +26,7 @@ export class TabCommentComponent {
     }
 
     getFormattedTextWithLink = computed<string>(() => {
-        const comment = this.comment();
+        const comment = this.trackedComment();
         let text = comment.formattedText();
 
         // If this is a git push event, format with icons

@@ -12,18 +12,17 @@ import { TFocusDay } from '../hr-focus-table.component';
 @Component({
     selector: 'hr-focus-summary-tab',
     templateUrl: './hr-focus-summary-tab.component.html',
-    standalone: true,
     imports: [ActivityTabComponent, DecimalPipe, NgxEchartsDirective, ScrollbarComponent, AvatarComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HrFocusSummaryTabComponent {
     days = input<TFocusDay[]>();
-    readonly userIn = input.required<User>({ alias: 'user' });
-    readonly user = tracked(this.userIn);
+    readonly user = input.required<User>();
+    readonly trackedUser = tracked(this.user);
 
     readonly stats = computed(() => {
         const days = this.days() ?? [];
-        const user = this.user();
+        const user = this.trackedUser();
         if (!days.length || !user) return null;
 
         const sorted = [...days].sort((a, b) => a.moment.diff(b.moment));

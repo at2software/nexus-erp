@@ -1,3 +1,4 @@
+import { Dictionary } from '@constants/constants';
 import { Company } from '@models/company/company.model';
 import { CommentService } from '@models/comment/comment.service';
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, effect, inject, input, model, signal, viewChild } from '@angular/core';
@@ -9,12 +10,14 @@ import { TabCommentComponent } from './tab-comment.component';
 import { Nx } from '@app/nx/nx.directive';
 import { NComponent } from '@shards/n/n.component';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
-import { GitService } from '@models/git.service';
+import { GitService } from '@models/http/git.service';
 import { GlobalService } from '@models/global.service';
 import { NgbTooltipModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { ActivityTabComponent } from '../activity-tab.component';
 import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
 import { ChatPluginInstance } from '@models/http/chat.plugin.instance';
+import { PluginInstance } from '@models/http/plugin.instance';
+import { VcardClass } from '@models/vcard/VcardClass';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -22,7 +25,6 @@ import { ChatPluginInstance } from '@models/http/chat.plugin.instance';
     templateUrl: './tab-comments.component.html',
     styleUrls: ['./tab-comments.component.scss'],
     imports: [TabCommentComponent, Nx, NComponent, ScrollbarComponent, NgbTooltipModule, NgbDropdownModule],
-    standalone: true,
 })
 export class TabCommentsComponent {
     quickLinks = input<Company>();
@@ -34,8 +36,8 @@ export class TabCommentsComponent {
     #allComments = signal<Comment[]>([]);
     groupedComments = signal<{ date: string; header: string; comments: Comment[] }[]>([]);
 
-    hasActivity: Record<string, boolean> = {};
-    showActivity: Record<string, boolean> = { nexus: true };
+    hasActivity = signal<Dictionary<boolean>>({});
+    showActivity = signal<Dictionary<boolean>>({ nexus: true });
 
     #commentService = inject(CommentService);
     #gitService = inject(GitService);
@@ -47,7 +49,7 @@ export class TabCommentsComponent {
     readonly scrollbar = viewChild(ScrollbarComponent);
 
     selectedTarget: 'nexus' | ChatPluginInstance = 'nexus';
-    availableChatTargets: ChatPluginInstance[] = [];
+    availableChatTargets = signal<ChatPluginInstance[]>([]);
 
     constructor() {
         effect(() => {
@@ -66,13 +68,13 @@ export class TabCommentsComponent {
             const instances = this.#pluginFactory.getInstances(currentProject, ['IRepositoryPluginProperty', 'ITaskPluginProperty', 'IChatPluginProperty']);
 
             // Collect available chat plugin instances
-            this.availableChatTargets = instances.filter((i) => i instanceof ChatPluginInstance && i.enc && this.#globalService.getEnc(i.enc.key).length > 0) as ChatPluginInstance[];
+            this.availableChatTargets.set(instances.filter((i) => i instanceof ChatPluginInstance && i.enc && this.#globalService.getEnc(i.enc.key).length > 0) as ChatPluginInstance[]);
 
             instances.forEach((instance) => {
                 const ctorName = instance.constructor?.name;
                 if (ctorName && instance.enc && this.#globalService.getEnc(instance.enc.key).length > 0) {
-                    this.hasActivity[ctorName] = true;
-                    this.showActivity[ctorName] = this.showActivity[ctorName] ?? true;
+                    this.hasActivity.update((h) => ({ ...h, [ctorName]: true }));
+                    this.showActivity.update((s) => ({ ...s, [ctorName]: s[ctorName] ?? true }));
                 }
             });
         }
@@ -105,34 +107,29 @@ export class TabCommentsComponent {
         });
     }
 
-    loadFromInstance(instance: any) {
-        const projectId = (instance as any).projectId || this.extractProjectId(instance) || this.currentProject()?.id?.toString() || '';
+    loadFromInstance(instance: PluginInstance) {
+        const projectId = instance.projectId || this.extractProjectId(instance) || this.currentProject()?.id?.toString() || '';
 
         instance
             .getActivityComments(projectId, 150, this.resolveUser.bind(this))
             .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe({
-                next: (commentData: any[]) => {
-                    const comments = commentData.map((data) => {
-                        const comment = Comment.fromJson(data);
-                        //if (data._icon) (comment as any)._icon = data._icon;
-                        //if (data.var) comment.var = data.var;
-                        return comment;
-                    });
+                next: (commentData) => {
+                    const comments = commentData.map((data) => Comment.fromJson(data));
 
                     this.#allComments.set([...this.#allComments(), ...comments]);
                     this.filterAndSortComments();
                 },
-                error: (err: any) => {
+                error: (err: unknown) => {
                     console.error('Failed to load plugin activity:', err);
                 },
             });
     }
 
-    extractProjectId(instance: any): string | undefined {
+    extractProjectId(instance: PluginInstance): string | undefined {
         if (instance._baseUrl && this.currentProject()) {
             const [gitInstance, path] = this.#gitService.instanceAndPath(this.currentProject()!);
-            if (gitInstance === instance && path) {
+            if ((gitInstance as unknown) === instance && path) {
                 return path.replace(/^\/|\/$/g, '').replace(/^projects\//, '');
             }
         }
@@ -141,13 +138,13 @@ export class TabCommentsComponent {
 
     // Helper to resolve users from multiple sources
     resolveUser(email?: string, username?: string, name?: string, pluginAttributeName?: string): User | undefined {
-        const searchSources: any[] = [
+        const searchSources: VcardClass[] = [
             ...(this.#globalService.teamAll || []),
             ...(this.currentProject()
-                ?.assignees?.map((a: any) => a.assignee)
-                .filter((u: any) => u?.class === 'User' || u?.class === 'CompanyContact') || []),
+                ?.assignees?.map((a) => a.assignee)
+                .filter((u) => u?.class === 'User' || u?.class === 'CompanyContact') || []),
         ];
-        return searchSources.find((u: User) => {
+        return searchSources.find((u) => {
             // Check plugin-specific attribute (X-NEXUS-GIT or X-NEXUS-MANTISBT)
             if (pluginAttributeName && username) {
                 const attrValue = u.card()?.get(pluginAttributeName)?.[0]?.val();
@@ -155,7 +152,7 @@ export class TabCommentsComponent {
             }
 
             // Check email
-            if (email && u.card()?.get('EMAIL')?.some((e: any) => e.val() === email)) return true;
+            if (email && u.card()?.get('EMAIL')?.some((e) => e.val() === email)) return true;
 
             // Partial name matching
             if (name) {
@@ -163,7 +160,7 @@ export class TabCommentsComponent {
                 if (nameMatch) return true;
             }
             return false;
-        });
+        }) as User | undefined;
     }
 
     filterAndSortComments() {
@@ -171,7 +168,7 @@ export class TabCommentsComponent {
             .filter((c) => {
                 const source = c.var?.source;
                 if (!source) return true;
-                return this.showActivity[source] ?? true;
+                return this.showActivity()[source] ?? true;
             })
             .sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
 
@@ -218,7 +215,7 @@ export class TabCommentsComponent {
     }
 
     toggleActivity(source: string) {
-        this.showActivity[source] = !this.showActivity[source];
+        this.showActivity.update((s) => ({ ...s, [source]: !s[source] }));
         this.filterAndSortComments();
     }
 
@@ -226,21 +223,22 @@ export class TabCommentsComponent {
         this.projects.set(p);
     }
 
-    onNew(event: any) {
-        const text = event.target.value.trim();
+    onNew(event: Event) {
+        const target = event.target as HTMLTextAreaElement;
+        const text = target.value.trim();
         if (!text) return;
 
         if (this.selectedTarget === 'nexus') {
             this.#commentService.store({ text, path: this.path() }).subscribe(() => {
                 this.reload();
-                event.target.value = '';
+                target.value = '';
                 this.resetTextareaHeight();
             });
         } else {
             // Send to chat plugin
             (this.selectedTarget as ChatPluginInstance).send(text).subscribe(() => {
                 this.reload();
-                event.target.value = '';
+                target.value = '';
                 this.resetTextareaHeight();
             });
         }
@@ -256,14 +254,14 @@ export class TabCommentsComponent {
 
     getTargetIcon(): string {
         if (this.selectedTarget === 'nexus') return 'nexus';
-        return (this.selectedTarget as any).icon?.() || 'chat';
+        return this.selectedTarget.icon() || 'chat';
     }
 
     selectTarget(target: 'nexus' | ChatPluginInstance) {
         this.selectedTarget = target;
     }
 
-    onTextareaInput(event: any) {
+    onTextareaInput(event: Event) {
         const textarea = event.target as HTMLTextAreaElement;
         this.adjustTextareaHeight(textarea);
     }

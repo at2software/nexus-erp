@@ -26,47 +26,47 @@ class HbciMessage {
      * Inner plain segments should be pre-formatted strings (including trailing "'")
      * and numbered starting at seq 3.
      *
-     * @param string   $dialogId  '0' for new dialogs
-     * @param int      $msgno     Message counter for this dialog (starts at 1)
-     * @param string   $systemId  System ID from sync ('0' before first sync)
-     * @param string   $blz       Bank routing code (BLZ)
-     * @param string   $username  Online banking username
-     * @param string   $pin       PIN
+     * @param string $dialogId '0' for new dialogs
+     * @param int $msgno Message counter for this dialog (starts at 1)
+     * @param string $systemId System ID from sync ('0' before first sync)
+     * @param string $blz Bank routing code (BLZ)
+     * @param string $username Online banking username
+     * @param string $pin PIN
      * @param string[] $plainSegs Pre-formatted inner segment strings at seq 3+
      */
     public static function buildWrapped(
         string $dialogId,
-        int    $msgno,
+        int $msgno,
         string $systemId,
         string $blz,
         string $username,
         string $pin,
-        array  $plainSegs,
+        array $plainSegs,
     ): string {
         $n    = count($plainSegs);
         $now  = new \DateTime('now', new \DateTimeZone('UTC'));
         $date = $now->format('Ymd');
         $time = $now->format('His');
-        $ref  = (string) random_int(1000000, 9999999);
+        $ref  = (string)random_int(1000000, 9999999);
 
         $blzE  = HbciSegment::escape($blz);
         $userE = HbciSegment::escape($username);
         $pinE  = HbciSegment::escape($pin);
 
         // Inner: HNSHK at seq 2, plain segs at 3..N+2, HNSHA at N+3
-        $hnshk = "HNSHK:2:4+PIN:1+999+{$ref}+1+1+1::{$systemId}+1+1:{$date}:{$time}+1:999:1+6:10:19+280:{$blzE}:{$userE}:S:0:0'";
-        $hnsha = 'HNSHA:' . ($n + 3) . ":2+{$ref}++{$pinE}'";
-        $innerContent = $hnshk . implode('', $plainSegs) . $hnsha;
+        $hnshk        = "HNSHK:2:4+PIN:1+999+{$ref}+1+1+1::{$systemId}+1+1:{$date}:{$time}+1:999:1+6:10:19+280:{$blzE}:{$userE}:S:0:0'";
+        $hnsha        = 'HNSHA:'.($n + 3).":2+{$ref}++{$pinE}'";
+        $innerContent = $hnshk.implode('', $plainSegs).$hnsha;
 
         // Outer: HNVSK at 998, HNVSD at 999, HNHBS at N+4
         // @8@00000000 = 8 ASCII '0' bytes (dummy key, NoPsd2)
         $dummyKey = str_repeat('0', 8);
-        $hnvsk = "HNVSK:998:3+PIN:1+998+1+1::{$systemId}+1:{$date}:{$time}+2:2:13:@8@{$dummyKey}:5:1+280:{$blzE}:{$userE}:V:0:0+0'";
-        $hnvsd = 'HNVSD:999:1+@' . strlen($innerContent) . '@' . $innerContent . "'";
-        $hnhbs = 'HNHBS:' . ($n + 4) . ":1+{$msgno}'";
+        $hnvsk    = "HNVSK:998:3+PIN:1+998+1+1::{$systemId}+1:{$date}:{$time}+2:2:13:@8@{$dummyKey}:5:1+280:{$blzE}:{$userE}:V:0:0+0'";
+        $hnvsd    = 'HNVSD:999:1+@'.strlen($innerContent).'@'.$innerContent."'";
+        $hnhbs    = 'HNHBS:'.($n + 4).":1+{$msgno}'";
 
-        $body = $hnvsk . $hnvsd . $hnhbs;
-        return self::buildHeader($dialogId, $msgno, $body) . $body;
+        $body = $hnvsk.$hnvsd.$hnhbs;
+        return self::buildHeader($dialogId, $msgno, $body).$body;
     }
 
     /**
@@ -74,13 +74,13 @@ class HbciMessage {
      */
     public static function buildPlain(string $dialogId, int $msgno, array $segs): string {
         $body = implode('', $segs);
-        return self::buildHeader($dialogId, $msgno, $body) . $body;
+        return self::buildHeader($dialogId, $msgno, $body).$body;
     }
 
     private static function buildHeader(string $dialogId, int $msgno, string $body): string {
         $placeholder = "HNHBK:1:3+000000000000+300+{$dialogId}+{$msgno}'";
         $total       = strlen($placeholder) + strlen($body);
-        return 'HNHBK:1:3+' . str_pad($total, 12, '0', STR_PAD_LEFT) . "+300+{$dialogId}+{$msgno}'";
+        return 'HNHBK:1:3+'.str_pad($total, 12, '0', STR_PAD_LEFT)."+300+{$dialogId}+{$msgno}'";
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -186,7 +186,7 @@ class HbciMessage {
             if ($haystack[$pos] === '@') {
                 $endAt = strpos($haystack, '@', $pos + 1);
                 if ($endAt !== false) {
-                    $binLen = (int) substr($haystack, $pos + 1, $endAt - $pos - 1);
+                    $binLen = (int)substr($haystack, $pos + 1, $endAt - $pos - 1);
                     $pos    = $endAt + 1 + $binLen;
                     continue;
                 }
@@ -203,7 +203,6 @@ class HbciMessage {
         }
         return false;
     }
-
     public static function splitUnescaped(string $string, string $delimiter): array {
         $parts = [];
         $start = 0;
@@ -218,7 +217,7 @@ class HbciMessage {
             if ($string[$pos] === '@') {
                 $endAt = strpos($string, '@', $pos + 1);
                 if ($endAt !== false) {
-                    $binLen = (int) substr($string, $pos + 1, $endAt - $pos - 1);
+                    $binLen = (int)substr($string, $pos + 1, $endAt - $pos - 1);
                     $pos    = $endAt + 1 + $binLen;
                     continue;
                 }
@@ -234,11 +233,9 @@ class HbciMessage {
         $parts[] = substr($string, $start);
         return $parts;
     }
-
     public static function unescape(string $value): string {
         return str_replace(['??', '?+', '?:', "?'"], ['?', '+', ':', "'"], $value);
     }
-
     private static function extractBinaryDe(string $de): string {
         if (str_starts_with($de, '@')) {
             $endAt = strpos($de, '@', 1);

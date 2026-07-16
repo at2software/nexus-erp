@@ -14,7 +14,6 @@ import { InputModalService } from '@app/_modals/modal-input/modal-input.componen
     templateUrl: './product-tree.component.html',
     styleUrls: ['./product-tree.component.scss'],
     host: { class: 'sticky-side sticky-side-100 card' },
-    standalone: true,
     imports: [ScrollbarComponent, ProductTreeListComponent, NgbTooltipModule, SpinnerComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

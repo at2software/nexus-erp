@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { tracked } from '@constants/tracked';
 import { FileService } from '@models/file/file.service';
 import { File } from '@models/file/file.model';
 import { IHasFiles } from '@models/file/has_files.interface';
@@ -10,15 +11,18 @@ import { Nx } from '@app/nx/nx.directive';
 @Component({
     selector: 'media-preview',
     templateUrl: './media-preview.component.html',
-    styleUrls: ['./media-preview.component.scss'],
-    standalone: true,
     imports: [DatePipe, DndDirective, FileComponent, Nx],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MediaPreviewComponent {
-    parent = input.required<IHasFiles>();
+    readonly parent = input.required<IHasFiles>();
+    readonly trackedParent = tracked(this.parent);
 
     #fileService = inject(FileService);
 
-    show = (_: File) => this.#fileService.show(_);
+    show = (_: File) => this.#fileService.download(_);
+
+    onUploaded() {
+        this.trackedParent().refresh().subscribe();
+    }
 }

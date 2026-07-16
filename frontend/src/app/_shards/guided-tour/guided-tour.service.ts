@@ -1,5 +1,6 @@
 import { ElementRef, Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
+import { storageGet, storageSet } from '@constants/storage';
 
 export interface GuidedSlide {
     id: string;
@@ -91,7 +92,7 @@ export class GuidedTourService {
 
     disable(): void {
         this.#disabled = true;
-        localStorage.setItem(DISABLED_KEY, 'true');
+        storageSet(DISABLED_KEY, true);
         this.#queue = [];
         this.currentSlide$.next(null);
         this.queueLength$.next(0);
@@ -107,21 +108,14 @@ export class GuidedTourService {
 
     #markSeen(id: string): void {
         this.#seenIds.add(id);
-        localStorage.setItem(SEEN_KEY, JSON.stringify([...this.#seenIds]));
+        storageSet(SEEN_KEY, [...this.#seenIds]);
     }
 
     #loadFromStorage(): void {
-        if (localStorage.getItem(DISABLED_KEY) === 'true') {
+        if (storageGet(DISABLED_KEY, false)) {
             this.#disabled = true;
             return;
         }
-        const seen = localStorage.getItem(SEEN_KEY);
-        if (seen) {
-            try {
-                this.#seenIds = new Set(JSON.parse(seen));
-            } catch {
-                /* ignore corrupt data */
-            }
-        }
+        this.#seenIds = new Set(storageGet<string[]>(SEEN_KEY, []));
     }
 }

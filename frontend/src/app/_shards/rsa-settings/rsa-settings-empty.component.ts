@@ -7,8 +7,6 @@ import { User } from '@models/user/user.model';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'rsa-settings-empty',
     templateUrl: './rsa-settings-empty.component.html',
-    styleUrls: ['./rsa-settings-empty.component.scss'],
-    standalone: true,
     imports: [EmptyStateComponent, SpinnerComponent],
 })
 export class RsaSettingsEmptyComponent {
@@ -27,8 +25,8 @@ export class RsaSettingsEmptyComponent {
         }
     }
 
-    onFileSelected($event: any) {
-        const input = $event.srcElement;
+    onFileSelected($event: Event) {
+        const input = $event.target as HTMLInputElement;
         if (input.files && input.files[0]) {
             const fileReader = new FileReader();
             fileReader.onload = () => {

@@ -1,3 +1,4 @@
+import { Dictionary } from '@constants/constants';
 import { Serializable } from '@models/serializable';
 
 export const deepCopy = <T>(source: T): T => {
@@ -8,7 +9,7 @@ export const deepCopy = <T>(source: T): T => {
         return Object.getOwnPropertyNames(source).reduce(
             (o, prop) => {
                 Object.defineProperty(o, prop, Object.getOwnPropertyDescriptor(source, prop)!);
-                o[prop] = deepCopy((source as Record<string, any>)[prop]);
+                o[prop] = deepCopy((source as Dictionary<any>)[prop]);
                 return o;
             },
             Object.create(Object.getPrototypeOf(source)),

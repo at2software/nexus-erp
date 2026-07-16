@@ -3,29 +3,31 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FileType;
+use App\Http\Requests\File\UploadAvatarRequest;
+use App\Http\Requests\File\UploadMediaRequest;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\File;
 use App\Models\Param;
 use App\Models\Project;
 use App\Models\User;
-use App\Traits\ControllerHasPermissionsTrait;
 use App\Traits\VcardTrait;
+use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class FileController extends Controller {
-    use ControllerHasPermissionsTrait;
-
     public function show(int $id) {
         $file = File::findOrFail($id);
+        if (! Storage::exists($file->dir)) {
+            return response()->json(['error' => 'File not found'], 404);
+        }
         return File::stream($file->dir, utf8_decode($file->name));
     }
     public function destroy(File $file) {
         return $file->delete();
     }
-    public function uploadAvatar(Company|User $obj) {
-        request()->validate(['file' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048']);
-        return $obj->setPhoto(request()->file('file')->path());
+    public function uploadAvatar(UploadAvatarRequest $request, Company|User $obj) {
+        return $obj->setPhoto($request->file('file')->path());
     }
     public function uploadTravelExpenses() {
         $request = request();
@@ -88,9 +90,6 @@ class FileController extends Controller {
         return $this->uploadAvatar($_);
     }
     public static function uploadMedia(Company|Project $obj) {
-        request()->validate([
-            'file' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp|max:10240',
-        ]);
         $dir = request()->file('file')->store('media');
         return File::create([
             'name' => request()->file('file')->getClientOriginalName(),
@@ -99,10 +98,10 @@ class FileController extends Controller {
             ...$obj->toPoly(),
         ]);
     }
-    public function uploadProjectMedia(Project $_) {
+    public function uploadProjectMedia(UploadMediaRequest $request, Project $_) {
         return $this->uploadMedia($_);
     }
-    public function uploadCompanyMedia(Company $_) {
+    public function uploadCompanyMedia(UploadMediaRequest $request, Company $_) {
         return $this->uploadMedia($_);
     }
     public static function usesVcardTrait($obj) {

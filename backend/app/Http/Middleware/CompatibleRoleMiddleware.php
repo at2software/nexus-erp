@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Exceptions\UnauthorizedException;
 use Spatie\Permission\Middleware\RoleMiddleware;
 
@@ -12,7 +13,7 @@ class CompatibleRoleMiddleware extends RoleMiddleware {
             ? $role
             : explode('|', $role);
 
-        if (! Auth::User()->hasAnyRole($roles)) {
+        if (! Auth::user()->hasAnyRole($roles)) {
             throw UnauthorizedException::forRoles($roles);
         }
         return $next($request);

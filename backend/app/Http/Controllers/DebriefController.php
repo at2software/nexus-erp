@@ -25,6 +25,15 @@ class DebriefController extends Controller {
         protected DebriefStatisticsService $statisticsService
     ) {}
 
+    /**
+     * Problem/positive attach, detach and pivot updates (severity, etc.) don't touch the
+     * DebriefProjectDebrief model itself, so no Eloquent event fires - touch() it explicitly,
+     * which saves it and fires the generic BaseModel live-sync broadcast as 'updated'.
+     */
+    private function notifyDebrief(DebriefProjectDebrief $debrief): void {
+        $debrief->touch();
+    }
+
     // ############
     // CATEGORIES
     // ############
@@ -193,15 +202,18 @@ class DebriefController extends Controller {
 
         $problem = DebriefProblem::find($validated['debrief_problem_id']);
         $problem->incrementUsageCount();
+        $this->notifyDebrief($debrief);
         return $debrief->load(['problems.category', 'positives.category']);
     }
     public function updateDebriefProblem(DebriefProblemRequest $request, DebriefProjectDebrief $debrief, DebriefProblem $problem) {
         $debrief->problems()->updateExistingPivot($problem->id, $request->validated());
+        $this->notifyDebrief($debrief);
         return $debrief->load(['problems.category', 'positives.category']);
     }
     public function destroyDebriefProblem(DebriefProjectDebrief $debrief, DebriefProblem $problem) {
         $debrief->problems()->detach($problem->id);
         $problem->decrementUsageCount();
+        $this->notifyDebrief($debrief);
         return response(null, 204);
     }
 
@@ -221,6 +233,7 @@ class DebriefController extends Controller {
             $positive                         = DebriefPositive::create($validated);
             $debrief->positives()->attach($positive->id, ['reported_by_user_id' => $request->user()?->id]);
         }
+        $this->notifyDebrief($debrief);
         return $positive->load('category');
     }
     public function searchPositives(Request $request) {
@@ -239,6 +252,7 @@ class DebriefController extends Controller {
     }
     public function destroyDebriefPositive(DebriefProjectDebrief $debrief, DebriefPositive $positive) {
         $debrief->positives()->detach($positive->id);
+        $this->notifyDebrief($debrief);
         return response(null, 204);
     }
     public function destroyPositive(DebriefPositive $positive) {
@@ -250,6 +264,32 @@ class DebriefController extends Controller {
     // ANALYTICS
     // ###########
 
+    public function showStats(Request $request) {
+        $filters = $request->all();
+        $limit   = $request->input('limit', 10);
+        $months  = $request->input('months', 12);
+
+        $sections = [
+            'aggregated'           => fn () => $this->statisticsService->getAggregatedStats($filters),
+            'categories'           => fn () => $this->statisticsService->getCategoryBreakdown($filters),
+            'categories_positives' => fn () => $this->statisticsService->getCategoryBreakdownPositives($filters),
+            'top_problems'         => fn () => $this->statisticsService->getTopProblems($limit, $filters),
+            'top_solutions'        => fn () => $this->statisticsService->getTopSolutions($limit),
+            'top_positives'        => fn () => $this->statisticsService->getTopPositives($limit, $filters),
+            'trends'               => fn () => $this->statisticsService->getTrends($months),
+            'top_customers_worst'  => fn () => $this->statisticsService->getTopCustomersByProblems($limit, $filters),
+            'top_customers_best'   => fn () => $this->statisticsService->getTopCustomersByPositives($limit, $filters),
+        ];
+
+        $include  = array_filter(explode(',', $request->input('include', '')));
+        $selected = $include ?: array_keys($sections);
+
+        $result = [];
+        foreach (array_intersect(array_keys($sections), $selected) as $key) {
+            $result[$key] = $sections[$key]();
+        }
+        return $result;
+    }
     public function showStatsAggregated(Request $request) {
         return $this->statisticsService->getAggregatedStats($request->all());
     }

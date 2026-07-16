@@ -1,10 +1,11 @@
+import { Dictionary } from '@constants/constants';
 import { HttpInterceptorFn, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 
 export const NexusHttpInterceptor = {
-    headers: {} as Record<string, HttpHeaders>,
+    headers: {} as Dictionary<HttpHeaders>,
     add(url: string, headers: HttpHeaders) {
         NexusHttpInterceptor.headers[url] = headers;
     },

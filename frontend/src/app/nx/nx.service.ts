@@ -1,11 +1,12 @@
 import { Nx } from './nx.directive';
 import { Injectable, Injector, inject } from '@angular/core';
 import { NxAction, NxActionType } from './nx.actions';
+import { INxContextMenu } from './nx.contextmenu.interface';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { Router } from '@angular/router';
 import { GlobalService } from '@models/global.service';
 import { NxGlobal } from './nx.global';
-import { NexusHttpService } from '@models/http/http.nexus';
+import { NexusHttp } from '@models/http/http.nexus';
 import { Observable, Subject } from 'rxjs';
 import { Serializable } from '@models/serializable';
 import { HttpClient } from '@angular/common/http';
@@ -23,21 +24,25 @@ const sub = (_: NxAction): NxAction[] => {
     return data;
 };
 
-export const resolved = <T>(_: T | (() => T)): T => (typeof _ == 'function' ? (_ as any)() : _);
+export const resolved = <T>(_: T | (() => T)): T => (typeof _ == 'function' ? (_ as () => T)() : _);
 
 export interface ContextMenuTrigger {
     objects: Nx[];
     event: MouseEvent;
 }
 
+/** A DOM element with the `Nx` directive attached (see `Nx.nx` host binding). */
+type NxElement = Element & { nx: Nx };
+
 @Injectable({ providedIn: 'root' })
 export class NxService {
     #doubleClickTimeout?: ReturnType<typeof setTimeout>;
     #doubleClickObject?: Nx;
     #lastObject?: Nx;
-    #interruptResult: any;
+    // Holds whatever the interrupting modal resolved with; shape varies per action (see NxAction.interrupt).
+    #interruptResult: unknown;
     selected: Nx[] = [];
-    #service = inject(NexusHttpService<any>);
+    #service = inject(NexusHttp);
     #router = inject(Router);
     #injector = inject(Injector);
     #glob = inject(GlobalService);
@@ -120,12 +125,12 @@ export class NxService {
     };
 
     getParent = () => this.#lastObject?.el.nativeElement.parentElement;
-    getSiblings = () => [...(this.getParent()?.children ?? [])].filter((_: any) => 'nx' in _); // spread converts HTMLCollection to Array
+    getSiblings = (): NxElement[] => [...(this.getParent()?.children ?? [])].filter((_): _ is NxElement => 'nx' in _); // spread converts HTMLCollection to Array
 
     selectWith = <T extends Serializable>(predict: (_: T) => boolean) => {
         this.unselectAll();
-        this.getSiblings().forEach((_: any) => {
-            if (predict(_.nx.nx())) this.select(_.nx);
+        this.getSiblings().forEach((_) => {
+            if (predict(_.nx.nx() as T)) this.select(_.nx);
         });
         this.propagateGlobalSelection();
     };
@@ -153,7 +158,7 @@ export class NxService {
     };
 
     toggle = (o: Nx): Nx => {
-        this.#isSelected(o) ? this.unselect(o) : this.select(o);
+        if (this.#isSelected(o)) this.unselect(o); else this.select(o);
         this.propagateGlobalSelection();
         return o;
     };
@@ -249,7 +254,9 @@ export class NxService {
             : Promise.resolve();
 
         interrupt
-            .then((result: any) => {
+            .then((result: unknown) => {
+                // An interrupt modal resolves `undefined`/falsy when cancelled — skip the action in that case.
+                if (matchedActions[0].interrupt && !result) return;
                 this.#interruptResult = result;
                 let stackCount = this.selected.length;
                 this.selected.forEach((sel) => {
@@ -257,7 +264,8 @@ export class NxService {
                     const selTables = sel.tables();
                     const action = NxService.flatActions(selNx.actions).find((_) => _.title == _action.title);
                     if (action?.action) {
-                        const resolve = (data: any = undefined) => {
+                        // Mirrors NxActionResolve's `success` callback — payload shape is per-action.
+                        const resolve = (data: unknown = undefined) => {
                             stackCount--;
                             propagate(action, stackCount);
                             const resolvedType = typeof action.type === 'function' ? action.type(sel.context()) : action.type;
@@ -267,15 +275,16 @@ export class NxService {
                                 if (target) tables.remove(target);
                             }
                             if (data && resolvedType === NxActionType.Creative && Array.isArray(selTables)) {
-                                selTables.push(data);
+                                // A Creative action resolves with the freshly created row to append.
+                                selTables.push(data as INxContextMenu);
                             }
                             if (stackCount === 0) propagateFinalized(action);
                         };
                         const actionType = action.action(resolve, sel.nxContext(), this.#interruptResult);
-                        if ((actionType as any) instanceof Promise) {
-                            (actionType as any as Promise<any>).then((response) => { if (response) resolve(response); });
-                        } else if ((actionType as any) instanceof Observable) {
-                            (actionType as any as Observable<any>).subscribe(resolve);
+                        if (actionType instanceof Promise) {
+                            actionType.then((response) => { if (response) resolve(response); });
+                        } else if (actionType instanceof Observable) {
+                            actionType.subscribe(resolve);
                         }
                     } else {
                         stackCount--;

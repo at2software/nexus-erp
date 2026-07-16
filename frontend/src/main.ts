@@ -1,10 +1,9 @@
 import 'reflect-metadata';
-import { ApplicationConfig, enableProdMode, ErrorHandler, inject, LOCALE_ID, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
-import { environment } from './environments/environment';
+import { ApplicationConfig, EnvironmentProviders, ErrorHandler, inject, LOCALE_ID, Provider, provideAppInitializer, provideZonelessChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { AppComponent } from '@app/app/app.component';
 import { APP_BASE_HREF, PlatformLocation, registerLocaleData } from '@angular/common';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpFeature, HttpFeatureKind, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { ConfirmationService } from './app/_modals/modal-confirm/confirmation.service';
 import { nexusHttpInterceptor } from '@app/http.interceptor';
@@ -14,7 +13,7 @@ import { GlobalService } from '@models/global.service';
 import { AuthenticationService } from '@models/auth.service';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
 import { PermissionsGuard } from '@guards/permissions.guard';
-import { routes } from './app/app-routing.module';
+import { routes } from './app/app.routes';
 import { LocaleService, LOCALE_CONFIG } from 'ngx-daterangepicker-material';
 import { ChunkErrorHandler } from '@constants/ChunkErrorHandler';
 import { provideEchartsCore } from 'ngx-echarts';
@@ -27,16 +26,17 @@ registerLocaleData(localeDe);
 
 AuthenticationService.loadSysInfo().then(async (sysinfo) => {
     if (sysinfo) {
-        let keycloakHttpOptions: any[] = [];
-        let keycloakProviders: any[] = [];
+        let keycloakHttpOptions: HttpFeature<HttpFeatureKind>[] = [];
+        let keycloakProviders: (Provider | EnvironmentProviders)[] = [];
         if (sysinfo.method === 'keycloak') {
-            const [{ includeBearerTokenInterceptor }, { KeycloakHandler }] = await Promise.all([import('keycloak-angular') as any, import('@models/keycloak')]);
+            const [{ includeBearerTokenInterceptor }, { KeycloakHandler }] = await Promise.all([import('keycloak-angular'), import('@models/http/keycloak')]);
             keycloakHttpOptions = [withInterceptors([includeBearerTokenInterceptor])];
             keycloakProviders = KeycloakHandler.provideKeycloak();
         }
 
         const appConfig: ApplicationConfig = {
             providers: [
+                provideZonelessChangeDetection(),
                 { provide: MODEL_REGISTRY_TOKEN, useFactory: () => MODEL_REGISTRY },
                 NxService,
                 GlobalService,
@@ -51,25 +51,15 @@ AuthenticationService.loadSysInfo().then(async (sysinfo) => {
                 { provide: ErrorHandler, useClass: ChunkErrorHandler },
                 { provide: APP_BASE_HREF, useFactory: (s: PlatformLocation) => s.getBaseHrefFromDOM(), deps: [PlatformLocation] },
                 { provide: LOCALE_ID, deps: [GlobalService], useFactory: (g: GlobalService) => g.locale },
-                provideEchartsCore({ echarts: () => import('echarts') as any }),
+                provideEchartsCore({ echarts: () => import('echarts') }),
 
                 provideRouter(routes()),
-                provideAppInitializer(() => {
-                    const initializerFn = (
-                        (_: RouteChangeListenerService) => () =>
-                            new Promise<void>((resolve) => resolve())
-                    )(inject(RouteChangeListenerService));
-                    return initializerFn();
-                }),
+                provideAppInitializer(() => { inject(RouteChangeListenerService); }),
                 ...keycloakProviders,
             ],
         };
 
-        if (environment.production) {
-            enableProdMode();
-        }
-
-        bootstrapApplication(AppComponent, { ...appConfig, providers: [provideZoneChangeDetection(), ...appConfig.providers] })
+        bootstrapApplication(AppComponent, appConfig)
             .then(() => {
                 const splash = document.getElementById('splash-screen');
                 if (splash) {

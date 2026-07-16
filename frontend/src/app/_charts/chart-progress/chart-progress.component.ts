@@ -8,7 +8,6 @@ import { ShortPipe } from '@pipes/short.pipe';
     templateUrl: './chart-progress.component.html',
     styleUrls: ['./chart-progress.component.scss'],
     host: { class: 'd-block w-100' },
-    standalone: true,
     imports: [NgbTooltipModule, ShortPipe, PercentPipe],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

@@ -18,7 +18,6 @@ type ActivityMode = 'initiative' | 'workflow';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'marketing-activity-detail',
     templateUrl: './marketing-activity-detail.component.html',
-    standalone: true,
     imports: [FormsModule, NgbDropdownModule, NgbTooltipModule, SpinnerComponent, I18nTextareaComponent],
 })
 export class MarketingActivityDetailComponent {
@@ -31,23 +30,23 @@ export class MarketingActivityDetailComponent {
     activity = signal<IActivityBase | null>(null);
     isLoading = signal(false);
     isSaving = signal(false);
-    availableMetrics: MarketingPerformanceMetric[] = [];
+    availableMetrics = signal<MarketingPerformanceMetric[]>([]);
 
     editName = '';
     editDayOffset = 0;
     editDescription: string | { language: string; formality: string; text: string }[] = '';
     editIsRequired = false;
     editHasExternalDependency = false;
-    editParentActivityId = '';
-    editQuickAction: QuickActionType = null;
-    selectedKpiId = '';
+    editParentActivityId = signal('');
+    editQuickAction = signal<QuickActionType>(null);
+    selectedKpiId = signal('');
 
-    readonly quickActions: { value: QuickActionType; label: string }[] = [
+    readonly quickActions: { value: QuickActionType; label: string; icon?: string }[] = [
         { value: null, label: 'none' },
-        { value: 'EMAIL', label: 'Email' },
-        { value: 'LINKEDIN', label: 'LinkedIn' },
-        { value: 'LINKEDIN_SEARCH', label: 'LinkedIn Search' },
-        { value: 'CALL', label: 'Call' },
+        { value: 'EMAIL', label: 'Email', icon: 'email' },
+        { value: 'LINKEDIN', label: 'LinkedIn', icon: 'group' },
+        { value: 'LINKEDIN_SEARCH', label: 'LinkedIn Search', icon: 'person_search' },
+        { value: 'CALL', label: 'Call', icon: 'call' },
     ];
 
     readonly siblingActivities = computed<IActivityBase[]>(() => {
@@ -58,19 +57,22 @@ export class MarketingActivityDetailComponent {
             : (ctx as MarketingWorkflow).marketing_activities ?? [];
     });
 
-    get selectedQuickActionLabel(): string {
-        return this.quickActions.find((qa) => qa.value === this.editQuickAction)?.label ?? 'none';
-    }
+    readonly selectedQuickAction = computed(() => {
+        const value = this.editQuickAction();
+        return this.quickActions.find((qa) => qa.value === value) ?? this.quickActions[0];
+    });
 
-    get selectedParentActivityLabel(): string {
-        if (!this.editParentActivityId) return 'none';
-        const a = this.siblingActivities().find((a) => String(a.id) === this.editParentActivityId);
+    readonly selectedMetric = computed(() => {
+        const kpiId = this.selectedKpiId();
+        return this.availableMetrics().find((m) => String(m.id) === kpiId) ?? null;
+    });
+
+    readonly selectedParentActivityLabel = computed<string>(() => {
+        const parentId = this.editParentActivityId();
+        if (!parentId) return 'none';
+        const a = this.siblingActivities().find((a) => String(a.id) === parentId);
         return a ? `D${a.day_offset} – ${a.name}` : 'none';
-    }
-
-    get selectedMetricLabel(): string {
-        return this.availableMetrics.find((m) => String(m.id) === this.selectedKpiId)?.name ?? 'none';
-    }
+    });
 
     constructor() {
         this.mode = this.#route.snapshot.data['mode'] ?? 'initiative';
@@ -83,15 +85,15 @@ export class MarketingActivityDetailComponent {
 
     #loadData(parentId: string, activityId: string) {
         this.isLoading.set(true);
-        if (!this.availableMetrics.length) {
-            this.#marketingService.indexMetrics().subscribe((m) => (this.availableMetrics = m));
+        if (!this.availableMetrics().length) {
+            this.#marketingService.indexMetrics().subscribe((m) => this.availableMetrics.set(m));
         }
-        const load$: Observable<any> = this.mode === 'initiative'
+        const load$: Observable<MarketingInitiative | MarketingWorkflow> = this.mode === 'initiative'
             ? this.#marketingService.showInitiative(parentId)
             : this.#marketingService.showWorkflow(parentId);
 
         load$.subscribe({
-            next: (ctx: any) => {
+            next: (ctx) => {
                 this.context.set(ctx);
                 const activity = this.siblingActivities().find((a) => String(a.id) === activityId) ?? null;
                 this.activity.set(activity);
@@ -108,9 +110,9 @@ export class MarketingActivityDetailComponent {
         this.editDescription = activity.description ?? '';
         this.editIsRequired = activity.is_required;
         this.editHasExternalDependency = activity.has_external_dependency ?? false;
-        this.editParentActivityId = activity.parent_activity_id ?? '';
-        this.editQuickAction = activity.quick_action ?? null;
-        this.selectedKpiId = activity.performance_metrics?.[0]?.id?.toString() ?? '';
+        this.editParentActivityId.set(activity.parent_activity_id != null ? String(activity.parent_activity_id) : '');
+        this.editQuickAction.set(activity.quick_action ?? null);
+        this.selectedKpiId.set(activity.performance_metrics?.[0]?.id?.toString() ?? '');
     }
 
     saveActivity() {
@@ -129,11 +131,11 @@ export class MarketingActivityDetailComponent {
             description: this.editDescription || null,
             is_required: this.editIsRequired,
             has_external_dependency: this.editHasExternalDependency,
-            parent_activity_id: this.editParentActivityId || null,
-            quick_action: this.editQuickAction,
+            parent_activity_id: this.editParentActivityId() || null,
+            quick_action: this.editQuickAction(),
         };
 
-        const save$: Observable<any> = this.mode === 'initiative'
+        const save$: Observable<IActivityBase> = this.mode === 'initiative'
             ? this.#marketingService.updateInitiativeActivity(parentId, activityId, payload)
             : this.#marketingService.updateWorkflowActivity(parentId, activityId, payload);
 
@@ -155,15 +157,16 @@ export class MarketingActivityDetailComponent {
         });
     }
 
-    #syncMetric(parentId: string, activityId: string, prevMetricId: string): Observable<any> {
-        if (prevMetricId === this.selectedKpiId) return of(null);
-        const ops: Observable<any>[] = [];
+    #syncMetric(parentId: string, activityId: string, prevMetricId: string): Observable<unknown> {
+        const selectedKpiId = this.selectedKpiId();
+        if (prevMetricId === selectedKpiId) return of(null);
+        const ops: Observable<unknown>[] = [];
         if (this.mode === 'initiative') {
             if (prevMetricId) ops.push(this.#marketingService.detachMetricFromInitiativeActivity(parentId, activityId, prevMetricId));
-            if (this.selectedKpiId) ops.push(this.#marketingService.attachMetricToInitiativeActivity(parentId, activityId, { metric_id: this.selectedKpiId }));
+            if (selectedKpiId) ops.push(this.#marketingService.attachMetricToInitiativeActivity(parentId, activityId, { metric_id: selectedKpiId }));
         } else {
             if (prevMetricId) ops.push(this.#marketingService.detachMetricFromActivity(activityId, prevMetricId));
-            if (this.selectedKpiId) ops.push(this.#marketingService.attachMetricToActivity(activityId, { metric_id: this.selectedKpiId }));
+            if (selectedKpiId) ops.push(this.#marketingService.attachMetricToActivity(activityId, { metric_id: selectedKpiId }));
         }
         return ops.length ? forkJoin(ops) : of(null);
     }

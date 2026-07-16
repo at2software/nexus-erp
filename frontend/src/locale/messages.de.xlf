@@ -388,6 +388,174 @@
         <target>speichern</target>
       </segment>
     </unit>
+    <unit id="i18n.common.remove">
+      <segment>
+        <source>remove</source>
+        <target>entfernen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.unsavedChanges">
+      <segment>
+        <source>unsaved changes</source>
+        <target>ungespeicherte Änderungen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.title">
+      <segment>
+        <source>PDF template</source>
+        <target>PDF-Vorlage</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.saved">
+      <segment>
+        <source>PDF template saved</source>
+        <target>PDF-Vorlage gespeichert</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.reverted">
+      <segment>
+        <source>Reverted to original template</source>
+        <target>Auf Originalvorlage zurückgesetzt</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.logoUpdated">
+      <segment>
+        <source>Logo updated</source>
+        <target>Logo aktualisiert</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.replaceLogo">
+      <segment>
+        <source>replace logo</source>
+        <target>Logo ersetzen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.revert">
+      <segment>
+        <source>revert to original</source>
+        <target>auf Original zurücksetzen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.renderPdf">
+      <segment>
+        <source>render real PDF</source>
+        <target>echtes PDF rendern</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.element">
+      <segment>
+        <source>element</source>
+        <target>Element</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.code">
+      <segment>
+        <source>code</source>
+        <target>Code</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.text">
+      <segment>
+        <source>text</source>
+        <target>Text</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.fontSize">
+      <segment>
+        <source>font size</source>
+        <target>Schriftgröße</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.color">
+      <segment>
+        <source>color</source>
+        <target>Farbe</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.style">
+      <segment>
+        <source>style</source>
+        <target>Stil</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.marginTop">
+      <segment>
+        <source>margin top</source>
+        <target>Abstand oben</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.marginBottom">
+      <segment>
+        <source>margin bottom</source>
+        <target>Abstand unten</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.paddingTop">
+      <segment>
+        <source>padding top</source>
+        <target>Innenabstand oben</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.paddingBottom">
+      <segment>
+        <source>padding bottom</source>
+        <target>Innenabstand unten</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.clickHint">
+      <segment>
+        <source>Click an element in the preview to edit its text and styling.</source>
+        <target>Klicken Sie ein Element in der Vorschau an, um Text und Formatierung zu bearbeiten.</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.add">
+      <segment>
+        <source>add</source>
+        <target>hinzufügen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.addText">
+      <segment>
+        <source>text block</source>
+        <target>Textblock</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.addDivider">
+      <segment>
+        <source>divider</source>
+        <target>Trennlinie</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.addSpacer">
+      <segment>
+        <source>spacer</source>
+        <target>Abstand</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.editFull">
+      <segment>
+        <source>edit full document</source>
+        <target>gesamtes Dokument bearbeiten</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.htmlCode">
+      <segment>
+        <source>HTML (template.html)</source>
+        <target>HTML (template.html)</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.cssCode">
+      <segment>
+        <source>CSS (styles.css)</source>
+        <target>CSS (styles.css)</target>
+      </segment>
+    </unit>
+    <unit id="i18n.settings.pdf.realPdf">
+      <segment>
+        <source>real PDF (DomPDF)</source>
+        <target>echtes PDF (DomPDF)</target>
+      </segment>
+    </unit>
     <unit id="i18n.common.select_mantis_project">
       <segment>
         <source>Select MantisBT project</source>
@@ -530,6 +698,36 @@
       <segment>
         <source>date &amp; time</source>
         <target>Datum &amp; Uhrzeit</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.review">
+      <segment>
+        <source>review</source>
+        <target>prüfen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.leaveAllowance">
+      <segment>
+        <source>leave allowance</source>
+        <target>Urlaubsanspruch</target>
+      </segment>
+    </unit>
+    <unit id="i18n.vacation.currentBalance">
+      <segment>
+        <source>current balance</source>
+        <target>aktuelles Guthaben</target>
+      </segment>
+    </unit>
+    <unit id="i18n.vacation.balanceIfApproved">
+      <segment>
+        <source>balance if approved</source>
+        <target>Guthaben bei Genehmigung</target>
+      </segment>
+    </unit>
+    <unit id="i18n.vacation.withdraw">
+      <segment>
+        <source>withdraw</source>
+        <target>zurückziehen</target>
       </segment>
     </unit>
     <unit id="i18n.common.duration">
@@ -1552,6 +1750,60 @@
         <target>Entscheidungsdauer</target>
       </segment>
     </unit>
+    <unit id="i18n.customers.mlForecast">
+      <segment>
+        <source>ML forecast</source>
+        <target>ML-Prognose</target>
+      </segment>
+    </unit>
+    <unit id="i18n.customers.mlInsights">
+      <segment>
+        <source>ML insights</source>
+        <target>ML-Erkenntnisse</target>
+      </segment>
+    </unit>
+    <unit id="i18n.customers.attentionNeeded">
+      <segment>
+        <source>attention needed</source>
+        <target>Handlungsbedarf</target>
+      </segment>
+    </unit>
+    <unit id="i18n.customers.mlRevenue12m">
+      <segment>
+        <source>predicted revenue (12m)</source>
+        <target>prognostizierter Umsatz (12M)</target>
+      </segment>
+    </unit>
+    <unit id="i18n.customers.mlNextPurchase">
+      <segment>
+        <source>predicted next purchase</source>
+        <target>prognostizierter nächster Kauf</target>
+      </segment>
+    </unit>
+    <unit id="i18n.customers.contactNowTip">
+      <segment>
+        <source>predicted next purchase date is in the past — contact this customer</source>
+        <target>prognostiziertes nächstes Kaufdatum liegt in der Vergangenheit — Kunde kontaktieren</target>
+      </segment>
+    </unit>
+    <unit id="i18n.customers.mlChurnRisk">
+      <segment>
+        <source>churn risk (12m)</source>
+        <target>Abwanderungsrisiko (12M)</target>
+      </segment>
+    </unit>
+    <unit id="i18n.customers.mlSupportHours">
+      <segment>
+        <source>predicted support (next quarter)</source>
+        <target>prognostizierter Support (nächstes Quartal)</target>
+      </segment>
+    </unit>
+    <unit id="i18n.customers.mlNextQuarter">
+      <segment>
+        <source>next quarter</source>
+        <target>nächstes Quartal</target>
+      </segment>
+    </unit>
     <unit id="i18n.customers.daysUntilProjectIsEither">
       <segment>
         <source>days until project is either ordered or failed</source>
@@ -1778,6 +2030,12 @@
       <segment>
         <source>activate recurring items</source>
         <target>wiederkehrende Positionen aktivieren</target>
+      </segment>
+    </unit>
+    <unit id="i18n.invoice.draftInvoice">
+      <segment>
+        <source>draft invoice</source>
+        <target>Rechnungsentwurf</target>
       </segment>
     </unit>
     <unit id="i18n.customers.customerclausesWorks">
@@ -2032,6 +2290,30 @@
         <target>Uptime-Überwachung</target>
       </segment>
     </unit>
+    <unit id="i18n.widget-customer-churn">
+      <segment>
+        <source>customer churn</source>
+        <target>Kundenabwanderung</target>
+      </segment>
+    </unit>
+    <unit id="i18n.widget-overrun-risk">
+      <segment>
+        <source>overrun risk</source>
+        <target>Überschreitungsrisiko</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.quoted">
+      <segment>
+        <source>quoted</source>
+        <target>kalkuliert</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.predicted">
+      <segment>
+        <source>predicted</source>
+        <target>prognostiziert</target>
+      </segment>
+    </unit>
     <unit id="i18n.common.newDashboard">
       <segment>
         <source>new dashboard</source>
@@ -2146,10 +2428,28 @@
         <target>nicht genug</target>
       </segment>
     </unit>
-    <unit id="i18n.hr.timeVacationOrWeekend">
+    <unit id="i18n.hr.timeVacation">
       <segment>
-        <source>vacation / weekend</source>
-        <target>Urlaub / Wochenende</target>
+        <source>vacation</source>
+        <target>Urlaub</target>
+      </segment>
+    </unit>
+    <unit id="i18n.hr.timeSick">
+      <segment>
+        <source>sick</source>
+        <target>krank</target>
+      </segment>
+    </unit>
+    <unit id="i18n.hr.timeHoliday">
+      <segment>
+        <source>public holiday</source>
+        <target>Feiertag</target>
+      </segment>
+    </unit>
+    <unit id="i18n.hr.timeWeekend">
+      <segment>
+        <source>weekend</source>
+        <target>Wochenende</target>
       </segment>
     </unit>
     <unit id="i18n.invoice.prepared">
@@ -3470,6 +3770,96 @@
         <target>abgeschlossen</target>
       </segment>
     </unit>
+    <unit id="i18n.common.issue">
+      <segment>
+        <source>issue</source>
+        <target>Ticket</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.tracker">
+      <segment>
+        <source>tracker</source>
+        <target>Tracker</target>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.linkExternalIssue">
+      <segment>
+        <source>link external issue</source>
+        <target>externes Ticket verknüpfen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.noTrackersLinked">
+      <segment>
+        <source>no issue trackers linked to this project</source>
+        <target>keine Ticketsysteme mit diesem Projekt verknüpft</target>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.noTokenManualHint">
+      <segment>
+        <source>no credentials for this tracker — enter the issue id manually below</source>
+        <target>keine Zugangsdaten für dieses Ticketsystem — Ticket-ID unten manuell eingeben</target>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.searchIssues">
+      <segment>
+        <source>search issues...</source>
+        <target>Tickets suchen...</target>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.noIssuesFound">
+      <segment>
+        <source>no issues found</source>
+        <target>keine Tickets gefunden</target>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.issueIdManual">
+      <segment>
+        <source>issue id</source>
+        <target>Ticket-ID</target>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.removeLink">
+      <segment>
+        <source>remove link</source>
+        <target>Verknüpfung entfernen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.hideCompleted">
+      <segment>
+        <source>hide completed issues</source>
+        <target>erledigte Tickets ausblenden</target>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.importUnresolvedIssues">
+      <segment>
+        <source>import unresolved issues</source>
+        <target>offene Tickets importieren</target>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.importFrom">
+      <segment>
+        <source>import from</source>
+        <target>importieren von</target>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.alreadyImportedSkipped">
+      <segment>
+        <source><ph id="0" equiv="INTERPOLATION" disp="{{ skippedCount() }}"/> issue(s) already imported — skipped</source>
+        <target><ph id="0" equiv="INTERPOLATION" disp="{{ skippedCount() }}"/> Ticket(s) bereits importiert — übersprungen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.selectAll">
+      <segment>
+        <source>select all</source>
+        <target>alle auswählen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.deselectAll">
+      <segment>
+        <source>deselect all</source>
+        <target>alle abwählen</target>
+      </segment>
+    </unit>
     <unit id="i18n.marketing.initiatives">
       <segment>
         <source>initiatives</source>
@@ -4215,6 +4605,18 @@
       <segment>
         <source>package multiplier</source>
         <target>Paketgröße</target>
+      </segment>
+    </unit>
+    <unit id="i18n.product.basePrice">
+      <segment>
+        <source>base price</source>
+        <target>Grundpreis</target>
+      </segment>
+    </unit>
+    <unit id="i18n.product.priceMultiplier">
+      <segment>
+        <source>price multiplier</source>
+        <target>Preismultiplikator</target>
       </segment>
     </unit>
     <unit id="i18n.common.weightG">
@@ -5279,22 +5681,82 @@
         <target>keine Daten</target>
       </segment>
     </unit>
-    <unit id="i18n.projects.leadSuccessByDesicionDuration">
+    <unit id="i18n.projects.acceptanceRateBySignal">
       <segment>
-        <source>lead success by desicion duration</source>
-        <target>Lead-Erfolg nach Entscheidungsdauer</target>
+        <source>acceptance rate by signal</source>
+        <target>Annahmequote nach Signal</target>
       </segment>
     </unit>
-    <unit id="i18n.projects.leadSuccessByBudgetSize">
+    <unit id="i18n.projects.signalDaysPending">
       <segment>
-        <source>lead success by budget size</source>
-        <target>Lead-Erfolg nach Budgetgröße</target>
+        <source>decision duration</source>
+        <target>Entscheidungsdauer</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.signalNet">
+      <segment>
+        <source>quote value</source>
+        <target>Angebotswert</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.signalItemCount">
+      <segment>
+        <source>item count</source>
+        <target>Positionsanzahl</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.signalDiscountPct">
+      <segment>
+        <source>discount</source>
+        <target>Rabatt</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.signalPrefixLength">
+      <segment>
+        <source>prefix length</source>
+        <target>Textbaustein-Länge</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.signalCompanyAcceptanceRate">
+      <segment>
+        <source>customer acceptance rate</source>
+        <target>Kunden-Annahmequote</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.signalCompanyPriorDecidedCount">
+      <segment>
+        <source>customer quote history</source>
+        <target>Angebotshistorie des Kunden</target>
       </segment>
     </unit>
     <unit id="i18n.projects.infoRealWorkingTimeVsQuoteEstimation">
       <segment>
         <source>real working time vs. quote estimation (only finished projects)</source>
         <target>tatsächliche Arbeitszeit vs. Angebotsschätzung (nur beendete Projekte)</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.finishedProjectsByGroup">
+      <segment>
+        <source>finished projects by product group</source>
+        <target>abgeschlossene Projekte nach Produktgruppe</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.revenueByGroup">
+      <segment>
+        <source>revenue by product group</source>
+        <target>Umsatz nach Produktgruppe</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.successRate">
+      <segment>
+        <source>success rate</source>
+        <target>Erfolgsquote</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.finishedProjectsOverTime">
+      <segment>
+        <source>finished projects over time</source>
+        <target>abgeschlossene Projekte im Zeitverlauf</target>
       </segment>
     </unit>
     <unit id="i18n.uptime.addMonitor">
@@ -5355,6 +5817,24 @@
       <segment>
         <source>unassigned</source>
         <target>nicht zugewiesen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.noData">
+      <segment>
+        <source>no data available</source>
+        <target>keine Daten verfügbar</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.successful">
+      <segment>
+        <source>successful</source>
+        <target>erfolgreich</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.unsuccessful">
+      <segment>
+        <source>unsuccessful</source>
+        <target>nicht erfolgreich</target>
       </segment>
     </unit>
     <unit id="i18n.milestone.updated">
@@ -5867,6 +6347,90 @@
         <target>zu Kunde verschieben</target>
       </segment>
     </unit>
+    <unit id="i18n.projects.quoteAcceptance">
+      <segment>
+        <source>quote acceptance</source>
+        <target>Angebotsannahme</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteOutcome">
+      <segment>
+        <source>outcome</source>
+        <target>Ergebnis</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteAccepted">
+      <segment>
+        <source>accepted</source>
+        <target>angenommen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteRejected">
+      <segment>
+        <source>rejected</source>
+        <target>abgelehnt</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.acceptanceProbability">
+      <segment>
+        <source>acceptance probability</source>
+        <target>Annahmewahrscheinlichkeit</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteSuggestions">
+      <segment>
+        <source>could improve the odds</source>
+        <target>könnte die Chancen verbessern</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteSuggestion.moreItems">
+      <segment>
+        <source>split into <ph id="0" equiv="PH" disp="to"/> items (currently <ph id="1" equiv="PH_1" disp="from"/>)</source>
+        <target>in <ph id="0" equiv="PH" disp="to"/> Positionen aufteilen (aktuell <ph id="1" equiv="PH_1" disp="from"/>)</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteSuggestion.fewerItems">
+      <segment>
+        <source>combine into <ph id="0" equiv="PH" disp="to"/> items (currently <ph id="1" equiv="PH_1" disp="from"/>)</source>
+        <target>in <ph id="0" equiv="PH" disp="to"/> Positionen zusammenfassen (aktuell <ph id="1" equiv="PH_1" disp="from"/>)</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteSuggestion.higherNet">
+      <segment>
+        <source>increase the quote value</source>
+        <target>den Angebotswert erhöhen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteSuggestion.lowerNet">
+      <segment>
+        <source>lower the quote value</source>
+        <target>den Angebotswert senken</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteSuggestion.discount">
+      <segment>
+        <source>offer <ph id="0" equiv="PH" disp="points"/> more discount</source>
+        <target><ph id="0" equiv="PH" disp="points"/> mehr Rabatt anbieten</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteSuggestion.addIntro">
+      <segment>
+        <source>write a personalized introduction</source>
+        <target>eine persönliche Einleitung schreiben</target>
+      </segment>
+    </unit>
+    <unit id="i18n.projects.quoteSuggestion.longerIntro">
+      <segment>
+        <source>write a longer introduction</source>
+        <target>eine längere Einleitung schreiben</target>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.f1Recall">
+      <segment>
+        <source>F1 <ph id="0" equiv="PH" disp="summary.value"/> · recall <ph id="1" equiv="PH_1" disp="summary.recall"/></source>
+        <target>F1 <ph id="0" equiv="PH" disp="summary.value"/> · Recall <ph id="1" equiv="PH_1" disp="summary.recall"/></target>
+      </segment>
+    </unit>
     <unit id="i18n.common.quote">
       <segment>
         <source>quote</source>
@@ -6035,6 +6599,24 @@
         <target>Meine Vorhersage</target>
       </segment>
     </unit>
+    <unit id="i18n.project.overrunPredicted">
+      <segment>
+        <source>overrun predicted</source>
+        <target>Überschreitung vorhergesagt</target>
+      </segment>
+    </unit>
+    <unit id="i18n.project.mlPredictedDuration">
+      <segment>
+        <source>ML predicted duration</source>
+        <target>ML-vorhergesagte Dauer</target>
+      </segment>
+    </unit>
+    <unit id="i18n.project.mlPredictedRemainingDuration">
+      <segment>
+        <source>ML predicted remaining</source>
+        <target>ML-vorhergesagte Restdauer</target>
+      </segment>
+    </unit>
     <unit id="i18n.projects.useAllPredictionsFromThis">
       <segment>
         <source>use all predictions from this user</source>
@@ -6087,6 +6669,24 @@
       <segment>
         <source>All items created here are assigned to the default product (see project settings).</source>
         <target>Alle hier erstellten Artikel werden dem Standardprodukt zugewiesen (siehe Projekteinstellungen).</target>
+      </segment>
+    </unit>
+    <unit id="i18n.project.newHeaderTitle">
+      <segment>
+        <source>New section header</source>
+        <target>Neue Abschnittsüberschrift</target>
+      </segment>
+    </unit>
+    <unit id="i18n.project.newHeaderInfo">
+      <segment>
+        <source>Headers group the items below them. Enter a title for the new section.</source>
+        <target>Überschriften gruppieren die darunterliegenden Artikel. Geben Sie einen Titel für den neuen Abschnitt ein.</target>
+      </segment>
+    </unit>
+    <unit id="i18n.project.newItemTitle">
+      <segment>
+        <source>New item</source>
+        <target>Neuer Artikel</target>
       </segment>
     </unit>
     <unit id="i18n.invoice.supportItems">
@@ -6920,6 +7520,18 @@
         <target>Hinweis</target>
       </segment>
     </unit>
+    <unit id="i18n.comment.makeSticky">
+      <segment>
+        <source>make sticky</source>
+        <target>anheften</target>
+      </segment>
+    </unit>
+    <unit id="i18n.comment.unstick">
+      <segment>
+        <source>unstick</source>
+        <target>lösen</target>
+      </segment>
+    </unit>
     <unit id="i18n.common.retire">
       <segment>
         <source>retire</source>
@@ -7014,6 +7626,12 @@
       <segment>
         <source>download</source>
         <target>herunterladen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.preview">
+      <segment>
+        <source>preview</source>
+        <target>Vorschau</target>
       </segment>
     </unit>
     <unit id="i18n.invoices.reallyDeleteThisFile">
@@ -7320,6 +7938,24 @@
       <segment>
         <source>reminder extended</source>
         <target>Erinnerung verlängert</target>
+      </segment>
+    </unit>
+    <unit id="i18n.project.duplicated">
+      <segment>
+        <source>project duplicated</source>
+        <target>Projekt dupliziert</target>
+      </segment>
+    </unit>
+    <unit id="i18n.project.duplicate">
+      <segment>
+        <source>duplicate project</source>
+        <target>Projekt duplizieren</target>
+      </segment>
+    </unit>
+    <unit id="i18n.project.duplicateName">
+      <segment>
+        <source>name for the duplicated project</source>
+        <target>Name für das duplizierte Projekt</target>
       </segment>
     </unit>
     <unit id="i18n.common.commentCreated">
@@ -9795,6 +10431,24 @@
       </segment>
     </unit>
     
+    <unit id="i18n.invoices.assignProductQty">
+      <segment>
+        <source>assign product &amp; qty</source>
+        <target>Produkt &amp; Menge zuweisen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.invoices.qtyFactor">
+      <segment>
+        <source>multiply quantity by</source>
+        <target>Menge multiplizieren mit</target>
+      </segment>
+    </unit>
+    <unit id="i18n.invoices.roundQtyTo">
+      <segment>
+        <source>round up to nearest</source>
+        <target>aufrunden auf</target>
+      </segment>
+    </unit>
     <unit id="i18n.invoices.assignToExpense">
       <segment>
         <source>assign to expense</source>
@@ -10410,6 +11064,270 @@
         <target>Projektanalyse</target>
       </segment>
     </unit>
-    
+
+    <unit id="i18n.common.requestDeletion">
+      <segment>
+        <source>request deletion</source>
+        <target>Löschung beantragen</target>
+      </segment>
+    </unit>
+
+    <unit id="i18n.common.requestDeletionReason">
+      <segment>
+        <source>Why should this be deleted?</source>
+        <target>Warum soll dies gelöscht werden?</target>
+      </segment>
+    </unit>
+
+    <unit id="i18n.common.deletionRequested">
+      <segment>
+        <source>Deletion requested</source>
+        <target>Löschung beantragt</target>
+      </segment>
+    </unit>
+
+    <unit id="i18n.common.deletionRequests">
+      <segment>
+        <source>deletion requests</source>
+        <target>Löschanträge</target>
+      </segment>
+    </unit>
+
+    <unit id="i18n.deletionRequest.reallyReject">
+      <segment>
+        <source>Reject this deletion request?</source>
+        <target>Diesen Löschantrag ablehnen?</target>
+      </segment>
+    </unit>
+
+    <unit id="i18n.common.due">
+      <segment>
+        <source>due</source>
+        <target>fällig</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.projectsThisWeek">
+      <segment>
+        <source><ph id="0" equiv="INTERPOLATION"/> projects this week</source>
+        <target><ph id="0" equiv="INTERPOLATION"/> Projekte diese Woche</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.totalWorkload">
+      <segment>
+        <source>total workload</source>
+        <target>Gesamtauslastung</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.noWorkScheduled">
+      <segment>
+        <source>no work scheduled</source>
+        <target>keine Arbeit geplant</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.unconfigured">
+      <segment>
+        <source>unconfigured</source>
+        <target>nicht konfiguriert</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.nothingToPlan">
+      <segment>
+        <source>nothing to plan</source>
+        <target>nichts zu planen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.undated">
+      <segment>
+        <source>undated</source>
+        <target>ohne Termin</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.externalIssues">
+      <segment>
+        <source>external issues</source>
+        <target>externe Issues</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.noExternalIssues">
+      <segment>
+        <source>no open issues assigned to you</source>
+        <target>keine offenen Issues dir zugewiesen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.issueUnresolvedTooltip">
+      <segment>
+        <source>no project related to this repository</source>
+        <target>kein Projekt mit diesem Repository verknüpft</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.projects">
+      <segment>
+        <source>projects</source>
+        <target>Projekte</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.scheduleIssue">
+      <segment>
+        <source>schedule issue</source>
+        <target>Issue einplanen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.estimateHours">
+      <segment>
+        <source>estimate (hours)</source>
+        <target>Schätzung (Stunden)</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.scheduleError">
+      <segment>
+        <source>failed to schedule milestone</source>
+        <target>Meilenstein konnte nicht eingeplant werden</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.issueConverted">
+      <segment>
+        <source>issue converted to milestone</source>
+        <target>Issue in Meilenstein umgewandelt</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.convertError">
+      <segment>
+        <source>failed to convert issue</source>
+        <target>Issue konnte nicht umgewandelt werden</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.milestoneOverdue">
+      <segment>
+        <source><ph id="0" equiv="PH" disp="milestone.name"/> — overdue</source>
+        <target><ph id="0" equiv="PH" disp="milestone.name"/> — überfällig</target>
+      </segment>
+    </unit>
+    <unit id="i18n.planner.milestoneLateStart">
+      <segment>
+        <source><ph id="0" equiv="PH" disp="milestone.name"/> — not started yet, planned start date has passed</source>
+        <target><ph id="0" equiv="PH" disp="milestone.name"/> — noch nicht begonnen, geplantes Startdatum liegt in der Vergangenheit</target>
+      </segment>
+    </unit>
+    <unit id="i18n.foci.openIssues">
+      <segment>
+        <source>open issues</source>
+        <target>offene Issues</target>
+      </segment>
+    </unit>
+    <unit id="i18n.foci.createEntry">
+      <segment>
+        <source>create entry</source>
+        <target>Eintrag erstellen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.missing_related_metric">
+      <segment>
+        <source>no preceding activity found for related metric: "<ph id="0" equiv="PH" disp="relatedName"/>"</source>
+        <target>keine vorhergehende Aktivität für die verknüpfte Kennzahl gefunden: "<ph id="0" equiv="PH" disp="relatedName"/>"</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.kpi_metric">
+      <segment>
+        <source>KPI / metric</source>
+        <target>KPI / Kennzahl</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.external_dependency">
+      <segment>
+        <source>external dependency</source>
+        <target>externe Abhängigkeit</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.parent_activity">
+      <segment>
+        <source>parent activity</source>
+        <target>übergeordnete Aktivität</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.activity_not_found">
+      <segment>
+        <source>activity not found</source>
+        <target>Aktivität nicht gefunden</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.search_icons_placeholder">
+      <segment>
+        <source>search icons...</source>
+        <target>Icons suchen...</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.icon_name_placeholder">
+      <segment>
+        <source>or type icon name directly</source>
+        <target>oder Icon-Namen direkt eingeben</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.icon">
+      <segment>
+        <source>icon</source>
+        <target>Icon</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.related_metric">
+      <segment>
+        <source>related denominator metric (optional)</source>
+        <target>verknüpfte Nenner-Kennzahl (optional)</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.related_metric_none">
+      <segment>
+        <source>none — use own activity total</source>
+        <target>keine — eigene Aktivitätssumme verwenden</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.importCsvTooltip">
+      <segment>
+        <source>Import prospects from CSV file</source>
+        <target>Interessenten aus CSV-Datei importieren</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.exportCsvTooltip">
+      <segment>
+        <source>Export filtered prospects as CSV</source>
+        <target>Gefilterte Interessenten als CSV exportieren</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.bumps_tooltip">
+      <segment>
+        <source>call attempts</source>
+        <target>Anrufversuche</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.git">
+      <segment>
+        <source>git</source>
+        <target>git</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.mantis">
+      <segment>
+        <source>mantis</source>
+        <target>mantis</target>
+      </segment>
+    </unit>
+    <unit id="i18n.plugins.linkToPluginUser">
+      <segment>
+        <source>link to plugin user</source>
+        <target>mit Plugin-Benutzer verknüpfen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.marketing.bump">
+      <segment>
+        <source>bump</source>
+        <target>Anstoß</target>
+      </segment>
+    </unit>
+    <unit id="i18n.issues.noCredentials">
+      <segment>
+        <source>no credentials for this tracker</source>
+        <target>keine Zugangsdaten für diesen Tracker</target>
+      </segment>
+    </unit>
+
   </file>
 </xliff>

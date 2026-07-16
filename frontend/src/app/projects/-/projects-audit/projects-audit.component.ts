@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, of } from 'rxjs';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
@@ -11,7 +11,6 @@ import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
 import { GitlabAuditService } from '@models/gitlab-audit/gitlab-audit.service';
 import { GitlabAuditProject } from '@models/gitlab-audit/gitlab-audit-project.model';
 import { GitlabSchedule } from '@models/gitlab-audit/gitlab-schedule.model';
-import { Company } from '@models/company/company.model';
 import { ProductService } from '@models/product/product.service';
 import { ParamService } from '@models/param.service';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
@@ -25,17 +24,18 @@ import { Nx } from '@app/nx/nx.directive';
 import { NComponent } from '@shards/n/n.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { Product } from '@models/product/product.model';
+import { Serializable } from '@models/serializable';
+import { Dictionary } from '@constants/constants';
 
 const NEXUS_PREFIX = '[NEXUS] ';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'projects-audit',
-    standalone: true,
     imports: [RouterModule, ToolbarComponent, EmptyStateComponent, AvatarComponent, SearchInputComponent, NgbTooltipModule, Nx, NComponent, AvatarComponent, SpinnerComponent],
     templateUrl: './projects-audit.component.html',
 })
-export class ProjectsAuditComponent implements OnInit {
+export class ProjectsAuditComponent {
     projects = signal<GitlabAuditProject[]>([]);
     loading = signal(true);
 
@@ -51,7 +51,7 @@ export class ProjectsAuditComponent implements OnInit {
     #productService = inject(ProductService);
     #paramService = inject(ParamService);
 
-    ngOnInit() {
+    constructor() {
         this.load();
         this.loadDefaultProduct();
     }
@@ -73,19 +73,17 @@ export class ProjectsAuditComponent implements OnInit {
 
     loadDefaultProduct() {
         this.#paramService.show('params/AUDIT_DEFAULT_PRODUCT_ID').subscribe({
-            next: (param: any) => {
-                const id = param?.value;
+            next: (param) => {
+                const id = param.value as string;
                 if (!id) return;
-                this.#productService.show(String(id)).subscribe({
-                    next: (product: any) => {
-                        this.defaultProduct.set(product);
-                    },
-                });
+                this.#productService.show(id).subscribe((product) => this.defaultProduct.set(product));
             },
         });
     }
 
-    selectDefaultProduct(product: any) {
+    selectDefaultProduct(selected: Serializable) {
+        const product = selected.assert(Product);
+        if (!product) return;
         this.defaultProduct.set(product);
         this.savingProduct.set(true);
         this.#paramService.update('params/AUDIT_DEFAULT_PRODUCT_ID', { value: product.id }).subscribe({
@@ -118,17 +116,19 @@ export class ProjectsAuditComponent implements OnInit {
             p.var.loading = true;
             const encoded = encodeURIComponent(p.namespace_with_path);
             this.#http
-                .get<any[]>(`${enc.value.url}api/v4/projects/${encoded}/pipeline_schedules`)
+                .get<GitlabSchedule[]>(`${enc.value.url}api/v4/projects/${encoded}/pipeline_schedules`)
                 .pipe(catchError(() => of([])))
                 .subscribe((raw) => {
-                    p.schedules = (raw ?? []).filter((s: any) => s.description?.startsWith(NEXUS_PREFIX)).map((s: any) => this.#makeSchedule(s, p));
+                    p.schedules = (raw ?? [])
+                        .filter((_) => _.description?.startsWith(NEXUS_PREFIX))
+                        .map((_) => this.#makeSchedule(_, p));
                     p.var.loading = false;
                 });
         });
     }
 
-    #makeSchedule(raw: any, project: GitlabAuditProject): GitlabSchedule {
-        const s = GitlabSchedule.fromApi(raw);
+    #makeSchedule(raw: GitlabSchedule, project: GitlabAuditProject): GitlabSchedule {
+        const s = GitlabSchedule.fromJson(raw);
         s.var.onDelete = (schedule: GitlabSchedule, done?: () => void) => {
             const enc = this.#enc(project)!;
             const encoded = encodeURIComponent(project.namespace_with_path);
@@ -157,9 +157,9 @@ export class ProjectsAuditComponent implements OnInit {
         p.var.onLinkCompany = async (project: GitlabAuditProject) => {
             const company = await (this.#modalBase as any).open(ModalSearchComponent, 'Company', 'select company').catch(() => null);
             if (!company) return;
-            this.#service.update(project.id, { company_id: company.id }).subscribe((updated: any) => {
+            this.#service.update(project.id, { company_id: company.id }).subscribe((updated) => {
                 project.company_id = updated.company_id;
-                project.company = updated.company ? Company.fromJson(updated.company) : company;
+                project.company = updated.company ?? company;
             });
         };
 
@@ -174,7 +174,7 @@ export class ProjectsAuditComponent implements OnInit {
             const modalRef = this.#ngbModal.open(ModalSelectInvoiceItemComponent, { size: 'lg' });
             const item = await modalRef.result.catch(() => null);
             if (!item) return;
-            this.#service.update(project.id, { invoice_item_id: item.id }).subscribe((updated: any) => {
+            this.#service.update(project.id, { invoice_item_id: item.id }).subscribe((updated) => {
                 project.invoice_item_id = updated.invoice_item_id;
                 project.invoice_item = updated.invoice_item ?? item;
             });
@@ -190,7 +190,7 @@ export class ProjectsAuditComponent implements OnInit {
         p.var.onCreateInvoiceItem = async (project: GitlabAuditProject) => {
             const item = await (this.#modalBase as any).open(ModalCreateAuditInvoiceItemComponent, project.company, this.defaultProduct).catch(() => null);
             if (!item) return;
-            this.#service.update(project.id, { invoice_item_id: item.id }).subscribe((updated: any) => {
+            this.#service.update(project.id, { invoice_item_id: item.id }).subscribe((updated) => {
                 project.invoice_item_id = updated.invoice_item_id;
                 project.invoice_item = updated.invoice_item ?? item;
             });
@@ -211,7 +211,7 @@ export class ProjectsAuditComponent implements OnInit {
     }
 
     cronLabel(cron: string): string {
-        const labels: Record<string, string> = {
+        const labels: Dictionary<string> = {
             '0 0 * * *': 'daily',
             '0 0 * * 0': 'weekly',
             '0 0 1 * *': 'monthly',

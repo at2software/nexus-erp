@@ -18,8 +18,7 @@ class At2ConnectAuthMiddleware {
         if (empty($token)) {
             return response()->json([], Response::HTTP_UNAUTHORIZED);
         }
-        $contact = Contact::where('at2_connect_token', $token)->get();
-        if ($contact->count() == 0) {
+        if (Contact::where('at2_connect_token', $token)->doesntExist()) {
             return response()->json([], Response::HTTP_NOT_FOUND);
         }
         return $next($request);

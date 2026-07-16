@@ -10,7 +10,6 @@ class DebriefProblem extends BaseModel {
     protected $table    = 'debrief_problems';
     protected $fillable = ['title', 'description', 'debrief_problem_category_id', 'created_by_user_id'];
     protected $appends  = ['class', 'icon'];
-    protected $access   = ['admin' => '*', 'project_manager' => 'cru'];
 
     public function category() {
         return $this->belongsTo(DebriefProblemCategory::class, 'debrief_problem_category_id');

@@ -1,4 +1,6 @@
-import { Directive, ElementRef, HostListener, afterNextRender, contentChild, inject } from '@angular/core';
+import { DestroyRef, Directive, ElementRef, NgZone, afterNextRender, contentChild, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { fromEvent } from 'rxjs';
 import { NxDropdown } from './nx.dropdown';
 import { AutopositionDirective, ECorrection } from '@directives/autoposition.directive';
 
@@ -10,6 +12,16 @@ export class NxSubMenu {
     private readonly autoposition = contentChild(AutopositionDirective);
 
     constructor() {
+        const destroyRef = inject(DestroyRef);
+        inject(NgZone).runOutsideAngular(() => {
+            fromEvent(this.el.nativeElement, 'mouseenter')
+                .pipe(takeUntilDestroyed(destroyRef))
+                .subscribe(() => this.submenu()?.el.nativeElement.classList.add('show'));
+            fromEvent(this.el.nativeElement, 'mouseleave')
+                .pipe(takeUntilDestroyed(destroyRef))
+                .subscribe(() => this.submenu()?.el.nativeElement.classList.remove('show'));
+        });
+
         afterNextRender(() => {
             this.submenu()?.el.nativeElement.classList.remove('show');
             this.autoposition()?.corrected.subscribe((correction) => {
@@ -20,12 +32,5 @@ export class NxSubMenu {
                 }
             });
         });
-    }
-
-    @HostListener('mouseenter') mouseenter() {
-        this.submenu()?.el.nativeElement.classList.add('show');
-    }
-    @HostListener('mouseleave') mouseleave() {
-        this.submenu()?.el.nativeElement.classList.remove('show');
     }
 }

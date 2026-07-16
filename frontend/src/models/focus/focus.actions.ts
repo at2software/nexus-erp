@@ -2,6 +2,7 @@ import { NxAction } from '@app/nx/nx.actions';
 import { Focus } from './focus.model';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
 import { ModalEditFocusComponent } from '@app/_modals/modal-edit-focus/modal-edit-focus.component';
+import { ModalLinkExtIssueComponent, ExtIssueLinkResult } from '@app/_modals/modal-link-ext-issue/modal-link-ext-issue.component';
 import { NxGlobal } from '@app/nx/nx.global';
 
 export function getFocusActions(self: Focus): NxAction[] {
@@ -11,8 +12,15 @@ export function getFocusActions(self: Focus): NxAction[] {
             action: () => ModalBaseService.open(ModalEditFocusComponent, self),
         },
         ...NxGlobal.clipboardActions(self),
+        {
+            // Opens the picker once; the chosen issue is applied to every selected focus.
+            title: $localize`:@@i18n.issues.linkExternalIssue:link external issue`,
+            group: true,
+            interrupt: { service: ModalLinkExtIssueComponent, args: self },
+            action: (_resolve, _ctx, result: ExtIssueLinkResult | undefined) =>
+                result ? self.update({ ext_issue_plugin_link_id: result.ext_issue_plugin_link_id, ext_issue_id: result.ext_issue_id }) : undefined,
+        },
         { title: $localize`:@@i18n.foci.resetToOrga:reset to organisational`, action: () => self.update({ project_id: null }).subscribe(), roles: 'hr' },
-        NxGlobal.deleteAction(self, $localize`:@@i18n.common.reallyDeleteThisFocus:really delete this focus?`, { roles: 'hr' }),
         {
             title: $localize`:@@i18n.foci.enableInvoicing:enable invoicing`,
             on: () => !self.invoice_item_id && self.is_unpaid,
@@ -59,5 +67,6 @@ export function getFocusActions(self: Focus): NxAction[] {
                 }));
             },
         },
+        NxGlobal.deleteAction(self, $localize`:@@i18n.common.reallyDeleteThisFocus:really delete this focus?`, { roles: 'admin' }),
     ];
 }

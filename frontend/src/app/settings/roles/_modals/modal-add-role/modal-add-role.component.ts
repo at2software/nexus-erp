@@ -5,8 +5,6 @@ import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 @Component({
     selector: 'modal-add-role',
     templateUrl: './modal-add-role.component.html',
-    styleUrls: ['./modal-add-role.component.scss'],
-    standalone: true,
     imports: [FormsModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

@@ -2,11 +2,11 @@ import { Subject } from 'rxjs';
 
 export interface NotificationType {
     key: string;
-    value: any;
+    value: unknown;
 }
 export class NotificationCenter {
     static subj: Subject<NotificationType> = new Subject<NotificationType>();
-    static subscribe = (keys: string[] = [], regex_values: RegExp[] = [], success: (value: any) => void) => {
+    static subscribe = (keys: string[] = [], regex_values: RegExp[] = [], success: (value: NotificationType) => void) => {
         return NotificationCenter.subj.subscribe((_) => {
             _.key = _.key.replace(/^_*/, '');
             if (NotificationCenter.applies(_, keys, regex_values)) {
@@ -17,7 +17,7 @@ export class NotificationCenter {
     static applies = (notification: NotificationType, keys: string[] = [], regex_values: RegExp[] = []): boolean => {
         if (keys.indexOf(notification.key) === -1) return false;
         for (const v of regex_values) {
-            if ((notification.value as string).match(v)) {
+            if (String(notification.value).match(v)) {
                 return true;
             }
         }

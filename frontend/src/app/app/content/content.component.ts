@@ -8,8 +8,6 @@ import { filter } from 'rxjs';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'app-content',
     templateUrl: './content.component.html',
-    styleUrls: ['./content.component.scss'],
-    standalone: true,
 })
 export class ContentComponent extends ContinuousScrollComponent {
     protected keycloakService: KeycloakService = inject(KeycloakService);

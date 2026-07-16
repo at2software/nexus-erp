@@ -3,11 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Encryption;
-use App\Traits\ControllerHasPermissionsTrait;
 
 class EncryptionController extends Controller {
-    use ControllerHasPermissionsTrait;
-
     public function encrypt() {
         $data = (array)($this->getBody());
         $enc  = Encryption::create([
@@ -18,10 +15,10 @@ class EncryptionController extends Controller {
         $enc->save();
         return $enc;
     }
-    public function update(int $id) {
-        return Encryption::findOrFail($id)->applyAndSave(request());
+    public function update(Encryption $encryption) {
+        return $encryption->applyAndSave(request());
     }
-    public function destroy(int $id) {
-        return Encryption::findOrFail($id)->delete();
+    public function destroy(Encryption $encryption) {
+        return $encryption->delete();
     }
 }

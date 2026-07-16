@@ -7,7 +7,7 @@ trait VcardGenderTrait {
 
     public static function findGenderInDatabase($name) {
         self::$_genderDatabase || self::$_genderDatabase = file_get_contents(resource_path('first_names.db')); // load DB
-        preg_match('/^'.mb_strtoupper($name, 'UTF-8').'.*?,(.*?),.*$/im', self::$_genderDatabase, $attr);
+        preg_match('/^'.preg_quote(mb_strtoupper($name, 'UTF-8'), '/').'.*?,(.*?),.*$/im', self::$_genderDatabase, $attr);
         if (count($attr) == 2) {
             return $attr[1];
         }

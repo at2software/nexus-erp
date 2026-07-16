@@ -54,6 +54,9 @@
       ],
       "@interfaces/*": [
         "src/interfaces/*"
+      ],
+      "quill": [
+        "node_modules/quill/quill.d.ts"
       ]
     }
   },

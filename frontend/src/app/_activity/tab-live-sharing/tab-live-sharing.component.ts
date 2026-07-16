@@ -9,7 +9,6 @@ import { environment } from 'src/environments/environment';
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'activity-tab-live-sharing',
-    standalone: true,
     imports: [ActivityTabComponent, ScrollbarComponent],
     templateUrl: './tab-live-sharing.component.html',
     styleUrls: ['./tab-live-sharing.component.scss'],

@@ -6,7 +6,6 @@ import { PaymentPlanTiersEditorComponent } from '@shards/payment-plan-editor/pay
 @Component({
     selector: 'settings-projects-payment-plans',
     templateUrl: './settings-projects-payment-plans.component.html',
-    standalone: true,
     imports: [ToolbarComponent, PaymentPlanTiersEditorComponent, NgbTooltipModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

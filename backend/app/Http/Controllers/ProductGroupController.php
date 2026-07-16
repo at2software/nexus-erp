@@ -4,12 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Company;
 use App\Models\ProductGroup;
-use App\Traits\ControllerHasPermissionsTrait;
 use Illuminate\Http\Request;
 
 class ProductGroupController extends Controller {
-    use ControllerHasPermissionsTrait;
-
     private function _trace($groups) {
         foreach ($groups as $group) {
             $this->_trace($group->child_groups);

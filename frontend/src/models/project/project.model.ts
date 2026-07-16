@@ -1,7 +1,6 @@
 import { Milestone } from './../milestones/milestone.model';
-import { Dictionary } from './../../constants/constants';
 import { Serializable } from './../serializable';
-import moment from 'moment';
+import { dayjs, Dayjs } from '@constants/dates';
 import { Company } from './../company/company.model';
 import { Assignee } from './../assignee/assignee.model';
 import { Focus } from './../focus/focus.model';
@@ -31,11 +30,12 @@ import { ConnectionProjects } from '@models/company/connection-projects.model';
 import { getProjectActions } from './project.actions';
 import { Task } from '@models/tasks/task.model';
 import { IHasMarker } from '@enums/marker';
-import { Subject } from 'rxjs';
+import { Subject, map } from 'rxjs';
 import { Model } from '@constants/type-discriminators';
 import { computed } from '@angular/core';
-
-export const PROJECT_STATES: Dictionary = {
+import { Dictionary } from '@constants/constants';
+import type { ProjectTimelineEntry } from '@models/api-response';
+export const PROJECT_STATES: Dictionary<string> = {
     Prepared: $localize`:@@i18n.invoice.prepared:prepared`,
     InProgress: $localize`:@@i18n.common.active:active`,
     Finished: $localize`:@@i18n.project.finished:finished`,
@@ -44,8 +44,21 @@ export const PROJECT_STATES: Dictionary = {
     Internal: $localize`:@@i18n.project.internal:internal project`,
     TimeBased: $localize`:@@i18n.project.timeBasedInvoicing:time based invoicing`,
 };
+
 @Model('Project')
 export class Project extends Serializable implements HasInvoiceItems, IHasFiles, IHasFoci, IHasAssignees, IHasMarker {
+    
+    static API_PATH = (): string => 'projects';
+    static WEBSOCKET_KEY = (): string => 'Project';
+    SERVICE = ProjectService;
+
+    override readonly badge = computed(() => this.#calcBadge());
+    override readonly ngLink = computed(() => `/projects/${this.id}`);
+    protected override readonly computedIcon = computed(() => environment.envApi + `projects/${this.id}/icon`);
+    
+    doubleClickAction: number = 0;
+    actions: NxAction[] = getProjectActions(this);
+
     company_id: string = '';
     description: string = '';
     gross: number = 0;
@@ -58,11 +71,11 @@ export class Project extends Serializable implements HasInvoiceItems, IHasFiles,
     name: string = '';
     net: number = 0;
     net_remaining: number = 0;
-    personalized: Dictionary = {};
+    personalized: Dictionary<string> = {};
     project_id: string = '';
     project_manager_id?: string;
     target_wage: number = 50;
-    timeline_chart?: any[] = [];
+    timeline_chart?: ProjectTimelineEntry[] = [];
     no_invoice_focus: number = 0;
     no_git_required: number = 0;
     foci_sum?: number;
@@ -75,47 +88,51 @@ export class Project extends Serializable implements HasInvoiceItems, IHasFiles,
     remind_at?: string;
     revenue_last_12?: number;
     started_at?: string;
-    uninvoiced_hours?: number;
+    uninvoiced_hours: number = 0;
     oldest_unbilled_focus_at?: string;
     invoiced_downpayments?: number;
     work_estimated?: number;
+    ml_predicted_hours?: number;
+    ml_predicted_at?: string;
     lead_probability?: number;
     milestone_state_counts?: { todo: number; in_progress: number; done: number; total: number };
     quote_descriptions?: string[];
     marker: number | null = null;
 
-    isOverdue               = computed(() => { const j = this.snapshot(); return j.state?.progress === ProjectState.ProgressRunning && !j.is_time_based && !j.is_internal && j.due_at ? moment(j.due_at).isBefore(moment()) : false; });
-    needsReminder           = computed(() => this.#calcNeedsReminder());
-    isRelevant              = computed(() => this.isOverdue() || this.needsReminder() || (NxGlobal.global.user?.hasRole('financial') ? this.net !== 0 : false) || this.progress() > 0.8);
-    deadlineColor           = computed(() => { const s = this.snapshot(); return !s.due_at ? 'text-dark-grey' : moment(s.due_at).isBefore(moment()) ? 'text-danger' : 'text-orange'; });
-    progress                = computed(() => this.is_time_based ? 1 : this.net === 0 ? 1 : (this.work_estimated && this.work_estimated > 0 ? this.hours_invested / this.work_estimated : 0));
-    css                     = computed(() => this.snapshot().state?.color || '');
-    rootMilestones          = computed(() => this.milestones.filter((_) => _.children.length === 0));
-    color                   = computed((): string => Color.fromHsl((170 + parseInt(this.id) * 29) % 360, 75, 45).toHexString());
-    acceptedChildren        = computed((): (typeof Serializable)[] => [Project, InvoiceItem, Focus]);
-    companyId               = computed(() => this.company_id);
-    getExtState             = computed((): string => this.state?.name || '');
-    remainingAllocatedTime  = computed(() => this.assignees.reduce((a, b) => a + parseFloat('' + b.hours_planned), 0));
-    remainingTimeBudget     = computed(() => (this.work_estimated ?? 0) - this.hours_invested);
-    timePercentage          = computed(() => this.hours_invested / (this.work_estimated ?? 1));
-    worksharesTotal         = computed(() => ((this.var.workshares as any[]) ?? []).reduce((a: number, b: any) => a + b.val, 0));
-    getName                 = computed(() => this.name);
-    assignedUsers           = computed((): Assignee[] => this.assignees.filter((_) => _.assignee instanceof User));
-    assignedCompanyContacts = computed((): Assignee[] => this.assignees.filter((_) => _.assignee instanceof CompanyContact));
-    hasIndividualWage       = computed(() => this.individual_wage !== null);
-    pluginInstances         = computed(() => PluginInstanceFactory.getInstances<IPlugin>(this.plugin_links, 'IPlugin'));
-    taskPluginInstances     = computed(() => PluginInstanceFactory.getInstances<ITaskPlugin>(this.plugin_links, 'ITaskPlugin'));
-    chatPluginInstances     = computed(() => PluginInstanceFactory.getInstances<IChatPlugin>(this.plugin_links, 'IChatPlugin'));
-    hasTimeBudget           = computed((): boolean => this.is_time_based === 1);
-    momentStarted           = computed((): moment.Moment => moment(this.started_at));
-    momentFinished          = computed((): moment.Moment => moment(this.finished_at));
-    momentDue               = computed((): moment.Moment => moment(this.due_at));
-    momentRemind            = computed((): moment.Moment => moment(this.remind_at));
-    frontendUrl             = computed((): string => `/projects/${this.id}`);
+    readonly isOverdue               = computed(() => { const j = this.snapshotAsThis(); return j.state?.progress === ProjectState.ProgressRunning && !j.is_time_based && !j.is_internal && j.due_at ? dayjs(j.due_at).isBefore(dayjs()) : false; });
+    readonly isOverrunPredicted      = computed(() => this.#calcOverrunPrediction());
+    /** Model 2 ("early warning") ratio of predicted final hours over the quoted estimate. >1 = predicted overrun. Undefined if there's no prediction/estimate to compare. */
+    readonly mlOverrunRatio          = computed((): number | undefined => { const j = this.snapshotAsThis(); return j.ml_predicted_hours === null || j.ml_predicted_hours === undefined || !j.work_estimated ? undefined : j.ml_predicted_hours / j.work_estimated; });
+    /** Model 2 predicted hours over the quoted estimate, in hours rather than ratio. */
+    readonly mlOverrunHours          = computed((): number | undefined => { const j = this.snapshotAsThis(); return j.ml_predicted_hours === null || j.ml_predicted_hours === undefined || !j.work_estimated ? undefined : j.ml_predicted_hours - j.work_estimated; });
+    readonly needsReminder           = computed(() => this.#calcNeedsReminder());
+    readonly isRelevant              = computed(() => this.isOverdue() || this.needsReminder() || (NxGlobal.global.user?.hasRole('financial') ? this.net !== 0 : false) || this.progress() > 0.8);
+    readonly deadlineColor           = computed(() => { const s = this.snapshot(); return !s.due_at ? 'text-dark-grey' : dayjs(s.due_at).isBefore(dayjs()) ? 'text-danger' : 'text-orange'; });
+    readonly progress                = computed(() => this.is_time_based ? 1 : this.net === 0 ? 1 : (this.work_estimated && this.work_estimated > 0 ? this.hours_invested / this.work_estimated : 0));
+    readonly css                     = computed(() => this.snapshotAsThis().state?.color || '');
+    readonly rootMilestones          = computed(() => this.milestones.filter((_) => _.children.length === 0));
+    readonly color                   = computed((): string => Color.fromHsl((170 + parseInt(this.id) * 29) % 360, 75, 45).toHexString());
+    readonly acceptedChildren        = computed((): (typeof Serializable)[] => [Project, InvoiceItem, Focus]);
+    readonly companyId               = computed(() => this.company_id);
+    readonly getExtState             = computed((): string => this.state?.name || '');
+    readonly remainingAllocatedTime  = computed(() => this.assignees.reduce((a, b) => a + parseFloat('' + b.hours_planned), 0));
+    readonly remainingTimeBudget     = computed(() => (this.work_estimated ?? 0) - this.hours_invested);
+    readonly timePercentage          = computed(() => this.hours_invested / (this.work_estimated ?? 1));
+    readonly worksharesTotal         = computed(() => ((this.var.workshares as { val?: number }[]) ?? []).reduce((a: number, b) => a + (b.val ?? 0), 0));
+    readonly getName                 = computed(() => this.name);
+    readonly assignedUsers           = computed((): Assignee[] => this.assignees.filter((_) => _.assignee instanceof User));
+    readonly assignedCompanyContacts = computed((): Assignee[] => this.assignees.filter((_) => _.assignee instanceof CompanyContact));
+    readonly hasIndividualWage       = computed(() => this.individual_wage !== null);
+    readonly pluginInstances         = computed(() => PluginInstanceFactory.getInstances<IPlugin>(this.plugin_links, 'IPlugin'));
+    readonly taskPluginInstances     = computed(() => PluginInstanceFactory.getInstances<ITaskPlugin>(this.plugin_links, 'ITaskPlugin'));
+    readonly chatPluginInstances     = computed(() => PluginInstanceFactory.getInstances<IChatPlugin>(this.plugin_links, 'IChatPlugin'));
+    readonly hasTimeBudget           = computed((): boolean => this.is_time_based === 1);
+    readonly momentStarted           = computed((): Dayjs => dayjs(this.started_at));
+    readonly momentFinished          = computed((): Dayjs => dayjs(this.finished_at));
+    readonly momentDue               = computed((): Dayjs => dayjs(this.due_at));
+    readonly momentRemind            = computed((): Dayjs => dayjs(this.remind_at));
+    readonly frontendUrl             = computed((): string => `/projects/${this.id}`);
 
-    override readonly badge = computed(() => this.#calcBadge());
-    protected override readonly computedIcon = computed(() => environment.envApi + `projects/${this.id}/icon`);
-    override readonly ngLink = computed(() => `/projects/${this.id}`);
     projectManagerChanged = new Subject<void>();
 
     @Type(()=>Company) company!: Company;
@@ -126,7 +143,7 @@ export class Project extends Serializable implements HasInvoiceItems, IHasFiles,
     @Type(()=>User) project_manager!: User;
     @Type(()=>File) files!: File[];
     @Type(()=>Focus) foci!: Focus[];
-    @Type(()=>Assignee) assignees!: Assignee[];
+    @Type(()=>Assignee) assignees: Assignee[] = [];
     @Type(()=>User) assigned_users!: User[];
     @Type(()=>CompanyContact) assigned_contacts!: CompanyContact[];
     @Type(()=>InvoiceItem) invoice_items!: InvoiceItem[];
@@ -137,24 +154,24 @@ export class Project extends Serializable implements HasInvoiceItems, IHasFiles,
     @Type(()=>ConnectionProjects) connection_projects?: ConnectionProjects[];
     @Type(()=>ProjectState) states!: ProjectState[];
 
-    static API_PATH = (): string => 'projects';
-    static WEBSOCKET_KEY = (): string => 'Project';
-    SERVICE = ProjectService;
-
-    doubleClickAction: number = 0;
-    actions: NxAction[] = getProjectActions(this);
-
     postpone (duration: number, onSuccess?: () => void, comment?: string) {
         NxGlobal.service.put(`projects/${this.id}/postpone`, { duration: duration, comment: comment }).subscribe((_) => {
             Toast.info($localize`:@@i18n.project.reminderExtended:reminder extended`);
-            this.patch(_)
+            this.patch(_ as Dictionary);
             onSuccess?.();
         });
     }
 
-    setState = (data: Dictionary) => NxGlobal.service.put(`projects/${this.id}`, data).subscribe((_) => this.patch(_));
+    duplicate(name: string) {
+        NxGlobal.service.post(`projects/${this.id}/duplicate`, { name }).pipe(map((_) => Project.fromJson(_))).subscribe((newProject) => {
+            Toast.info($localize`:@@i18n.project.duplicated:project duplicated`);
+            newProject.navigateTo(newProject.frontendUrl());
+        });
+    }
+
+    setState = (data: Dictionary) => NxGlobal.service.put(`projects/${this.id}`, data).subscribe((_) => this.patch(_ as Dictionary));
     addParticipant = (connectionId: string) =>
-        NxGlobal.service.post(`projects/${this.id}/connection-projects`, { connection_id: connectionId }).subscribe((_) => {
+        NxGlobal.service.post(`projects/${this.id}/connection-projects`, { connection_id: connectionId }, Object).subscribe((_) => {
             this.connection_projects = this.connection_projects || [];
             this.connection_projects.push(ConnectionProjects.fromJson(_));
             Toast.info($localize`:@@i18n.project.participantAdded:participant added`);
@@ -162,24 +179,39 @@ export class Project extends Serializable implements HasInvoiceItems, IHasFiles,
         });
 
     #calcNeedsReminder(): boolean {
-        const j = this.snapshot();
+        const j = this.snapshotAsThis();
         if (!j.remind_at) return false;
-        const isPast = moment(j.remind_at).isBefore(moment());
+        const isPast = dayjs(j.remind_at).isBefore(dayjs());
         if (j.state?.progress === ProjectState.ProgressRunning && !j.is_time_based && !j.is_internal) return isPast;
         if (j.state?.progress === ProjectState.ProgressPrepared && !j.is_internal) return isPast;
         return false;
     }
 
+    #calcOverrunPrediction(): boolean {
+        const j = this.snapshotAsThis();
+        if (j.state?.progress !== ProjectState.ProgressRunning || !!j.is_internal || !!j.is_time_based) return false;
+        if (j.ml_predicted_hours === null || j.ml_predicted_hours === undefined) return false;
+        if (j.work_estimated === null || j.work_estimated === undefined || j.work_estimated <= 0) return false;
+        return j.ml_predicted_hours > j.work_estimated;
+    }
+
     #calcBadge(): undefined | [string, string] {
         if (this.needsReminder()) return ['bg-danger', $localize`:@@i18n.common.needsAttention:needs attention`];
+        if (this.isOverrunPredicted()) return ['bg-warning', $localize`:@@i18n.project.overrunPredicted:overrun predicted`];
         if (!this.remind_at && !this.is_internal && !this.is_time_based) return ['bg-warning', $localize`:@@i18n.common.noReminderSet:no reminder set`];
         return undefined;
     }
 
-    worksharePerc = (u: any) => (100 * u.val) / this.worksharesTotal();
-    setParent = (_: Serializable): any => {
-        if (_ instanceof Company) return this.update({ company_id: _.id, project_id: null }).subscribe();
-        if (_ instanceof Project) this.update({ project_id: _.id, company_id: _.company_id }).subscribe();
+    worksharePerc = (u: { val: number }) => (100 * u.val) / this.worksharesTotal();
+    setParent = (_: Serializable): void => {
+        if (_ instanceof Company) {
+            this.update({ company_id: _.id, project_id: null }).subscribe();
+            return;
+        }
+        if (_ instanceof Project) {
+            this.update({ project_id: _.id, company_id: _.company_id }).subscribe();
+            return;
+        }
         console.error('setting parent class ' + _.class + ' is not implemented yet');
     };
 

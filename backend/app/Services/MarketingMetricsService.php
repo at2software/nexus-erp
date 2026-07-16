@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 
 class MarketingMetricsService {
     public static function getPerformanceMetrics(Request $request) {
-        $query = MarketingPerformanceMetric::query();
+        $query = MarketingPerformanceMetric::with('relatedMetric');
 
         if ($request->has('metric_type')) {
             $query->byType($request->metric_type);
@@ -25,6 +25,9 @@ class MarketingMetricsService {
                 'description'         => $metric->description,
                 'metric_type'         => $metric->metric_type,
                 'target_value'        => $metric->target_value,
+                'kpi_icon'            => $metric->kpi_icon,
+                'kpi_color'           => $metric->kpi_color,
+                'related_metric_id'   => $metric->related_metric_id,
                 'current_value'       => $metric->getCurrentValue(),
                 'progress_percentage' => round($metric->getProgressPercentage(), 2),
                 'activity_stats'      => $metric->getActivityStatistics(),

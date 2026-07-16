@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { UserService } from '@models/user/user.service';
 import { AuthenticationService } from '@models/auth.service';
@@ -13,10 +13,9 @@ import { FormsModule } from '@angular/forms';
     selector: 'app-login',
     templateUrl: './login.component.html',
     styleUrls: ['./login.component.scss'],
-    standalone: true,
     imports: [FormsModule],
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent {
     email: string = '';
     password: string = '';
 
@@ -27,7 +26,7 @@ export class LoginComponent implements OnInit {
 
     isLoading = signal(false);
 
-    ngOnInit() {
+    constructor() {
         deleteCookie('api_token');
         delete NexusHttpInterceptor.headers[environment.envApi];
     }
@@ -36,7 +35,7 @@ export class LoginComponent implements OnInit {
 
     removeCircularReferences() {
         const seen = new WeakSet();
-        return (key: any, value: object | null) => {
+        return (_key: string, value: object | null) => {
             if (typeof value === 'object' && value !== null) {
                 if (seen.has(value)) {
                     return;
@@ -55,7 +54,7 @@ export class LoginComponent implements OnInit {
             this.#authService.apiToken = undefined;
             if (AuthenticationService.sysinfo!.method === 'token') {
                 this.isLoading.set(true);
-                this.#userService.login(this.email, this.password).subscribe((response: any) => {
+                this.#userService.login(this.email, this.password).subscribe((response) => {
                     this.isLoading.set(false);
                     if (!('user' in response)) return;
                     const data = response.user;

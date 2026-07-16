@@ -14,14 +14,13 @@ import { CustomerAddToInitiativeModalComponent } from './customer-add-to-initiat
 
 @Component({
     selector: 'customer-initiatives',
-    standalone: true,
     templateUrl: './customer-initiatives.component.html',
     imports: [RouterModule, NgbTooltipModule, DatePipe, Nx, AvatarComponent, AvatarComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CustomerInitiativesComponent {
-    readonly companyIn = input.required<Company>({ alias: 'company' });
-    readonly company = tracked(this.companyIn);
+    readonly company = input.required<Company>();
+    readonly trackedCompany = tracked(this.company);
 
     activityRows = signal<MarketingProspectActivity[]>([]);
 
@@ -30,12 +29,12 @@ export class CustomerInitiativesComponent {
 
     constructor() {
         effect(() => {
-            if (this.companyIn().id) untracked(() => this.#load());
+            if (this.company().id) untracked(() => this.#load());
         });
     }
 
     #load() {
-        this.#marketingService.indexProspects({ company_id: this.companyIn().id }).subscribe((prospects: any[]) => {
+        this.#marketingService.indexProspects({ company_id: this.company().id }).subscribe((prospects) => {
             const rows: MarketingProspectActivity[] = [];
             for (const prospect of prospects) {
                 for (const activity of prospect.activities ?? []) {
@@ -52,24 +51,25 @@ export class CustomerInitiativesComponent {
     statusIcon = (status: string) => status === 'overdue' ? 'warning' : 'schedule';
     statusClass = (status: string) => status === 'overdue' ? 'text-danger' : 'text-primary';
 
+    onActionResolved = () => this.activityRows.update((rows) => rows.filter((a) => a.status === 'pending' || a.status === 'overdue'));
+
     openAddModal() {
         this.#modalService
-            .open(CustomerAddToInitiativeModalComponent, { company: this.company })
-            .then((result: any) => {
+            .open(CustomerAddToInitiativeModalComponent, { company: this.trackedCompany() })
+            .then((result) => {
                 if (!result?.contact_ids?.length) return;
                 const calls = result.contact_ids.map((cid: string) => {
-                    const contact = this.company().employees?.find((e) => e.id === cid);
+                    const contact = this.trackedCompany().employees?.find((e) => e.id === cid);
                     return this.#marketingService.storeProspect({
                         marketing_initiative_id: result.initiative_id,
                         company_contact_id: cid,
-                        company_id: this.company().id,
+                        company_id: this.trackedCompany().id,
                         name: contact?.getName,
                         status: 'new',
                         added_via: 'manual',
                     });
                 });
                 forkJoin(calls).subscribe(() => this.#load());
-            })
-            .catch(() => { /* noop */ });
+            });
     }
 }

@@ -1,6 +1,6 @@
-import { Dictionary } from './constants';
+import { Dictionary } from "./constants";
 
-export const personalized = (text: string, personalizations: Dictionary = {}): string => {
+export const personalized = (text: string, personalizations: Dictionary<string> = {}): string => {
     if (!text) return text;
     Object.keys(personalizations).forEach((key: string) => {
         const val = personalizations[key];

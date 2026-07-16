@@ -1,19 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { MarketingInitiative } from '@models/marketing/marketing-initiative.model';
-
-export interface CsvColumnMapping {
-    header: string;
-    field: string;
-}
-
-export interface CsvImportResult {
-    mappings: CsvColumnMapping[];
-    rows: string[][];
-    initiativeId: string;
-    leadSourceId: number;
-}
+import { CsvColumnMapping, CsvImportResult } from '@models/api-response';
 
 const TARGET_FIELDS = [
     { key: 'skip',        label: '— skip —' },
@@ -28,12 +17,12 @@ const TARGET_FIELDS = [
     { key: 'role',        label: 'Role / Position' },
     { key: 'notes',       label: 'Notes' },
 ];
+type InitArgs = { headers: string[]; rows: string[][]; initiatives: MarketingInitiative[]; currentInitiativeId?: string; existingNames?: string[] };
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'marketing-csv-import-modal',
     templateUrl: './marketing-csv-import-modal.component.html',
-    standalone: true,
     imports: [FormsModule],
 })
 export class MarketingCsvImportModalComponent extends ModalBaseComponent<CsvImportResult> {
@@ -71,17 +60,17 @@ export class MarketingCsvImportModalComponent extends ModalBaseComponent<CsvImpo
         this.mappings().some(m => m.field !== 'skip')
     );
 
-    init(...args: any): void {
-        const { headers, rows, initiatives, currentInitiativeId, existingNames } = args[0];
+    init(args: InitArgs): void {
+        const { headers, rows, initiatives, currentInitiativeId, existingNames } = args;
         this.allRows      = rows;
         this.initiatives  = initiatives;
         this.existingNames = existingNames ?? [];
-        this.mappings.set((headers as string[]).map(h => ({ header: h, field: autoMapHeader(h) })));
+        this.mappings.set(headers.map(h => ({ header: h, field: autoMapHeader(h) })));
 
         if (currentInitiativeId) {
             this.selectedInitiativeId.set(currentInitiativeId);
-            const ini = initiatives.find((i: any) => String(i.id) === currentInitiativeId);
-            const primary = ini?.channels?.find((c: any) => c.pivot?.is_primary);
+            const ini = initiatives.find((i) => String(i.id) === currentInitiativeId);
+            const primary = ini?.channels?.find((c) => c.pivot?.is_primary);
             this.selectedLeadSourceId.set(primary?.id ?? ini?.channels?.[0]?.id ?? 0);
         }
     }
@@ -89,7 +78,7 @@ export class MarketingCsvImportModalComponent extends ModalBaseComponent<CsvImpo
     setInitiative(id: string) {
         this.selectedInitiativeId.set(id);
         const ini = this.initiatives.find(i => String(i.id) === id);
-        const primary = ini?.channels?.find((c: any) => c.pivot?.is_primary);
+        const primary = ini?.channels?.find((c) => c.pivot?.is_primary);
         this.selectedLeadSourceId.set(primary?.id ?? ini?.channels?.[0]?.id ?? 0);
     }
 
@@ -124,7 +113,7 @@ function autoMapHeader(header: string): string {
 }
 
 export function parseCsv(text: string): { headers: string[]; rows: string[][] } {
-    const content = text.replace(/^﻿/, '');
+    const content = text.replace(/^\uFEFF/, '');
     const firstLine = content.split(/\r?\n/)[0] ?? '';
     const sep = (firstLine.match(/;/g)?.length ?? 0) > (firstLine.match(/,/g)?.length ?? 0) ? ';' : ',';
 

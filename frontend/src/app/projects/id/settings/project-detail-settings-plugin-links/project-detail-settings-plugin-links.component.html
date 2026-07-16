@@ -2,7 +2,7 @@
     <div class="col-12">
         <div class="card mb-3">
             <div class="card-header" i18n="@@i18n.projects.pluginLinks">plugin links</div>
-            @if (pluginLinks.length > 0) {
+            @if (pluginLinks().length > 0) {
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>
@@ -13,14 +13,14 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @for (link of pluginLinks; track link.id) {
+                            @for (link of pluginLinks(); track link.id) {
                                 <tr [nx]="link">
                                     <td>
                                         <n [ngbTooltip]="factory.instanceFor(link)?.state" class="text-{{ factory.instanceFor(link)?.getStateCss() }}">
                                             {{ factory.instanceFor(link)?.icon() }}
                                         </n>
                                     </td>
-                                    <td>{{ link.name }}</td>
+                                    <td>{{ link.name || factory.instanceFor(link)?.getName() }}</td>
                                     <td>
                                         <a [href]="link.url" target="_blank" class="text-decoration-none">
                                             <span class="font-monospace small">{{ link.url }}</span>

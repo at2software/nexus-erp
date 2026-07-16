@@ -7,7 +7,6 @@ import { TableHeaderSortButtonComponent } from '../table-header-sort-button/tabl
     selector: 'table-header2',
     templateUrl: './table-header.component.html',
     styleUrls: ['./table-header.component.scss'],
-    standalone: true,
     imports: [TableHeaderSortButtonComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

@@ -2,9 +2,7 @@
 
 namespace App\Enums;
 
-use BenSampo\Enum\Enum;
-
-final class ProjectVersioningSource extends Enum {
-    const None   = 0;
-    const GitLab = 1;
+enum ProjectVersioningSource: int {
+    case None   = 0;
+    case GitLab = 1;
 }

@@ -3,19 +3,22 @@ import { Router } from '@angular/router';
 import { Dictionary } from '@constants/constants';
 import { Serializable } from '@models/serializable';
 import { GlobalService } from '@models/global.service';
-import { NexusHttpService } from '@models/http/http.nexus';
+import { NexusHttp } from '@models/http/http.nexus';
 import { NxService } from './nx.service';
 import { HttpClient } from '@angular/common/http';
 import { Title } from '@angular/platform-browser';
 import { SmartLinkDirective } from '@directives/smart-link.directive';
 import { Subject } from 'rxjs';
-import { getCookie, setCookie } from '@constants/cookies';
+import { getCookie } from '@constants/cookies';
 import { objectMap, objectRemoveEmpty } from '@constants/objectMap';
 import { NxActionType } from './nx.actions';
 import { ModalConfirmComponent } from '@app/_modals/modal-confirm/modal-confirm.component';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
+import { ModalInputComponent, ModalInputArgs, ModalInputResult } from '@app/_modals/modal-input/modal-input.component';
+import { Toast } from '@app/_shards/toast/toast';
+import { tap } from 'rxjs';
 
-type TClipDict<T> = Record<string, T[]>;
+type TClipDict<T> = Dictionary<T[]>;
 
 export enum TBroadcast {
     Update,
@@ -23,12 +26,12 @@ export enum TBroadcast {
 }
 interface BroadcastPayload {
     type: TBroadcast;
-    data: any;
+    data: Serializable;
 }
 
 /** Main helper class — exposes services and state statically to classes outside the injector */
 export class NxGlobal {
-    static service: NexusHttpService<any>;
+    static service: NexusHttp;
     static http: HttpClient;
     static router: Router;
     static injector: Injector;
@@ -38,8 +41,8 @@ export class NxGlobal {
     static title: Title;
     static currentTitle?: string;
     static context?: Serializable;
-    static modalService: ModalBaseService<any>;
-    static MODEL_REGISTRY_TOKEN: Record<string, any>;
+    static modalService: ModalBaseService;
+    static MODEL_REGISTRY_TOKEN: Dictionary<typeof Serializable>;
 
     static #eventSubject = new Subject<BroadcastPayload>();
     static broadcast$ = this.#eventSubject.asObservable();
@@ -83,7 +86,32 @@ export class NxGlobal {
     static hasClip = (_: Serializable) =>
         (this.#clips[_.class] ?? []).findIndex((x) => x.apiPathWithId() === _.apiPathWithId()) !== -1;
 
-    static deleteAction(self: any, message: string, options?: { roles?: string | null; on?: () => boolean; action?: () => void }) {
+    static deleteAction(self: Serializable, message: string, options?: { roles?: string | null; on?: () => boolean; action?: () => void }) {
+        // When the action is role-gated and the current user lacks those roles, offer a
+        // "request deletion" alternative instead of hiding the action entirely: the user
+        // gives a reason and a DeletionRequest is created for an admin to approve.
+        const roles = (options?.roles ?? '').split('|').map((r) => r.trim()).filter(Boolean);
+        if (roles.length && !(NxGlobal.global.user?.hasAnyRole(roles) ?? false)) {
+            return {
+                title: $localize`:@@i18n.common.requestDeletion:request deletion`,
+                interrupt: {
+                    service: ModalInputComponent,
+                    args: {
+                        title: $localize`:@@i18n.common.requestDeletion:request deletion`,
+                        message: $localize`:@@i18n.common.requestDeletionReason:Why should this be deleted?`,
+                    } satisfies ModalInputArgs,
+                },
+                action: (_success?: (v: unknown) => void, _ctx?: unknown, result?: ModalInputResult) => {
+                    if (!result?.text) return undefined;
+                    return NxGlobal.service
+                        .post('deletion_requests', { model_type: self.getModelName(), model_id: self.id, reason: result.text })
+                        .pipe(tap(() => Toast.success($localize`:@@i18n.common.deletionRequested:Deletion requested`)));
+                },
+                type: NxActionType.Destructive,
+                group: true,
+                ...(options?.on ? { on: options.on } : {}),
+            };
+        }
         return {
             title: $localize`:@@i18n.common.delete:delete`,
             interrupt: { service: ModalConfirmComponent, args: { message, title: $localize`:@@i18n.common.attention:attention` } },
@@ -124,18 +152,19 @@ export class NxGlobal {
     }
 
     static #updateClipboardCookies() {
-        setCookie('CLIPBOARD', JSON.stringify(objectMap(this.#clips, (val) => val.map((_) => _.id))), 7);
+        localStorage.setItem('CLIPBOARD', JSON.stringify(objectMap(this.#clips, (val) => val.map((_) => _.id))));
     }
 
     static loadClipboardCookies = async () => {
-        const cookie = getCookie('CLIPBOARD');
-        if (!cookie) return;
+        const raw = localStorage.getItem('CLIPBOARD') || getCookie('CLIPBOARD');
+        if (!raw) return;
 
-        const ccookie = cookie as unknown as TClipDict<number>;
-        if (!Object.values(ccookie).flattened().length) return;
+        const cookie = JSON.parse(raw) as TClipDict<number>;
+        if (!Object.values(cookie).flattened().length) return;
 
         const { REFLECTION } = await import('src/constants/constants');
-        NxGlobal.service.post('populate-clipboard', cookie).subscribe((data: TClipDict<any>) => {
+        NxGlobal.service.post('populate-clipboard', cookie).subscribe((response) => {
+            const data = response as TClipDict<{ class?: string }>;
             const d: TClipDict<Serializable> = {};
             for (const c of Object.keys(data)) {
                 d[c] = data[c].map((_) => REFLECTION(_));
@@ -155,21 +184,26 @@ export class NxGlobal {
     }
 
     static payload(obj: Serializable, hidden: string[] = []): Dictionary {
-        return NxGlobal.payloadFor(obj, obj.constructor as any, hidden);
+        return NxGlobal.payloadFor(obj, obj.constructor as typeof Serializable, hidden);
     }
 
-    static payloadFor(obj: any, ctor: any, hidden: string[] = []): Dictionary {
+    // Callers pass either a concrete model class or `x.constructor` (cast to `typeof Serializable`,
+    // since a Serializable instance's constructor is always one of its subclasses).
+    static payloadFor(obj: Serializable, ctor: typeof Serializable, hidden: string[] = []): Dictionary {
         const c = ctor.DB_TABLE_NAME();
         const additional = ctor.ADDITIONAL_COLUMNS();
-        const o = obj as any;
+        const o = obj as unknown as Dictionary;
         const tables = NxGlobal.global.tables?.filter((_) => _.name == c);
         if (tables) {
             const d: Dictionary = {};
             if (tables.length !== 1) {
-                console.trace(`table "${c}" not known to NEXUS - maybe not defined in environment update`);
+                const _class = obj.class ?? 'unknown';
+                const myClass = ctor.name;
+                console.log(obj);
+                console.trace(`table "${c}" "${_class}" "${myClass}" not known to NEXUS - maybe not defined in environment update`);
                 return d;
             }
-            const fields = tables[0].columns.map((_: any) => _.Field);
+            const fields = tables[0].columns.map((_) => _.Field);
             for (const i in o) {
                 if (hidden.includes(i)) continue;
                 if (i === 'id') continue;
@@ -178,7 +212,7 @@ export class NxGlobal {
             }
             return d;
         }
-        return obj;
+        return obj as unknown as Dictionary;
     }
 
     static navigateTo = (url: string) => this.router.navigate([SmartLinkDirective.dynamicUrlFor(url)]);

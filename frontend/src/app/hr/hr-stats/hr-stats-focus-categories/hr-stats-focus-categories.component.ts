@@ -6,6 +6,9 @@ import { NgxEchartsModule } from 'ngx-echarts';
 import { Color } from '@constants/Color';
 import { EChartsSimpleOptions, ECHARTS_DEFAULT_TOOLTIP_OPTIONS, ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
+import { Dictionary } from '@constants/constants';
+import type { EChartsOption, SeriesOption } from 'echarts';
+import { ChartAxisTooltipParam } from '@models/api-response';
 
 interface FocusCategoryData {
     id: number;
@@ -22,7 +25,6 @@ interface FocusCategoryData {
 
 @Component({
     selector: 'hr-stats-focus-categories',
-    standalone: true,
     imports: [NgxEchartsModule, EmptyStateComponent],
     templateUrl: './hr-stats-focus-categories.component.html',
     styleUrl: './hr-stats-focus-categories.component.scss',
@@ -33,8 +35,8 @@ export class HrStatsFocusCategoriesComponent {
     #global = inject(GlobalService);
 
     users = signal<FocusCategoryData[]>([]);
-    chartOptions = signal<Record<number, any>>({});
-    donutChartOptions = signal<Record<number, any>>({});
+    chartOptions = signal<Record<number, EChartsOption>>({});
+    donutChartOptions = signal<Record<number, EChartsOption | null>>({});
 
     #categoryColors = {
         orga: '#333333',
@@ -53,8 +55,8 @@ export class HrStatsFocusCategoriesComponent {
                 return teamA - teamB;
             });
 
-            const charts: Record<number, any> = {};
-            const donuts: Record<number, any> = {};
+            const charts: Record<number, EChartsOption> = {};
+            const donuts: Record<number, EChartsOption | null> = {};
             sorted.forEach((user) => {
                 charts[user.id] = this.#createChartOptions(user);
                 donuts[user.id] = this.#createDonutChartOptions(user);
@@ -66,7 +68,7 @@ export class HrStatsFocusCategoriesComponent {
         });
     }
 
-    #createChartOptions(user: FocusCategoryData): any {
+    #createChartOptions(user: FocusCategoryData): EChartsOption {
         const months = this.#getAllMonths(user);
         const series = this.#createSeries(user, months);
         const requiredHoursLine = this.#createRequiredHoursLine(user, months);
@@ -83,18 +85,19 @@ export class HrStatsFocusCategoriesComponent {
             },
             tooltip: {
                 ...EChartsSimpleOptions.tooltip,
-                formatter: (params: any) => {
+                formatter: (rawParams: unknown) => {
+                    const params = rawParams as ChartAxisTooltipParam[];
                     const month = params[0].axisValue;
                     let tooltipContent = `<div class="p-2"><strong>${month}</strong><br/>`;
 
                     // Separate categories and required hours line
-                    const categoryParams = params.filter((p: any) => p.seriesName !== $localize`@@i18n.hr.required_hours`);
-                    const requiredParam = params.find((p: any) => p.seriesName === $localize`@@i18n.hr.required_hours`);
+                    const categoryParams = params.filter((p) => p.seriesName !== $localize`@@i18n.hr.required_hours`);
+                    const requiredParam = params.find((p) => p.seriesName === $localize`@@i18n.hr.required_hours`);
 
                     // Show categories first
                     let totalActual = 0;
-                    categoryParams.reverse().forEach((param: any) => {
-                        if (param.value > 0) {
+                    categoryParams.reverse().forEach((param) => {
+                        if (param.value && param.value > 0) {
                             const seriesColor = param.color;
                             const value = param.value.toFixed(1);
                             tooltipContent += `<div class="d-flex justify-content-between"><span style="color: ${seriesColor};">${param.seriesName}</span><span class="ms-2">${value}h</span></div>`;
@@ -109,7 +112,7 @@ export class HrStatsFocusCategoriesComponent {
                     }
 
                     // Show required hours at the bottom
-                    if (requiredParam && requiredParam.value > 0) {
+                    if (requiredParam?.value && requiredParam.value > 0) {
                         const requiredColor = requiredParam.color;
                         const requiredValue = requiredParam.value.toFixed(1);
                         tooltipContent += `<div class="d-flex justify-content-between"><span style="color: ${requiredColor};">${requiredParam.seriesName}</span><span class="ms-2">${requiredValue}h</span></div>`;
@@ -118,7 +121,7 @@ export class HrStatsFocusCategoriesComponent {
                 },
             },
             series: [...series, requiredHoursLine],
-        };
+        } satisfies EChartsOption;
     }
 
     #getAllMonths(user: FocusCategoryData): string[] {
@@ -134,8 +137,8 @@ export class HrStatsFocusCategoriesComponent {
         return Array.from(monthSet).sort();
     }
 
-    #createSeries(user: FocusCategoryData, months: string[]): any[] {
-        const series: any[] = [];
+    #createSeries(user: FocusCategoryData, months: string[]): SeriesOption[] {
+        const series: SeriesOption[] = [];
 
         Object.entries(user.categories).forEach(([categoryName, categoryData]) => {
             if (categoryData && categoryData.length > 0) {
@@ -159,7 +162,7 @@ export class HrStatsFocusCategoriesComponent {
         return series;
     }
 
-    #createRequiredHoursLine(user: FocusCategoryData, months: string[]): any {
+    #createRequiredHoursLine(user: FocusCategoryData, months: string[]): SeriesOption {
         const requiredHoursData = months.map((month) => {
             return this.#calculateRequiredHoursForMonth(user, month);
         });
@@ -185,7 +188,7 @@ export class HrStatsFocusCategoriesComponent {
     }
 
     #formatCategoryName(categoryName: string): string {
-        const nameMap: Record<string, string> = {
+        const nameMap: Dictionary<string> = {
             orga: $localize`@@i18n.hr.organizational`,
             unpaid: $localize`@@i18n.hr.unpaid_work`,
             time_based_customers: $localize`@@i18n.hr.time_based_customers`,
@@ -196,7 +199,7 @@ export class HrStatsFocusCategoriesComponent {
         return nameMap[categoryName] || categoryName;
     }
 
-    #createDonutChartOptions(user: FocusCategoryData): any {
+    #createDonutChartOptions(user: FocusCategoryData): EChartsOption | null {
         const categoryTotals = this.#calculateCategoryTotals(user);
         const totalTime = Object.values(categoryTotals).reduce((sum, value) => sum + value, 0);
 
@@ -224,7 +227,8 @@ export class HrStatsFocusCategoriesComponent {
             tooltip: {
                 trigger: 'item',
                 ...ECHARTS_DEFAULT_TOOLTIP_OPTIONS,
-                formatter: (params: any) => {
+                formatter: (rawParams: unknown) => {
+                    const params = rawParams as { color: string; value: number; name: string; percent: number };
                     const seriesColor = params.color;
                     const value = params.value.toFixed(1);
                     return `<div class="p-2">
@@ -304,11 +308,11 @@ export class HrStatsFocusCategoriesComponent {
                     },
                 },
             ],
-        };
+        } satisfies EChartsOption;
     }
 
-    #calculateCategoryTotals(user: FocusCategoryData): Record<string, number> {
-        const totals: Record<string, number> = {};
+    #calculateCategoryTotals(user: FocusCategoryData): Dictionary<number> {
+        const totals: Dictionary<number> = {};
 
         Object.entries(user.categories).forEach(([categoryName, categoryData]) => {
             if (categoryData) {
@@ -322,7 +326,7 @@ export class HrStatsFocusCategoriesComponent {
     }
 
     #getCategoryColor(categoryName: string): string {
-        const colorMap: Record<string, string> = {
+        const colorMap: Dictionary<string> = {
             orga: this.#categoryColors.orga,
             unpaid: this.#categoryColors.unpaid,
             time_based_customers: this.#categoryColors.time_based_customers,

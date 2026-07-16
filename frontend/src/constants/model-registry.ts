@@ -22,6 +22,7 @@ import { DebriefProblem } from '@models/project/debrief-problem.model';
 import { DebriefProblemCategory } from '@models/project/debrief-problem-category.model';
 import { DebriefProjectDebrief } from '@models/project/debrief-project-debrief.model';
 import { DebriefSolution } from '@models/project/debrief-solution.model';
+import { DeletionRequest } from '@models/deletion-request/deletion-request.model';
 import { Encryption } from '@models/encryption/encryption.model';
 import { Expense } from '@models/expense/expense.model';
 import { ExpenseCategory } from '@models/expense/expense-category.model';
@@ -30,6 +31,7 @@ import { Focus } from '@models/focus/focus.model';
 import { Framework } from '@models/project/framework.model';
 import { FrameworkLatest } from '@models/project/framework-latest.model';
 import { GitlabAuditProject } from '@models/gitlab-audit/gitlab-audit-project.model';
+import { GitlabSchedule } from '@models/gitlab-audit/gitlab-schedule.model';
 import { Invoice } from '@models/invoice/invoice.model';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { InvoiceReminder } from '@models/invoice/invoice-reminder.model';
@@ -49,7 +51,7 @@ import { Product } from '@models/product/product.model';
 import { ProductGroup } from '@models/product/product-group.model';
 import { Project } from '@models/project/project.model';
 import { ProjectState } from '@models/project/project-state.model';
-import { Sentinel } from '@models/sentinel.model';
+import { Sentinel } from '@models/sentinels/sentinel.model';
 import { Task } from '@models/tasks/task.model';
 import { UptimeCheck } from '@models/uptime/uptime-check.model';
 import { UptimeMonitor } from '@models/uptime/uptime-monitor.model';
@@ -74,6 +76,7 @@ export const MODEL_REGISTRY: Record<string, any> = {
     'DebriefProblemCategory': DebriefProblemCategory,
     'DebriefProjectDebrief': DebriefProjectDebrief,
     'DebriefSolution': DebriefSolution,
+    'DeletionRequest': DeletionRequest,
     'Encryption': Encryption,
     'Expense': Expense,
     'ExpenseCategory': ExpenseCategory,
@@ -82,6 +85,7 @@ export const MODEL_REGISTRY: Record<string, any> = {
     'Framework': Framework,
     'FrameworkLatest': FrameworkLatest,
     'GitlabAuditProject': GitlabAuditProject,
+    'GitlabSchedule': GitlabSchedule,
     'Invoice': Invoice,
     'InvoiceItem': InvoiceItem,
     'InvoiceReminder': InvoiceReminder,

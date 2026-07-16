@@ -1,0 +1,40 @@
+<div class="modal d-block" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" i18n="@@i18n.planner.scheduleIssue">schedule issue</span>
+                <button type="button" class="btn-close" (click)="decline()" tabindex="0" (keydown.enter)="decline()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3 d-flex">
+                    <span class="input-group-text" i18n="@@i18n.common.project">project</span>
+                    <select class="form-select" [ngModel]="projectId()" (ngModelChange)="projectId.set($event)">
+                        @for (project of projects(); track project.id) {
+                            <option [value]="project.id">{{ project.name }}</option>
+                        }
+                    </select>
+                </div>
+                <div class="input-group mb-3 d-flex">
+                    <span class="input-group-text" i18n="@@i18n.common.name">name</span>
+                    <input class="form-control" [ngModel]="name()" (ngModelChange)="name.set($event)" />
+                </div>
+                <div class="input-group mb-3 d-flex">
+                    <span class="input-group-text" i18n="@@i18n.planner.estimateHours">estimate (hours)</span>
+                    <input type="number" min="0" class="form-control" [ngModel]="workloadHours()" (ngModelChange)="workloadHours.set($event)" />
+                </div>
+                <div class="input-group mb-3 d-flex">
+                    <span class="input-group-text" i18n="@@i18n.common.start">start</span>
+                    <input type="date" class="form-control" [ngModel]="startedAt()" (ngModelChange)="startedAt.set($event)" />
+                </div>
+                <div class="input-group mb-3 d-flex">
+                    <span class="input-group-text" i18n="@@i18n.common.due">due</span>
+                    <input type="date" class="form-control" [ngModel]="dueAt()" (ngModelChange)="dueAt.set($event)" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" (click)="decline()" i18n="@@i18n.common.cancel">cancel</button>
+                <button type="button" class="btn btn-primary" (click)="accept()" [disabled]="!canSubmit()" hotkey="CTRL+ENTER" i18n="@@i18n.common.ok">ok</button>
+            </div>
+        </div>
+    </div>
+</div>

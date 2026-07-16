@@ -3,7 +3,7 @@ import { Milestone } from './milestone.model';
 import { MilestoneState, MILESTONE_STATES } from './milestone-state.enum';
 import { NxGlobal } from '@app/nx/nx.global';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
-import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { ModalBaseService } from '@app/_modals/modal-base-service';
 import { ModalEditMilestoneComponent } from '@app/_modals/modal-edit-milestone/modal-edit-milestone.component';
 
 export function getMilestoneActions(self: Milestone): NxAction[] {
@@ -11,12 +11,7 @@ export function getMilestoneActions(self: Milestone): NxAction[] {
         {
             title: $localize`:@@i18n.common.edit:edit`,
             group: false,
-            action: () => {
-                const modalService = NxGlobal.injector.get(NgbModal);
-                const modalRef = modalService.open(ModalEditMilestoneComponent, { size: 'xl' });
-                modalRef.componentInstance.init(self, self.project);
-                return modalRef.result;
-            },
+            action: () => ModalBaseService.open(ModalEditMilestoneComponent, self, self.project),
         },
         {
             title: $localize`:@@i18n.common.setState:set state`,

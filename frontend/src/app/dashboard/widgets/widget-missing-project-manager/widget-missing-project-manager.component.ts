@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { Project } from '@models/project/project.model';
 import { ProjectService } from '@models/project/project.service';
 import { BaseWidgetComponent, WidgetOptions } from '../base.widget.component';
-import { WidgetsModule } from '../widgets.module';
+import { WIDGET_SHARED } from '../widgets.shared';
 import { PermissionsDirective } from '@directives/permissions.directive';
 import { ProjectState } from '@models/project/project-state.model';
 
@@ -10,9 +10,8 @@ import { ProjectState } from '@models/project/project-state.model';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'widget-missing-project-manager',
     templateUrl: './widget-missing-project-manager.component.html',
-    styleUrls: ['./widget-missing-project-manager.component.scss', './../base.widget.component.scss'],
-    standalone: true,
-    imports: [WidgetsModule, PermissionsDirective],
+    styleUrls: ['./../base.widget.component.scss'],
+    imports: [...WIDGET_SHARED, PermissionsDirective],
 })
 export class WidgetMissingProjectManagerComponent extends BaseWidgetComponent {
     readonly #FILTERS = {

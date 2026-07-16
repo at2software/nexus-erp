@@ -1,6 +1,9 @@
+@let _isLoading = isLoading();
+@let _unmatched = unmatched();
+@let _categories = categories();
 <toolbar>
-    <button class="btn btn-primary" (click)="load()" [disabled]="isLoading()">
-        @if (isLoading()) {
+    <button class="btn btn-primary" (click)="load()" [disabled]="_isLoading">
+        @if (_isLoading) {
             <span class="spinner-border spinner-border-sm me-1"></span> fetching…
         } @else {
             <i>sync</i> fetch transactions
@@ -10,7 +13,7 @@
 
 <div class="row g-3">
     <div class="col-3">
-        @if (matched().length > 0 || unmatched().length > 0) {
+        @if (matched().length > 0 || _unmatched.length > 0) {
             <div class="card mb-3">
                 <div class="card-body p-0" style="height: 160px">
                     <div echarts [options]="matchRatioChart()" style="width:100%;height:160px"></div>
@@ -22,7 +25,7 @@
             <div class="card">
                 <div class="card-header d-flex align-items-center">
                     <span>unassigned expenses</span>
-                    @if (categories().length > 0) {
+                    @if (_categories.length > 0) {
                         <div ngbDropdown placement="bottom-end" autoClose="outside" class="ms-auto">
                             <button class="btn btn-sm p-0" ngbDropdownToggle
                                 [class.text-primary]="selectedCategoryIds().size > 0"
@@ -30,7 +33,7 @@
                                 <i>filter_list</i>
                             </button>
                             <div ngbDropdownMenu>
-                                @for (cat of categories(); track cat.id) {
+                                @for (cat of _categories; track cat.id) {
                                     <button class="dropdown-item d-flex align-items-center gap-2"
                                         (click)="toggleCategory(cat.id)">
                                         <i class="small" [style.color]="cat.css()">{{ isCatSelected(cat.id) ? 'check_box' : 'check_box_outline_blank' }}</i>
@@ -65,7 +68,7 @@
             <div class="card mb-3">
                 <div class="card-header d-flex align-items-center">
                     <span>expense patterns</span>
-                    @if (categories().length > 0) {
+                    @if (_categories.length > 0) {
                         <div ngbDropdown placement="bottom-end" autoClose="outside" class="ms-auto">
                             <button class="btn btn-sm p-0" ngbDropdownToggle
                                 [class.text-primary]="selectedPatternCategoryIds().size > 0"
@@ -73,7 +76,7 @@
                                 <i>filter_list</i>
                             </button>
                             <div ngbDropdownMenu>
-                                @for (cat of categories(); track cat.id) {
+                                @for (cat of _categories; track cat.id) {
                                     <button class="dropdown-item d-flex align-items-center gap-2"
                                         (click)="togglePatternCategory(cat.id)">
                                         <i class="small" [style.color]="cat.css()">{{ isPatternCatSelected(cat.id) ? 'check_box' : 'check_box_outline_blank' }}</i>
@@ -148,7 +151,7 @@
         <div class="card">
             <div class="card-header hstack gap-2">
                 <span>unmatched debit transactions</span>
-                @if (unmatched().length > 0) {
+                @if (_unmatched.length > 0) {
                     <input
                         class="form-control form-control-sm ms-2"
                         style="max-width: 220px"
@@ -164,9 +167,9 @@
                     </button>
                     @if (selectedTxs().length > 0) {
                         <span class="badge bg-primary ms-1">{{ selectedTxs().length }} selected</span>
-                        @if (commonPattern) {
-                            <span class="badge bg-secondary text-truncate" style="max-width:200px" [title]="commonPattern">
-                                "{{ commonPattern }}"
+                        @if (commonPattern(); as pattern) {
+                            <span class="badge bg-secondary text-truncate" style="max-width:200px" [title]="pattern">
+                                "{{ pattern }}"
                             </span>
                         }
                         <button class="btn btn-sm text-muted ms-auto" (click)="clearTxSelection()">
@@ -176,13 +179,13 @@
                 }
             </div>
 
-            @if (!isLoading() && unmatched().length === 0 && matched().length === 0) {
+            @if (!_isLoading && _unmatched.length === 0 && matched().length === 0) {
                 <div class="p-4 text-center text-muted">
                     Click <strong>fetch transactions</strong> to load the last 90 days of debit transactions.
                 </div>
             }
-
-            @if (filteredUnmatched.length > 0) {
+            @let _filteredUnmatched = filteredUnmatched();
+            @if (_filteredUnmatched.length > 0) {
                 <div class="table-responsive">
                     <table class="table table-hover mb-0 align-middle">
                         <colgroup>
@@ -192,7 +195,7 @@
                             <col style="width: 110px">
                         </colgroup>
                         <tbody>
-                            @for (tx of filteredUnmatched; track tx.key) {
+                            @for (tx of _filteredUnmatched; track tx.key) {
                                 <tr class="tx-row" [nx]="tx">
                                     <td class="text-muted small text-nowrap">{{ tx.date }}</td>
                                     <td class="text-muted text-truncate"

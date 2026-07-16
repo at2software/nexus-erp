@@ -1,8 +1,9 @@
-@if (tiers.length === 0) {
+@let _tiers = tiers();
+@if (_tiers.length === 0) {
     <empty-state [card]="false" class="settings" i18n-title="@@i18n.payment.noTiersDefined" title="no payment plan tiers defined yet"></empty-state>
 }
 
-@for (tier of tiers; let i = $index; track i) {
+@for (tier of _tiers; let i = $index; track i) {
     <div class="card-header d-flex align-items-center gap-2" [class.border-top]="i > 0">
         <input [(ngModel)]="tier.label" class="form-control" style="max-width: 140px" placeholder="label" i18n-placeholder="@@i18n.payment.tierLabel" (change)="save()" />
         <div class="input-group" style="width: 160px; flex-shrink: 0">

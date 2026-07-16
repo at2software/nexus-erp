@@ -93,16 +93,36 @@ class OwnCalDAVBackend extends AbstractBackend {
         }
         return null;
     }
-    private function getCalendarDataFromVcard($name, $vcard, $uid) {
+
+    /**
+     * Builds a valid, stable ETag.
+     *
+     * The ETag must be a quoted-string (RFC 7232) and must not change between
+     * requests unless the underlying record actually changed. The previous
+     * implementation returned an unquoted value containing a space
+     * (e.g. "12026-06-19 12:34:56"), which clients like Thunderbird could not
+     * match against their cache, causing recurring (birthday) events to be
+     * re-created on every sync.
+     */
+    private function makeEtag($id, $updatedAt): string {
+        $stamp = $updatedAt ? $updatedAt->getTimestamp() : 0;
+        return '"'.$id.'-'.$stamp.'"';
+    }
+
+    private function getCalendarDataFromVcard($name, $vcard, $uid, $updatedAt = null) {
         $birthday = $this->getBirthdayFromVCard($vcard);
         if ($birthday === null) {
             return null;
         }
+        // DTSTAMP must be deterministic for a given record so the event body
+        // stays byte-identical across syncs; deriving it from the live clock
+        // makes every fetch look like a modification.
+        $dtstamp = $updatedAt ? gmdate('Ymd\THis\Z', $updatedAt->getTimestamp()) : gmdate('Ymd\THis\Z');
         return "BEGIN:VCALENDAR\r\n".
                "VERSION:2.0\r\n".
                "BEGIN:VEVENT\r\n".
                'UID:'.$uid."\r\n".
-               'DTSTAMP:'.gmdate('Ymd\THis\Z')."\r\n".
+               'DTSTAMP:'.$dtstamp."\r\n".
                'DTSTART;VALUE=DATE:'.date('Ymd', strtotime($birthday))."\r\n".
                'SUMMARY:Birthday of '.$name."\r\n".
                "RRULE:FREQ=YEARLY\r\n".
@@ -126,11 +146,12 @@ class OwnCalDAVBackend extends AbstractBackend {
         }
 
         $vacationType = $isSick ? 'Sickday' : 'Vacation';
+        $dtstamp      = $vacation->updated_at ? gmdate('Ymd\THis\Z', $vacation->updated_at->getTimestamp()) : gmdate('Ymd\THis\Z');
         return "BEGIN:VCALENDAR\r\n".
                 "VERSION:2.0\r\n".
                 "BEGIN:VEVENT\r\n".
                 'UID:vacation-'.$vacation->id.'@nexus'."\r\n".
-                'DTSTAMP:'.gmdate('Ymd\THis\Z')."\r\n".
+                'DTSTAMP:'.$dtstamp."\r\n".
                 $timestamp.
                 'SUMMARY:'.$vacationType.' of '.$vacation->user->name."\r\n".
                 "END:VEVENT\r\n".
@@ -181,7 +202,7 @@ class OwnCalDAVBackend extends AbstractBackend {
         $result = [];
         if ($calendarId == 0) {
             foreach (User::whereHasBirthday()->get() as $user) {
-                $calendarData = $this->getCalendarDataFromVcard($user->name, $user->vcard, 'birthday-user-'.$user->id.'@nexus');
+                $calendarData = $this->getCalendarDataFromVcard($user->name, $user->vcard, 'birthday-user-'.$user->id.'@nexus', $user->updated_at);
                 if ($calendarData === null) {
                     continue;
                 }
@@ -189,13 +210,14 @@ class OwnCalDAVBackend extends AbstractBackend {
                     'id'           => $user->id,
                     'uri'          => 'user_'.strval($user->id),
                     'lastmodified' => null,
-                    'etag'         => $user->id.$user->updated_at,
+                    'etag'         => $this->makeEtag($user->id, $user->updated_at),
                     'size'         => strlen($calendarData),
+                    'calendardata' => $calendarData,
                     'component'    => 'vevent',
                 ];
             }
             foreach (Contact::whereHasBirthday()->get() as $contact) {
-                $calendarData = $this->getCalendarDataFromVcard($contact->name, $contact->vcard, 'birthday-contact-'.$contact->id.'@nexus');
+                $calendarData = $this->getCalendarDataFromVcard($contact->name, $contact->vcard, 'birthday-contact-'.$contact->id.'@nexus', $contact->updated_at);
                 if ($calendarData === null) {
                     continue;
                 }
@@ -203,17 +225,15 @@ class OwnCalDAVBackend extends AbstractBackend {
                     'id'           => $contact->id,
                     'uri'          => 'contact_'.strval($contact->id),
                     'lastmodified' => null,
-                    'etag'         => $contact->id.$contact->updated_at,
+                    'etag'         => $this->makeEtag($contact->id, $contact->updated_at),
                     'size'         => strlen($calendarData),
+                    'calendardata' => $calendarData,
                     'component'    => 'vevent',
                 ];
             }
-            $vacations = Vacation::with('grant')
+            $vacations = Vacation::with(['grant', 'user'])
                 ->whereIn('state', [VacationState::Approved, VacationState::Sick])
                 ->where('amount', '<=', '0')
-                ->whereHas('grant', function ($query) {
-                    $query->where('expires_at', '>', now());
-                })
                 ->get();
             foreach ($vacations as $vacation) {
                 $isSick = false;
@@ -229,16 +249,18 @@ class OwnCalDAVBackend extends AbstractBackend {
                 if ($end != null && $vacation->started_at > $end && $vacation->ended_at > $end) {
                     continue;
                 }
+                $calendarData = $this->getCalendarDataFromVacation($vacation, $isSick);
                 $result[] = [
                     'id'           => $vacation->id,
                     'uri'          => 'vacation_'.strval($vacation->id),
                     'lastmodified' => null,
-                    'etag'         => $vacation->id.$vacation->updated_at,
-                    'size'         => strlen($this->getCalendarDataFromVacation($vacation, $isSick)),
+                    'etag'         => $this->makeEtag($vacation->id, $vacation->updated_at),
+                    'size'         => strlen($calendarData),
+                    'calendardata' => $calendarData,
                     'component'    => 'vevent',
                 ];
             }
-            foreach (CalendarEntry::all() as $calendarEntry) {
+            foreach (CalendarEntry::cursor() as $calendarEntry) {
                 $vcalendar = $calendarEntry->vcalendar;
                 // preg_match('/DTSTART:(\d{8}T\d{6}Z)/', $vcalendar, $startMatches);
                 // preg_match('/DTEND:(\d{8}T\d{6}Z)/', $vcalendar, $endMatches);
@@ -266,8 +288,9 @@ class OwnCalDAVBackend extends AbstractBackend {
                     'id'           => $calendarEntry->id,
                     'uri'          => 'calendarEntry_'.strval($calendarEntry->id),
                     'lastmodified' => null,
-                    'etag'         => $calendarEntry->id.$calendarEntry->updated_at,
+                    'etag'         => $this->makeEtag($calendarEntry->id, $calendarEntry->updated_at),
                     'size'         => strlen($vcalendar),
+                    'calendardata' => $vcalendar,
                     'component'    => 'vevent',
                 ];
             }
@@ -304,7 +327,7 @@ class OwnCalDAVBackend extends AbstractBackend {
                 if (empty($user)) {
                     return [];
                 }
-                $calendardata = $this->getCalendarDataFromVcard($user->name, $user->vcard, 'birthday-user-'.$user->id.'@nexus');
+                $calendardata = $this->getCalendarDataFromVcard($user->name, $user->vcard, 'birthday-user-'.$user->id.'@nexus', $user->updated_at);
                 if ($calendardata === null) {
                     return [];
                 }
@@ -312,7 +335,7 @@ class OwnCalDAVBackend extends AbstractBackend {
                     'id'           => $user->id,
                     'uri'          => $objectUri,
                     'lastmodified' => null,
-                    'etag'         => $user->id.$user->updated_at,
+                    'etag'         => $this->makeEtag($user->id, $user->updated_at),
                     'size'         => strlen($calendardata),
                     'calendardata' => $calendardata,
                     'component'    => 'vevent',
@@ -323,7 +346,7 @@ class OwnCalDAVBackend extends AbstractBackend {
                 if (empty($contact)) {
                     return [];
                 }
-                $calendardata = $this->getCalendarDataFromVcard($contact->name, $contact->vcard, 'birthday-contact-'.$contact->id.'@nexus');
+                $calendardata = $this->getCalendarDataFromVcard($contact->name, $contact->vcard, 'birthday-contact-'.$contact->id.'@nexus', $contact->updated_at);
                 if ($calendardata === null) {
                     return [];
                 }
@@ -331,7 +354,7 @@ class OwnCalDAVBackend extends AbstractBackend {
                     'id'           => $contact->id,
                     'uri'          => $objectUri,
                     'lastmodified' => null,
-                    'etag'         => $contact->id.$contact->updated_at,
+                    'etag'         => $this->makeEtag($contact->id, $contact->updated_at),
                     'size'         => strlen($calendardata),
                     'calendardata' => $calendardata,
                     'component'    => 'vevent',
@@ -354,7 +377,7 @@ class OwnCalDAVBackend extends AbstractBackend {
                     'id'           => $vacation->id,
                     'uri'          => $objectUri,
                     'lastmodified' => null,
-                    'etag'         => $vacation->id.$vacation->updated_at,
+                    'etag'         => $this->makeEtag($vacation->id, $vacation->updated_at),
                     'size'         => strlen($calendardata),
                     'calendardata' => $calendardata,
                     'component'    => 'vevent',
@@ -370,7 +393,7 @@ class OwnCalDAVBackend extends AbstractBackend {
                     'id'           => $calendarEntry->id,
                     'uri'          => $objectUri,
                     'lastmodified' => null,
-                    'etag'         => $calendarEntry->id.$calendarEntry->updated_at,
+                    'etag'         => $this->makeEtag($calendarEntry->id, $calendarEntry->updated_at),
                     'size'         => strlen($calendardata),
                     'calendardata' => $calendardata,
                     'component'    => 'vevent',

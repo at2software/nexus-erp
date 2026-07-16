@@ -13,7 +13,7 @@ class PluginSlackController extends PluginChatController {
         return 'slack';
     }
     public static function createInstance(): ?static {
-        if ($endpoint = env('SLACK_API_ENDPOINT')) {
+        if ($endpoint = config('services.slack.api_endpoint')) {
             $instance = new static;
             $instance->init($endpoint);
             return $instance;
@@ -24,7 +24,7 @@ class PluginSlackController extends PluginChatController {
     protected function getToken(): string {
         $token = Cache::get('slack_api_token');
         if (! $token) {
-            $token = env('SLACK_ACCESS_TOKEN');
+            $token = config('services.slack.access_token');
             Cache::put('slack_api_token', $token, now()->addMinutes(59));
         }
         return $token;
@@ -106,13 +106,13 @@ class PluginSlackController extends PluginChatController {
         }
     }
     public function getImageMarkdown(string $path, string $title = 'image'): string {
-        return 'Image: '.env('API_URL').'../'.$path;
+        return 'Image: '.config('app.api_url').'../'.$path;
     }
     public function getIconFor(Project $project): string {
         return ':slack: Slack Channel';
     }
     public function env(string $key): ?string {
-        return env('SLACK_'.$key);
+        return config('services.slack.'.strtolower($key)) ?: null;
     }
     public function updatePosition(string $position, string $userId): void {
         // Slack doesn't have a direct position concept, could be implemented via profile fields

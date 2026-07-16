@@ -5,14 +5,14 @@
         <div class="chart-title" roles="invoicing">{{ value() ? (value()! | mshort) : (value() | loading) }}</div>
     </div>
 
-    @if (hasInvoicesModule) {
+    @if (hasInvoicesModule()) {
         <echarts-range-card type="rangeArea" [chartData]="chartData()" [suffix]="' ' + global.currencySymbol()" [color]="['cyan', 'cyan-teal', 'teal']" [seriesCount]="3" roles="invoicing"></echarts-range-card>
     }
 
     <widget-options style="overflow: hidden;" [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
 
     @if (!onlyChart() && !getOptions()['chart-only']?.value) {
-        <ul-compact>
+        <ul-compact revealList>
             @for (group of groupedData(); track group.company.id) {
                 <li class="list-group-item hstack gap-2 text-nowrap" [compact]="isCompactGroup(group)">
                     <div>

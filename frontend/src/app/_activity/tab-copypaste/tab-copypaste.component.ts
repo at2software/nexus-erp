@@ -13,7 +13,6 @@ import { Serializable } from '@models/serializable';
     selector: 'activity-tab-copypaste',
     templateUrl: './tab-copypaste.component.html',
     styleUrls: ['./tab-copypaste.component.scss'],
-    standalone: true,
     imports: [ActivityTabComponent, ScrollbarComponent, NgbTooltipModule],
 })
 export class TabCopypasteComponent {
@@ -22,25 +21,23 @@ export class TabCopypasteComponent {
 
     tab = viewChild.required(ActivityTabComponent);
 
-    #hasClips = toSignal(NxGlobal.onClipboardChanged, { initialValue: false });
+    protected hasClips = toSignal(NxGlobal.onClipboardChanged, { initialValue: false });
     #rootObject = toSignal(this.#global.onRootObjectSelected);
 
     constructor() {
         this.#global.init.subscribe(() => NxGlobal.loadClipboardCookies());
 
         effect(() => {
-            if (this.#hasClips()) {
-                this.tab().show();
+            if (this.hasClips()) {
                 this.tab().focus();
             } else {
-                this.tab().hide();
                 this.#activityService.activateLatestTab();
             }
         });
 
         effect(() => {
             const root = this.#rootObject();
-            if (root != null) NxGlobal.setCurrentRoot(root);
+            if (root instanceof Serializable) NxGlobal.setCurrentRoot(root);
         });
     }
 

@@ -7,38 +7,41 @@ import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { Color } from '@constants/Color';
 import { tracked } from '@constants/tracked';
+import { ExtIssueRef } from '@models/ext-issue/ext-issue-resolver.service';
 
 @Component({
     selector: '[tr-annotation]',
     templateUrl: './tr-annotation.component.html',
     host: { class: 'annotate annotate-left' },
     changeDetection: ChangeDetectionStrategy.OnPush,
-    standalone: true,
     imports: [NComponent, DecimalPipe, PercentPipe, NgbTooltipModule, SmartLinkDirective, NComponent],
 })
 export class TableRowAnnotationComponent {
-    readonly itemIn = input.required<InvoiceItem>({ alias: 'item' });
-    readonly item = tracked(this.itemIn);
+    readonly item = input.required<InvoiceItem>();
+    readonly trackedItem = tracked(this.item);
     text = input('');
-    readonly companyIn = input<Company>(undefined, { alias: 'company' });
-    readonly company = tracked(this.companyIn);
+    readonly company = input<Company | undefined>(undefined);
+    readonly trackedCompany = tracked(this.company);
     mode = input<'quote' | 'invoice' | 'support'>('invoice');
+    extIssues = input<Record<string, ExtIssueRef>>({});
+
+    readonly extIssue = computed(() => this.extIssues()[this.trackedItem()?.id]);
 
     readonly #COL_CENTER = 140;
 
     readonly avg = computed(() => {
-        const item = this.item();
+        const item = this.trackedItem();
         return Math.round(10 * (item.predictions?.length ? item.predictions.reduce((a, b) => a + b.qty, 0) / item.predictions.length : item.qty)) / 10;
     });
 
-    readonly diff = computed(() => (this.avg() - this.item().qty) / this.item().qty);
+    readonly diff = computed(() => (this.avg() - this.trackedItem().qty) / this.trackedItem().qty);
 
     readonly col = computed(() => {
         const iCol = this.#COL_CENTER - this.#COL_CENTER * Math.min(1, Math.max(-1, this.diff()));
         return Color.fromHsl(iCol, 100, 60).toHexString();
     });
 
-    readonly fociPercentage = computed(() => this.item().qty / (this.item().billed_foci_sum_duration || 1));
+    readonly fociPercentage = computed(() => this.trackedItem().qty / (this.trackedItem().billed_foci_sum_duration || 1));
 
     readonly fociColor = computed(() => {
         const p = this.fociPercentage();

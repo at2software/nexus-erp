@@ -6,15 +6,15 @@ use App\Http\Controllers\PluginController;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PluginLink extends BaseModel {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     const FLAG_GITLAB_HOOKED = 1 << 0;
 
-    protected $fillable = ['name', 'url', 'path', 'type', 'parent_id', 'parent_type', 'framework_id', 'framework_version'];
+    protected $fillable = ['name', 'url', 'type', 'parent_id', 'parent_type', 'framework_id', 'framework_version'];
     protected $hidden   = ['deleted_at', 'created_at', 'updated_at'];
-    protected $access   = ['admin' => '*', 'project_manager' => 'crud', 'user' => 'crud'];
 
     public function parent(): MorphTo {
         return $this->morphTo();

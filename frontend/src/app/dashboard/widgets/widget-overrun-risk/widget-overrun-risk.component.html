@@ -1,0 +1,29 @@
+@let _data = data();
+<div class="card card-chart mb-3">
+    <div class="card-header gap-2">
+        <n class="local-ai-icon" [mlReliability]="'project_overrun'">local_ai</n>
+        <span class="flex-fill text-truncate" i18n="@@i18n.widget-overrun-risk">overrun risk</span>
+        <span class="badge badge-dark">{{ value() ?? (value() | loading) }}</span>
+    </div>
+
+    <widget-options [options]="getOptions()" (updated)="_onUpdate($event)" (deleted)="onDelete($event)"></widget-options>
+
+    <ul-compact revealList [badge]="badgeCount(_data) > 0 ? '' + badgeCount(_data) : undefined">
+        @for (_ of _data; track _.id; let i = $index) {
+            <li class="list-group-item d-flex text-nowrap" [nx]="_" [tables]="_data" [compact]="indexExceedsSettings(i) && !_.badge()">
+                <div>
+                    <avatar [object]="_"></avatar>
+                </div>
+                <div class="flex-fill ms-3 text-truncate">
+                    <div class="d-flex text-truncate">
+                        <div class="flex-fill text-truncate">{{ _.name }}</div>
+                        <div class="text-danger text-nowrap">+{{ _.mlOverrunHours() | number: '1.1-1' }}h</div>
+                    </div>
+                    <div class="text-muted text-truncate small">
+                        {{ _.work_estimated | number: '1.1-1' }}h <span i18n="@@i18n.common.quoted">quoted</span> → {{ _.ml_predicted_hours | number: '1.1-1' }}h <span i18n="@@i18n.common.predicted">predicted</span>
+                    </div>
+                </div>
+            </li>
+        }
+    </ul-compact>
+</div>

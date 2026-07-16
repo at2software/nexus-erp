@@ -1,4 +1,4 @@
-import { map, Observable, of, ReplaySubject } from 'rxjs';
+import { EMPTY, expand, last, map, Observable, of, ReplaySubject, scan } from 'rxjs';
 import { Encryption } from '../encryption/encryption.model';
 import { NexusHttpInterceptor } from '@app/http.interceptor';
 import { HttpHeaders } from '@angular/common/http';
@@ -6,6 +6,7 @@ import { Serializable } from '../serializable';
 import { HttpWrapper } from './http.wrapper';
 import { PluginLink } from '../pluginLink/plugin-link.model';
 import type { Project } from '@models/project/project.model';
+import { Dictionary } from '@constants/constants';
 
 export type TPluginStates = 'idle' | 'connecting' | 'connected' | 'connection fail' | 'no token';
 
@@ -21,7 +22,7 @@ export abstract class PluginInstance extends HttpWrapper implements IPlugin {
     abstract getHref(): string;
     abstract getName(): string;
     abstract toPluginLink(id: string): PluginLink;
-    abstract getActivityComments(projectId: string, maxInitialItems?: number, resolveUser?: (email?: string, username?: string, name?: string, pluginAttribute?: string) => any): Observable<any[]>;
+    abstract getActivityComments(projectId: string, maxInitialItems?: number, resolveUser?: (email?: string, username?: string, name?: string, pluginAttribute?: string) => any): Observable<Dictionary[]>;
 
     // Plugin metadata for VCard integration
     abstract getVcardAttributeName(): string; // e.g., 'X-NEXUS-MANTISBT'
@@ -41,6 +42,7 @@ export abstract class PluginInstance extends HttpWrapper implements IPlugin {
     instance!: PluginInstance; // used for http requests
     baseInstance: PluginInstance | undefined = undefined;
     init = new ReplaySubject<void>(1);
+    projectId?:string;
 
     createBlankFor: ((project: Project) => Promise<string>) | undefined = undefined;
     protected connectWith = map<Serializable, any>((_) => {
@@ -51,6 +53,14 @@ export abstract class PluginInstance extends HttpWrapper implements IPlugin {
     getRootInstance = (): PluginInstance => this.baseInstance ?? this;
     isRootInstance = (): boolean => (this.baseInstance ? false : true);
     canCreateTasks = (): boolean => false;
+
+    /** Follows page-numbered listings (Mantis `page`, GitLab `page`) until a short page is returned. */
+    protected fetchAllPages = <T>(requestPage: (page: number) => Observable<T[]>, pageSize: number): Observable<T[]> =>
+        requestPage(1).pipe(
+            expand((page, i) => (page.length < pageSize ? EMPTY : requestPage(i + 2))),
+            scan((all, page) => all.concat(page), [] as T[]),
+            last(),
+        );
 
     load = (url: string, enc: Encryption, baseInstance?: PluginInstance, pluginLink?: PluginLink) => {
         this.enc = enc;

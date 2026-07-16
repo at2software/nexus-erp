@@ -8,8 +8,8 @@
 
                 <div class="row g-3 mb-4">
                     <div class="col-6">
-                        <label class="form-label">Initiative</label>
-                        <select class="form-select" [ngModel]="selectedInitiativeId()" (ngModelChange)="setInitiative($event)">
+                        <label class="form-label" for="initiative-select">Initiative</label>
+                        <select id="initiative-select" class="form-select" [ngModel]="selectedInitiativeId()" (ngModelChange)="setInitiative($event)">
                             <option value="">— select initiative —</option>
                             @for (ini of initiatives; track ini.id) {
                                 <option [value]="'' + ini.id">{{ ini.name }}</option>
@@ -18,8 +18,8 @@
                     </div>
                     @if (selectedInitiative() && (selectedInitiative()!.channels?.length ?? 0) > 0) {
                         <div class="col-6">
-                            <label class="form-label">Lead Source</label>
-                            <select class="form-select" [ngModel]="selectedLeadSourceId()" (ngModelChange)="selectedLeadSourceId.set(+$event)">
+                            <label class="form-label" for="lead-source-select">Lead Source</label>
+                            <select id="lead-source-select" class="form-select" [ngModel]="selectedLeadSourceId()" (ngModelChange)="selectedLeadSourceId.set(+$event)">
                                 @for (channel of selectedInitiative()!.channels!; track channel.id) {
                                     <option [value]="channel.id">{{ channel.name }}</option>
                                 }
@@ -36,7 +36,7 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Column Mapping</label>
+                    <div class="form-label">Column Mapping</div>
                     <div class="table-responsive">
                         <table class="table table-sm table-bordered mb-0">
                             <thead>

@@ -175,6 +175,9 @@ class WidgetController extends Controller {
     public function GET_CASHFLOW_CUSTOMER_SUPPORT($baseWage = 0) {
         return new CashflowBuilder(
             builder: Company::whereHasUnbilledFoci()->whereNot('id', Param::get('ME_ID')->value),
+            // ml_predicted_support_hours: support-load forecast (predicted next-quarter support
+            // hours), additive to the unbilled-cashflow sum above — never replaces it.
+            appends: ['ml_predicted_support_hours'],
             sum: fn ($company) => $company->foci_unbilled_sum_duration * $company->getWage($baseWage)
         );
     }

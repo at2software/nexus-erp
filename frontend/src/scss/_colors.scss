@@ -1,86 +1,79 @@
 @use "sass:map";
 @use "sass:color";
 
-$blue        : #135BCD;  // projects
-$indigo      : #391AD2;
-$purple      : #7B0DCF;  // acquisitions
-$pink        : #DC0094;  // products
-$red         : #F9001D;  // customers
-$orange      : #FF6700;
-$yellow      : #FFA200;  // expenses
-$green       : #30E800;  // invoices
-$teal        : #00C9A7;  // prepared invoice stuff
-$cyan        : #0A8BC9;  // time-based-projects
+// Background surfaces (dark theme only)
+$bg-darker : #050909;  // deepest surface, near-black green-gray
+$bg-card   : #101818;  // cards
+$bg-body   : #162020;  // body / modals / navbars
+$bg-hover  : #1d2929;  // hover states
+$bg-muted  : #233232;  // inputs / secondary containers
 
-$bg-darker       : #050909;  // Deep, near-black green-gray
-$bg-card         : #101818;  // Deep, near-black green-gray
-$bg-body         : #162020;  // For cards, modals, navbars
-$bg-hover        : #1d2929;  // For hover states
-$bg-muted: #233232;  // For inputs, secondary containers
-
-$primary  : $teal;
-$primary-1: #69d8c5;
-$primary-2: #2bcbb0;
-$primary-3: #008972;
-$primary-4: #005d4e;
-$secondary: $pink;
-$success  : #6bf57e;
-$warning  : #e2f56b;
-$danger   : #f57e6b;
-$info     : #6be2f5;
-
+// Single source of truth for every named/brand color.
+// `--color-<name>`, `--bs-<name>`, `.bg-<name>` and `.text-<name>` are all derived from this map.
 $custom-colors: (
-    'blue'       : #135BCD,     // projects
-    'indigo'     : #391AD2,
-    'purple'     : #7B0DCF,     // acquisitions
-    'pink'       : #DC0094,     // products
-    'red'        : #F9001D,     // customers
-    'orange'     : #FF6700,
-    'yellow'     : #FFA200,     // expenses
-    'green'      : #30E800,     // invoices
-    'teal'       : #00C9A7,     // prepared invoice stuff
-    'cyan'       : #0A8BC9,     // time-based-projects
-    'cyan-teal'  : #05AAB8,     // customer support (between cyan and teal)
-    'grey'       : #888888,     //
-    'dark-grey'  : #444444,     //
-    primary-0    : #00c9a7,
-    primary-1    : #69d8c5,
-    primary-2    : #2bcbb0,
-    primary-3    : #008972,
-    primary-4    : #005d4e,
+    'blue'           : #135BCD,                              // projects
+    'indigo'         : #391AD2,
+    'purple'         : #7B0DCF,                              // acquisitions
+    'pink'           : #DC0094,                              // products
+    'red'            : #F9001D,                              // customers
+    'orange'         : #FF6700,
+    'yellow'         : #FFA200,                              // expenses
+    'green'          : #30E800,                              // invoices
+    'teal'           : #00C9A7,                              // prepared invoices / primary
+    'cyan'           : #0A8BC9,                              // time-based projects
+    'cyan-teal'      : #05AAB8,                              // customer support (between cyan and teal)
+    'grey'           : #888888,
+    'dark-grey'      : #444444,
+    'primary-0'      : #00C9A7,
+    'primary-1'      : #69D8C5,
+    'primary-2'      : #2BCBB0,
+    'primary-3'      : #008972,
+    'primary-4'      : color.adjust(#00C9A7, $lightness: -30%),
+    'danger'         : #F9001D,
+    'danger-darker'  : color.adjust(#F9001D, $lightness: -30%),
+    'warning'        : #FFA200,
+    'warning-darker' : color.adjust(#FFA200, $lightness: -30%),
+    'success'        : #30E800,
+    'success-darker' : color.adjust(#30E800, $lightness: -30%),
+    'info'           : #00C9A7,
+    'info-darker'    : color.adjust(#00C9A7, $lightness: -30%),
+    'card'           : $bg-card,
 );
 
-$custom-colors: map.merge($custom-colors, (
-    'blue'          : map.get($custom-colors, 'blue'),
-    'indigo'        : map.get($custom-colors, 'indigo'),
-    'purple'        : map.get($custom-colors, 'purple'),
-    'pink'          : map.get($custom-colors, 'pink'),
-    'red'           : map.get($custom-colors, 'red'),
-    'orange'        : map.get($custom-colors, 'orange'),
-    'yellow'        : map.get($custom-colors, 'yellow'),
-    'green'         : map.get($custom-colors, 'green'),
-    'teal'          : map.get($custom-colors, 'teal'),
-    'cyan'          : map.get($custom-colors, 'cyan'),
-    'cyan-teal'     : map.get($custom-colors, 'cyan-teal'),
-    'danger'        : map.get($custom-colors, 'red'),
-    'danger-darker' : color.adjust(map.get($custom-colors, 'red'), $lightness: -30%),
-    'warning'       : map.get($custom-colors, 'yellow'),
-    'warning-darker': color.adjust(map.get($custom-colors, 'yellow'), $lightness: -30%),
-    'success'       : map.get($custom-colors, 'green'),
-    'success-darker': color.adjust(map.get($custom-colors, 'green'), $lightness: -30%),
-    'info'          : map.get($custom-colors, 'teal'),
-    'info-darker'   : color.adjust(map.get($custom-colors, 'teal'), $lightness: -30%),
-    'primary-4'     : color.adjust(map.get($custom-colors, 'primary-0'), $lightness: -30%),
-    'card'   : $bg-card,
-));
+// --- Standalone Sass API ---
+// Consumed by component stylesheets via `@use 'colors' as *` and by
+// _bootstrap-setup.scss. Brand hues mirror the map above.
+$blue   : map.get($custom-colors, 'blue');
+$indigo : map.get($custom-colors, 'indigo');
+$purple : map.get($custom-colors, 'purple');
+$pink   : map.get($custom-colors, 'pink');
+$red    : map.get($custom-colors, 'red');
+$orange : map.get($custom-colors, 'orange');
+$yellow : map.get($custom-colors, 'yellow');
+$green  : map.get($custom-colors, 'green');
+$teal   : map.get($custom-colors, 'teal');
+$cyan   : map.get($custom-colors, 'cyan');
 
-@function col($_) { @return map.get($custom-colors, $_); }
+$primary  : $teal;
+$secondary: $pink;
+$primary-1: map.get($custom-colors, 'primary-1');
+$primary-2: map.get($custom-colors, 'primary-2');
+$primary-3: map.get($custom-colors, 'primary-3');
+// NOTE: intentionally differs from the map key 'primary-4' (which is primary-0
+// darkened for --color-primary-4); this softer tone is used as a surface color
+// in component styles. Candidate for unification later.
+$primary-4: #005d4e;
 
-$outline-width: 2px;
+// Soft semantic tones used as component surfaces/gradients. Intentionally lighter
+// than the saturated map values that drive --bs-* and .bg-*/.text-* utilities.
+$success: #6bf57e;
+$warning: #e2f56b;
+$danger : #f57e6b;
+$info   : #6be2f5;
 
-@each $key, $value in $custom-colors { 
-    .bg-#{$key} { background-color: #{$value} !important; } 
-    .text-#{$key} { color: #{$value} !important; } 
+@each $key, $value in $custom-colors {
+    .bg-#{$key}   { background-color: #{$value} !important; }
+    .text-#{$key} { color: #{$value} !important; }
 }
 
 :root {
@@ -89,5 +82,8 @@ $outline-width: 2px;
         --bs-#{$key}: #{$value};
     }
     --color-primary-filter: invert(0.5) sepia(1) saturate(5) hue-rotate(130deg); // sepia is 40° hue
-    --text-outline: --color-background-0 0 0 3px, --color-background-0 #{$outline-width} -#{$outline-width} 3px, --color-background-0 #{$outline-width} #{$outline-width} 3px, --color-background-0 -#{$outline-width} -#{$outline-width} 3px, --color-background-0 -#{$outline-width} #{$outline-width} 3px;
+    --color-success-soft: #{$success};
+    --color-danger-soft: #{$danger};
+    --color-warning-soft: #{$warning};
+    --color-info-soft: #{$info};
 }

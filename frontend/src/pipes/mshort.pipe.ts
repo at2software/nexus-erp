@@ -4,7 +4,6 @@ import { ShortPipe } from './short.pipe';
 
 @Pipe({
     name: 'mshort',
-    standalone: true,
 })
 export class MoneyShortPipe implements PipeTransform {
     #global: GlobalService = inject(GlobalService);

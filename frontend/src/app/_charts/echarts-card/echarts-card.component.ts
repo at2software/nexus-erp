@@ -1,23 +1,24 @@
-import { ChangeDetectionStrategy, Component, OnChanges, OnInit, SimpleChanges, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
 import { EChartsSimpleOptions } from '../echarts-presets';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { deepMerge } from '@constants/deepMerge';
 import { GlobalService } from '@models/global.service';
 import { Color } from '@constants/Color';
 import type { EChartsOption } from 'echarts';
+import type { EChartsType, TopLevelFormatterParams } from 'echarts/types/dist/shared';
+import { Dictionary } from '@constants/constants';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'echarts-card',
     templateUrl: './echarts-card.component.html',
     styleUrls: ['./echarts-card.component.scss'],
-    standalone: true,
     imports: [NgxEchartsDirective],
 })
-export class EchartsCardComponent implements OnInit, OnChanges {
+export class EchartsCardComponent {
     readonly global = inject(GlobalService);
     
-    value = input<number>(0);
+    value = signal<number>(0);
     cardTitle = input<string>('');
     color = input<string | string[]>('primary');
     options = input<EChartsOption>({});
@@ -26,22 +27,24 @@ export class EchartsCardComponent implements OnInit, OnChanges {
 
 
     chartOptions = signal<EChartsOption>({});
-    protected echartsInstance = signal<any>(null);
+    protected echartsInstance = signal<EChartsType | null>(null);
     protected trend = signal<number>(0);
+    #chartInitialized = false;
 
-    protected individualOptions = (): object => ({});
+    protected individualOptions = (): Dictionary => ({});
 
-    ngOnInit(): void {
+    constructor() {
         this.chartOptions.set(deepMerge(
             structuredClone(EChartsSimpleOptions),
             {
                 series: [],
                 tooltip: {
                     confine: true,
-                    formatter: (params: any) => {
-                        if (!params || params.length === 0) return '';
+                    formatter: (params: TopLevelFormatterParams) => {
+                        const arr = [params].flat();
+                        if (arr.length === 0) return '';
 
-                        const xValue = params[0].axisValue;
+                        const xValue = arr[0].axisValue;
                         const headerColor = Color.fromVar(this.getColor(0)).toHexString();
                         const headerTextColor = new Color(headerColor).bestBW().toHexString();
 
@@ -49,12 +52,12 @@ export class EchartsCardComponent implements OnInit, OnChanges {
 
                         let total = 0;
                         html += '<div class="card-body p-1">';
-                        params.forEach((param: any, i: number) => {
+                        arr.forEach((param, i: number) => {
                             const seriesColor = param.color || this.getColor(i);
                             html += `<div class="f-b p-0 d-flex" style="color: ${seriesColor};">`;
                             html += `<div class="flex-fill px-2">${param.seriesName}</div>`;
                             html += `<div class="px-2 text-end">${param.value}${this.suffix()}</div></div>`;
-                            total += param.value || 0;
+                            total += Number(param.value) || 0;
                         });
                         html += `<div class="f-b p-0 d-flex"><div class="flex-fill px-2">&sum;</div><div class="px-2 text-end">${total}${this.suffix()}</div></div>`;
                         html += '</div>';
@@ -67,16 +70,18 @@ export class EchartsCardComponent implements OnInit, OnChanges {
             this.individualOptions(),
             this.options(),
         ));
-    }
+        this.#chartInitialized = true;
 
-    ngOnChanges(changes: SimpleChanges): void {
-        if (this.chartOptions() && 'options' in changes && changes.options) {
-            this.chartOptions.update((opts) => Object.assign({}, opts, changes.options));
+        effect(() => {
+            const options = this.options();
+            if (this.#chartInitialized) {
+                this.chartOptions.update((opts) => Object.assign({}, opts, options));
+            }
             window.dispatchEvent(new Event('resize'));
-        }
+        });
     }
 
-    onChartInit(ec: any) {
+    onChartInit(ec: EChartsType) {
         this.echartsInstance.set(ec);
     }
 

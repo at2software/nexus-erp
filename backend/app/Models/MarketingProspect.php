@@ -265,7 +265,12 @@ class MarketingProspect extends BaseModel {
         return $lastCompletedAt;
     }
     public static function filteredQuery(Request $request) {
-        $query = static::with(['marketingInitiative', 'leadSource', 'activities.marketingInitiativeActivity', 'company', 'companyContact.contact', 'companyContact.company', 'user']);
+        $query = static::with(['marketingInitiative', 'leadSource', 'activities.marketingInitiativeActivity.i18n', 'company', 'companyContact.contact', 'companyContact.company', 'user'])
+            ->withExists([
+                'activities as has_overdue_activities' => fn ($q) => $q
+                    ->where('status', 'pending')
+                    ->where('scheduled_at', '<=', now()),
+            ]);
 
         if ($request->has('marketing_initiative_id')) {
             $query->where('marketing_initiative_id', $request->marketing_initiative_id);
@@ -306,12 +311,7 @@ class MarketingProspect extends BaseModel {
             });
         }
 
-        $prospects = $query->latest()->get();
-        $prospects->each(function ($prospect) {
-            $prospect->has_overdue_activities = $prospect->activities()
-                ->where('status', 'pending')->where('scheduled_at', '<=', now())->exists();
-        });
-        return $prospects;
+        return $query->latest()->get();
     }
     public static function getStats(): array {
         $statusCounts = static::selectRaw('status, COUNT(*) as count')
@@ -338,11 +338,12 @@ class MarketingProspect extends BaseModel {
         foreach ($variants as $variant) {
             $regex    = static::buildPhoneRegex($variant);
             $prospect = static::where('vcard', 'REGEXP', $regex)->first();
-            if ($prospect) return $prospect;
+            if ($prospect) {
+                return $prospect;
+            }
         }
         return null;
     }
-
     private static function normalizePhoneVariants(string $search): array {
         $search = preg_replace('/\(0\)/', '', $search);
         $search = preg_replace('/[\(\)]/', '', $search);
@@ -358,7 +359,6 @@ class MarketingProspect extends BaseModel {
         }
         return [$search];
     }
-
     private static function buildPhoneRegex(string $normalizedNumber): string {
         $pattern = '';
         foreach (str_split($normalizedNumber) as $char) {
@@ -366,7 +366,6 @@ class MarketingProspect extends BaseModel {
         }
         return $pattern;
     }
-
     public static function createFromAddon(array $validated, $user): mixed {
         $vcard       = new Vcard($validated['vcard']);
         $linkedinUrl = $vcard->getFirstValue('URL');

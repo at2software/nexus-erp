@@ -1,4 +1,6 @@
 @let _user = user();
+@let _newWorkingHours = newWorkingHours();
+@let _vacationCalculation = vacationCalculation();
 
 <hr-vacation-container></hr-vacation-container>
 
@@ -63,23 +65,23 @@
         <h6 class="mb-2" i18n="@@i18n.hr.newWorkingHours">new working hours</h6>
         <div class="d-flex mb-3">
             <div class="form-floating me-2">
-                <input type="number" class="form-control text-end" placeholder="8" [(ngModel)]="newWorkingHours.mo" (ngModelChange)="calculateVacationAdjustment()" />
+                <input type="number" class="form-control text-end" placeholder="8" [ngModel]="_newWorkingHours.mo" (ngModelChange)="newWorkingHours.update((h) => ({ ...h, mo: $event })); calculateVacationAdjustment()" />
                 <div class="input-group-text col-4" i18n="@@i18n.common.mondayInitial">m</div>
             </div>
             <div class="form-floating me-2">
-                <input type="number" class="form-control text-end" placeholder="8" [(ngModel)]="newWorkingHours.tu" (ngModelChange)="calculateVacationAdjustment()" />
+                <input type="number" class="form-control text-end" placeholder="8" [ngModel]="_newWorkingHours.tu" (ngModelChange)="newWorkingHours.update((h) => ({ ...h, tu: $event })); calculateVacationAdjustment()" />
                 <div class="input-group-text col-4" i18n="@@i18n.common.tuesdayInitial">t</div>
             </div>
             <div class="form-floating me-2">
-                <input type="number" class="form-control text-end" placeholder="8" [(ngModel)]="newWorkingHours.we" (ngModelChange)="calculateVacationAdjustment()" />
+                <input type="number" class="form-control text-end" placeholder="8" [ngModel]="_newWorkingHours.we" (ngModelChange)="newWorkingHours.update((h) => ({ ...h, we: $event })); calculateVacationAdjustment()" />
                 <div class="input-group-text col-4" i18n="@@i18n.common.wednesdayInitial">w</div>
             </div>
             <div class="form-floating me-2">
-                <input type="number" class="form-control text-end" placeholder="8" [(ngModel)]="newWorkingHours.th" (ngModelChange)="calculateVacationAdjustment()" />
+                <input type="number" class="form-control text-end" placeholder="8" [ngModel]="_newWorkingHours.th" (ngModelChange)="newWorkingHours.update((h) => ({ ...h, th: $event })); calculateVacationAdjustment()" />
                 <div class="input-group-text col-4" i18n="@@i18n.common.thursdayInitial">t</div>
             </div>
             <div class="form-floating me-2">
-                <input type="number" class="form-control text-end" placeholder="8" [(ngModel)]="newWorkingHours.fr" (ngModelChange)="calculateVacationAdjustment()" />
+                <input type="number" class="form-control text-end" placeholder="8" [ngModel]="_newWorkingHours.fr" (ngModelChange)="newWorkingHours.update((h) => ({ ...h, fr: $event })); calculateVacationAdjustment()" />
                 <div class="input-group-text col-4" i18n="@@i18n.common.fridayInitial">f</div>
             </div>
         </div>
@@ -102,7 +104,7 @@
         </div>
 
         <!-- Vacation Calculation Info -->
-        @if (vacationCalculation) {
+        @if (_vacationCalculation) {
             <div class="card mb-3">
                 <div class="card-body">
                     <h6 i18n="@@i18n.hr.vacationAdjustmentCalculation">vacation hours adjustment calculation</h6>
@@ -112,24 +114,24 @@
                                 <span i18n="@@i18n.hr.remainingMonthsUntilEndOf">remaining months until end of year</span>
                                 <span class="notranslate">:</span>
                             </strong>
-                            {{ vacationCalculation.remainingMonths }}
+                            {{ _vacationCalculation.remainingMonths }}
                         </div>
                         <div>
                             <strong>
                                 <span i18n="@@i18n.hr.averageDailyHoursChange">average daily hours change</span>
                                 <span class="notranslate">:</span>
                             </strong>
-                            {{ vacationCalculation.avgHoursChange | number: '1.2-2' }} hours
+                            {{ _vacationCalculation.avgHoursChange | number: '1.2-2' }} hours
                         </div>
                         <div>
                             <strong>
                                 <span i18n="@@i18n.hr.vacationHoursAdjustment">vacation hours adjustment</span>
                                 <span class="notranslate">:</span>
                             </strong>
-                            <span [class]="vacationCalculation.adjustmentHours >= 0 ? 'text-success' : 'text-danger'"> {{ vacationCalculation.adjustmentHours >= 0 ? '+' : '' }}{{ vacationCalculation.adjustmentHours | number: '1.2-2' }} hours </span>
+                            <span [class]="_vacationCalculation.adjustmentHours >= 0 ? 'text-success' : 'text-danger'"> {{ _vacationCalculation.adjustmentHours >= 0 ? '+' : '' }}{{ _vacationCalculation.adjustmentHours | number: '1.2-2' }} hours </span>
                         </div>
                         <div class="mt-2">
-                            <small class="text-muted" i18n="@@i18n.hr.calculationFormula"> Formula: {{ vacationDaysPerYear }} days × {{ vacationCalculation.remainingMonths }}/12 months × {{ vacationCalculation.avgHoursChange | number: '1.2-2' }} hours change </small>
+                            <small class="text-muted" i18n="@@i18n.hr.calculationFormula"> Formula: {{ vacationDaysPerYear }} days × {{ _vacationCalculation.remainingMonths }}/12 months × {{ _vacationCalculation.avgHoursChange | number: '1.2-2' }} hours change </small>
                         </div>
                     </div>
                 </div>

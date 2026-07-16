@@ -1,4 +1,4 @@
-import { AfterViewInit, Directive, ElementRef, inject, output, OutputEmitterRef, Renderer2 } from '@angular/core';
+import { AfterViewInit, Directive, ElementRef, NgZone, inject, output, OutputEmitterRef, Renderer2 } from '@angular/core';
 
 const OFFSET = {
     top: 10,
@@ -15,13 +15,13 @@ export enum ECorrection {
 
 @Directive({
     selector: '.autoposition',
-    standalone: true,
 })
 export class AutopositionDirective implements AfterViewInit {
     corrected = output<ECorrection>();
 
     #el = inject(ElementRef);
     #re = inject(Renderer2);
+    #zone = inject(NgZone);
 
     static calculateResposition(el: ElementRef): [any, ECorrection] {
         const element = el.nativeElement;
@@ -117,14 +117,16 @@ export class AutopositionDirective implements AfterViewInit {
     }
 
     ngAfterViewInit() {
-        new MutationObserver(() => {
-            const target = this.#el.nativeElement;
-            if (target.classList.contains('show')) {
-                AutopositionDirective.reposition(this.#el, this.#re, this.corrected);
-            } else {
-                target.style.top = '0';
-                target.style.left = '0';
-            }
-        }).observe(this.#el.nativeElement, { attributeFilter: ['class'], attributes: true });
+        this.#zone.runOutsideAngular(() => {
+            new MutationObserver(() => {
+                const target = this.#el.nativeElement;
+                if (target.classList.contains('show')) {
+                    AutopositionDirective.reposition(this.#el, this.#re, this.corrected);
+                } else {
+                    target.style.top = '0';
+                    target.style.left = '0';
+                }
+            }).observe(this.#el.nativeElement, { attributeFilter: ['class'], attributes: true });
+        });
     }
 }

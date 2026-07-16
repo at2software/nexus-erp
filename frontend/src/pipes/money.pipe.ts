@@ -3,7 +3,6 @@ import { inject, Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
     name: 'money',
-    standalone: true,
 })
 export class MoneyPipe implements PipeTransform {
     global = inject(GlobalService);

@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
 import { Invoice } from '@models/invoice/invoice.model';
 import { NexusHttpService } from '../http/http.nexus';
 import { File } from './file.model';
@@ -9,9 +10,13 @@ import { InvoiceReminder } from '../invoice/invoice-reminder.model';
 })
 export class FileService extends NexusHttpService<File> {
     public apiPath = 'files';
-    public TYPE = () => File;
+    override readonly model = File;
 
-    show(target: Invoice | InvoiceReminder | File): void {
+    previewBlob(file: File): Observable<Blob> {
+        return this.http().get(this.baseUrl() + `files/${file.id}`, { responseType: 'blob' });
+    }
+
+    download(target: Invoice | InvoiceReminder | File): void {
         let url: string | undefined = undefined;
         if (target instanceof Invoice) url = `invoices/${target.id}/pdf`;
         if (target instanceof InvoiceReminder) url = `invoice_reminders/${target.id}/pdf`;
@@ -22,6 +27,7 @@ export class FileService extends NexusHttpService<File> {
         this.getFile(url!);
     }
 
-    upload = (path: string, file: FormData) => this.post(path, file);
+    uploadWithProgress = (path: string, file: FormData) =>
+        this.http().request<any>('POST', this.baseUrl() + path, { body: file, reportProgress: true, observe: 'events' });
     uploadTravelExpenses = (files: FormData, success?: () => void) => this.postBlob('users/travel-expenses', files, success);
 }

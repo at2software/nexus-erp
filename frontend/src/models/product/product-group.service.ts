@@ -9,9 +9,8 @@ import { Company } from '../company/company.model';
 })
 export class ProductGroupService extends NexusHttpService<ProductGroup> {
     public apiPath = 'product_groups';
-    public TYPE = () => ProductGroup;
+    override readonly model = ProductGroup;
 
-    show = (id: string) => this.get(`product_groups/${id}`);
     indexCustomers = (p: ProductGroup) =>
         this.get(`product_groups/${p.id}/customers`).pipe(
             map((data: any) => ({

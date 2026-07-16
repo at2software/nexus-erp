@@ -7,12 +7,9 @@ use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Services\ProductStatisticsService;
-use App\Traits\ControllerHasPermissionsTrait;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller {
-    use ControllerHasPermissionsTrait;
-
     public static function index(Request $request) {
         return ProductGroup::indexAll();
     }

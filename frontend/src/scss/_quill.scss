@@ -1,0 +1,118 @@
+@use 'colors';
+
+// Quill's bundled quill.snow.css is a light-theme vendor stylesheet that, due to Sass
+// requiring `@use` before plain `@import`, always compiles AFTER these overrides and
+// matches several selectors at equal-or-higher specificity (e.g. `.ql-toolbar.ql-snow`,
+// `.ql-container.ql-snow`, `.ql-snow .ql-picker`). `!important` is used below on the
+// specific properties that collide with it, so dark-theme colors win regardless of
+// source order.
+.rte-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    background-color: var(--bs-dropdown-bg) !important;
+    border: 1px solid transparent !important;
+    border-bottom: none !important;
+    padding: 0.25rem 0.5rem;
+
+    .ql-formats {
+        display: flex;
+        align-items: center;
+        gap: 0.125rem;
+        margin: 0 !important;
+    }
+
+    button {
+        background: none;
+        border: none;
+        color: var(--bs-body-color) !important;
+        padding: 0.25rem 0.4rem;
+        border-radius: var(--bs-border-radius-sm);
+
+        &:hover,
+        &:focus {
+            color: var(--bs-primary) !important;
+        }
+        &.ql-active {
+            color: var(--bs-primary) !important;
+            background-color: var(--bs-tertiary-bg, colors.$bg-hover);
+        }
+        i {
+            font-size: 1rem;
+            vertical-align: text-bottom;
+        }
+    }
+
+    select {
+        background-color: transparent;
+        color: var(--bs-body-color) !important;
+        border: 1px solid var(--bs-border-color) !important;
+        border-radius: var(--bs-border-radius-sm);
+    }
+}
+.ql-container {
+    font-family: inherit !important;
+    font-size: inherit !important;
+}
+.ql-container.ql-snow {
+    border-color: transparent !important;
+    background-color: var(--bs-body-bg) !important;
+    color: var(--bs-body-color) !important;
+}
+
+.ql-editor {
+    line-height: inherit !important;
+    color: var(--bs-body-color) !important;
+
+    &.ql-blank::before {
+        color: var(--bs-secondary-color) !important;
+    }
+}
+
+.ql-snow .ql-picker {
+    color: var(--bs-body-color) !important;
+
+    .ql-picker-label {
+        border: 1px solid var(--bs-border-color) !important;
+    }
+    .ql-picker-options {
+        background-color: colors.$bg-card !important;
+        border: 1px solid var(--bs-border-color) !important;
+    }
+    .ql-picker-item:hover,
+    .ql-picker-item.ql-selected {
+        color: var(--bs-primary) !important;
+    }
+}
+
+// Quill's buildButtons() overwrites the innerHTML of recognized toolbar buttons
+// (bold/italic/underline/link/list/clean/blockquote/header) with its own SVG icons,
+// so our material-icon ligatures never render for them — the SVGs must be re-themed
+// directly via .ql-stroke/.ql-fill.
+.ql-snow .ql-stroke,
+.ql-snow .ql-stroke-miter {
+    stroke: #eee !important;
+}
+
+.ql-snow .ql-fill {
+    fill: #eee !important;
+}
+
+.ql-snow.ql-toolbar button:hover .ql-stroke,
+.ql-snow .ql-toolbar button:hover .ql-stroke,
+.ql-snow.ql-toolbar button.ql-active .ql-stroke,
+.ql-snow .ql-toolbar button.ql-active .ql-stroke {
+    stroke: var(--bs-primary) !important;
+}
+
+.ql-snow.ql-toolbar button:hover .ql-fill,
+.ql-snow .ql-toolbar button:hover .ql-fill,
+.ql-snow.ql-toolbar button.ql-active .ql-fill,
+.ql-snow .ql-toolbar button.ql-active .ql-fill {
+    fill: var(--bs-primary) !important;
+}
+
+.ql-editor img {
+    max-width: 100%;
+}

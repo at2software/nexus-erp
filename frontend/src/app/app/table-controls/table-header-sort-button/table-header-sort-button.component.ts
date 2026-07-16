@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { SortData } from '../sort-data';
 import { SortMode } from '../sort-mode';
 
@@ -6,14 +6,13 @@ import { SortMode } from '../sort-mode';
     selector: 'table-header-sort-button',
     templateUrl: './table-header-sort-button.component.html',
     styleUrls: ['./table-header-sort-button.component.scss'],
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TableHeaderSortButtonComponent {
     key = input<string>();
     sortData = input<SortData>();
 
-    public get icon(): string {
+    readonly icon = computed<string>(() => {
         if (this.key() == this.sortData()?.key) {
             switch (this.sortData()?.sortMode) {
                 case SortMode.ASCENDING:
@@ -25,7 +24,7 @@ export class TableHeaderSortButtonComponent {
             }
         }
         return 'sort';
-    }
+    });
 
     public onClick(event: MouseEvent): void {
         event.preventDefault();

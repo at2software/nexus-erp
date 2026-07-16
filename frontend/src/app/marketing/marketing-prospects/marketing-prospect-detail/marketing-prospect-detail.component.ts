@@ -17,13 +17,12 @@ import { RteComponent } from '@app/_shards/rte/rte.component';
 import { personalized } from '@constants/personalized';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { GlobalService } from '@models/global.service';
+import { Dictionary } from '@constants/constants';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'marketing-prospect-detail',
     templateUrl: './marketing-prospect-detail.component.html',
-    styleUrls: ['./marketing-prospect-detail.component.scss'],
-    standalone: true,
     imports: [DatePipe, FormsModule, NgbTooltipModule, Nx, VcardComponent, ToolbarComponent, RteComponent, RouterLink, SpinnerComponent],
 })
 export class MarketingProspectDetailComponent {
@@ -55,10 +54,13 @@ export class MarketingProspectDetailComponent {
 
     #loadProspectDetails(id: string) {
         this.isLoading.set(true);
-        this.#marketingService.showProspect(id).subscribe((prospect: MarketingProspect) => {
-            this.prospect.set(prospect);
-            this.activities.set(prospect.activities ?? []);
-            this.isLoading.set(false);
+        this.#marketingService.showProspect(id).subscribe({
+            next: (prospect: MarketingProspect) => {
+                this.prospect.set(prospect);
+                this.activities.set(prospect.activities ?? []);
+                this.isLoading.set(false);
+            },
+            error: () => this.isLoading.set(false),
         });
     }
 
@@ -101,7 +103,7 @@ export class MarketingProspectDetailComponent {
     }
 
     getQuickActionIcon(qa: string): string {
-        return ({ EMAIL: 'email', LINKEDIN: 'open_in_new', LINKEDIN_SEARCH: 'search', CALL: 'phone' } as Record<string, string>)[qa] || '';
+        return ({ EMAIL: 'email', LINKEDIN: 'open_in_new', LINKEDIN_SEARCH: 'search', CALL: 'phone' } as Dictionary<string>)[qa] || '';
     }
 
     getLocalizedDescription(activity: MarketingProspectActivity): string {
@@ -110,26 +112,26 @@ export class MarketingProspectDetailComponent {
         if (typeof desc === 'string') return desc;
         const lang = this.prospect()?.getLang() || 'de';
         const formality = this.prospect()?.getFormality() || 'formal';
-        return desc.find((v: any) => v.language === lang && v.formality === formality)?.text
-            ?? desc.find((v: any) => v.language === lang)?.text
+        return desc.find((v) => v.language === lang && v.formality === formality)?.text
+            ?? desc.find((v) => v.language === lang)?.text
             ?? desc[0]?.text ?? '';
     }
 
     convertProspect() {
         if (!this.prospect()) return;
-        this.#modal.open(MarketingConvertProspectModalComponent, { prospect: this.prospect() })
+        this.#modal.open(MarketingConvertProspectModalComponent, { prospect: this.prospect()! })
             .then(result => {
                 if (!result) return;
                 this.#marketingService.convertProspect(this.prospect()!.id, result).subscribe({
                     next: () => this.#loadProspectDetails(this.prospect()!.id),
                     error: () => alert('Failed to convert prospect. Please try again.'),
                 });
-            }).catch();
+            });
     }
 
     linkToContact() {
         if (!this.prospect()) return;
-        this.#modal.open(MarketingLinkContactModalComponent, { prospect: this.prospect() })
+        this.#modal.open(MarketingLinkContactModalComponent, { prospect: this.prospect()! })
             .then(result => {
                 if (!result) return;
                 this.#marketingService.updateProspect(this.prospect()!.id, { company_contact_id: result.company_contact_id })
@@ -137,7 +139,7 @@ export class MarketingProspectDetailComponent {
                         next: (updated: MarketingProspect) => this.prospect.set(updated),
                         error: () => alert('Failed to link contact. Please try again.'),
                     });
-            }).catch();
+            });
     }
 
     unlinkCompany() {
@@ -153,7 +155,7 @@ export class MarketingProspectDetailComponent {
     #getEmailBody(activity: MarketingProspectActivity): string {
         const targetId = String(activity.marketing_initiative_activity_id || activity.marketing_activity?.id || '');
         if (!targetId) return this.getLocalizedDescription(activity);
-        const matched = this.activities().find((item: any) => {
+        const matched = this.activities().find((item) => {
             const id = String(item?.marketing_initiative_activity_id || item?.marketing_initiative_activity?.id || item?.marketing_activity?.id || '');
             return id === targetId;
         });
@@ -162,7 +164,7 @@ export class MarketingProspectDetailComponent {
         );
     }
 
-    #getPersonalizations(): Record<string, string> {
+    #getPersonalizations(): Dictionary<string> {
         const prospect = this.prospect();
         const contact = prospect?.company_contact?.contact;
         const cc = prospect?.company_contact;

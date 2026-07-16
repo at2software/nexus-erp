@@ -16,9 +16,6 @@ class DebriefProjectDebrief extends BaseModel {
             'conducted_at' => 'datetime',
         ];
     }
-
-    protected $access = ['admin' => '*', 'project_manager' => 'cru'];
-
     public function project() {
         return $this->belongsTo(Project::class);
     }

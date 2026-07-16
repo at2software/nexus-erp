@@ -1,0 +1,18 @@
+@if (chart(); as _chart) {
+<div class="card mb-3">
+    <div class="card-header" i18n="@@i18n.common.timeline">timeline</div>
+    <div class="position-relative">
+        <div echarts [options]="_chart.options" [style.height.px]="_chart.height"></div>
+        <!-- Avatar overlay for heatmap rows -->
+        @if (_chart.users.length > 0) {
+        <div class="position-absolute" style="left: 20px; top: 140px; width: 30px">
+            @for (user of _chart.users; track user.id) {
+            <div class="d-flex align-items-center justify-content-center" [style.height.px]="20">
+                <avatar [object]="user" [size]="'xs'"></avatar>
+            </div>
+            }
+        </div>
+        }
+    </div>
+</div>
+}

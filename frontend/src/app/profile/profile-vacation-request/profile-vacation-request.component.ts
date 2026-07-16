@@ -4,14 +4,17 @@ import { FormsModule } from '@angular/forms';
 import { AffixInputDirective } from '@directives/affix-input.directive';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
-import moment from 'moment';
-import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
+import { dayjs } from '@constants/dates';
+import { DaterangepickerDirective, NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
 import { Nx } from '@app/nx/nx.directive';
 import { GlobalService } from '@models/global.service';
 import { User } from '@models/user/user.model';
 import { VacationGrant } from '@models/vacation/vacation-grant.model';
 import { Vacation } from '@models/vacation/vacation.model';
 import { VacationService } from '@models/vacation/vacation.service';
+import { Holiday } from '@models/api-response';
+
+type TimePeriod = NonNullable<DaterangepickerDirective['value']>;
 
 interface TDay {
     day: string;
@@ -20,12 +23,6 @@ interface TDay {
     mult: number;
     specialName: string;
     specialDescription: string | undefined;
-}
-interface THoliday {
-    date: moment.Moment;
-    datum: string;
-    hinweis: string;
-    name: string;
 }
 
 const STR_REGULAR_WORKDAY = 'Regulärer Arbeitstag';
@@ -36,7 +33,6 @@ const STR_PARTIAL_VACATION = 'Partieller Urlaub';
     selector: 'profile-vacation-request',
     templateUrl: './profile-vacation-request.component.html',
     styleUrls: ['./profile-vacation-request.component.scss'],
-    standalone: true,
     imports: [DatePipe, DecimalPipe, EmptyStateComponent, Nx, FormsModule, NgbTooltipModule, NgxDaterangepickerMd, AffixInputDirective],
 })
 export class ProfileVacationRequestComponent {
@@ -46,17 +42,17 @@ export class ProfileVacationRequestComponent {
     grants = signal<VacationGrant[]>([]);
     currentGrant = signal<VacationGrant | undefined>(undefined);
     dayList = signal<TDay[]>([]);
-    holidays = signal<THoliday[] | undefined>(undefined);
+    holidays = signal<Holiday[] | undefined>(undefined);
     totalDeduction = signal(0);
     openRequests = signal<any[]>([]);
 
-    holidayPeriod!: { startDate: any; endDate: any };
+    holidayPeriod: TimePeriod | null = null;
     comment: string = '';
 
     constructor() {
-        this.#vacationService.aget('vacations/holidays', {}, Object).subscribe((h: any[]) => {
-            h.forEach((_) => (_.date = moment(_.datum)));
-            this.holidays.set(h);
+        this.#vacationService.indexHolidays().subscribe((holidays) => {
+            holidays.forEach((_) => (_.date = dayjs(_.datum)));
+            this.holidays.set(holidays);
         });
         this.#reload(this.global.user!);
     }
@@ -79,8 +75,8 @@ export class ProfileVacationRequestComponent {
     onDatesUpdated = () => {
         if (!this.holidayPeriod?.startDate || !this.holidayPeriod?.endDate) return;
 
-        let start = moment(this.holidayPeriod.startDate.$d);
-        const end = moment(this.holidayPeriod.endDate.$d);
+        let start = dayjs(this.holidayPeriod.startDate.toDate());
+        const end = dayjs(this.holidayPeriod.endDate.toDate());
         if (start > end) return;
 
         const result: TDay[] = [];
@@ -95,7 +91,7 @@ export class ProfileVacationRequestComponent {
                 const holidays = this.holidays();
                 if (holidays) {
                     for (const _ of holidays) {
-                        if (_.date.isSame(start, 'day')) assignSpecialHoliday(day, 0, _.name, _.hinweis);
+                        if (_.date.isSame(start.toDate(), 'day')) assignSpecialHoliday(day, 0, _.name, _.hinweis);
                     }
                 }
                 result.push(day);
@@ -147,8 +143,8 @@ export class ProfileVacationRequestComponent {
         }
         const payload = Vacation.fromJson({
             comment: this.comment ?? '',
-            started_at: moment(this.holidayPeriod.startDate.$d).format('YYYY-MM-DD'),
-            ended_at: moment(this.holidayPeriod.endDate.$d).format('YYYY-MM-DD'),
+            started_at: this.holidayPeriod!.startDate.format('YYYY-MM-DD'),
+            ended_at: this.holidayPeriod!.endDate.format('YYYY-MM-DD'),
             state: Vacation.STATE_REQUESTED,
             amount: -total,
             vacation_grant_id: this.currentGrant()!.id,

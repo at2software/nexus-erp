@@ -1,4 +1,4 @@
-import { forkJoin } from 'rxjs';
+import { forkJoin, map, Observable } from 'rxjs';
 import { PluginLink } from '@models/pluginLink/plugin-link.model';
 import { Label } from '@models/tasks/label.model';
 import { User } from '@models/user/user.model';
@@ -18,10 +18,18 @@ export class GitLabSubPlugin extends GitLabPlugin {
     getUserFor = (userId: string) => this.#users.find((_) => _.id == userId);
     getLabels = () => this.#labels;
     getLabelFor = (name: string) => this.#labels.find((_) => _.name == name);
-    indexMembers = () => this.get(`members/all`, {}, this.toUser);
+    indexMembers = (): Observable<unknown[]> => this.get(`members/all`, {}, this.toUser) as unknown as Observable<unknown[]>;
     indexLabels = () => this.get('labels', {}, (_: any) => new Label(_.color, _.name, _.id));
-    indexTasks = () => this.aget('issues?scope=all&per_page=100', {}, this.toTask);
-    indexOpenTasks = () => this.aget(`issues?assignee_id=${this.myUser().id}&state=opened`, {}, this.toTask);
+    indexTasks = (): Observable<Task[]> => {
+        const pageSize = 100;
+        return this.fetchAllPages((page) => this.aget(`issues?scope=all&per_page=${pageSize}&page=${page}`, {}, this.toTask) as unknown as Observable<Task[]>, pageSize);
+    };
+    indexOpenTasks = (): Observable<Task[]> => this.aget(`issues?assignee_id=${this.myUser().id}&state=opened`, {}, this.toTask) as unknown as Observable<Task[]>;
+    indexTasksPage = (page: number, pageSize: number, openOnly: boolean): Observable<{ tasks: Task[]; hasMore: boolean }> => {
+        const state = openOnly ? 'opened' : 'all';
+        return (this.aget(`issues?scope=all&state=${state}&per_page=${pageSize}&page=${page}`, {}, this.toTask) as unknown as Observable<Task[]>).pipe(map((tasks) => ({ tasks, hasMore: tasks.length >= pageSize })));
+    };
+    override searchIssues = (query: string): Observable<Task[]> => this.aget(`issues?scope=all&search=${encodeURIComponent(query)}&per_page=30`, {}, this.toTask) as unknown as Observable<Task[]>;
     showProject = () => this.get('');
     toPluginLink = (id: string) => PluginLink.fromJson({ type: 'git', url: this.enc.value.url + 'projects/' + id });
     #getRepositoryName = () => this._baseUrl.replace(/(https?:\/\/)?([^/]*).*/, '$2');
@@ -31,8 +39,8 @@ export class GitLabSubPlugin extends GitLabPlugin {
     reopen = (_: Task) => this.put('issues/' + _.id, { state_event: 'reopen' });
     destroy = (_: Task) => this.delete('issues/' + _.id);
     assign = (_: Task, user: User) => this.put('issues/' + _.id, { assignee_id: user.id });
-    addLabel = (_: Task, label: string) => this.put('issues/' + _.id, { add_labels: label });
-    removeLabel = (_: Task, label: string) => this.put('issues/' + _.id, { remove_labels: label });
+    addLabel = (_: Task, label: string): Observable<Task> => this.put('issues/' + _.id, { add_labels: label }) as unknown as Observable<Task>;
+    removeLabel = (_: Task, label: string): Observable<Task> => this.put('issues/' + _.id, { remove_labels: label }) as unknown as Observable<Task>;
 
     protected connectSub = (pluginLink?: PluginLink): Promise<void> =>
         new Promise<void>((resolve) => {

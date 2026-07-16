@@ -1,7 +1,10 @@
-﻿import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Company } from '@models/company/company.model';
+import { CompanyContact } from '@models/company/company-contact.model';
 import { CompanyService } from '@models/company/company.service';
+import { Serializable } from '@models/serializable';
 import { MarketingService } from '@models/marketing/marketing.service';
 import { VcardRow } from '@models/vcard/VcardRow';
 import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
@@ -13,10 +16,9 @@ import { of, switchMap } from 'rxjs';
     selector: 'customers-known-sequitur-search',
     templateUrl: './customers-known-sequitur-search.component.html',
     styleUrls: ['./customers-known-sequitur-search.component.scss'],
-    standalone: true,
     imports: [SearchInputComponent],
 })
-export class CustomersKnownSequiturSearchComponent implements OnInit {
+export class CustomersKnownSequiturSearchComponent {
     number: string | undefined;
     #route = inject(ActivatedRoute);
     #router = inject(Router);
@@ -25,8 +27,8 @@ export class CustomersKnownSequiturSearchComponent implements OnInit {
     #inputModalService = inject(InputModalService);
     noCustomerFound = signal(false);
 
-    ngOnInit() {
-        this.#route.params.subscribe((_) => {
+    constructor() {
+        this.#route.params.pipe(takeUntilDestroyed()).subscribe((_) => {
             this.number = 'id' in _ ? _['id'] : undefined;
             if (this.number) {
                 this.number = this.number.replace(/[^\0-9]/g, '');
@@ -35,15 +37,11 @@ export class CustomersKnownSequiturSearchComponent implements OnInit {
         });
     }
 
-    onSearchResultSelect(_: any) {
-        switch (_.class) {
-            case 'Company':
-                this.openKnownSequitur(_);
-                break;
-            case 'CompanyContact':
-                this.openKnownSequitur(_.company);
-                break;
-        }
+    onSearchResultSelect(_: Serializable) {
+        const asCompany = _.assert(Company);
+        const asContact = _.assert(CompanyContact);
+        if (asCompany) this.openKnownSequitur(asCompany);
+        if (asContact) this.openKnownSequitur(asContact.company);
     }
 
     createCostumer = () => {
@@ -84,8 +82,9 @@ export class CustomersKnownSequiturSearchComponent implements OnInit {
         });
     }
 
-    linkExistingCompany = (company: Company) => {
-        this.setPhoneNumber(company);
+    linkExistingCompany = (selected: Serializable) => {
+        const company = selected.assert(Company);
+        if (company) this.setPhoneNumber(company);
     };
 
     getKnownSeqUrl = (): string => {

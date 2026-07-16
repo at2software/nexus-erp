@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { DatePipe } from '@angular/common';
 import { SearchService } from '@models/search.service';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { Dictionary } from '@constants/constants';
 
 interface Command {
     name: string;
@@ -21,7 +22,7 @@ interface CommandExecution {
     executed_by?: string;
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
+const CATEGORY_ICONS: Dictionary<string> = {
     Cronjobs: 'schedule',
     HR: 'people',
     Customers: 'business',
@@ -33,18 +34,17 @@ const CATEGORY_ICONS: Record<string, string> = {
     selector: 'settings-commands',
     templateUrl: './settings-commands.component.html',
     styleUrls: ['./settings-commands.component.scss'],
-    standalone: true,
     imports: [DatePipe, SpinnerComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SettingsCommandsComponent {
     loading = signal(true);
-    commands = signal<Record<string, Command[]>>({});
+    commands = signal<Dictionary<Command[]>>({});
     categories = computed(() => Object.keys(this.commands()).sort());
 
     #searchService = inject(SearchService);
     #executing = signal<Set<string>>(new Set());
-    #executionResults = signal<Record<string, CommandExecution>>({});
+    #executionResults = signal<Dictionary<CommandExecution>>({});
 
     constructor() {
         this.#searchService.getCommands().subscribe((data) => {

@@ -13,8 +13,6 @@ import { UserService } from '@models/user/user.service';
 @Component({
     selector: 'profile-focus',
     templateUrl: './profile-focus.component.html',
-    styleUrls: ['./profile-focus.component.scss'],
-    standalone: true,
     imports: [ScrollbarComponent, WidgetMyWorkingTimeComponent, NgbProgressbarModule, AvatarComponent, DecimalPipe, HrFocusTableComponent, EmptyStateComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

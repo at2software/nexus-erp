@@ -30,10 +30,10 @@
                         <div>
                             <div class="mb-2 hstack gap-2">
                                 <span class="text-truncate col-3" i18n="@@i18n.common.recurrence">recurrence</span>
-                                <div class="btn-group" ngbDropdown>
-                                    <button type="button" class="btn btn-outline-primary dropdown-toggle-simple" [class]="_item.getRepeatColor()" ngbDropdownToggle>
+                                <div ngbDropdown>
+                                    <span class="dropdown-toggle cursor-pointer" [class]="_item.getRepeatColor()" ngbDropdownToggle>
                                         {{ _item.type === 0 ? 'none' : _item.getRepeatString() }}
-                                    </button>
+                                    </span>
                                     <div ngbDropdownMenu>
                                         <button ngbDropdownItem (click)="setItemType(0)" i18n="@@i18n.common.none">none</button>
                                         <button ngbDropdownItem class="text-pink" (click)="setItemType(30)" i18n="@@i18n.common.daily">daily</button>
@@ -75,6 +75,26 @@
                                     <option [value]="0" i18n="@@i18n.common.net">net</option>
                                     <option [value]="1" i18n="@@i18n.common.gross">gross</option>
                                 </select>
+                            </div>
+                        </div>
+                    } @else if (_product.time_based !== 0) {
+                        <div class="mb-2 hstack gap-2">
+                            <span class="text-truncate col-3" i18n="@@i18n.product.basePrice">base price</span>
+                            <div class="input-group">
+                                <input type="text" class="form-control text-end" [value]="basePrice() | money" disabled />
+                                <span class="input-group-text text-muted">{{ global.currencySymbol() }}</span>
+                            </div>
+                            <span class="mx-2">→</span>
+                            <div class="input-group">
+                                <input type="text" class="form-control text-end" [value]="computedPrice() | money" disabled />
+                                <span class="input-group-text text-muted">{{ global.currencySymbol() }}</span>
+                            </div>
+                        </div>
+                        <div class="mb-2 hstack gap-2">
+                            <span class="text-truncate col-3" i18n="@@i18n.product.priceMultiplier">price multiplier</span>
+                            <div class="input-group">
+                                <input type="text" class="form-control text-end" [autosave]="_product" [(ngModel)]="_product.price_multiplier" />
+                                <span class="input-group-text text-muted">x</span>
                             </div>
                         </div>
                     }

@@ -1,4 +1,6 @@
 @let _loading = loading();
+@let _assets = assets();
+@let _categories = categories();
 <div class="row">
     <!-- Categories Sidebar -->
     <div class="col-md-3">
@@ -9,7 +11,7 @@
             <div class="card-body p-0">
                 <div class="list-group list-group-flush">
                     <!-- Category Items -->
-                    @for (category of categories; track category.name) {
+                    @for (category of _categories; track category.name) {
                         <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" [class.active]="selectedCategory === category.name" (click)="filterByCategory(category.name)" tabindex="0" (keydown.enter)="filterByCategory(category.name)">
                             <div>
                                 <i class="me-2">{{ category.icon }}</i>
@@ -84,7 +86,7 @@
         }
 
         <!-- Upload Area when category selected -->
-        @if (!_loading && assets.length > 0 && selectedCategory) {
+        @if (!_loading && _assets.length > 0 && selectedCategory) {
             <div class="mb-4">
                 <div class="card border-dashed" data-tour="assets-upload" [dnd]="'marketing-assets'" [dndCategory]="selectedCategory" (dndUploaded)="onFilesUploaded()">
                     <div class="card-body text-center py-3">
@@ -98,9 +100,9 @@
         }
 
         <!-- Assets Grid -->
-        @if (!_loading && assets.length > 0) {
+        @if (!_loading && _assets.length > 0) {
             <div class="row">
-                @for (asset of assets; track asset.id) {
+                @for (asset of _assets; track asset.id) {
                     <div class="col-sm-6 col-md-4 col-lg-3 mb-4">
                         <div class="card h-100" [nx]="asset">
                             <!-- Asset Preview -->
@@ -126,7 +128,7 @@
                                             <span class="badge bg-light text-dark small pointer" (click)="removeTagFromAsset(asset, tag)" tabindex="0" (keydown.enter)="removeTagFromAsset(asset, tag)" [title]="getRemoveTagTitle(tag)">{{ tag }}</span>
                                         }
                                     </div>
-                                    <input type="text" class="form-control form-control-sm" placeholder="Add new tag..." i18n-placeholder="@@i18n.marketing.add_new_tag_placeholder" [ngbTypeahead]="tagTypeahead" (keyup)="onTagInputKeyup($event, asset, $any($event.target))" (selectItem)="onTagSelected($event, asset)" #tagInput />
+                                    <input type="text" class="form-control form-control-sm" placeholder="Add new tag..." i18n-placeholder="@@i18n.marketing.add_new_tag_placeholder" [ngbTypeahead]="tagTypeahead" (keyup)="onTagInputKeyup($event, asset, tagInput)" (selectItem)="onTagSelected($event, asset)" #tagInput />
                                 </div>
                             </div>
                         </div>
@@ -136,7 +138,7 @@
         }
 
         <!-- Empty State with Drag & Drop -->
-        @if (!_loading && assets.length === 0) {
+        @if (!_loading && _assets.length === 0) {
             <div class="card border-dashed" [dnd]="'marketing-assets'" [dndCategory]="selectedCategory" (dndUploaded)="onFilesUploaded()">
                 <empty-state [card]="false" class="marketing" i18n-title="@@i18n.marketing.no_assets" title="no assets found">
                     <p class="text-muted small" i18n="@@i18n.marketing.no_assets_description">Drop files here to build your marketing asset library. Supports images, videos, documents and more.</p>

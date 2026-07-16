@@ -1,25 +1,27 @@
+import { Dictionary } from '@constants/constants';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { BaseWidgetComponent } from '../base.widget.component';
 import { OptionType } from '../widget-options/widget-options.component';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { NexusHttpInterceptor } from '@app/http.interceptor';
 import { Color } from '@constants/Color';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 
-import { WidgetsModule } from '../widgets.module';
+import { WIDGET_SHARED } from '../widgets.shared';
 import { EChartsSimpleOptions } from '@charts/echarts-presets';
+import type { EChartsOption } from 'echarts';
+import type { EChartsType } from 'echarts/types/dist/shared';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'widget-ext',
     templateUrl: './widget-ext.component.html',
-    styleUrls: ['./widget-ext.component.scss', './../base.widget.component.scss'],
-    standalone: true,
-    imports: [WidgetsModule],
+    styleUrls: ['./../base.widget.component.scss'],
+    imports: [...WIDGET_SHARED],
 })
 export class WidgetExtComponent extends BaseWidgetComponent {
-    chartOptions = signal<any>({ ...EChartsSimpleOptions, series: [] });
-    #echartsInstance: any;
+    chartOptions = signal<EChartsOption>({ ...EChartsSimpleOptions, series: [] });
+    #echartsInstance: EChartsType | undefined;
     #http = inject(HttpClient);
 
     defaultOptions = () => ({
@@ -29,9 +31,9 @@ export class WidgetExtComponent extends BaseWidgetComponent {
     });
 
     reload() {
-        const url = this.getOptions().url.value;
-        const additionalHeaders = this.getOptions().headers.value.split(' ');
-        const headerOptions: any = {
+        const url = this.getOptions().url?.value as string | undefined;
+        const additionalHeaders = (this.getOptions().headers?.value as string | undefined)?.split(' ') ?? [];
+        const headerOptions: Dictionary<string> = {
             'Content-Type': 'application/x-www-form-urlencoded',
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Credentials': 'true',
@@ -44,17 +46,18 @@ export class WidgetExtComponent extends BaseWidgetComponent {
         if (!url) return;
 
         NexusHttpInterceptor.add(url, new HttpHeaders(headerOptions));
-        this.#http.get(url).subscribe((data: any) => {
+        this.#http.get<{ data: Dictionary[] }>(url).subscribe((data) => {
             const xBounds: [string?, string?] = [undefined, undefined];
             for (const _ of data.data) {
-                if (xBounds[0] === undefined) xBounds[0] = _.data[0].x;
-                if (xBounds[0]!.localeCompare(_.data[0].x) > 0) xBounds[0] = _.data[0].x;
-                if (xBounds[1] === undefined) xBounds[1] = _.data.last().x;
-                if (xBounds[1]!.localeCompare(_.data.last().x) < 0) xBounds[1] = _.data.last().x;
+                const d = _.data as { x: string }[];
+                if (xBounds[0] === undefined) xBounds[0] = d[0].x;
+                if (xBounds[0]!.localeCompare(d[0].x) > 0) xBounds[0] = d[0].x;
+                if (xBounds[1] === undefined) xBounds[1] = d[d.length - 1].x;
+                if (xBounds[1]!.localeCompare(d[d.length - 1].x) < 0) xBounds[1] = d[d.length - 1].x;
             }
 
-            const xKeys: Record<string, { x: string; y: number }> = {};
-            for (let i = moment(xBounds[0]); i <= moment(xBounds[1]); i.add(1, 'days')) {
+            const xKeys: Dictionary<{ x: string; y: number }> = {};
+            for (let i = dayjs(xBounds[0]); i.isSameOrBefore(dayjs(xBounds[1])); i = i.add(1, 'days')) {
                 xKeys[i.format('YYYY-MM-DD')] = { x: i.format('YYYY-MM-DD'), y: 0 };
             }
 
@@ -63,24 +66,24 @@ export class WidgetExtComponent extends BaseWidgetComponent {
 
             let count = 0;
             const echartsData = data['data']
-                .map((_: any) => {
+                .map((_) => {
                     if (!('data' in _) || !Array.isArray(_['data'])) return null;
-                    count += _['data'].reduce((a: number, b: any) => a + b['y'], 0);
+                    count += (_['data'] as Dictionary<number>[]).reduce((a, b) => a + (b['y'] as number), 0);
                     const keys = structuredClone(xKeys);
-                    _['data'].forEach((b: any) => { if (b['x'] in keys) keys[b['x']].y += b['y']; });
+                    (_['data'] as Dictionary<string | number>[]).forEach((b) => { if (b['x'] in keys) keys[String(b['x'])].y += Number(b['y']); });
                     return {
-                        name: _['name'],
+                        name: String(_['name']),
                         type: 'line' as const,
                         stack: 'external',
                         symbol: 'none',
                         areaStyle: { opacity: 0.6 },
-                        lineStyle: { width: 2, color: Color.uniqueColorFromString(_['name']) },
-                        itemStyle: { color: Color.uniqueColorFromString(_['name']) },
-                        data: Object.values(keys).map((point: any) => [point.x, point.y]),
+                        lineStyle: { width: 2, color: Color.uniqueColorFromString(String(_['name'])) },
+                        itemStyle: { color: Color.uniqueColorFromString(String(_['name'])) },
+                        data: Object.values(keys).map((point) => [point.x, point.y]),
                         smooth: false,
                     };
                 })
-                .filter((series: any) => series !== null);
+                .filter((series): series is NonNullable<typeof series> => series !== null);
 
             this.value.set(count);
             this.chartOptions.set({ ...this.chartOptions(), series: echartsData });
@@ -88,5 +91,5 @@ export class WidgetExtComponent extends BaseWidgetComponent {
         });
     }
 
-    onChartInit = (ec: any) => (this.#echartsInstance = ec);
+    onChartInit = (ec: EChartsType) => (this.#echartsInstance = ec);
 }

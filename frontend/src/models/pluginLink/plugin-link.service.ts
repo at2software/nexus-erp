@@ -8,7 +8,7 @@ export type PluginLinkType = 'mattermost' | 'git';
 @Injectable({ providedIn: 'root' })
 export class PluginLinkService extends NexusHttpService<PluginLink> {
     apiPath = 'plugin_links';
-    TYPE = () => PluginLink;
-    store = (_: PluginLink, parent?: Serializable) => this.post(parent?.apiPathWithId() + '/plugin_links', { type: _.type, url: _.url });
+    override readonly model = PluginLink;
+    store = (_: PluginLink, parent?: Serializable) => this.post(parent?.apiPathWithId() + '/plugin_links', { type: _.type, name: _.name, url: _.url });
     createChannel = (_: PluginLink, parent?: Serializable) => this.post(parent?.apiPathWithId() + '/plugin_link_channel', { type: _.type, url: _.url });
 }

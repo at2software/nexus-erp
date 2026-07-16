@@ -12,12 +12,25 @@
 @let _hasBillingConcerns = hasBillingConcerns();
 @let _billingConcernsTooltip = billingConcernsTooltip();
 @let _timePercentage = project.timePercentage();
+@let _quotePrediction = quoteAcceptancePrediction();
+@let _quoteReliable = quoteAcceptanceReliable();
 <toolbar>
     @if (_invoicingType > 0 && (!project.company.requires_po || project.po_number?.length) && (_invoicingType !== 1 || _hasDownpaymentItems)) {
-        <button class="btn" [class.btn-primary]="!_isCreating && !_hasBillingConcerns" [class.btn-danger]="!_isCreating && _hasBillingConcerns" [class.btn-dark]="_isCreating" role="alert" (click)="makeInvoice()" [disabled]="_isCreating" [ngbTooltip]="_hasBillingConcerns ? _billingConcernsTooltip : ''">
-            <n>invoice</n>
-            <div i18n="@@i18n.invoice.create{invoiceNumber}">create {{ invoiceNumber }}</div>
-        </button>
+        <div class="btn-group" ngbDropdown>
+            <button class="btn" [class.btn-primary]="!_isCreating && !_hasBillingConcerns" [class.btn-danger]="!_isCreating && _hasBillingConcerns" [class.btn-dark]="_isCreating" role="alert" (click)="makeInvoice()" [disabled]="_isCreating" [ngbTooltip]="_hasBillingConcerns ? _billingConcernsTooltip : ''">
+                <n>invoice</n>
+                <div i18n="@@i18n.invoice.create{invoiceNumber}">create {{ invoiceNumber }}</div>
+            </button>
+            <button type="button" class="btn dropdown-toggle dropdown-toggle-split" [class.btn-primary]="!_isCreating && !_hasBillingConcerns" [class.btn-danger]="!_isCreating && _hasBillingConcerns" [class.btn-dark]="_isCreating" ngbDropdownToggle [disabled]="_isCreating">
+                <span class="visually-hidden" i18n="@@i18n.invoices.toggleDropdown">toggle dropdown</span>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
+                <button class="dropdown-item hstack gap-2" (click)="makeDraftInvoice()">
+                    <n>invoice</n>
+                    <span class="flex-fill" i18n="@@i18n.invoice.draftInvoice">draft invoice</span>
+                </button>
+            </div>
+        </div>
     }
 
     @if (_invoicingType > 0 && project.company.requires_po && !project.po_number?.length) {
@@ -67,7 +80,7 @@
         </div>
     }
 
-    @if (finalItems().length && _invoicingType !== 2) {
+    @if (_invoicingType === 2 || (_invoicingType !== 2 && finalItems().length)) {
         <div ngbDropdown>
             <button class="btn btn-plain dropdown-toggle-simple" ngbDropdownToggle>
                 <i>more_vert</i>
@@ -124,8 +137,8 @@
             <div class="card mb-3">
                 <div class="card-header" i18n="@@i18n.invoices.support-invoice">support invoice</div>
                 <ul class="list-group">
-                    <li class="list-group-item hstack gap-2 py-1 cursor-pointer" [class.text-warning]="(project.uninvoiced_hours ?? 0) > 0" [class.text-muted]="(project.uninvoiced_hours ?? 0) === 0" (click)="navigateToSupport($event)" (keyup.enter)="navigateToSupport($event)" tabindex="0">
-                        @if ((project.uninvoiced_hours ?? 0) > 0) {
+                    <li class="list-group-item hstack gap-2 py-1 cursor-pointer" [class.text-warning]="project.uninvoiced_hours > 0" [class.text-muted]="project.uninvoiced_hours === 0" (click)="navigateToSupport($event)" (keyup.enter)="navigateToSupport($event)" tabindex="0">
+                        @if (project.uninvoiced_hours > 0) {
                             <i class="text-warning">schedule</i>
                             <div class="flex-fill small" i18n="@@i18n.common.unbilledFoci">unbilled foci</div>
                             <div class="small">{{ project.uninvoiced_hours | number: '1.1-1' }}h</div>
@@ -184,6 +197,45 @@
                             <div class="small text-muted">—</div>
                         }
                     </li>
+                </ul>
+            </div>
+        }
+
+        <!-- Quote acceptance prediction card (on demand, never persisted — see App\ML\ProjectQuoteModel) -->
+        @if (_invoicingType === 0 && project && _quoteReliable && _quotePrediction) {
+            <div class="card mb-3">
+                <div class="card-header gap-2">
+                    <n class="local-ai-icon" [mlReliability]="'project_quote_acceptance'">local_ai</n>
+                    <span class="flex-fill" i18n="@@i18n.projects.quoteAcceptance">quote acceptance</span>
+                </div>
+                <ul class="list-group">
+                    @if (_quotePrediction.decided) {
+                        <li class="list-group-item hstack gap-2 py-1">
+                            <div class="flex-fill text-muted" i18n="@@i18n.projects.quoteOutcome">outcome</div>
+                            @if (_quotePrediction.actual_outcome) {
+                                <span class="badge bg-success" i18n="@@i18n.projects.quoteAccepted">accepted</span>
+                            } @else {
+                                <span class="badge bg-danger" i18n="@@i18n.projects.quoteRejected">rejected</span>
+                            }
+                        </li>
+                    } @else if (_quotePrediction.probability !== null) {
+                        <li class="list-group-item hstack gap-2 py-1">
+                            <div class="flex-fill" i18n="@@i18n.projects.acceptanceProbability">acceptance probability</div>
+                            <div class="small" [class.text-success]="_quotePrediction.probability >= 0.5" [class.text-warning]="_quotePrediction.probability < 0.5">{{ _quotePrediction.probability | percent: '1.0-0' }}</div>
+                        </li>
+                        @if (_quotePrediction.suggestions.length) {
+                            <li class="list-group-item d-flex flex-column">
+                                <div class="text-muted" i18n="@@i18n.projects.quoteSuggestions">could improve the odds</div>
+                            </li>
+                            
+                            @for (s of _quotePrediction.suggestions; track s.feature) {
+                                <li class="list-group-item hstack gap-2">
+                                    <span class="flex-fill">{{ suggestionText(s) }}</span>
+                                    <span class="text-success">+{{ s.delta | percent: '1.0-0' }}</span>
+                                </li>
+                            }
+                        }
+                    }
                 </ul>
             </div>
         }

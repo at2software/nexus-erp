@@ -12,16 +12,11 @@ import { TabTasksBaseComponent } from '../tab-tasks-base.component';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'tab-tasks-hr',
     templateUrl: './tab-tasks-hr.component.html',
-    standalone: true,
     imports: [Nx, NgbTooltipModule, DatePipe],
 })
 export class TabTasksHrComponent extends TabTasksBaseComponent {
-    vacationRequests = signal<any[]>([]);
+    vacationRequests = signal<Vacation[]>([]);
     sickNotes = signal<Vacation[]>([]);
-
-    readonly #collapsed = signal<Set<string>>(new Set());
-    toggle = (key: string) => this.#collapsed.update(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
-    isCollapsed = (key: string) => this.#collapsed().has(key);
 
     #vacationService = inject(VacationService);
 

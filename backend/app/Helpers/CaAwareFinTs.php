@@ -21,7 +21,6 @@ class CaAwareConnection extends Connection {
         parent::__construct($url, $timeoutConnect, $timeoutResponse);
         $this->caBundle = $caBundle;
     }
-
     public function send(string $message): string {
         if ($this->curlHandle === null) {
             $this->curlHandle = curl_init() ?: throw new CurlException('Failed initializing cURL.', null);
@@ -45,9 +44,9 @@ class CaAwareConnection extends Connection {
         curl_setopt($this->curlHandle, CURLOPT_POSTFIELDS, base64_encode($message));
         $response = curl_exec($this->curlHandle);
 
-        if (false === $response) {
+        if ($response === false) {
             throw new CurlException(
-                'Failed sending to ' . $this->url . ': ' . curl_error($this->curlHandle),
+                'Failed sending to '.$this->url.': '.curl_error($this->curlHandle),
                 null,
                 curl_errno($this->curlHandle),
                 curl_getinfo($this->curlHandle),
@@ -58,7 +57,7 @@ class CaAwareConnection extends Connection {
         $statusCode = curl_getinfo($this->curlHandle, CURLINFO_HTTP_CODE);
         if ($statusCode < 200 || $statusCode > 299) {
             throw new CurlException(
-                'Bad response with status code ' . $statusCode,
+                'Bad response with status code '.$statusCode,
                 $response,
                 $statusCode,
                 curl_getinfo($this->curlHandle)
@@ -83,7 +82,6 @@ class CaAwareFinTs extends FinTs {
         }
         return $instance;
     }
-
     protected function newConnection(): Connection {
         $prop = new \ReflectionProperty(FinTs::class, 'options');
         $prop->setAccessible(true);
@@ -91,7 +89,6 @@ class CaAwareFinTs extends FinTs {
         $opts = $prop->getValue($this);
         return new CaAwareConnection($opts->url, $opts->timeoutConnect, $opts->timeoutResponse, $this->caBundle);
     }
-
     private static function resolveBundle(): string {
         $configured = ini_get('curl.cainfo');
         if ($configured && file_exists($configured)) {

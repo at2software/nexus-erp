@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Comment;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
 
 class CheckVatId extends Command {
     protected $signature   = 'vat_id:check {company}';
@@ -73,24 +74,19 @@ class CheckVatId extends Command {
 
         $this->finalUrl = sprintf(self::URL, $countryCode, $vatNumber);
 
-        $curl = curl_init();
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($curl, CURLOPT_URL, $this->finalUrl);
-        curl_setopt($curl, CURLOPT_TIMEOUT, 30);
-        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 10);
-        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
-
-        $resp      = curl_exec($curl);
-        $curlError = curl_error($curl);
-        curl_close($curl);
-
-        if ($resp === false || $resp === '') {
-            $this->errorDescription = 'VAT service unavailable: '.($curlError ?: 'empty response');
+        try {
+            $response = Http::timeout(30)->connectTimeout(10)->get($this->finalUrl);
+        } catch (\Exception $e) {
+            $this->errorDescription = 'VAT service unavailable: '.$e->getMessage();
             return false;
         }
 
-        $this->response = json_decode($resp);
+        if ($response->failed() || $response->body() === '') {
+            $this->errorDescription = 'VAT service unavailable: HTTP '.$response->status();
+            return false;
+        }
+
+        $this->response = json_decode($response->body());
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             $this->errorDescription = 'VAT service returned invalid response';

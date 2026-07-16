@@ -28,12 +28,12 @@
                                     <div class="flex-shrink-0">
                                         <span>{{ u.getName() }}</span>
                                     </div>
-                                    @if (u.var?.data?.real_name && u.var.data.real_name !== u.getName()) {
+                                    @if (u.var.data?.real_name && u.var.data.real_name !== u.getName()) {
                                         <div class="text-muted text-truncate flex-shrink-1" style="min-width: 0">
                                             <small class="text-truncate d-block">{{ u.var.data.real_name }}</small>
                                         </div>
                                     }
-                                    @if (u.var?.data?.email) {
+                                    @if (u.var.data?.email) {
                                         <div class="text-muted text-truncate flex-shrink-1" style="min-width: 0">
                                             <small class="text-truncate d-block">{{ u.var.data.email }}</small>
                                         </div>

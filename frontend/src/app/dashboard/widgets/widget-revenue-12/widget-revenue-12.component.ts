@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, viewChild } from '@angular/core';
 import { BaseWidgetComponent } from '../base.widget.component';
-import { WidgetsModule } from '../widgets.module';
+import { WIDGET_SHARED } from '../widgets.shared';
 import { ShortPipe } from '@pipes/short.pipe';
 import { PermissionsDirective } from '@directives/permissions.directive';
 import { EchartsRangeCardComponent } from '@charts/echarts-card/echarts-range-card.component';
@@ -9,9 +9,8 @@ import { EchartsRangeCardComponent } from '@charts/echarts-card/echarts-range-ca
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'widget-revenue-12',
     templateUrl: './widget-revenue-12.component.html',
-    styleUrls: ['./widget-revenue-12.component.scss', './../base.widget.component.scss'],
-    standalone: true,
-    imports: [WidgetsModule, ShortPipe, PermissionsDirective],
+    styleUrls: ['./../base.widget.component.scss'],
+    imports: [...WIDGET_SHARED, ShortPipe, PermissionsDirective],
 })
 export class WidgetRevenue12Component extends BaseWidgetComponent {
     readonly chart = viewChild(EchartsRangeCardComponent);

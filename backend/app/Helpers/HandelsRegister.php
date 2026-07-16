@@ -10,13 +10,13 @@ use Symfony\Component\DomCrawler\Crawler;
 
 class HandelsRegister {
     private Client $client;
-    private string $viewState = '';
+    private string $viewState         = '';
     private string $resultsFormAction = '';
 
     private function initClient() {
         $this->client = new Client([
             'verify'      => CaBundle::getSystemCaRootBundlePath(),
-            'cookies'     => new CookieJar(),
+            'cookies'     => new CookieJar,
             'http_errors' => false,
             'headers'     => [
                 'User-Agent'      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -25,7 +25,6 @@ class HandelsRegister {
             ],
         ]);
     }
-
     public function process($commercialRegister) {
         $this->initClient();
 
@@ -38,7 +37,6 @@ class HandelsRegister {
         }
         return $this->parseCompany($resultsHtml);
     }
-
     private function parseCommercialRegister($commercialRegister) {
         if (preg_match('/[|,]/', $commercialRegister)) {
             $parts = preg_split('/[|,]/', $commercialRegister);
@@ -59,7 +57,6 @@ class HandelsRegister {
 
         return null;
     }
-
     private function fetchSearchResults($commercialRegister) {
         $parsed = $this->parseCommercialRegister($commercialRegister);
         if (! $parsed) {
@@ -79,7 +76,7 @@ class HandelsRegister {
             Log::warning('HandelsRegister: Failed to load welcome page.');
             return null;
         }
-        $body1 = (string) $r1->getBody();
+        $body1 = (string)$r1->getBody();
 
         preg_match('/name="javax.faces.ViewState".*?value="([^"]+)"/', $body1, $vsMatch);
         $welcomeViewState = $vsMatch[1] ?? '';
@@ -93,7 +90,7 @@ class HandelsRegister {
                 'javax.faces.ViewState'     => $welcomeViewState,
             ],
         ]);
-        $body2 = (string) $r2->getBody();
+        $body2 = (string)$r2->getBody();
 
         preg_match('/name="javax.faces.ViewState".*?value="([^"]+)"/', $body2, $vsMatch2);
         $searchViewState = $vsMatch2[1] ?? '';
@@ -125,13 +122,13 @@ class HandelsRegister {
                 'javax.faces.ViewState'         => $searchViewState,
             ],
         ]);
-        $body3 = (string) $r3->getBody();
+        $body3 = (string)$r3->getBody();
 
         // Step 4: Follow redirect to results page
         if (preg_match('/redirect url="([^"]+)"/', $body3, $redirectMatch)) {
             $resultsUrl = 'https://www.handelsregister.de'.$redirectMatch[1];
             $r4         = $this->client->get($resultsUrl);
-            return (string) $r4->getBody();
+            return (string)$r4->getBody();
         }
 
         if (str_contains($body3, 'fehlerhaft')) {
@@ -142,7 +139,6 @@ class HandelsRegister {
         Log::warning('HandelsRegister: No redirect to results page for: '.$commercialRegister);
         return null;
     }
-
     private function parseCompany($html) {
         $crawler = new Crawler($html);
 
@@ -180,7 +176,7 @@ class HandelsRegister {
             ]);
 
             if ($response->getStatusCode() === 200) {
-                $insolvent = str_contains((string) $response->getBody(), 'Insolvenz');
+                $insolvent = str_contains((string)$response->getBody(), 'Insolvenz');
             }
         }
 
@@ -194,7 +190,6 @@ class HandelsRegister {
             'history'   => array_slice($cells, 8),
         ];
     }
-
     private function extractDocumentLinks(Crawler $crawler) {
         return $crawler->filter('td a')->each(function ($linkNode) {
             $onclick = $linkNode->attr('onclick') ?? '';
@@ -207,7 +202,6 @@ class HandelsRegister {
             ];
         });
     }
-
     private function mapRegistergericht($registerGerichtOrt) {
         $mapping = [
             'alle'                               => '',

@@ -22,24 +22,31 @@ trait CustomModelTrait {
      * @return array search array for polymorphic relations
      */
     public function toPoly($key = 'parent') {
-        return ["{$key}_type" => get_class($this), "{$key}_id" => $this->id];
+        return ["{$key}_type" => $this::class, "{$key}_id" => $this->id];
     }
 
     public function getMutators() {
-        return isset($this->my_mutators) ? $this->my_mutators : [];
+        return $this->my_mutators ?? [];
     }
     public function getTableColumns() {
         return $this->getConnection()->getSchemaBuilder()->getColumnListing($this->getTable());
     }
     public function getColumnDescriptions() {
-        return DB::select('describe '.$this->getTable());
+        $wrapped = $this->getConnection()->getQueryGrammar()->wrapTable($this->getTable());
+        return DB::select("DESCRIBE {$wrapped}");
     }
+
+    private static array $virtualColumnCache = [];
+
     public function getVirtualColumns() {
-        return array_values(array_map(function ($_) {
-            return $_->Field;
-        }, Arr::where($this->getColumnDescriptions(), function ($_) {
-            return $_->Extra == 'VIRTUAL GENERATED';
-        })));
+        $table = $this->getTable();
+        if (! array_key_exists($table, static::$virtualColumnCache)) {
+            static::$virtualColumnCache[$table] = array_values(array_map(
+                fn ($_) => $_->Field,
+                Arr::where($this->getColumnDescriptions(), fn ($_) => $_->Extra === 'VIRTUAL GENERATED')
+            ));
+        }
+        return static::$virtualColumnCache[$table];
     }
 
     /**
@@ -47,11 +54,11 @@ trait CustomModelTrait {
      * This way you can use SomeClass::whereHas('relation'), which is not possible for MorphMany relations.
      */
     public function hasManyMorph($class, $key = 'parent') {
-        return $this->hasMany($class, $key.'_id')->where($key.'_type', get_class($this));
+        return $this->hasMany($class, $key.'_id')->where($key.'_type', $this::class);
     }
 
     public function hasOneMorph($class, $key = 'parent') {
-        return $this->hasOne($class, $key.'_id')->where($key.'_type', get_class($this));
+        return $this->hasOne($class, $key.'_id')->where($key.'_type', $this::class);
     }
 
     // ********** CRUD Role Access *********** //
@@ -141,10 +148,14 @@ trait CustomModelTrait {
 
     public function getValidFields($obj, array $ignore = []) {
         $virtualColumns = $this->getVirtualColumns();
+        $fillable       = $this->getFillable();
         $validFields    = [];
         foreach ($obj as $key => $value) {
             if (is_array($value) || is_object($value)) {
-                // $value = json_encode($value);
+                continue;
+            }
+            // Honour $fillable when the model declares it
+            if (count($fillable) && ! in_array($key, $fillable) && ! in_array($key, $this->getMutators())) {
                 continue;
             }
             if (! Schema::hasColumn($this->getTable(), $key) && ! in_array($key, $this->getMutators())) {
@@ -180,13 +191,6 @@ trait CustomModelTrait {
         return $this;
     }
 
-    /**
-     * @deprecated Use applyAndSave($request) instead to avoid request() coupling.
-     */
-    public function applyAndSaveRequest(array $ignore = []) {
-        return $this->applyAndSave(request(), $ignore);
-    }
-
     public function appendRequest() {
         if (! ($a = request('append'))) {
             return $this;
@@ -220,19 +224,18 @@ trait CustomModelTrait {
         $this->$column |= $flag;
     }
     public static function fromTablePath($path, $id) {
-        $db = 'Tables_in_'.env('DB_DATABASE');
-        foreach (DB::select('SHOW TABLES') as $t) {
-            $table = $t->{$db};
-            if ($table == $path) {
-                $class = 'App\\Models\\'.Str::studly(Str::singular($table));
-                try {
-                    return $class::findOrFail(intval($id));
-                } catch (Exception $e) {
-                }
-                return response('', 404);
-            }
+        if (! Schema::hasTable($path)) {
+            return response('', 404);
         }
-        return response('', 404);
+        $class = 'App\\Models\\'.Str::studly(Str::singular($path));
+        if (! class_exists($class)) {
+            return response('', 404);
+        }
+        try {
+            return $class::findOrFail(intval($id));
+        } catch (Exception $e) {
+            return response('', 404);
+        }
     }
     public static function polyOrNull($objectOrNull): array {
         return $objectOrNull?->toPoly() ?? self::nullPoly();
@@ -244,7 +247,7 @@ trait CustomModelTrait {
         return new BaseBuilder($query);
     }
     public function canBeAccessedByUser($crud = 'read'): bool {
-        return self::checkRoleAccess(get_class($this), $crud);
+        return self::checkRoleAccess($this::class, $crud);
     }
     public static function hasUserAccess($crud = 'read'): bool {
         return self::checkRoleAccess(static::class, $crud);

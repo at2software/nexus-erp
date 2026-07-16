@@ -4,9 +4,10 @@ import { Type } from 'class-transformer';
 import { MarketingInitiative } from './marketing-initiative.model';
 import { MarketingWorkflow } from './marketing-workflow.model';
 import { MarketingPerformanceMetric } from './marketing-performance-metrics.model';
-import { QuickActionType, TActivityStats } from './marketing-activity.model';
+import { QuickActionType } from './marketing-activity.model';
 import { IActivityBase } from './activity-base.interface';
 import { Model } from '@constants/type-discriminators';
+import type { ActivityStats } from '@models/api-response';
 
 @Model('MarketingInitiativeActivity')
 export class MarketingInitiativeActivity extends Serializable implements IActivityBase {
@@ -18,12 +19,12 @@ export class MarketingInitiativeActivity extends Serializable implements IActivi
     marketing_workflow_id?: string;
     name!: string;
     day_offset!: number;
-    description!: string | any;
+    description!: string | { language: string; formality: string; text: string }[];
     is_required!: boolean;
     has_external_dependency?: boolean;
     parent_activity_id?: string;
     quick_action?: QuickActionType;
-    stats?: TActivityStats;
+    stats?: ActivityStats;
 
     // Relationships
     @Type(()=>MarketingInitiative) marketing_initiative?: MarketingInitiative;

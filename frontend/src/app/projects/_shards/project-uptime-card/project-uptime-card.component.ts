@@ -15,15 +15,14 @@ import { tracked } from '@constants/tracked';
 
 @Component({
     selector: 'project-uptime-card',
-    standalone: true,
     imports: [NgbDropdownModule, NgbTooltipModule, Nx, NComponent, AvatarComponent, ProjectComponent, CollapsibleDirective, SpinnerComponent],
     templateUrl: './project-uptime-card.component.html',
     styleUrls: ['./project-uptime-card.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectUptimeCardComponent {
-    readonly projectIn = input.required<Project>({ alias: 'project' });
-    readonly project = tracked(this.projectIn);
+    readonly project = input.required<Project>();
+    readonly trackedProject = tracked(this.project);
 
     monitors = signal<UptimeMonitor[]>([]);
     allMonitors = signal<UptimeMonitor[]>([]);
@@ -33,11 +32,11 @@ export class ProjectUptimeCardComponent {
     #modalService = inject(UptimeMonitorModalService);
 
     constructor() {
-        effect(() => this.#loadMonitors(this.projectIn()));
+        effect(() => this.#loadMonitors(this.trackedProject()));
         this.#loadAllMonitors();
     }
 
-    #loadMonitors(project: Project = this.projectIn()) {
+    #loadMonitors(project: Project = this.trackedProject()) {
         this.loading.set(true);
         this.#service.index({ project_id: project.id }).subscribe({
             next: (monitors) => {
@@ -85,14 +84,14 @@ export class ProjectUptimeCardComponent {
     }
 
     createNew() {
-        this.#modalService.open(undefined, [this.project().id]).then(() => {
+        this.#modalService.open(undefined, [this.trackedProject().id]).then(() => {
             this.#loadMonitors();
             this.#loadAllMonitors();
         }).catch(() => void 0);
     }
 
     linkExisting(monitor: UptimeMonitor) {
-        const projectIds = [...(monitor.projects?.map((p) => p.id) || []), this.project().id];
+        const projectIds = [...(monitor.projects?.map((p) => p.id) || []), this.trackedProject().id];
         this.#service.update(monitor.id, { project_ids: projectIds } as any).subscribe(() => {
             this.#loadMonitors();
             this.#loadAllMonitors();
@@ -100,7 +99,7 @@ export class ProjectUptimeCardComponent {
     }
 
     #unlinkMonitor(monitor: UptimeMonitor) {
-        const projectIds = (monitor.projects?.map((p) => p.id) || []).filter((id) => id !== this.project().id);
+        const projectIds = (monitor.projects?.map((p) => p.id) || []).filter((id) => id !== this.trackedProject().id);
         this.#service.update(monitor.id, { project_ids: projectIds } as any).subscribe(() => {
             this.#loadMonitors();
             this.#loadAllMonitors();

@@ -6,6 +6,8 @@ import { NgxEchartsModule } from 'ngx-echarts';
 import { Color } from '@constants/Color';
 import { EChartsSimpleOptions, ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
+import type { EChartsOption } from 'echarts';
+import { ChartAxisTooltipParam } from '@models/api-response';
 
 interface FocusAccuracyData {
     id: number;
@@ -23,7 +25,6 @@ interface FocusAccuracyData {
 
 @Component({
     selector: 'hr-stats-invoice-focus',
-    standalone: true,
     imports: [NgxEchartsModule, EmptyStateComponent],
     templateUrl: './hr-stats-invoice-focus.component.html',
     styleUrl: './hr-stats-invoice-focus.component.scss',
@@ -34,8 +35,8 @@ export class HrStatsInvoiceFocusComponent {
     #global = inject(GlobalService);
 
     users = signal<FocusAccuracyData[]>([]);
-    chartOptions = signal<Record<number, any>>({});
-    donutChartOptions = signal<Record<number, any>>({});
+    chartOptions = signal<Record<number, EChartsOption>>({});
+    donutChartOptions = signal<Record<number, EChartsOption>>({});
 
     constructor() {
         this.#statsService.showFocusAccuracy().subscribe((response: FocusAccuracyData[]) => {
@@ -45,8 +46,8 @@ export class HrStatsInvoiceFocusComponent {
                 return teamA - teamB;
             });
 
-            const charts: Record<number, any> = {};
-            const donuts: Record<number, any> = {};
+            const charts: Record<number, EChartsOption> = {};
+            const donuts: Record<number, EChartsOption> = {};
             sorted.forEach((user) => {
                 charts[user.id] = this.#createChartOptions(user);
                 donuts[user.id] = this.#createDonutChartOptions(user);
@@ -58,7 +59,7 @@ export class HrStatsInvoiceFocusComponent {
         });
     }
 
-    #createChartOptions(user: FocusAccuracyData): any {
+    #createChartOptions(user: FocusAccuracyData): EChartsOption {
         const months = user.monthly_focus_accuracy.map((item) => item.month).sort();
         const countData = months.map((month) => {
             const monthData = user.monthly_focus_accuracy.find((item) => item.month === month);
@@ -86,8 +87,9 @@ export class HrStatsInvoiceFocusComponent {
                 ...EChartsSimpleOptions.tooltip,
                 backgroundColor: 'transparent',
                 borderWidth: 0,
-                formatter: (params: any) => {
-                    const month = params[0].axisValue;
+                formatter: (params: unknown) => {
+                    const items = params as ChartAxisTooltipParam[];
+                    const month = items[0].axisValue;
                     const monthData = user.monthly_focus_accuracy.find((item) => item.month === month);
 
                     if (!monthData) return '';
@@ -135,10 +137,10 @@ export class HrStatsInvoiceFocusComponent {
                     z: 10,
                 },
             ],
-        };
+        } satisfies EChartsOption;
     }
 
-    #createDonutChartOptions(user: FocusAccuracyData): any {
+    #createDonutChartOptions(user: FocusAccuracyData): EChartsOption {
         const latestMonth = user.monthly_focus_accuracy.length > 0 ? user.monthly_focus_accuracy.sort((a, b) => b.month.localeCompare(a.month))[0] : null;
 
         const overallCountAccuracy = latestMonth ? latestMonth.focused_percentage_duration : 0;
@@ -196,7 +198,7 @@ export class HrStatsInvoiceFocusComponent {
                     </div>`;
                 },
             },
-        };
+        } satisfies EChartsOption;
     }
 
     getUserForAvatar = (user: FocusAccuracyData) => {

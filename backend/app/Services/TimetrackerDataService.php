@@ -3,8 +3,9 @@
 namespace App\Services;
 
 use App\Enums\InvoiceItemType;
-use App\Http\Middleware\Auth;
+use App\Enums\MilestoneState;
 use App\Models\Assignment;
+use Illuminate\Support\Facades\Auth;
 
 class TimetrackerDataService {
     const GLOBAL_LOADERS  = ['id', 'name', 'color', 'latest_focus', 'target', 'is_subscribed', 'icon', 'company_name'];
@@ -26,7 +27,16 @@ class TimetrackerDataService {
                 $_->needs_progress_bar = ! $_->is_time_based && ! $_->is_internal;
                 $_->target             = self::TARGET_PROJECT;
                 if (! $_->is_time_based) {
-                    $_->items = $_->invoiceItems()->whereType(InvoiceItemType::Default)->get()->map->only(['id', 'text']);
+                    $_->items = $_->invoiceItems()->whereType(InvoiceItemType::Default)->with('milestones:id,state,name,started_at')->get()
+                        ->reject(fn ($item) => $item->milestones->isNotEmpty() &&
+                            $item->milestones->every(fn ($milestone) => ($milestone->started_at && $milestone->started_at->isFuture()) ||
+                                $milestone->state == MilestoneState::DONE
+                            )
+                        )
+                        ->values()
+                        ->map(function ($item) {
+                            return $item->only(['id', 'text', 'foci_sum', 'assumed_workload', 'milestones']);
+                        });
                 }
                 $_->is_internal   = $_->is_internal ? 1 : 0;
                 $_->is_time_based = $_->is_time_based ? 1 : 0;

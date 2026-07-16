@@ -3,22 +3,21 @@
 namespace App\Models;
 
 use App\Actions\GenerateProjectQuoteAction;
+use App\Actions\Project\ConvertInvoiceItemsToMilestonesAction;
+use App\Actions\Project\DuplicateProjectAction;
+use App\Actions\Project\HandleProjectStateTransitionAction;
+use App\Actions\Project\MoveProjectItemsToCustomerAction;
+use App\Actions\Project\PostponeProjectAction;
 use App\Builders\ProjectBuilder;
 use App\Casts\Permission;
 use App\Casts\Precomputed;
 use App\Casts\PrecomputedAuth;
 use App\Collections\ProjectCollection;
-use App\Enums\CommentType;
 use App\Enums\InvoiceItemType;
-use App\Http\Controllers\PluginMattermostController;
-use App\Jobs\ChatAddUsersJob;
-use App\Jobs\ChatGetOrCreateChannelJob;
-use App\Jobs\ChatRemoveUsersJob;
-use App\Jobs\ChatSendMessageJob;
-use App\Queries\ProjectSuccessQuoteQuery;
-use App\Queries\ProjectTimelineQuery;
+use App\Queries\FociTimelineQuery;
 use App\Traits\CanMakeInvoiceTrait;
 use App\Traits\HasAssignmentsTrait;
+use App\Traits\HasAvatarProjection;
 use App\Traits\HasFilesTrait;
 use App\Traits\HasFociTrait;
 use App\Traits\HasInvoiceItemsTrait;
@@ -32,29 +31,22 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Bus;
 
 class Project extends BaseModel {
     public static function withParentHierarchy($collection): ProjectCollection {
-        $allProjects = collect();
-        foreach ($collection as $project) {
-            $allProjects->push($project);
-            $parentId = $project->project_id;
-            while ($parentId) {
-                $parent = static::find($parentId);
-                if ($parent) {
-                    $allProjects->push($parent);
-                    $parentId = $parent->project_id;
-                } else {
-                    $parentId = null;
-                }
-            }
+        $all        = collect($collection->all())->keyBy('id');
+        $parentIds  = $all->pluck('project_id')->filter()->unique()->diff($all->keys())->values()->all();
+        while (count($parentIds)) {
+            $parents   = static::whereIn('id', $parentIds)->get()->keyBy('id');
+            $all       = $all->merge($parents);
+            $parentIds = $parents->pluck('project_id')->filter()->unique()->diff($all->keys())->values()->all();
         }
-        return new ProjectCollection($allProjects->unique('id')->values()->all());
+        return new ProjectCollection($all->values()->all());
     }
 
     use CanMakeInvoiceTrait;
     use HasAssignmentsTrait;
+    use HasAvatarProjection;
     use HasFactory;
     use HasFilesTrait;
     use HasFociTrait;
@@ -70,7 +62,7 @@ class Project extends BaseModel {
 
     protected $touches  = ['company'];
     protected $appends  = ['class', 'icon', 'path', 'params', 'net', 'state', 'has_time_budget'];
-    protected $fillable = ['company_id', 'name', 'intro', 'outro', 'description', 'project_id', 'product_id', 'remind_at', 'deadline_at', 'lead_probability', 'project_manager_id', 'no_git_required'];
+    protected $fillable = ['company_id', 'name', 'description', 'project_id', 'product_id', 'remind_at', 'deadline_at', 'lead_probability', 'project_manager_id', 'no_git_required', 'po_number', 'is_time_based', 'is_internal', 'individual_wage'];
 
     protected function casts(): array {
         return [
@@ -85,11 +77,10 @@ class Project extends BaseModel {
             'decision_at'              => 'date',
             'is_ignored_from_prepared' => 'boolean',
             'no_git_required'          => 'boolean',
+            'ml_predicted_hours'       => 'float',
+            'ml_predicted_at'          => 'datetime',
         ];
     }
-
-    protected $access = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
-
     protected static function boot(): void {
         parent::boot();
         static::created(function (Project $project) {
@@ -111,16 +102,28 @@ class Project extends BaseModel {
     // ######################
 
     public function precomputeNetAttribute(): float {
-        return $this->invoiceItems()->whereIn('type', InvoiceItemType::ProjectTotal)->sum('net');
+        return $this->invoiceItems()->whereIn('type', InvoiceItemType::ProjectTotal)->where('stage', 0)->sum('net');
+    }
+    /**
+     * True net value, bypassing the `financial`-role masking applied by the `net` cast.
+     * Use for authoritative documents (quote PDFs) and payment-plan tiering, which must be
+     * correct regardless of whether the triggering user holds the `financial` role.
+     */
+    public function netUnmasked(): float {
+        $raw = $this->getRawOriginal('net');
+        if ($raw !== null) {
+            return floatval($raw);
+        }
+        return floatval($this->precomputeNetAttribute());
     }
     public function precomputeGrossAttribute(): float {
         return $this->invoiceItems()->whereIn('type', InvoiceItemType::Total)->sum('gross');
     }
     public function precomputeNetRemainingAttribute(): float {
         if ($this->is_time_based) {
-            return $this->invoiceItems()->whereIn('type', InvoiceItemType::ProjectTotalRemaining)->whereNull('invoice_id')->whereNull('company_id')->sum('net');
+            return $this->invoiceItems()->whereIn('type', InvoiceItemType::ProjectTotalRemaining)->where('stage', 0)->whereNull('invoice_id')->whereNull('company_id')->sum('net');
         }
-        return $this->invoiceItems()->whereIn('type', InvoiceItemType::ProjectTotalRemaining)->sum('net');
+        return $this->invoiceItems()->whereIn('type', InvoiceItemType::ProjectTotalRemaining)->where('stage', 0)->sum('net');
     }
     public function precomputeWorkEstimatedAttribute(): float {
         return $this->invoiceItems->reduce(fn ($carry, $_) => $carry + $_->assumedWorkload(), 0);
@@ -158,7 +161,7 @@ class Project extends BaseModel {
         return $mainContact ?: $this->assignedContacts()->first();
     }
     public function getTimelineChartAttribute() {
-        return (new ProjectTimelineQuery($this))->get();
+        return (new FociTimelineQuery(fn () => $this->foci()))->get();
     }
     public function getDecisionAtAttribute(): ?Carbon {
         return $this->firstDecisionState()->first()?->pivot->created_at;
@@ -189,6 +192,14 @@ class Project extends BaseModel {
         $w = $this->work_estimated;
         return $w > 0 ? $this->hours_invested / $w : 0;
     }
+
+    public function getMlOverrunRatioAttribute(): ?float {
+        if ($this->ml_predicted_hours === null || ! $this->work_estimated) {
+            return null;
+        }
+        return $this->ml_predicted_hours / $this->work_estimated;
+    }
+
     protected function hasTimeBudget(): Attribute {
         return Attribute::make(
             get: fn () => $this->hasTimeBudgetLogic()
@@ -234,7 +245,7 @@ class Project extends BaseModel {
         return $this->hasMany(Milestone::class);
     }
     public function parentProject() {
-        return $this->belongsTo(Project::class);
+        return $this->belongsTo(Project::class, 'project_id', 'id');
     }
     public function pluginLinks() {
         return $this->hasManyMorph(PluginLink::class);
@@ -283,12 +294,26 @@ class Project extends BaseModel {
             ->pickLatest('project_project_state', 'project_id', 'id');
     }
     public function firstStartedState() {
-        return $this->states()->where('progress', ProjectState::Running)->pickOldest('project_project_state', 'project_id', 'id');
+        return $this->states()
+            ->where('progress', ProjectState::Running)
+            ->whereRaw('`project_project_state`.`id` = (
+                SELECT MIN(`pps`.`id`)
+                FROM `project_project_state` AS `pps`
+                INNER JOIN `project_states` AS `ps_sub` ON `ps_sub`.`id` = `pps`.`project_state_id`
+                WHERE `pps`.`project_id` = `project_project_state`.`project_id`
+                AND `ps_sub`.`progress` = ?
+            )', [ProjectState::Running]);
     }
     public function firstDecisionState() {
         return $this->states()
             ->whereIn('progress', [ProjectState::Running, ProjectState::Finished])
-            ->pickOldest('project_project_state', 'project_id', 'id');
+            ->whereRaw('`project_project_state`.`id` = (
+                SELECT MIN(`pps`.`id`)
+                FROM `project_project_state` AS `pps`
+                INNER JOIN `project_states` AS `ps_sub` ON `ps_sub`.`id` = `pps`.`project_state_id`
+                WHERE `pps`.`project_id` = `project_project_state`.`project_id`
+                AND `ps_sub`.`progress` IN (?, ?)
+            )', [ProjectState::Running, ProjectState::Finished]);
     }
     public function lastFinishedStateRelation() {
         return $this->hasOneThrough(ProjectState::class, 'project_project_state')
@@ -315,31 +340,10 @@ class Project extends BaseModel {
         return $this->company->getWage($baseWage);
     }
     public function postpone(int $duration, ?string $comment = null): static {
-        $map = [
-            1 => ['period' => 'weeks',  'amount' => 1,  'label' => '1 Wochen'],
-            2 => ['period' => 'weeks',  'amount' => 2,  'label' => '2 Wochen'],
-            3 => ['period' => 'months', 'amount' => 1,  'label' => '1 Monate'],
-            4 => ['period' => 'months', 'amount' => 2,  'label' => '2 Monate'],
-            5 => ['period' => 'months', 'amount' => 3,  'label' => '3 Monate'],
-            6 => ['period' => 'months', 'amount' => 6,  'label' => '6 Monate'],
-            7 => ['period' => 'months', 'amount' => 12, 'label' => '1 Jahr'],
-        ];
-        $config = $map[$duration] ?? null;
-        if (! $config) {
-            return $this;
-        }
-        $method           = 'add'.ucfirst($config['period']);
-        $this->remind_at  = now()->$method($config['amount'])->toDateTimeString();
-        $this->save();
-
-        $text = ($comment ? $comment.'<br>' : '').'Frist verlängert ('.$config['label'].')';
-        Comment::create([
-            ...$this->toPoly(),
-            'text'    => $text,
-            'user_id' => request()->user()->id,
-            'is_mini' => true,
-        ]);
-        return $this;
+        return app(PostponeProjectAction::class)->execute($this, $duration, $comment);
+    }
+    public function duplicate(string $name): Project {
+        return app(DuplicateProjectAction::class)->execute($this, $name);
     }
     public function setParent(?int $parentId): void {
         if ($this->pluginLinks) {
@@ -364,132 +368,23 @@ class Project extends BaseModel {
                     ...$this->toPoly(),
                 ]);
             }
-            $this->project_manager_id = $parent->project_manager_id;
-            $this->product_id         = $parent->product_id;
+            $this->project_id          = $parent->id;
+            $this->project_manager_id  = $parent->project_manager_id;
+            $this->product_id          = $parent->product_id;
         } else {
-            $this->project_manager_id = null;
-            $this->product_id         = null;
+            $this->project_id          = null;
+            $this->project_manager_id  = null;
+            $this->product_id          = null;
         }
     }
     public function moveItemsToCustomer($itemsQuery, array $itemUpdates = []): void {
-        Invoice::disablePropagation();
-
-        $maxPos = $this->company->invoiceItems()->max('position') ?? 0;
-
-        InvoiceItem::create([
-            'company_id' => $this->company->id,
-            'position'   => ++$maxPos,
-            'type'       => InvoiceItemType::Header,
-            'text'       => ($this->po_number ? $this->po_number.' ' : '').$this->name,
-        ]);
-
-        $itemsQuery->get()->each(function ($item) use (&$maxPos, $itemUpdates) {
-            $item->update([
-                'company_id' => $this->company_id,
-                'position'   => ++$maxPos,
-                ...$itemUpdates,
-            ]);
-        });
-
-        Invoice::enablePropagation();
-        $this->propagateDirty();
+        app(MoveProjectItemsToCustomerAction::class)->execute($this, $itemsQuery, $itemUpdates);
     }
     public function handleStateTransition(ProjectState $previousState, int $userId): void {
-        $name = $this->company->name.' - '.$this->name;
-        $icon = env('API_URL').'companies/'.$this->company->id.'/icon?'.time();
-
-        $stateChangeMessage = $this->getStateChangeMessage($previousState);
-
-        if ($this->hasStateChangedTo(ProjectState::Prepared, $previousState)) {
-            $this->repeatingItems->each(fn ($item) => $item->update(['next_recurrence_at' => null]));
-        }
-
-        if ($this->hasStateChangedTo(ProjectState::Running, $previousState)) {
-            $this->repeatingItems->each(function ($item) {
-                if (! $item->next_recurrence_at) {
-                    $item->update(['next_recurrence_at' => now()]);
-                }
-            });
-
-            Comment::create([...$this->toPoly(), 'text' => $stateChangeMessage, 'user_id' => $userId, 'is_mini' => true, 'type' => CommentType::Info]);
-
-            if (! env('APP_DEBUG', true)) {
-                $props        = PluginMattermostController::buildWebhookProps($name, $icon);
-                $userIds      = $this->assigned_users->pluck('id')->toArray();
-                $featuresText = PHP_EOL.'#### Bestellte Features:'.PHP_EOL;
-                $featuresText .= $this->invoiceItems->map(fn ($item) => "* [ ] $item->text ($item->qty $item->unit_name)")->implode(PHP_EOL);
-
-                Bus::chain([
-                    new ChatGetOrCreateChannelJob($this),
-                    new ChatAddUsersJob($this, $userIds),
-                    new ChatSendMessageJob($stateChangeMessage, $props, channelEnvKey: 'TOWN_SQUARE', appendProjectIcon: true),
-                    new ChatSendMessageJob($featuresText, $props, $this, imagePath: 'images/projekt_gestartet.png'),
-                ])->dispatch();
-            }
-        }
-
-        if ($this->hasStateChangedTo(ProjectState::Finished, $previousState)) {
-            Comment::create([...$this->toPoly(), 'text' => $stateChangeMessage, 'user_id' => $userId, 'is_mini' => true, 'type' => CommentType::Info]);
-
-            if (! env('APP_DEBUG', true)) {
-                $props = PluginMattermostController::buildWebhookProps($name, $icon);
-                ChatSendMessageJob::dispatch('', $props, $this, imagePath: 'images/projekt_abgeschlossen.png');
-                ChatRemoveUsersJob::dispatch($this, $this->assigned_users->pluck('id')->toArray());
-                ChatSendMessageJob::dispatch($stateChangeMessage, $props, channelEnvKey: 'TOWN_SQUARE');
-            }
-        }
-
-        if ($this->state->is_in_stats) {
-            $successRateParam        = $this->company->param('PROJECT_SUCCESS_RATE');
-            $successRateParam->value = (new ProjectSuccessQuoteQuery($this->company))->getCurrentPercentage();
-            $successRateParam->save();
-        }
+        app(HandleProjectStateTransitionAction::class)->execute($this, $previousState, $userId);
     }
     public function convertItemsToMilestones(): array {
-        $allInvoiceItems      = $this->invoiceItems;
-        $unlinkedInvoiceItems = $this->invoiceItems()->whereType(InvoiceItemType::Default)->whereDoesntHave('milestones')->get();
-
-        if ($unlinkedInvoiceItems->isEmpty()) {
-            return [
-                'message'            => 'No unlinked invoice items found to convert',
-                'milestones_created' => 0,
-                'debug_info'         => [
-                    'project_id'           => $this->id,
-                    'total_invoice_items'  => $allInvoiceItems->count(),
-                    'already_linked_items' => $allInvoiceItems->count() - $unlinkedInvoiceItems->count(),
-                ],
-            ];
-        }
-
-        $conversionFactor  = Param::get('MILESTONE_CONVERSION_FACTOR')->value;
-        $hoursPerDay       = Param::get('INVOICE_HPD')->value;
-        $createdMilestones = [];
-        $maxPosition       = $this->milestones()->max('position') ?? -1;
-
-        foreach ($unlinkedInvoiceItems as $index => $invoiceItem) {
-            $estimatedDays = $invoiceItem->assumedWorkload() / $hoursPerDay ?? 1;
-            $dueDelta      = max(1, ceil($estimatedDays * $conversionFactor));
-            $dueAt         = now()->addDays($dueDelta);
-
-            $milestone = $this->milestones()->create([
-                'name'       => $invoiceItem->text,
-                'started_at' => now()->toDateString(),
-                'due_at'     => $dueAt,
-                'duration'   => $estimatedDays,
-                'progress'   => $invoiceItem->progress * 100 ?? 0,
-                'state'      => 0,
-                'position'   => $maxPosition + $index + 1,
-            ]);
-
-            $milestone->invoiceItems()->attach($invoiceItem->id);
-            $createdMilestones[] = $milestone->load('invoiceItems');
-        }
-
-        return [
-            'message'            => 'Successfully converted invoice items to milestones',
-            'milestones_created' => count($createdMilestones),
-            'milestones'         => $createdMilestones,
-        ];
+        return app(ConvertInvoiceItemsToMilestonesAction::class)->execute($this);
     }
     public function newEloquentBuilder($query) {
         return new ProjectBuilder($query);

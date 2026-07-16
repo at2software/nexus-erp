@@ -21,7 +21,6 @@ import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS, ECHARTS_DONUT_ITEM_STYLE } from '@char
     templateUrl: './invoices-standing.component.html',
     styleUrls: ['./invoices-standing.component.scss'],
     providers: [{ provide: NgbDateAdapter, useClass: NgbDateCarbonAdapter }],
-    standalone: true,
     imports: [MoneyPipe, Nx, AvatarComponent, FormsModule, NgbDatepickerModule, SafePipe, EmptyStateComponent, EchartsComponent],
 })
 export class InvoicesStandingComponent {
@@ -110,7 +109,7 @@ export class InvoicesStandingComponent {
     toggleCategory(name: string) {
         this.selectedCategories.update(sel => {
             const next = new Set(sel);
-            next.has(name) ? next.delete(name) : next.add(name);
+            if (next.has(name)) next.delete(name); else next.add(name);
             return next;
         });
     }

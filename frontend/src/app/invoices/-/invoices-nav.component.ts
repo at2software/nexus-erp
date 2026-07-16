@@ -9,8 +9,6 @@ import { HotkeyDirective } from '@directives/hotkey.directive';
 @Component({
     selector: 'invoices-nav',
     templateUrl: './invoices-nav.component.html',
-    styleUrls: ['./invoices-nav.component.scss'],
-    standalone: true,
     imports: [RouterModule, ActivityTabComponent, ActionsInvoiceLatest, HeaderComponent, HeaderLinkItemComponent, HotkeyDirective],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

@@ -17,7 +17,7 @@ class CamtParser {
 
         $transactions = [];
         try {
-            $dom = new \DOMDocument();
+            $dom = new \DOMDocument;
             if (! @$dom->loadXML($xml)) {
                 return [];
             }
@@ -37,8 +37,8 @@ class CamtParser {
     }
 
     private static function parseEntry(\DOMXPath $xpath, \DOMNode $entry): ?FinTsTransaction {
-        $text = fn (string $name) => (string) $xpath->evaluate(
-            'normalize-space(.//*[local-name()="' . $name . '"])',
+        $text = fn (string $name) => (string)$xpath->evaluate(
+            'normalize-space(.//*[local-name()="'.$name.'"])',
             $entry
         );
 
@@ -52,7 +52,7 @@ class CamtParser {
             ? FinTsTransaction::CD_CREDIT
             : FinTsTransaction::CD_DEBIT;
 
-        $amount  = (float) $amtStr;
+        $amount  = (float)$amtStr;
         $storno  = $text('RvslInd') === 'true';
         $dateStr = $text('Dt'); // BookgDt/Dt appears before ValDt/Dt in document order
 

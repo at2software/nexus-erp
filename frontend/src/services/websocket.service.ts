@@ -37,6 +37,13 @@ export interface QuickMessage {
     message: string;
 }
 
+export interface DataChangedPayload {
+    class: string;
+    id: string | number;
+    event: 'created' | 'updated' | 'deleted';
+    actorId: string | number;
+}
+
 export interface SharingStatus {
     userId: string;
     userName: string;
@@ -53,11 +60,14 @@ export class WebSocketService {
 
     echo: Echo<any> | null = null;
     connected$ = new BehaviorSubject<boolean>(false);
+    reconnected$ = new Subject<void>();
+    #wasConnected = false;
     mousePositions$ = new Subject<MousePosition>();
     sharingToggled$ = new Subject<SharingStatus>();
     visibilityChanged$ = new Subject<{ userId: string; visible: boolean; url: string }>();
     mouseClicks$ = new Subject<MouseClick>();
     quickMessages$ = new Subject<QuickMessage>();
+    dataChanged$ = new Subject<DataChangedPayload>();
 
     constructor() {
         window.Pusher = Pusher;
@@ -90,17 +100,15 @@ export class WebSocketService {
         });
 
         this.echo.connector.pusher.connection.bind('connected', () => {
+            // pusher-js handles retry/backoff on its own for 'unavailable'/'failed' states;
+            // forcing a disconnect() here used to tear down the socket entirely instead of letting it recover.
+            if (this.#wasConnected) this.reconnected$.next();
+            this.#wasConnected = true;
             this.connected$.next(true);
         });
 
         this.echo.connector.pusher.connection.bind('disconnected', () => {
             this.connected$.next(false);
-        });
-
-        this.echo.connector.pusher.connection.bind('state_change', (states: { current: string }) => {
-            if (states.current === 'unavailable' || states.current === 'failed') {
-                this.disconnect();
-            }
         });
 
         this.#listenToLiveSharingChannel();
@@ -122,6 +130,9 @@ export class WebSocketService {
         });
         channel?.listenForWhisper('quick-message', (data: QuickMessage) => {
             this.quickMessages$.next(data);
+        });
+        channel?.listen('.data.changed', (data: DataChangedPayload) => {
+            this.dataChanged$.next(data);
         });
     }
 

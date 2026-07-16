@@ -32,14 +32,15 @@
 <ng-template #vaultModal let-modal>
     @let _cv = currentVault();
     @if (_cv) {
+        @let _tanChallenge = tanChallenge();
         <div class="modal-header">
             <span class="modal-title">{{ _cv.name }}</span>
-            <button type="button" class="btn-close" (click)="modal.dismiss()"></button>
+            <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
         </div>
         <div class="modal-body">
 
             <!-- ── Credential fields (hidden while TAN challenge is active) ── -->
-            @if (!tanChallenge()) {
+            @if (!_tanChallenge) {
                 <ul class="list-group">
                     @for (key of keysFor(_cv); track key; let i = $index) {
                         <li class="list-group-item" [class.text-danger]="isKeyMissing(key)">
@@ -92,7 +93,7 @@
             }
 
             <!-- ── TAN challenge ── -->
-            @if (tanChallenge(); as tan) {
+            @if (_tanChallenge; as tan) {
                 <div class="d-flex flex-column align-items-center gap-3 py-2">
 
                     @if (tan.type === 'decoupled') {
@@ -111,20 +112,20 @@
                     @if (tan.type === 'phototan' && tan.image) {
                         <img [src]="tan.image" alt="PhotoTAN" class="img-fluid" style="max-width:220px" />
                         @if (tan.text) { <div class="text-muted small text-center">{{ tan.text }}</div> }
-                        <input class="form-control" style="max-width:260px" i18n-placeholder="@@i18n.settings.enterTan" placeholder="Enter TAN" [ngModel]="tanInput()" (ngModelChange)="tanInput.set($event)" autofocus />
+                        <input class="form-control" style="max-width:260px" i18n-placeholder="@@i18n.settings.enterTan" placeholder="Enter TAN" [ngModel]="tanInput()" (ngModelChange)="tanInput.set($event)" />
                     }
 
                     @if (tan.type === 'flickertan' && tan.svg) {
                         <div [innerHTML]="tan.svg" style="max-width:300px"></div>
                         @if (tan.text) { <div class="text-muted small text-center">{{ tan.text }}</div> }
-                        <input class="form-control" style="max-width:260px" i18n-placeholder="@@i18n.settings.enterTan" placeholder="Enter TAN" [ngModel]="tanInput()" (ngModelChange)="tanInput.set($event)" autofocus />
+                        <input class="form-control" style="max-width:260px" i18n-placeholder="@@i18n.settings.enterTan" placeholder="Enter TAN" [ngModel]="tanInput()" (ngModelChange)="tanInput.set($event)" />
                     }
 
                     @if (tan.type === 'tan') {
                         <n class="display-4 text-primary">security</n>
                         @if (tan.text) { <div class="text-muted small text-center">{{ tan.text }}</div> }
                         @if (tan.medium) { <div class="text-muted small">Device: {{ tan.medium }}</div> }
-                        <input class="form-control" style="max-width:260px" i18n-placeholder="@@i18n.settings.enterTan" placeholder="Enter TAN" [ngModel]="tanInput()" (ngModelChange)="tanInput.set($event)" autofocus />
+                        <input class="form-control" style="max-width:260px" i18n-placeholder="@@i18n.settings.enterTan" placeholder="Enter TAN" [ngModel]="tanInput()" (ngModelChange)="tanInput.set($event)" />
                     }
 
                 </div>
@@ -132,16 +133,16 @@
 
         </div>
         <div class="modal-footer">
-            @if (_cv.prefix === 'GITLAB' && !tanChallenge()) {
+            @if (_cv.prefix === 'GITLAB' && !_tanChallenge) {
                 <button class="btn btn-outline-primary me-auto" (click)="savePipelineJobs()" i18n="@@i18n.common.save">save jobs</button>
             }
-            @if (!tanChallenge()) {
+            @if (!_tanChallenge) {
                 <button class="btn btn-success" (click)="checkCredentials()" i18n="@@i18n.settings.checkSave">check & save</button>
             }
-            @if (tanChallenge() && tanChallenge()!.type !== 'decoupled') {
+            @if (_tanChallenge && _tanChallenge!.type !== 'decoupled') {
                 <button class="btn btn-success" (click)="submitTan()" [disabled]="!tanInput()">confirm TAN</button>
             }
-            <button class="btn btn-secondary" (click)="tanChallenge() ? cancelTan() : modal.dismiss()" i18n="@@i18n.common.cancel">cancel</button>
+            <button class="btn btn-secondary" (click)="_tanChallenge ? cancelTan() : modal.dismiss()" i18n="@@i18n.common.cancel">cancel</button>
         </div>
     }
 </ng-template>

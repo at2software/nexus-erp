@@ -1,17 +1,18 @@
-import { Component, computed, input, output, signal, TemplateRef, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal, TemplateRef, viewChild } from '@angular/core';
 
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { TextParamEditorComponent } from '@shards/text-param-editor/text-param-editor.component';
 import { InvoicePrepare } from '@app/invoices/_shards/invoice-prepare/invoice-prepare';
 import { CustomerPaymentDetailsComponent } from '@app/customers/_shards/customer-payment-details/customer-payment-details.component';
-import { TBillingConsideration, Company } from '@models/company/company.model';
+import { Company } from '@models/company/company.model';
+import { BillingConsideration } from '@models/api-response';
 import { Project } from '@models/project/project.model';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { SafePipe } from '@pipes/safe.pipe';
 
 @Component({
     selector: 'invoice-prepare-wrapper',
-    standalone: true,
+    changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [NgbTooltipModule, TextParamEditorComponent, InvoicePrepare, CustomerPaymentDetailsComponent, SafePipe],
     templateUrl: './invoice-prepare-wrapper.html',
     styleUrls: ['./invoice-prepare-wrapper.scss'],
@@ -22,7 +23,7 @@ export class InvoicePrepareWrapper {
     stageFilter = input<number | undefined>(undefined);
     annotationType = input<'invoice' | 'quote' | 'support' | 'none'>('invoice');
     showMiniCards = input<boolean>(true);
-    additionalBillingConsiderations = input<TBillingConsideration[]>([]);
+    additionalBillingConsiderations = input<BillingConsideration[]>([]);
     allowedNewItems = input<('item' | 'paydown' | 'group' | 'discount')[]>(['item', 'paydown', 'group', 'discount']);
     withInstalments = input<boolean>(true);
     mode = input<'invoice' | 'quote'>('invoice');
@@ -30,11 +31,11 @@ export class InvoicePrepareWrapper {
     projectPaymentDuration = input<string | undefined>(undefined);
     onChangeProjectPaymentDuration = input<(() => void) | undefined>(undefined);
     onRemoveProjectPaymentDuration = input<(() => void) | undefined>(undefined);
-    considerationsChanged = output<TBillingConsideration[]>();
+    considerationsChanged = output<BillingConsideration[]>();
 
     readonly table = viewChild(InvoicePrepare);
 
-    readonly allBillingConsiderations = signal<TBillingConsideration[]>([]);
+    readonly allBillingConsiderations = signal<BillingConsideration[]>([]);
 
     readonly prefixKey = computed(() => (this.mode() === 'quote' ? 'PROJECT_PREFIX' : 'INVOICE_PREFIX'));
     readonly suffixKey = computed(() => (this.mode() === 'quote' ? 'PROJECT_SUFFIX' : 'INVOICE_SUFFIX'));
@@ -81,12 +82,12 @@ export class InvoicePrepareWrapper {
         this.#recalculateBillingConsiderations(items);
     }
 
-    trackBillingConsideration(_index: number, item: TBillingConsideration) {
+    trackBillingConsideration(_index: number, item: BillingConsideration) {
         return item.invoice_item_id || item.label + item.type || _index;
     }
 
     fixVatIssues() {
-        const items = this.items();
+        const items = this.items() ?? this.table()?._items();
         if (!items) return;
 
         const company = this.company();

@@ -1,0 +1,29 @@
+.backlog-chip {
+    cursor: grab;
+
+    &.cdk-drag-dragging {
+        cursor: grabbing;
+    }
+
+    &.cdk-drag-disabled {
+        cursor: default;
+    }
+}
+
+.cdk-drag-preview {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    border-radius: var(--bs-border-radius);
+}
+
+.cdk-drag-placeholder {
+    opacity: 0.3;
+}
+
+.issue-tracker-icon {
+    cursor: pointer;
+}
+
+.issue-project {
+    flex: 0 0 auto;
+    max-width: 35%;
+}

@@ -6,8 +6,6 @@ import { HeaderLinkItemComponent } from '@app/app/header/header-link-item/header
 @Component({
     selector: 'marketing',
     templateUrl: './marketing.component.html',
-    styleUrls: ['./marketing.component.scss'],
-    standalone: true,
     imports: [RouterModule, HeaderComponent, HeaderLinkItemComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

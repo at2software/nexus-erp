@@ -1,7 +1,7 @@
 <toolbar>
     <button class="btn btn-primary" (click)="onNewEmployment()" ngbTooltip="CTRL+ALT+N" hotkey="CTRL+ALT+N"><i>add</i> new employment</button>
     <button class="btn btn-plain text-primary" (click)="open(calculator)"><i>calculate</i></button>
-    @if (isAdmin) {
+    @if (isAdmin()) {
         <button class="btn btn-outline-primary ms-auto" (click)="addUser()" i18n="@@i18n.user.addNewUser"><i>person_add</i> add new user</button>
     }
 </toolbar>
@@ -95,7 +95,7 @@
                                 <li class="list-group-item d-flex cursor-pointer" smartLink="/{{ p.path }}">
                                     <avatar [object]="p"></avatar>
                                     <div class="flex-fill text-truncate me-2">
-                                        {{ p.name }}
+                                        {{ p.getName() }}
                                     </div>
                                     <span class="badge badge-dark">{{ p.duration | number: '1.1-1' }}h</span>
                                 </li>

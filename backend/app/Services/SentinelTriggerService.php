@@ -6,9 +6,10 @@ use App\Enums\SentinelTriggerType;
 use App\Models\Sentinel;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class SentinelTriggerService {
-    public static function handleModelBasedTrigger(int $triggerType, Model $model): void {
+    public static function handleModelBasedTrigger(SentinelTriggerType $triggerType, Model $model): void {
         $table          = $model->getTable();
         $originalValues = $model->getOriginal();
 
@@ -37,6 +38,14 @@ class SentinelTriggerService {
         // Refresh model to ensure relations are accessible
         $model?->refresh();
 
-        $sentinel->execute($model, $originalValues);
+        try {
+            $sentinel->execute($model, $originalValues);
+        } catch (\Throwable $e) {
+            Log::error('Sentinel execution failed', [
+                'sentinel_id' => $sentinel->id,
+                'model'       => $model ? $model::class.'#'.$model->getKey() : null,
+                'error'       => $e->getMessage(),
+            ]);
+        }
     }
 }

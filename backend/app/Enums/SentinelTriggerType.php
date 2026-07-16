@@ -2,14 +2,12 @@
 
 namespace App\Enums;
 
-use BenSampo\Enum\Enum;
-
-final class SentinelTriggerType extends Enum {
-    const Disabled   = 0;
-    const Always     = 1;
-    const OnCreated  = 2;
-    const OnUpdated  = 3;
-    const OnDeleted  = 4;
-    const Once       = 5;
-    const OnSchedule = 6;
+enum SentinelTriggerType: int {
+    case Disabled   = 0;
+    case Always     = 1;
+    case OnCreated  = 2;
+    case OnUpdated  = 3;
+    case OnDeleted  = 4;
+    case Once       = 5;
+    case OnSchedule = 6;
 }

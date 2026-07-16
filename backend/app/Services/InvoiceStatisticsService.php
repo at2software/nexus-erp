@@ -75,8 +75,8 @@ class InvoiceStatisticsService {
                 ->sum('net');
 
             $result[] = [
-                'date'    => $current->format('Y-m'),
-                'revenue' => (float)$monthRevenue,
+                'period' => $current->format('Y-m'),
+                'value'  => (float)$monthRevenue,
             ];
 
             $current->addMonth();

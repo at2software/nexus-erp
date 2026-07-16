@@ -1,13 +1,12 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { InputSettingsGroupComponent } from '@shards/input-group/input-settings-group.component';
-import { NexusHttpService } from '@models/http/http.nexus';
+import { NexusHttp } from '@models/http/http.nexus';
+import { ParamValueResponse } from '@models/api-response';
 
 @Component({
     selector: 'settings-projects-notifications',
     templateUrl: './settings-projects-notifications.component.html',
-    styleUrls: ['./settings-projects-notifications.component.scss'],
-    standalone: true,
     imports: [InputSettingsGroupComponent, FormsModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -15,10 +14,10 @@ export class SettingsProjectsNotificationsComponent {
     thresholds = signal<number[]>([]);
     newThreshold = signal<number | null>(null);
 
-    #http = inject(NexusHttpService);
+    #http = inject(NexusHttp);
 
     constructor() {
-        this.#http.get('params/PROJECT_WORK_THRESHOLDS').subscribe((param: any) => {
+        this.#http.get<ParamValueResponse | undefined>('params/PROJECT_WORK_THRESHOLDS').subscribe((param) => {
             if (param?.value) {
                 try {
                     this.thresholds.set(JSON.parse(param.value));

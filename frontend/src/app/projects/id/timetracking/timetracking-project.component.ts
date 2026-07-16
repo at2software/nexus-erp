@@ -13,13 +13,12 @@ import { EnableTableExportDirective } from '@app/app/table-controls/enable-table
 import { FormsModule } from '@angular/forms';
 import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
 import { SafePipe } from '@pipes/safe.pipe';
+import { IssuePickerComponent } from '@shards/issue-picker/issue-picker.component';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './timetracking.component.html',
-    styleUrls: ['./timetracking.component.scss'],
-    standalone: true,
-    imports: [AvatarComponent, CdkTableModule, DatePipe, DecimalPipe, NComponent, ContinuousMarkerComponent, EmptyStateComponent, EnableTableExportDirective, Nx, NgbTooltipModule, FormsModule, NgxDaterangepickerMd, SafePipe],
+    imports: [AvatarComponent, CdkTableModule, DatePipe, DecimalPipe, NComponent, ContinuousMarkerComponent, EmptyStateComponent, EnableTableExportDirective, Nx, NgbTooltipModule, FormsModule, NgxDaterangepickerMd, SafePipe, IssuePickerComponent],
     host: { id: 'TimetrackingProjectComponent' },
 })
 export class TimetrackingProjectComponent extends TimetrackingComponent {

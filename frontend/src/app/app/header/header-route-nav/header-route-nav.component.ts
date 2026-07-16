@@ -1,15 +1,15 @@
-﻿import { ChangeDetectionStrategy, Component, effect, inject, input, OnDestroy } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
 import { ActivatedRoute, Route, RouterModule } from '@angular/router';
 import { GlobalService } from '@models/global.service';
 import { HeaderLinkItemComponent } from '../header-link-item/header-link-item.component';
 import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
-import { Observable, Subscription } from 'rxjs';
+import { Observable } from 'rxjs';
 
 export interface NavRouteData {
     title: string;
     roles?: string;
     exact?: boolean;
-    visibleWhen?: (context: any) => boolean;
+    visibleWhen?: (context: unknown) => boolean;
 }
 
 export interface ProcessedRoute {
@@ -25,54 +25,50 @@ export interface ProcessedRoute {
     selector: 'header-route-nav',
     templateUrl: './header-route-nav.component.html',
     styleUrls: ['./header-route-nav.component.scss'],
-    standalone: true,
     imports: [HeaderLinkItemComponent, NgbDropdownModule, RouterModule],
 })
-export class HeaderRouteNavComponent implements OnDestroy {
-    context = input.required<any>();
+export class HeaderRouteNavComponent {
+    context = input.required<unknown>();
     routeConfig = input<Route | null>();
-    onChange = input<Observable<any> | undefined>();
+    onChange = input<Observable<unknown> | undefined>();
 
     #route = inject(ActivatedRoute);
     #global = inject(GlobalService);
-    #subscription?: Subscription;
 
-    routes: ProcessedRoute[] = [];
+    routes = signal<ProcessedRoute[]>([]);
 
     constructor() {
-        effect(() => {
+        effect((onCleanup) => {
             this.context();
             this.routeConfig();
-            this.#subscription?.unsubscribe();
-            this.#subscription = this.onChange()?.subscribe(() => this.#updateRoutes());
+            const subscription = this.onChange()?.subscribe(() => this.#updateRoutes());
+            onCleanup(() => subscription?.unsubscribe());
             this.#updateRoutes();
         });
-    }
-
-    ngOnDestroy(): void {
-        this.#subscription?.unsubscribe();
     }
 
     #updateRoutes() {
         const routes = (this.routeConfig() ?? this.#route.routeConfig)?.children || [];
 
-        this.routes = routes
-            .filter((route) => route.data?.['nav'])
-            .filter((route) => {
-                const navData = route.data!['nav'] as NavRouteData;
-                // Check role permission
-                if (navData.roles) {
-                    const requiredRoles = navData.roles.split('|');
-                    if (!this.#global.user?.hasAnyRole(requiredRoles)) {
+        this.routes.set(
+            routes
+                .filter((route) => route.data?.['nav'])
+                .filter((route) => {
+                    const navData = route.data!['nav'] as NavRouteData;
+                    // Check role permission
+                    if (navData.roles) {
+                        const requiredRoles = navData.roles.split('|');
+                        if (!this.#global.user?.hasAnyRole(requiredRoles)) {
+                            return false;
+                        }
+                    }
+                    if (navData.visibleWhen && !navData.visibleWhen(this.context())) {
                         return false;
                     }
-                }
-                if (navData.visibleWhen && !navData.visibleWhen(this.context())) {
-                    return false;
-                }
-                return true;
-            })
-            .map((route) => this.#processRoute(route));
+                    return true;
+                })
+                .map((route) => this.#processRoute(route)),
+        );
     }
 
     #processRoute(route: Route): ProcessedRoute {

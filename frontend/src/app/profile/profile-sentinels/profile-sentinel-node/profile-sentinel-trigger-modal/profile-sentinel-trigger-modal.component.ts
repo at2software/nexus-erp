@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { NgbActiveModal, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
-import { Sentinel } from '@models/sentinel.model';
+import { Sentinel } from '@models/sentinels/sentinel.model';
 import { ObserverTrigger } from '@enums/observer-trigger';
 import { GlobalService } from '@models/global.service';
+import type { TableSchema } from '@models/api-response';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -11,7 +12,6 @@ import { FormsModule } from '@angular/forms';
     selector: 'sentinel-trigger-edit-modal',
     templateUrl: './profile-sentinel-trigger-modal.component.html',
     styleUrls: ['./profile-sentinel-trigger-modal.component.scss'],
-    standalone: true,
     imports: [FormsModule, NgbDropdownModule],
 })
 export class ProfileSentinelTriggerModalComponent extends ModalBaseComponent<boolean> {
@@ -25,7 +25,7 @@ export class ProfileSentinelTriggerModalComponent extends ModalBaseComponent<boo
         .filter((key) => !isNaN(Number(ObserverTrigger[key as any])))
         .map((key) => ({ label: key, value: ObserverTrigger[key as keyof typeof ObserverTrigger] as number }))
         .filter((opt) => ![ObserverTrigger.Always, ObserverTrigger.Once].includes(opt.value));
-    tables: { name: string; columns: string[] }[] = [];
+    tables: TableSchema[] = [];
     allowedTimes = ['00:00', '08:00', '12:00', '17:00'];
 
     init(sentinel: Sentinel): void {

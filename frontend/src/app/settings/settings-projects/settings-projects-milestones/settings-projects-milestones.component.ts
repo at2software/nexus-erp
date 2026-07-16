@@ -5,7 +5,6 @@ import { InputSettingsGroupComponent } from '@shards/input-group/input-settings-
     selector: 'settings-projects-milestones',
     templateUrl: './settings-projects-milestones.component.html',
     styleUrls: ['./settings-projects-milestones.component.scss'],
-    standalone: true,
     imports: [InputSettingsGroupComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

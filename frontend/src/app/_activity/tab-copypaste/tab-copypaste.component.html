@@ -1,4 +1,4 @@
-<activity-tab icon="copy_all" [hidden]="true">
+<activity-tab icon="copy_all" [hidden]="!hasClips()">
     <div class="container">
         <scrollbar>
             @for (class of getKeys(); track class) {

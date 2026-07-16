@@ -75,7 +75,8 @@ class GitIssueWebhookJob implements ShouldQueue {
             $message .= " → `$action` by $by";
         }
 
-        foreach ($this->links->siblingsOfType(PluginChatController::class) as $chatInfo) {
+        $siblings = $this->links->siblingsOfType(PluginChatController::class)->unique('channelId')->values();
+        foreach ($siblings as $chatInfo) {
             ChatSendMessageJob::dispatch($message, $props, channelId: $chatInfo['channelId']);
         }
     }

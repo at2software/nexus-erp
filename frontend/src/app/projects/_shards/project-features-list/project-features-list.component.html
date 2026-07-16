@@ -1,0 +1,78 @@
+<ng-template #featureItemContent let-item="item">
+    <div class="d-flex">
+        @if (item.milestones && item.milestones.length > 0) {
+        <div class="me-2 d-flex gap-1 align-items-center">
+            @for (m of item.milestones; track m.id) {
+            <div class="d-flex align-items-center gap-1">
+                <i class="cursor-default css-tip"
+                    [ngbTooltip]="'Milestone: ' + m.name + (m.progress ? ' (' + (m.progress | number: '1.0-0') + '%)' : '')"
+                    [class.text-muted]="m.state === 0" [class.text-primary]="m.state === 1"
+                    [class.text-success]="m.state === 2">
+                    @if (m.state === 0) {
+                    radio_button_unchecked
+                    }
+                    @if (m.state === 1) {
+                    schedule
+                    }
+                    @if (m.state === 2) {
+                    check_circle
+                    }
+                </i>
+                @if (m.user) {
+                <avatar [object]="m.user" [size]="'xs'"></avatar>
+                }
+            </div>
+            }
+        </div>
+        }
+        <div class="flex-fill me-2 text-truncate" [innerHTML]="safeItemText(item)"
+            [class]="getItemTextColor(item)"></div>
+        @if (item.progress && item.pt > 0) {
+        <div class="text-end me-2 text-nowrap css-tip" [class]="getProgressColorClass(item)"
+            [attr.data-tip]="(item.fociSum | number: '1.1-1') + 'h / ' + (item.pt * 8 | number: '1.1-1') + 'h'">{{
+            item.progress * 100 | number: '1.0-0' }}%</div>
+        }
+    </div>
+    @if (item.qty > 0) {
+    @if (getUserContributions(item).length > 0) {
+    <div class="progress" [style.height.px]="3">
+        @for (contribution of getUserContributions(item); track contribution.user?.id) {
+        <div class="progress-bar css-tip" [style.width.%]="contribution.percentage"
+            [style.background-color]="contribution.color"
+            [attr.data-tip]="getUserName(contribution.user) + ': ' + (contribution.hours | number: '1.1-1') + 'h'">
+        </div>
+        }
+    </div>
+    } @else if (item.progress) {
+    <div class="progress" [style.height.px]="3">
+        <div class="progress-bar bg-primary css-tip" [style.width.%]="item.progress * 100"
+            [attr.data-tip]="(item.progress * 100 | number: '1.0-0') + '%'"></div>
+    </div>
+    }
+    }
+</ng-template>
+
+<div class="card mb-3">
+    <div class="card-header gap-2">
+        <span i18n="@@i18n.common.features" class="flex-fill text-truncate">features</span>
+        <div class="chart-title" ngbTooltip="foci with invoice item relationship"
+            i18n-ngbTooltip="@@i18n.projects.fociWithInvoiceItemRelationship"
+            [class.text-warning]="unfocusedProgress() > 0.1 && unfocusedProgress() <= 0.2"
+            [class.text-danger]="unfocusedProgress() > 0.2">
+            {{ focusedProgress() | percent: '1.1-1' }}
+        </div>
+    </div>
+    <ul class="list-group">
+        @for (i of focusItems(); track i.id) {
+        @if (i.milestones && i.milestones.length > 0) {
+        <li class="list-group-item" [class.text-muted]="allMilestonesDone(i)" [nx]="i.milestones.first()!">
+            <ng-container *ngTemplateOutlet="featureItemContent; context: { item: i }"></ng-container>
+        </li>
+        } @else {
+        <li class="list-group-item" [class.text-muted]="allMilestonesDone(i)">
+            <ng-container *ngTemplateOutlet="featureItemContent; context: { item: i }"></ng-container>
+        </li>
+        }
+        }
+    </ul>
+</div>

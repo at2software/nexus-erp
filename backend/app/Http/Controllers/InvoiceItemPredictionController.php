@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Middleware\Auth;
 use App\Models\InvoiceItem;
 use App\Models\InvoiceItemPrediction;
 use App\Models\Project;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class InvoiceItemPredictionController extends Controller {
@@ -20,7 +20,7 @@ class InvoiceItemPredictionController extends Controller {
         return $_->fresh();
     }
     public function stats(Request $request, Project $_) {
-        $total = $_->invoiceItems()->where('type', '<', 10)->get()->count();
+        $total = $_->invoiceItems()->where('type', '<', 10)->count();
         if ($total > 0) {
             return [
                 'total'       => $total,

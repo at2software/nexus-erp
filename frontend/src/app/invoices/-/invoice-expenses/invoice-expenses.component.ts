@@ -27,8 +27,6 @@ import { SpinnerComponent } from '@shards/spinner/spinner.component';
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'invoice-expenses',
     templateUrl: './invoice-expenses.component.html',
-    styleUrls: ['./invoice-expenses.component.scss'],
-    standalone: true,
     imports: [Nx, NComponent, MoneyPipe, DndDirective, EmptyStateComponent, ToolbarComponent, DatePipe, NgxEchartsDirective, NgbTooltip, SpinnerComponent],
 })
 export class InvoiceExpensesComponent {
@@ -51,7 +49,10 @@ export class InvoiceExpensesComponent {
         const exps = this.expenses();
         return {
             backgroundColor: 'transparent',
-            tooltip: { trigger: 'item', formatter: (p: any) => `${p.name}<br/>${p.percent}%` },
+            tooltip: { trigger: 'item', formatter: (p) => { 
+                const pt = p as { name: string; percent: number }; 
+                return `${pt.name}<br/>${pt.percent}%`; 
+            }},
             series: [{
                 type: 'pie',
                 radius: ['55%', '85%'],
@@ -107,7 +108,7 @@ export class InvoiceExpensesComponent {
     onNewExpense = () => this.#modalService.open(ModalEditExpenseComponent, undefined);
     onNewExpenseCategory() {
         this.#modalService
-            .open(ModalInputComponent, {title: $localize`:@@i18n.invoices.newCategory:New category`, placeholder: $localize`:@@i18n.invoices.categoryName:category name`})
+            .open(ModalInputComponent, { title: $localize`:@@i18n.invoices.newCategory:New category` })
             .then(response => {
                 if (response) {
                     const category = ExpenseCategory.fromJson({ name: response.text });
@@ -176,9 +177,9 @@ export class InvoiceExpensesComponent {
 
     onDnd(files: File[]) {
         const reader = new FileReader();
-        reader.onload = (event: any) => {
+        reader.onload = (event: ProgressEvent<FileReader>) => {
             this.categories().forEach((_) => (_.var.visible = true));
-            const text = event.target.result;
+            const text = event.target!.result as string;
             const lines = text.split(/\r?\n|\r|\n/g);
             while (lines.length && (lines[0].match(/;/g) || []).length < 2) {
                 lines.shift();
@@ -187,11 +188,11 @@ export class InvoiceExpensesComponent {
                 Toast.warn('invalid CSV file');
                 return;
             }
-            this.lopsHeaders.set(lines.shift().split(/;/));
+            this.lopsHeaders.set(lines.shift()!.split(/;/));
             const n: string[][] = [];
             let realItem = true;
             while (lines.length && realItem) {
-                const o = lines.shift().split(/;/);
+                const o = lines.shift()!.split(/;/);
                 if (o.length !== this.lopsHeaders()!.length) realItem = false;
                 if (o[this.#lopsNameColumn].trim().length === 0) realItem = false;
                 if (realItem) n.push(o);
@@ -203,7 +204,7 @@ export class InvoiceExpensesComponent {
 
     onLopsUpdate() {
         const items = this.getItems();
-        const observables: Observable<any>[] = [];
+        const observables: Observable<Expense>[] = [];
         items.forEach((item) => {
             if (item.price === -1) {
                 item.price = item.var.lops;

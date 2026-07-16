@@ -1,4 +1,6 @@
-export const DB_COUNTRIES = [
+import { CountryEntry } from '@models/api-response';
+
+export const DB_COUNTRIES: CountryEntry[] = [
     { name: 'Afghanistan', alpha2: 'AF', 'country-code': '004' },
     { name: 'Åland Islands', alpha2: 'AX', 'country-code': '248' },
     { name: 'Albania', alpha2: 'AL', 'country-code': '008' },

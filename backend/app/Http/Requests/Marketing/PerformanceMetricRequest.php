@@ -11,12 +11,13 @@ class PerformanceMetricRequest extends FormRequest {
     public function rules(): array {
         $req = $this->isMethod('POST') ? 'required' : 'sometimes';
         return [
-            'name'         => "$req|string|max:255",
-            'description'  => 'nullable|string',
-            'metric_type'  => "$req|in:counter,percentage,conversion,currency,duration",
-            'target_value' => 'nullable|numeric|min:0',
-            'kpi_icon'     => 'nullable|string|max:100',
-            'kpi_color'    => 'nullable|string|max:50',
+            'name'              => "$req|string|max:255",
+            'description'       => 'nullable|string',
+            'metric_type'       => "$req|in:counter,percentage,conversion,currency,duration",
+            'target_value'      => 'nullable|numeric|min:0',
+            'kpi_icon'          => 'nullable|string|max:100',
+            'kpi_color'         => 'nullable|string|max:50',
+            'related_metric_id' => 'nullable|exists:marketing_performance_metrics,id',
         ];
     }
 }

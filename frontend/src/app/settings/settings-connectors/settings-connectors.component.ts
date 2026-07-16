@@ -5,8 +5,8 @@ import { VaultService } from '@models/vault.service';
 import { ParamService } from '@models/param.service';
 import { Toast } from '@shards/toast/toast';
 import { NComponent } from '@shards/n/n.component';
+import { Dictionary } from '@constants/constants';
 
-type TDict = Record<string, string>;
 interface TPipelineJob {
     job: string;
     artifact: string;
@@ -16,8 +16,8 @@ interface TVault {
     prefix: string;
     name: string;
     active: boolean;
-    keys: TDict;
-    map: TDict;
+    keys: Dictionary<string>;
+    map: Dictionary<string>;
     missing?: string[];
 }
 interface TTanChallenge {
@@ -29,7 +29,7 @@ interface TTanChallenge {
     svg?: string;
 }
 
-const VAULT_INFO: Record<string, { label: string; description: string }[]> = {
+const VAULT_INFO: Dictionary<{ label: string; description: string }[]> = {
     MATTERMOST: [
         { label: 'URL', description: 'Mattermost server endpoint (e.g. https://mattermost.example.com)' },
         { label: 'team id', description: 'Numeric team ID — visible in Admin Console → Teams' },
@@ -66,7 +66,6 @@ const DEFAULT_PIPELINE_JOBS: TPipelineJob[] = [
     selector: 'settings-connectors',
     imports: [FormsModule, NgbDropdownModule, NgbTooltipModule, NComponent],
     templateUrl: './settings-connectors.component.html',
-    styleUrl: './settings-connectors.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SettingsConnectorsComponent {
@@ -86,7 +85,7 @@ export class SettingsConnectorsComponent {
     constructor() {
         this.#vaultService.index().subscribe((response: TVault[]) => {
             response.forEach((vault) => {
-                const map: TDict = {};
+                const map: Dictionary<string> = {};
                 Object.keys(vault.keys).forEach((key) => (map[`${vault.prefix}_${key}`] = ''));
                 vault.map = map;
             });
@@ -177,7 +176,7 @@ export class SettingsConnectorsComponent {
         if (normalized.startsWith('DE') && normalized.length >= 12) {
             const blz = normalized.substring(4, 12);
             this.updateVaultMapKey('FINTS_BLZ', blz);
-            this.#vaultService.bankLookup(blz).subscribe((info: any) => {
+            this.#vaultService.bankLookup(blz).subscribe((info) => {
                 if (info?.url) this.updateVaultMapKey('FINTS_URL', info.url);
                 this.bankName.set(info?.name ?? null);
             });

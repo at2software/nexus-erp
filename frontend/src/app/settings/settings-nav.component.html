@@ -9,7 +9,8 @@
         <header-link-item routerLink="invoices" title="invoices" roles="invoicing" i18n-title="@@i18n.common.invoices"></header-link-item>
         <header-link-item routerLink="projects" title="projects" roles="user" i18n-title="@@i18n.common.projects"></header-link-item>
         <header-link-item routerLink="roles" title="users" [exact]="false" roles="admin" i18n-title="@@i18n.common.users"></header-link-item>
-        <header-link-item routerLink="vault" title="connectors" i18n-title="@@i18n.common.connectors"></header-link-item>
+        <header-link-item routerLink="vault" title="connectors" roles="admin" i18n-title="@@i18n.common.connectors"></header-link-item>
+        <header-link-item routerLink="pdf" title="PDF template" roles="admin" i18n-title="@@i18n.settings.pdf.title"></header-link-item>
         <header-link-item routerLink="commands" title="commands" roles="admin" i18n-title="@@i18n.settings.commands"></header-link-item>
     </ul>
 </app-header>

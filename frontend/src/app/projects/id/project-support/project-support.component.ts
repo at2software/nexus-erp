@@ -1,5 +1,5 @@
 import { CdkTableModule } from '@angular/cdk/table';
-import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, input, OnDestroy, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Nx } from '@app/nx/nx.directive';
@@ -16,28 +16,40 @@ import { Product } from '@models/product/product.model';
 import { ProductService } from '@models/product/product.service';
 import { Project } from '@models/project/project.model';
 import { Company } from '@models/company/company.model';
+import { Serializable } from '@models/serializable';
+import { ExtIssueResolverService, ExtIssueRef } from '@models/ext-issue/ext-issue-resolver.service';
+import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { MoneyPipe } from '@pipes/money.pipe';
-import moment from 'moment';
+import { Dayjs, dayjsMin, dayjsMax } from '@constants/dates';
 import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
 import { Subscription } from 'rxjs';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'project-support',
-    standalone: true,
     imports: [CdkTableModule, DatePipe, DecimalPipe, FormsModule, RouterLink, Nx, NComponent, AffixInputDirective, NgbTooltipModule, NgxDaterangepickerMd, EmptyStateComponent, SearchInputComponent, SpinnerComponent, MoneyPipe],
     templateUrl: './project-support.component.html',
     styleUrl: './project-support.component.scss',
 })
-export class ProjectSupportComponent implements OnDestroy {
-    parent = input.required<Project | Company>();
+export class ProjectSupportComponent {
 
-    readonly ranges: any = DATESPAN_RANGE;
+    #focusService = inject(FocusService);
+    #invoiceItemService = inject(InvoiceItemService);
+    #productService = inject(ProductService);
+    #extIssueResolver = inject(ExtIssueResolverService);
+    #pluginFactory = inject(PluginInstanceFactory);
+    #destroyRef = inject(DestroyRef);
+    global = inject(GlobalService);
+
+    parent = input.required<Project | Company>();
+    parentReloadRequested = output<void>();
+
+    readonly ranges = DATESPAN_RANGE;
     span: StartEnd = new StartEnd();
     foci = signal<Focus[]>([]);
     selectionProduct = signal<Product | undefined>(undefined);
@@ -46,24 +58,19 @@ export class ProjectSupportComponent implements OnDestroy {
     selection = signal<Focus[]>([]);
     supportItems = signal<InvoiceItem[]>([]);
 
-    readonly fociColumns = ['user_id', 'started_at', 'comment', 'duration'];
+    /** Live-resolved external issue links keyed by focus id. Status is fetched, never stored. */
+    extIssues = signal<Record<string, ExtIssueRef>>({});
+
     readonly supportItemColumns = ['text', 'net'];
 
     readonly isProject = computed(() => this.parent() instanceof Project);
+    readonly hasIssueTracker = computed(() => (this.isProject() ? this.#pluginFactory.getTaskInstances(this.parent()).length > 0 : false));
+    readonly fociColumns = computed(() => (this.hasIssueTracker() ? ['user_id', 'started_at', 'comment', 'ext_issue', 'duration'] : ['user_id', 'started_at', 'comment', 'duration']));
     readonly vatId = computed(() => (this.parent() instanceof Project ? (this.parent() as Project).company?.vat_id : (this.parent() as Company).vat_id));
-    readonly invoicingRoute = computed(() => (this.isProject() ? 'invoicing' : 'billing'));
+    readonly invoicingRoute = computed(() => (this.isProject() ? ['..', 'invoicing', 'support'] : ['..', 'billing']));
 
     readonly descField = viewChild<ElementRef>('desc');
     readonly fociSpinner = viewChild<SpinnerComponent>('fociSpinner');
-
-    #focusService = inject(FocusService);
-    #invoiceItemService = inject(InvoiceItemService);
-    #productService = inject(ProductService);
-    #global = inject(GlobalService);
-
-    get global() {
-        return this.#global;
-    }
 
     #allFoci: Focus[] = [];
     #selectionSub: Subscription;
@@ -76,12 +83,11 @@ export class ProjectSupportComponent implements OnDestroy {
             this.reloadSupportItems();
         });
 
-        this.#selectionSub = this.#global.onObjectSelected.subscribe((_) => this.#onSelection(_));
-    }
-
-    ngOnDestroy() {
-        this.#global.registerSelectedObject(null, false);
-        this.#selectionSub.unsubscribe();
+        this.#selectionSub = this.global.onObjectSelected.subscribe((_) => this.#onSelection(_));
+        this.#destroyRef.onDestroy(() => {
+            this.global.registerSelectedObject(null, false);
+            this.#selectionSub.unsubscribe();
+        });
     }
 
     #initProduct(project: Project | Company) {
@@ -100,28 +106,34 @@ export class ProjectSupportComponent implements OnDestroy {
             next: (_) => {
                 this.#allFoci = _;
                 this.#filterFoci();
+                this.#extIssueResolver.resolveRows(this.isProject() ? (this.parent() as Project) : undefined, this.#allFoci, this.extIssues);
                 this.fociSpinner()?.hide();
             },
             error: () => this.fociSpinner()?.hide(),
         });
     }
 
+    /** Re-resolves ext-issue links after a row action (e.g. "link external issue") completes. */
+    onFociActionsResolved = () => this.#extIssueResolver.resolveRows(this.isProject() ? (this.parent() as Project) : undefined, this.#allFoci, this.extIssues);
+
     reloadSupportItems() {
         this.#invoiceItemService.getInvoiceItems(this.parent(), { append: 'my_prediction', with: 'predictions' }).subscribe((items: InvoiceItem[]) => {
-            this.supportItems.set(items.filter((x: any) => x.stage === 1 && !x.invoice_id));
+            this.supportItems.set(items.filter((x) => x.stage === 1 && !x.invoice_id));
         });
     }
 
-    #onSelection(_: any) {
+    #onSelection(_: unknown) {
         setTimeout(() => {
             const selected = [_].flat();
-            const foci = selected.length && selected[0] instanceof Focus ? selected : [];
+            const foci = (selected.length && selected[0] instanceof Focus ? selected : []) as Focus[];
             this.selection.set(foci);
             this.selectionSum.set(foci.reduce((b: number, a: Focus) => a.duration + b, 0).toString());
             foci.forEach((s: Focus) => {
-                if ((s.comment ?? '').length) this.selectionDescription.set(s.comment!);
+                if (s.comment?.length) {
+                    this.selectionDescription.set(s.comment);
+                }
             });
-            this.descField()?.nativeElement.focus();
+            if (foci.length) this.descField()?.nativeElement.focus();
         });
     }
 
@@ -141,12 +153,12 @@ export class ProjectSupportComponent implements OnDestroy {
 
     onCreateNewSupportItem() {
         const sel = this.selection();
-        let min: moment.Moment | undefined = undefined;
-        let max: moment.Moment | undefined = undefined;
+        let min: Dayjs | undefined = undefined;
+        let max: Dayjs | undefined = undefined;
         const selectedIds = sel.map((_) => {
             const ca = _.momentStarted();
-            min = min ? moment.min(ca, min) : ca;
-            max = max ? moment.max(ca, max) : ca;
+            min = min ? dayjsMin(ca, min) : ca;
+            max = max ? dayjsMax(ca, max) : ca;
             return _.id;
         });
         setTimeout(() => {
@@ -160,12 +172,15 @@ export class ProjectSupportComponent implements OnDestroy {
             this.#focusService.createInvoiceItemsFor(this.parent(), selectedIds, desc, parseFloat(this.selectionSum()), product.id).subscribe(() => {
                 this.reloadSupportItems();
                 this.reloadFoci();
+                this.parentReloadRequested.emit();
             });
         }
     }
 
-    onProductSelect(_: Product) {
-        this.selectionProduct.set(_);
+    onProductSelect(selected: Serializable) {
+        const product = selected.assert(Product);
+        if (!product) return;
+        this.selectionProduct.set(product);
         this.descField()?.nativeElement.focus();
     }
 }

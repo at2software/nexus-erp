@@ -32,9 +32,18 @@ interface TBankTx extends INxContextMenu {
     key: string;
 }
 
+// Matched transactions are rendered as plain rows (no [nx] directive), so they don't need INxContextMenu.
+interface TMatchedTx {
+    date: string;
+    amount: number;
+    sender: string;
+    reference: string;
+    key: string;
+}
+
 interface TMatchedItem {
     expense: Expense;
-    transactions: TBankTx[];
+    transactions: TMatchedTx[];
     is_amount_mismatch: boolean;
     latest_amount: number;
 }
@@ -117,7 +126,7 @@ export class InvoicesBankBalanceComponent {
         const dangerColor = Color.fromVar('danger').toHexString();
         return {
             backgroundColor: 'transparent',
-            tooltip: { trigger: 'item', formatter: (p: any) => `${p.name}: ${p.value}` },
+            tooltip: { trigger: 'item', formatter: (p) => { const pt = p as { name: string; value: number }; return `${pt.name}: ${pt.value}`; } },
             series: [{
                 type: 'pie',
                 radius: ['55%', '85%'],
@@ -130,7 +139,7 @@ export class InvoicesBankBalanceComponent {
         };
     });
 
-    get filteredUnmatched(): TBankTx[] {
+    readonly filteredUnmatched = computed<TBankTx[]>(() => {
         let txs = this.unmatched();
         if (this.hideSingleDebitors()) {
             const counts = new Map<string, number>();
@@ -139,42 +148,38 @@ export class InvoicesBankBalanceComponent {
         }
         const text = this.filterText().toLowerCase();
         return text ? txs.filter(tx => tx.reference.toLowerCase().includes(text) || tx.sender.toLowerCase().includes(text)) : txs;
-    }
+    });
 
-    get commonPattern(): string {
+    readonly commonPattern = computed<string>(() => {
         const txs = this.selectedTxs();
         if (txs.length === 0) return '';
         if (txs.length === 1) return txs[0].reference;
         return longestCommonSubstring(txs.map(t => t.reference));
-    }
+    });
 
-    get expensesWithoutPattern(): Expense[] {
-        return this.allExpenses().filter(e => !e.matching_string);
-    }
+    readonly expensesWithoutPattern = computed<Expense[]>(() => this.allExpenses().filter(e => !e.matching_string));
 
-    get expensesWithPattern(): Expense[] {
-        return this.allExpenses().filter(e => !!e.matching_string);
-    }
+    readonly expensesWithPattern = computed<Expense[]>(() => this.allExpenses().filter(e => !!e.matching_string));
 
     categoryFor = (exp: Expense) => this.categories().find(c => String(c.id) === String(exp.category_id));
 
-    isCatSelected = (id: any) => this.selectedCategoryIds().has(String(id));
-    isPatternCatSelected = (id: any) => this.selectedPatternCategoryIds().has(String(id));
+    isCatSelected = (id: string) => this.selectedCategoryIds().has(String(id));
+    isPatternCatSelected = (id: string) => this.selectedPatternCategoryIds().has(String(id));
 
-    toggleCategory(id: any) {
+    toggleCategory(id: string) {
         this.selectedCategoryIds.update(s => {
             const key = String(id);
             const n = new Set(s);
-            n.has(key) ? n.delete(key) : n.add(key);
+            if (n.has(key)) n.delete(key); else n.add(key);
             return n;
         });
     }
 
-    togglePatternCategory(id: any) {
+    togglePatternCategory(id: string) {
         this.selectedPatternCategoryIds.update(s => {
             const key = String(id);
             const n = new Set(s);
-            n.has(key) ? n.delete(key) : n.add(key);
+            if (n.has(key)) n.delete(key); else n.add(key);
             return n;
         });
     }
@@ -188,7 +193,7 @@ export class InvoicesBankBalanceComponent {
             expenses: this.#expenseService.index(),
         }).subscribe({
             next: ({ bank, expenses }) => {
-                const matched: TMatchedItem[] = (bank.matched ?? []).map((item: any) => {
+                const matched: TMatchedItem[] = (bank.matched ?? []).map((item) => {
                     const expense: Expense =
                         expenses.find((e: Expense) => String(e.id) === String(item.expense.id)) ?? Expense.fromJson(item.expense);
                     if (item.is_amount_mismatch) {
@@ -200,7 +205,7 @@ export class InvoicesBankBalanceComponent {
                     }
                     return {
                         expense,
-                        transactions: (item.transactions as any[]).map((tx: any, i: number) => ({ ...tx, key: `m|${tx.date}|${i}` })),
+                        transactions: item.transactions.map((tx, i) => ({ ...tx, key: `m|${tx.date}|${i}` })),
                         is_amount_mismatch: !!item.is_amount_mismatch,
                         latest_amount: +item.latest_amount,
                     };
@@ -208,7 +213,7 @@ export class InvoicesBankBalanceComponent {
 
                 this.matched.set(matched);
                 this.unmatched.set(
-                    (bank.unmatched ?? []).map((tx: any, i: number) => ({
+                    (bank.unmatched ?? []).map((tx, i) => ({
                         ...tx,
                         key: `u|${tx.date}|${tx.amount}|${i}`,
                         actions: this.#makeTxActions(),
@@ -234,14 +239,14 @@ export class InvoicesBankBalanceComponent {
             {
                 title: $localize`:@@i18n.invoices.assignToExpense:assign to expense`,
                 group: true,
-                on: () => this.expensesWithoutPattern.length > 0,
+                on: () => this.expensesWithoutPattern().length > 0,
                 action: () => this.openAssignModalNx(),
             },
             {
                 title: $localize`:@@i18n.invoices.changeStringOnExpense:change string on expense`,
                 group: true,
-                on: () => this.expensesWithPattern.length > 0,
-                children: () => this.expensesWithPattern.map(exp => ({
+                on: () => this.expensesWithPattern().length > 0,
+                children: () => this.expensesWithPattern().map(exp => ({
                     title: exp.name,
                     group: true,
                     action: () => this.changeStringOnExpense(exp),
@@ -262,14 +267,14 @@ export class InvoicesBankBalanceComponent {
     toggleExpand(id: string) {
         this.expandedIds.update(s => {
             const n = new Set(s);
-            n.has(id) ? n.delete(id) : n.add(id);
+            if (n.has(id)) n.delete(id); else n.add(id);
             return n;
         });
     }
     isExpanded = (id: string) => this.expandedIds().has(id);
 
     highlightRef(reference: string): SafeHtml {
-        const pattern = this.commonPattern;
+        const pattern = this.commonPattern();
         if (!pattern) return this.#sanitizer.bypassSecurityTrustHtml(this.#esc(reference));
         const lref = reference.toLowerCase();
         const lpat = pattern.toLowerCase();
@@ -293,22 +298,23 @@ export class InvoicesBankBalanceComponent {
     createExpenseFromNxSelection() {
         const ref = this.#ngbModal.open(ModalEditExpenseComponent, { size: 'xl' });
         ref.componentInstance.init(undefined);
-        ref.componentInstance.item.matching_string = this.commonPattern;
+        ref.componentInstance.item.matching_string = this.commonPattern();
     }
 
     openAssignModalNx() {
-        const pattern = this.commonPattern;
-        ModalBaseService.open(ModalAssignExpenseComponent, this.expensesWithoutPattern, pattern).then((expense: Expense) => {
+        const pattern = this.commonPattern();
+        ModalBaseService.open(ModalAssignExpenseComponent, this.expensesWithoutPattern(), pattern).then((expense) => {
+            if (!expense) return;
             expense.matching_string = pattern;
             expense.update().subscribe(() => {
                 Toast.success(`pattern assigned to "${expense.name}"`);
                 this.load();
             });
-        }).catch(() => {});
+        });
     }
 
     changeStringOnExpense(expense: Expense) {
-        const pattern = this.commonPattern;
+        const pattern = this.commonPattern();
         expense.matching_string = pattern;
         expense.update().subscribe(() => {
             Toast.success(`pattern updated for "${expense.name}"`);

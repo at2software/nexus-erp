@@ -14,29 +14,28 @@ import { SpinnerComponent } from '@shards/spinner/spinner.component';
     selector: 'marketing-convert-prospect-modal',
     templateUrl: './marketing-convert-prospect-modal.component.html',
     styleUrls: ['./marketing-convert-prospect-modal.component.scss'],
-    standalone: true,
     imports: [FormsModule, ScrollbarComponent, AvatarComponent, SpinnerComponent],
 })
 export class MarketingConvertProspectModalComponent extends ModalBaseComponent<{ company_id?: string; create_new: boolean; company_name?: string }> {
     prospect!: MarketingProspect;
-    searchQuery: string = '';
-    companyResults: Company[] = [];
-    selectedCompany: Company | null = null;
+    searchQuery = signal('');
+    companyResults = signal<Company[]>([]);
+    selectedCompany = signal<Company | null>(null);
     isLoading = signal(false);
     createNew = signal(false);
 
     #searchService = inject(SearchService);
-    #searchDelay: any;
+    #searchDelay: ReturnType<typeof setTimeout> | undefined;
 
-    init(...args: any): void {
-        this.prospect = args[0].prospect;
+    init(args: { prospect: MarketingProspect }): void {
+        this.prospect = args.prospect;
         // Pre-fill search with company name from prospect's vcard
         const companyFromVcard = this.prospect.card()
             ?.get('ORG')
             ?.map((_) => _.vals.join(' '))
             .join(', ');
         if (companyFromVcard) {
-            this.searchQuery = companyFromVcard;
+            this.searchQuery.set(companyFromVcard);
             this.#searchCompanies();
         }
     }
@@ -44,46 +43,46 @@ export class MarketingConvertProspectModalComponent extends ModalBaseComponent<{
     onSearchInput() {
         if (this.#searchDelay) clearTimeout(this.#searchDelay);
 
-        if (this.searchQuery.length >= 2) {
+        if (this.searchQuery().length >= 2) {
             this.#searchDelay = setTimeout(() => this.#searchCompanies(), 300);
         } else {
-            this.companyResults = [];
+            this.companyResults.set([]);
         }
     }
 
     #searchCompanies() {
         this.isLoading.set(true);
-        this.#searchService.search(this.searchQuery, { only: 'Company' }).subscribe({
-            next: (results: any) => {
-                this.companyResults = Object.values(results).map((x: any) => REFLECTION(x) as Company);
+        this.#searchService.search(this.searchQuery(), { only: 'Company' }).subscribe({
+            next: (results) => {
+                this.companyResults.set(Object.values(results).map((x) => REFLECTION<Company>(x)));
                 this.isLoading.set(false);
             },
             error: () => {
                 this.isLoading.set(false);
-                this.companyResults = [];
+                this.companyResults.set([]);
             },
         });
     }
 
     selectCompany(company: Company) {
-        this.selectedCompany = company;
+        this.selectedCompany.set(company);
         this.createNew.set(false);
     }
 
     selectCreateNew() {
         this.createNew.set(true);
-        this.selectedCompany = null;
+        this.selectedCompany.set(null);
     }
 
     onSuccess() {
         if (this.createNew()) {
             return {
                 create_new: true,
-                company_name: this.searchQuery,
+                company_name: this.searchQuery(),
             };
-        } else if (this.selectedCompany) {
+        } else if (this.selectedCompany()) {
             return {
-                company_id: this.selectedCompany.id,
+                company_id: this.selectedCompany()!.id,
                 create_new: false,
             };
         }

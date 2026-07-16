@@ -105,7 +105,7 @@ class DebriefStatisticsService {
                 $first           = $problemRows->first();
                 $maxSeverity     = $problemRows->sortByDesc(fn ($r) => $severityWeights[$r->severity] ?? 0)->first()->severity;
                 $problemProjects = $problemRows->pluck('project_id')->filter()->unique()
-                    ->map(fn ($id) => $projects->get($id)?->only(['id', 'name', 'icon']))
+                    ->map(fn ($id) => $projects->get($id)?->onlyAvatar())
                     ->filter()->values()->toArray();
 
                 $problems[] = [
@@ -141,7 +141,7 @@ class DebriefStatisticsService {
         return $query->get()->map(fn ($problem) => [
             'id'             => $problem->id,
             'title'          => $problem->title,
-            'category'       => $problem->category->name,
+            'category_name'  => $problem->category->name,
             'category_color' => $problem->category->color,
             'usage_count'    => $problem->usage_count,
         ])->toArray();
@@ -152,10 +152,10 @@ class DebriefStatisticsService {
             ->limit($limit)
             ->get()
             ->map(fn ($solution) => [
-                'id'                => $solution->id,
-                'title'             => $solution->title,
-                'avg_effectiveness' => round($solution->avg_effectiveness_rating ?? 0, 2),
-                'usage_count'       => $solution->usage_count,
+                'id'                       => $solution->id,
+                'title'                    => $solution->title,
+                'avg_effectiveness_rating' => round($solution->avg_effectiveness_rating ?? 0, 2),
+                'usage_count'              => $solution->usage_count,
             ])->toArray();
     }
     public function getTrends(int $months = 12): array {
@@ -245,12 +245,12 @@ class DebriefStatisticsService {
         return $positives->map(fn ($positive) => [
             'id'             => $positive->id,
             'title'          => $positive->title,
-            'category'       => $positive->category_name,
+            'category_name'  => $positive->category_name,
             'category_color' => $positive->category_color,
             'count'          => $positive->count,
             'projects'       => $projectsByTitle->get($positive->title, collect())
                 ->pluck('project_id')->unique()
-                ->map(fn ($id) => $projects->get($id)?->only(['id', 'name', 'icon']))
+                ->map(fn ($id) => $projects->get($id)?->onlyAvatar())
                 ->filter()->values()->toArray(),
         ])->toArray();
     }
@@ -285,7 +285,7 @@ class DebriefStatisticsService {
         $companies = Company::whereIn('id', $rows->pluck('company_id')->filter()->unique())->get()->keyBy('id');
         return $rows->map(fn ($row) => array_merge(
             $companies->get($row->company_id)?->onlyAvatar() ?? ['id' => $row->company_id, 'name' => 'Unknown', 'icon' => ''],
-            ['count' => $row->problem_count]
+            ['debrief_problem_count' => $row->problem_count]
         ))->toArray();
     }
     public function getTopCustomersByPositives(int $limit = 10, array $filters = []): array {
@@ -319,7 +319,7 @@ class DebriefStatisticsService {
         $companies = Company::whereIn('id', $rows->pluck('company_id')->filter()->unique())->get()->keyBy('id');
         return $rows->map(fn ($row) => array_merge(
             $companies->get($row->company_id)?->onlyAvatar() ?? ['id' => $row->company_id, 'name' => 'Unknown', 'icon' => ''],
-            ['count' => $row->positive_count]
+            ['debrief_positive_count' => $row->positive_count]
         ))->toArray();
     }
     public function getCategoryBreakdownPositives(array $filters = []): array {

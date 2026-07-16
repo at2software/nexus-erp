@@ -5,15 +5,9 @@ namespace App\Http\Controllers;
 use App\Actions\CombineInvoiceItemsAction;
 use App\Enums\InvoiceItemType;
 use App\Models\InvoiceItem;
-use App\Traits\ControllerHasPermissionsTrait;
 use Illuminate\Http\Request;
 
 class InvoiceItemController extends Controller {
-    use ControllerHasPermissionsTrait;
-
-    public function permissionsMiddleware() {
-        return 'permission_invoiceItem';
-    }
     public function indexStandingOrders() {
         $q = InvoiceItem::whereIn('type', InvoiceItemType::Repeating)->whereNot('next_recurrence_at', null)->with('company', 'productSource')->oldest('next_recurrence_at');
         if (request()->has('company_id')) {

@@ -4,7 +4,7 @@
 
 <div class="background"></div>
 
-@if (!p.is_time_based && p.state.isRunning()) {
+@if (!p.is_time_based) {
     @if (p.progress() <= 1) {
         <div class="outline" [style.borderColor]="color">
             <div class="outline-limit">

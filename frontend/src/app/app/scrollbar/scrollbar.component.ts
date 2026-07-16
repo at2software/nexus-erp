@@ -8,7 +8,6 @@ import { ContinuousScrollComponent } from '@shards/continuous/continuous.scroll.
     styleUrls: ['./scrollbar.component.scss'],
     host: { class: 'custom-scrollbar' },
     imports: [],
-    standalone: true,
 })
 export class ScrollbarComponent extends ContinuousScrollComponent {
     el = inject(ElementRef);

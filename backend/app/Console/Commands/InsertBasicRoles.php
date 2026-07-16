@@ -35,10 +35,10 @@ class InsertBasicRoles extends Command {
         AssignmentRole::firstOrCreate(['name' => 'customer']);
 
         $admin = User::firstOrCreate(
-            ['email' => env('ADMIN_EMAIL', 'admin@example.com')],
+            ['email' => config('services.admin.email')],
             [
                 'name'     => 'Super Admin',
-                'password' => Hash::make(env('ADMIN_PASSWORD', 'changeme')),
+                'password' => Hash::make(config('services.admin.password')),
                 'vcard'    => "BEGIN:VCARD\nFN:Super Admin\nN:Admin;Admin;;;\nEND:VCARD",
             ]
         );

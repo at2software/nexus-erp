@@ -33,7 +33,7 @@ class ZugferdInvoiceBuilder {
             $iban        = Param::get('ME_IBAN')->value;
             $sellerEmail = Param::get('ME_EMAIL')->value ?? '';
             if (empty($sellerEmail) || trim($sellerEmail) === '') {
-                $sellerEmail = env('MAIL_FROM_ADDRESS', 'noreply@example.com');
+                $sellerEmail = config('mail.from.address', 'noreply@example.com');
             }
 
             $document

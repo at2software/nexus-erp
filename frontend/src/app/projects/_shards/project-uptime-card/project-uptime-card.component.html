@@ -49,8 +49,8 @@
                         <div class="fw-bold">{{ monitor.name }}</div>
                     </div>
                     <div class="avatars-stack">
-                        @if (project().project_manager) {
-                            <avatar [object]="project().project_manager" size="xs"></avatar>
+                        @if (trackedProject().project_manager) {
+                            <avatar [object]="trackedProject().project_manager" size="xs"></avatar>
                         }
                         @for (user of monitor.recipients; track user.id) {
                             <avatar [object]="user" size="xs"></avatar>

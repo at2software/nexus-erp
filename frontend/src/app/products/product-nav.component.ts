@@ -5,8 +5,6 @@ import { RouterModule } from '@angular/router';
 @Component({
     selector: 'product-nav',
     templateUrl: './product-nav.component.html',
-    styleUrls: ['./product-nav.component.scss'],
-    standalone: true,
     imports: [ProductTreeComponent, RouterModule],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

@@ -13,6 +13,4 @@ class FloatParam extends BaseModel {
     protected function casts(): array {
         return ['value' => 'double'];
     }
-
-    protected $access   = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 }

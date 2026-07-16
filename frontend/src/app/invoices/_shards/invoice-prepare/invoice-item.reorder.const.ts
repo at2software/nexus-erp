@@ -1,9 +1,10 @@
+import { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { deepCopy } from '@constants/deepClone';
 import { InvoiceItemType } from '@enums/invoice-item.type';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { InvoiceItemService } from '@models/invoice/invoice-item.service';
 
-export const reorderInvoiceItems = (items: InvoiceItem[], event: any, service: InvoiceItemService) => {
+export const reorderInvoiceItems = (items: InvoiceItem[], event: CdkDragDrop<InvoiceItem[]>, service: InvoiceItemService) => {
     const copy = deepCopy(items);
     const i = copy.splice(event.previousIndex, 1);
     copy.splice(event.currentIndex, 0, i[0]);
@@ -39,12 +40,17 @@ function clamp(value: number, max: number): number {
     return Math.max(0, Math.min(max, value));
 }
 
-export const reindexInvoiceItems = (items: InvoiceItem[]): { items: InvoiceItem[]; net: number; gross: number; vat: any } => {
-    let vat: any = {};
+interface VatEntry {
+    title: string;
+    value: number;
+}
+
+export const reindexInvoiceItems = (items: InvoiceItem[]): { items: InvoiceItem[]; net: number; gross: number; vat: VatEntry[] } => {
+    const vatByRate: Record<string, VatEntry> = {};
     let pos = 0;
     let net = 0;
     let gross = 0;
-    let currentGroup: any = undefined;
+    let currentGroup: InvoiceItem | undefined = undefined;
     for (const item of items) {
         if (item.hasNumbering()) {
             item.var.pos = ++pos;
@@ -56,10 +62,10 @@ export const reindexInvoiceItems = (items: InvoiceItem[]): { items: InvoiceItem[
                 currentGroup.var.sum += item.total;
                 currentGroup.var.pt += item.pt;
             }
-            if (!(item.vat_rate in vat)) {
-                vat[item.vat_rate] = { title: '+ ' + item.vat_rate + '% VAT', value: 0 };
+            if (!(item.vat_rate in vatByRate)) {
+                vatByRate[item.vat_rate] = { title: '+ ' + item.vat_rate + '% VAT', value: 0 };
             }
-            vat[item.vat_rate].value += item.vat;
+            vatByRate[item.vat_rate].value += item.vat;
         } else {
             if (item.type == InvoiceItemType.Header) {
                 currentGroup = item;
@@ -68,6 +74,6 @@ export const reindexInvoiceItems = (items: InvoiceItem[]): { items: InvoiceItem[
             }
         }
     }
-    vat = Object.values(vat);
-    return { items: items, net: net, gross: gross, vat: vat };
+    const vat = Object.values(vatByRate);
+    return { items: [...items], net: net, gross: gross, vat: vat };
 };

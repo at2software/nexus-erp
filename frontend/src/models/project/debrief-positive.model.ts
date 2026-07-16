@@ -5,12 +5,13 @@ import { User } from '@models/user/user.model';
 import { signal, computed } from '@angular/core';
 import { Type } from 'class-transformer';
 import { NxAction, NxActionType } from '@app/nx/nx.actions';
-import { tap } from 'rxjs';
+import { map } from 'rxjs';
 import { NxGlobal, TBroadcast } from '@app/nx/nx.global';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
 import { ModalInputComponent } from '@app/_modals/modal-input/modal-input.component';
 import { ModalCombineDebriefItemsComponent } from '@app/_modals/modal-combine-debrief-items/modal-combine-debrief-items.component';
 import { Model } from '@constants/type-discriminators';
+import { Project } from './project.model';
 
 @Model('DebriefPositive')
 export class DebriefPositive extends Serializable {
@@ -25,11 +26,8 @@ export class DebriefPositive extends Serializable {
             group: false,
             action: (success) => {
                 ModalBaseService.open(ModalInputComponent, { title: $localize`:@@i18n.common.rename:rename`, initialValue: this.title })
-                    .then((result: any) => {
+                    .then((result) => {
                         if (result?.text?.trim()) this.update({ title: result.text }).subscribe(() => success?.(undefined));
-                    })
-                    .catch(() => {
-                        /* noop */
                     });
             },
         },
@@ -44,7 +42,7 @@ export class DebriefPositive extends Serializable {
                     ModalCombineDebriefItemsComponent,
                     items.map((i) => ({ id: i.id, title: i.title })),
                 )
-                    .then((result: any) => {
+                    .then((result) => {
                         if (!result?.title?.trim()) return;
                         NxGlobal.getService(DebriefService)
                             .combinePositives(
@@ -52,9 +50,6 @@ export class DebriefPositive extends Serializable {
                                 result.title,
                             )
                             .subscribe(() => success?.(undefined));
-                    })
-                    .catch(() => {
-                        /* noop */
                     });
             },
         },
@@ -63,7 +58,7 @@ export class DebriefPositive extends Serializable {
             group: true,
             children: () => [
                 { title: $localize`:@@i18n.common.none:none`, group: true, action: () => this.update({ debrief_problem_category_id: null }) },
-                ...['customer', 'process', 'technical', 'planning'].map((cat: any, index: number) => ({
+                ...['customer', 'process', 'technical', 'planning'].map((cat: string, index: number) => ({
                     title: cat,
                     group: true,
                     action: () => this.update({ debrief_problem_category_id: index + 1 }),
@@ -86,7 +81,11 @@ export class DebriefPositive extends Serializable {
     description?: string;
     debrief_problem_category_id?: string;
     reported_by_user_id?: string;
+    category_name?: string;
+    category_color?: string;
+    count: number = 0;
 
+    @Type(()=>Project) projects: Project[] = [];
     @Type(()=>DebriefProblemCategory) category?: DebriefProblemCategory;
     @Type(()=>User) reported_by?: User;
 
@@ -94,7 +93,12 @@ export class DebriefPositive extends Serializable {
         if (this.debrief_project_debrief_id()) {
             return NxGlobal.getService(DebriefService)
                 .detachPositive(this.debrief_project_debrief_id(), this.id)
-                .pipe(tap(() => NxGlobal.broadcast({ type: TBroadcast.Delete, data: this })));
+                .pipe(
+                    map(() => {
+                        NxGlobal.broadcast({ type: TBroadcast.Delete, data: this });
+                        return this;
+                    }),
+                );
         }
         return super.delete();
     }

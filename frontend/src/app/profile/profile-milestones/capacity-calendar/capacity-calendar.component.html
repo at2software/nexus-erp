@@ -1,0 +1,159 @@
+<div class="capacity-calendar" (pointermove)="onPointerMove($event)" (pointerup)="onPointerUp()" (pointercancel)="onPointerUp()">
+    @if (overdueMilestones().length) {
+        <div class="overdue-milestones">
+            @for (milestone of overdueMilestones(); track milestone.id) {
+                <div
+                    class="overdue-milestone-row"
+                    [ngbTooltip]="milestoneTooltip(milestone)"
+                    (click)="editMilestone.emit(milestone)"
+                    (keydown.enter)="editMilestone.emit(milestone)"
+                    [nx]="milestone"
+                    tabindex="0"
+                >
+                    @if (milestone.project) {
+                        <avatar [object]="milestone.project" size="xs"></avatar>
+                    }
+                    <span class="flex-fill text-truncate">{{ milestone.name }}</span>
+                    <span class="due-date">{{ dueDateLabel(milestone) }}</span>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="day-of-week-header">
+        @for (label of dayLabels; track label) {
+            <div class="day-of-week-label">{{ label }}</div>
+        }
+    </div>
+
+    @for (week of weeks(); track trackByWeek($index, week)) {
+        <div class="week-row">
+            <div class="week-meta">
+                @if (week.monthLabel) {
+                    <span class="month-label">{{ week.monthLabel }}</span>
+                }
+            </div>
+
+            <div class="week-body" [style.--lanes]="week.laneCount">
+                <div class="week-days">
+                    @for (day of week.days; track $index) {
+                        @if (day) {
+                            <div
+                                class="day-cell"
+                                [class.today]="isToday(day)"
+                                [class.bg-striped]="day.is_break"
+                                cdkDropList
+                                [id]="dropListId(day)"
+                                [cdkDropListData]="day"
+                                [cdkDropListSortingDisabled]="true"
+                                (cdkDropListDropped)="onDrop(day, $event)"
+                                #popover="ngbPopover"
+                                [ngbPopover]="dayPopover"
+                                [popoverContext]="{ day: day, popover: popover }"
+                                triggers="click"
+                                placement="auto"
+                                container="body"
+                                tabindex="0"
+                            >
+                                @if (!day.is_break) {
+                                    <div class="capacity-fill" [class.overflow]="isOverflowing(day)" [style.height]="fillHeight(day)"></div>
+                                }
+                                <div 
+                                    class="day-number" 
+                                    [class.text-muted]="day.is_break"
+                                    [class.text-warning]="day.total_percent > 80 && day.total_percent <= 100"
+                                    [class.text-danger]="day.total_percent > 100"
+                                    >
+                                    {{ dayNumber(day) }}
+                                </div>
+                                @if (day.distinct_project_count > 1) {
+                                    <div class="fragmentation-dots" ngbTooltip="{{ day.distinct_project_count }} projects">
+                                        @for (_ of fragmentationDots(day); track $index) {
+                                            <span class="dot"></span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        } @else {
+                            <div class="day-cell day-empty"></div>
+                        }
+                    }
+                </div>
+
+                <div class="event-lanes">
+                    @for (bar of week.bars; track trackByBar($index, bar)) {
+                        <div
+                            class="event-bar"
+                            [class.continues-left]="bar.continuesLeft"
+                            [class.continues-right]="bar.continuesRight"
+                            [class.bg-danger]="isMilestoneOverdue(bar.milestone)"
+                            [class.bg-warning]="isMilestoneLateStart(bar.milestone)"
+                            [class.bg-success]="isMilestoneDone(bar.milestone)"
+                            [class.bg-not-started]="isMilestoneNotStarted(bar.milestone)"
+                            [style.left]="barLeft(bar)"
+                            [style.width]="barWidth(bar)"
+                            [style.top.px]="bar.lane * 24"
+                            [ngbTooltip]="barTooltip(bar)"
+                            (pointerdown)="onBarPointerDown(bar, 'move', $event)"
+                            (click)="onBarClick(bar, $event)"
+                            (keydown.enter)="editMilestone.emit(bar.milestone)"
+                            [nx]="bar.milestone"
+                            tabindex="0"
+                        >
+                            @if (!bar.continuesLeft) {
+                                <span class="resize-handle start" (pointerdown)="onBarPointerDown(bar, 'resize-start', $event)"></span>
+                            }
+                            <span class="bar-label hstack gap-0 align-items-center flex-nowrap">
+                                @if (bar.milestone.project) {
+                                    <avatar [object]="bar.milestone.project" size="xs"></avatar>
+                                }
+                                <span>{{ bar.milestone.name }}</span>
+                            </span>
+                            @if (!bar.continuesRight) {
+                                <span class="resize-handle end" (pointerdown)="onBarPointerDown(bar, 'resize-end', $event)"></span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<ng-template #dayPopover let-day="day" let-popover="popover">
+    @if (day) {
+        <div class="day-popup">
+            <div class="d-flex align-items-center justify-content-between">
+                <strong>{{ day.date }}</strong>
+                @if (!day.is_break) {
+                    <button type="button" class="btn btn-sm text-primary p-0" (click)="onAddClick(day, popover)" i18n-ngbTooltip="@@i18n.common.addMilestone" ngbTooltip="add milestone">
+                        <i>add</i>
+                    </button>
+                }
+            </div>
+            @if (day.is_break) {
+                <div class="text-muted mt-1"><i class="me-1">event_busy</i>{{ day.break_name || day.break_type }}</div>
+            } @else {
+                <div class="d-flex justify-content-between mt-1">
+                    <span i18n="@@i18n.planner.totalWorkload">total workload</span>
+                    <strong [class.text-success]="day.total_percent < 75" [class.text-warning]="day.total_percent >= 75 && day.total_percent < 100" [class.text-danger]="day.total_percent >= 100">{{ day.total_percent | number: '1.0-1' }}%</strong>
+                </div>
+                <div class="text-muted small">{{ day.total_hours | number: '1.1-1' }}h / {{ day.available_hours }}h</div>
+                @if (day.elements.length) {
+                    <hr class="my-2" />
+                    @for (element of day.elements; track trackByElement($index, element)) {
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            @if (element.project) {
+                                <avatar [object]="element.project"></avatar>
+                            }
+                            <span class="flex-fill text-truncate">{{ element.name }}</span>
+                            <span class="text-muted">{{ element.hours | number: '1.1-1' }}h</span>
+                        </div>
+                    }
+                } @else {
+                    <div class="text-muted small mt-2" i18n="@@i18n.planner.noWorkScheduled">no work scheduled</div>
+                }
+            }
+        </div>
+    }
+</ng-template>

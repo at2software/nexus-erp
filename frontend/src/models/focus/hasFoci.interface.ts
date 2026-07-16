@@ -1,18 +1,16 @@
 import { Signal } from '@angular/core';
-import { Focus } from './focus.model';
-import { Assignee } from '@models/assignee/assignee.model';
-export interface IHasFoci {
+import type { Focus } from './focus.model';
+import type { Assignee } from '@models/assignee/assignee.model';
+import type { ProjectTimelineEntry } from '@models/api-response';
+import { Serializable } from '@models/serializable';
+
+// Extending Serializable guarantees every IHasFoci is a Serializable model: because Serializable
+// carries protected/private members, only its subclasses can satisfy this interface.
+export interface IHasFoci extends Serializable {
     foci: Focus[];
-    class: string;
-    id: string;
     hasTimeBudget: () => boolean;
-    icon: string;
     pivot?: Assignee;
-    badge: Signal<[string, string] | undefined>;
-    ngLink: Signal<string | undefined>;
-    getName: () => string;
-    apiPath: () => string;
-    apiPathWithId: () => string;
+    timeline_chart?: ProjectTimelineEntry[];
 }
 
 export interface IHasFociGuard {

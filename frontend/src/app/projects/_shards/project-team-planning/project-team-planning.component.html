@@ -1,4 +1,4 @@
-@let _entity = entity();
+@let _entity = trackedEntity();
 @let _project = asProject();
 @let _assignees = assignees();
 
@@ -28,7 +28,7 @@
         </div>
         @let _progress = forecastProgress();
         @if (_progress) {
-            <div class="progress rounded-0" style="height: 2px" ngbTooltip="invested: {{ _progress.invested | number: '1.1-1' }}h  forecast: {{ _progress.forecast | number: '1.1-1' }}h  estimated: {{ _progress.estimated | number: '1.1-1' }}h">
+            <div class="progress rounded-0" style="height: 2px" [ngbTooltip]="tooltipText()">
                 <div class="progress-bar bg-primary" [style.width.%]="_progress.investedPct"></div>
                 @if (_progress.allocatedPct > 0) {
                     <div class="progress-bar bg-primary bg-striped" [style.width.%]="_progress.allocatedPct"></div>
@@ -50,10 +50,10 @@
                     <div class="position-relative">
                         <avatar [object]="c.assignee"></avatar>
                         @if (_project?.project_manager?.id === c.assignee.id) {
-                            <i class="pm-badge text-primary" i18n-ngbTooltip="@@i18n.common.projectManager" ngbTooltip="project manager">manage_accounts</i>
+                            <i class="pm-badge text-primary" i18n-title="@@i18n.common.projectManager" title="project manager">manage_accounts</i>
                         }
                     </div>
-                    <div class="flex-fill text-truncate" [ngbTooltip]="c.assignee.getName()" container="parent">
+                    <div class="flex-fill text-truncate" [title]="c.assignee.getName()">
                         {{ c.assignee.getName() }}
                     </div>
                     <div class="input-group w-auto flex-nowrap">
@@ -74,10 +74,10 @@
                         }
                         @if (_project?.is_time_based || isProjectManager()) {
                             @if (isProjectManager()) {
-                                <input class="form-control text-end" style="width: 50px;" ngbTooltip="planned hours" [(ngModel)]="c.hours_planned" (blur)="c.hours_planned = roundHours(c.hours_planned)" [autosave]="c" roles="project_manager" i18n-ngbTooltip="@@i18n.projects.plannedHours" />
+                                <input class="form-control text-end" style="width: 50px;" i18n-title="@@i18n.projects.plannedHours" title="planned hours" [(ngModel)]="c.hours_planned" (blur)="c.hours_planned = roundHours(c.hours_planned)" [autosave]="c" roles="project_manager" />
                             }
                             @else {
-                                <span class="input-group-text" ngbTooltip="planned hours" noroles="project_manager" i18n-ngbTooltip="@@i18n.projects.plannedHours">{{ c.hours_planned | number: '1.0-1' }}h</span>
+                                <span class="input-group-text" i18n-title="@@i18n.projects.plannedHours" title="planned hours" noroles="project_manager">{{ c.hours_planned | number: '1.0-1' }}h</span>
                             }
                         }
                     </div>

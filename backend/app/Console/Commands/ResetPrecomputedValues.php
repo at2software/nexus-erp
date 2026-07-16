@@ -31,7 +31,7 @@ class ResetPrecomputedValues extends Command {
             if (method_exists($model, 'resetPrecomputedAttributes')) {
                 if (count($model->getPrecomputedAttributes())) {
                     echo "Resetting precomputed values for $class\n";
-                    $model::all()->each(fn ($m) => $m->resetPrecomputedAttributes());
+                    $model::query()->chunkById(100, fn ($chunk) => $chunk->each->resetPrecomputedAttributes());
                 }
             }
         }

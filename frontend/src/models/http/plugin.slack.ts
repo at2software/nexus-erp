@@ -1,10 +1,14 @@
+import { Dictionary } from '@constants/constants';
 import { catchError, map, Observable } from 'rxjs';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { PluginLink } from '../pluginLink/plugin-link.model';
 import { ChatPluginInstance } from './chat.plugin.instance';
 
+interface SlackPost extends Dictionary { ts?: string; text?: string; user?: string; }
+interface SlackHistoryResponse extends Dictionary { messages?: SlackPost[]; }
+
 export class SlackPlugin extends ChatPluginInstance {
-    posts: any[] = [];
+    posts: SlackPost[] = [];
     channelName: string = 'slack';
 
     // VCard integration metadata (not implemented for Slack yet)
@@ -25,21 +29,21 @@ export class SlackPlugin extends ChatPluginInstance {
     baseUrl = (): string => this._baseUrl.substring(0, this.enc.value.url.length) + 'api';
 
     toPluginLink = (id: string) => PluginLink.fromJson({ type: 'slack', url: this.enc.value.url + 'archives/' + id });
-    index = () => this.get(`/conversations.history?channel=${this.channelId}&latest=${moment().unix()}`, {}, this.#toPost);
-    indexMembers = () => this.get(`/conversations.members?channel=${this.channelId}`, {}, (_: any) => this.getRootInstance().addMember(_));
+    index = () => this.get(`/conversations.history?channel=${this.channelId}&latest=${dayjs().unix()}`, {}, this.#toPost);
+    indexMembers = () => this.get(`/conversations.members?channel=${this.channelId}`, {}, (_: unknown) => this.getRootInstance().addMember(_ as Dictionary<unknown>));
     showImage = (userId: string) => this.getRootInstance().getBlob(`users.profile.get?user=${userId}`);
     showChannel = () => this.get('/conversations.info', { channel: this.channelId });
-    setChannelName = (data: any) => (this.channelName = data.name);
+    setChannelName = (data: unknown) => (this.channelName = (data as { name?: string })?.name ?? '');
     send = (message: string) => this.getRootInstance().post(`chat.postMessage`, { channel: this.channelId, text: message });
 
     // Get activity for comments tab
-    getActivityComments(): Observable<any[]> {
-        return this.index().pipe(
-            map((posts: any[]) => {
+    getActivityComments(): Observable<Dictionary[]> {
+        return (this.index() as Observable<SlackPost[]>).pipe(
+            map((posts) => {
                 if (!posts) return [];
                 return posts.map((post) => ({
                     text: `<n>slack</n> ${post.text || ''}`,
-                    created_at: new Date(parseInt(post.ts) * 1000),
+                    created_at: new Date(parseInt(post.ts ?? '0') * 1000),
                     user: { name: post.user || 'Unknown' },
                     is_mini: true,
                     var: { source: 'slack', nicon: 'slack' },
@@ -53,18 +57,19 @@ export class SlackPlugin extends ChatPluginInstance {
             this.getRootInstance()
                 .get('auth.test')
                 .pipe(catchError(() => this.handleError(reject)))
-                .subscribe(resolve);
+                .subscribe(() => resolve());
         });
 
-    #toPost = (data: any): object => {
-        let m: any[] = data.messages || [];
-        m.forEach((post: any) => {
-            post.avatar = () => {
-                const member = this.findMember(post.user);
+    #toPost = (data: unknown): SlackPost[] => {
+        const d = data as SlackHistoryResponse;
+        let m: SlackPost[] = d.messages || [];
+        m.forEach((post) => {
+            (post as SlackPost & { avatar?: () => string | undefined }).avatar = () => {
+                const member = this.findMember(post.user ?? '');
                 return member?.icon;
             };
         });
-        m = m.sort((a, b) => a.ts - b.ts);
+        m = m.sort((a, b) => Number(a.ts ?? 0) - Number(b.ts ?? 0));
         return m;
     };
 }

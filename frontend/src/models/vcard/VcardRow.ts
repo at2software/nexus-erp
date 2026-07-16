@@ -1,3 +1,4 @@
+import { Dictionary } from '@constants/constants';
 import { NxContextMenu } from '@app/nx/nx.contextmenu';
 import type { INxContextMenu } from '@app/nx/nx.contextmenu.interface';
 
@@ -11,7 +12,7 @@ export class VcardRow implements INxContextMenu {
     }
 
     track_id: number = NxContextMenu.getTrackId();
-    info: Record<string, any> = {};
+    info: Dictionary<any> = {};
 
     actions = [{ title: 'Remove', hotkey: 'CTRL+DELETE', group: true }];
 

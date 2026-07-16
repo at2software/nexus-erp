@@ -7,7 +7,6 @@ import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
     selector: 'activity-tab',
     template: '<ng-content></ng-content>',
     host: { class: 'tab-pane fade' },
-    standalone: true,
 })
 export class ActivityTabComponent {
     readonly el = inject(ElementRef);
@@ -18,7 +17,7 @@ export class ActivityTabComponent {
     nicon = input<string>();
     hidden = model(false);
     badge = model<string | undefined>(undefined);
-    componentType = input<Type<any>>();
+    componentType = input<Type<unknown>>();
     onFocus: () => void = () => { /* no-op */ };
     onBlur: () => void = () => { /* no-op */ };
 

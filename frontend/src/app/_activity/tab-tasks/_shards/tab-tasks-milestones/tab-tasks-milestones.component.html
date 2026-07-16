@@ -1,9 +1,9 @@
-<ng-template #milestonesTemplate let-items="items" let-title="title" let-color="color" let-sectionKey="sectionKey">
+﻿<ng-template #milestonesTemplate let-items="items" let-title="title" let-color="color" let-sectionKey="sectionKey">
     @if (items.length) {
         <div class="header text-{{ color }} align-items-center hstack gap-2">
             <n>nexus</n>
             <span class="flex-fill">{{ title }}</span>
-            <i class="pointer" (click)="toggle(sectionKey)">{{ isCollapsed(sectionKey) ? 'expand_less' : 'expand_more' }}</i>
+            <i class="pointer" tabindex="0" (click)="toggle(sectionKey)" (keyup.enter)="toggle(sectionKey)">{{ isCollapsed(sectionKey) ? 'expand_less' : 'expand_more' }}</i>
         </div>
         @if (!isCollapsed(sectionKey)) {
             <ul class="list-group">
@@ -40,7 +40,7 @@
     <div class="header text-warning align-items-center hstack gap-2">
         <n>nexus</n>
         <span class="flex-fill" i18n="@@i18n.activity.projectsNoCoverage">projects without milestone coverage</span>
-        <i class="pointer" (click)="toggle('noCoverage')">{{ isCollapsed('noCoverage') ? 'expand_less' : 'expand_more' }}</i>
+        <i class="pointer" tabindex="0" (click)="toggle('noCoverage')" (keyup.enter)="toggle('noCoverage')">{{ isCollapsed('noCoverage') ? 'expand_less' : 'expand_more' }}</i>
     </div>
     @if (!isCollapsed('noCoverage')) {
         <ul class="list-group">

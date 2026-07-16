@@ -15,10 +15,12 @@ const config: Config = {
     ],
   },
   moduleNameMapper: {
+    'src/(.*)': '<rootDir>/src/$1',
     '@charts/(.*)': '<rootDir>/src/app/_charts/$1',
     '@dashboard/(.*)': '<rootDir>/src/app/dashboard/$1',
     '@models/(.*)': '<rootDir>/src/models/$1',
     '@constants/(.*)': '<rootDir>/src/constants/$1',
+    '@pipes/(.*)': '<rootDir>/src/pipes/$1',
     '@directives/(.*)': '<rootDir>/src/directives/$1',
     '@guards/(.*)': '<rootDir>/src/guards/$1',
     '@shards/(.*)': '<rootDir>/src/app/_shards/$1',

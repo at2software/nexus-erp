@@ -11,7 +11,6 @@ import { HotkeyDirective } from '@directives/hotkey.directive';
 @Component({
     selector: 'hr-vacation-container',
     templateUrl: './hr-vacation-container.component.html',
-    standalone: true,
     imports: [HrVacationComponent, HotkeyDirective],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -30,7 +29,8 @@ export class HrVacationContainerComponent {
     }
 
     onAddGrant() {
-        this.#modal.open(HrVacationGrantModalComponent, VacationGrant.fromJson({}), this.currentUser).then((_) => {
+        this.#modal.open(HrVacationGrantModalComponent, VacationGrant.fromJson({}), this.currentUser()).then((_) => {
+            if (!_) return;
             _.store({ name: _.name, expires_at: _.expires_at, amount: _.amount, user_id: _.user_id }).subscribe(() => this.hrVacationComponent()?.reload());
         });
     }

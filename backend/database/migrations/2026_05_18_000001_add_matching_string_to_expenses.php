@@ -10,7 +10,6 @@ return new class extends Migration {
             $table->string('matching_string')->nullable()->after('ends_at');
         });
     }
-
     public function down(): void {
         Schema::table('expenses', function (Blueprint $table) {
             $table->dropColumn('matching_string');

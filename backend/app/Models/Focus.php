@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class Focus extends BaseModel {
     use HasFactory;
 
-    protected $fillable = ['created_at', 'started_at', 'updated_at', 'user_id', 'parent_id', 'parent_type', 'duration', 'comment', 'invoice_item_id', 'invoiced_in_item_id', 'is_unpaid'];
+    protected $fillable = ['created_at', 'started_at', 'updated_at', 'user_id', 'parent_id', 'parent_type', 'duration', 'comment', 'invoice_item_id', 'invoiced_in_item_id', 'is_unpaid', 'ext_issue_plugin_link_id', 'ext_issue_id'];
 
     // protected $hidden = ['project', 'company'];
     protected $appends = ['class', 'icon', 'path'];
@@ -23,8 +23,8 @@ class Focus extends BaseModel {
         ];
     }
 
+    // Cascades a save to the parent (Project or Company), which broadcasts itself as 'updated'.
     protected $touches = ['user', 'parent'];
-    protected $access  = ['admin' => '*', 'project_manager' => 'cru', 'user' => 'cru'];
 
     public function parent() {
         return $this->morphTo();
@@ -37,6 +37,9 @@ class Focus extends BaseModel {
     }
     public function invoicedInItem() {
         return $this->belongsTo(InvoiceItem::class, 'invoiced_in_item_id');
+    }
+    public function extIssuePluginLink() {
+        return $this->belongsTo(PluginLink::class, 'ext_issue_plugin_link_id');
     }
     public function getParentNameAttribute() {
         return $this->parent->name;

@@ -15,7 +15,6 @@ export interface CombineInvoiceItemsResult {
     selector: 'modal-combine-invoice-items',
     templateUrl: './modal-combine-invoice-items.component.html',
     styleUrls: ['./modal-combine-invoice-items.component.scss'],
-    standalone: true,
     imports: [FormsModule, DecimalPipe, HotkeyDirective, SafePipe],
 })
 export class ModalCombineInvoiceItemsComponent extends ModalBaseComponent<CombineInvoiceItemsResult> {

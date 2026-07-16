@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, inject, signal, viewChild } from '@angular/core';
-import * as d3 from 'd3';
+import { arc, curveCardinalClosed, line, max, range, scaleBand, scaleLinear, select, selectAll } from 'd3';
 import { InvoiceService } from '@models/invoice/invoice.service';
 import { NComponent } from '@shards/n/n.component';
 import { Color } from '@constants/Color';
@@ -16,12 +16,19 @@ interface MonthlyRevenueData {
     avg: number;
 }
 
+interface RadialLayer {
+    getInner: (d: MonthlyRevenueData) => number;
+    getOuter: (d: MonthlyRevenueData) => number;
+    darken: number;
+}
+
+interface RadialPoint { x: number; y: number }
+
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'widget-revenue-radial',
     templateUrl: './widget-revenue-radial.component.html',
-    styleUrls: ['./widget-revenue-radial.component.scss'],
-    standalone: true,
+    host: { class: 'd-block' },
     imports: [NComponent, SpinnerComponent],
     providers: [MoneyPipe],
 })
@@ -38,7 +45,7 @@ export class WidgetRevenueRadialComponent {
     }
 
     #loadData() {
-        this.#invoiceService.getMonthlyRevenueRanges().subscribe((data: any) => {
+        this.#invoiceService.getMonthlyRevenueRanges().subscribe((data) => {
             this.#data = data as MonthlyRevenueData[];
             this.loading.set(false);
             setTimeout(() => this.#createChart(), 0);
@@ -48,7 +55,7 @@ export class WidgetRevenueRadialComponent {
     #createChart() {
         if (!this.chartContainer() || !this.#data.length) return;
 
-        d3.select(this.chartContainer()!.nativeElement).selectAll('*').remove();
+        select(this.chartContainer()!.nativeElement).selectAll('*').remove();
 
         const width = 280;
         const height = 280;
@@ -59,11 +66,11 @@ export class WidgetRevenueRadialComponent {
 
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-        const x = d3.scaleBand().domain(d3.range(12).map((i) => i.toString())).range([0, 2 * Math.PI]).align(0);
-        const maxValue = d3.max(this.#data, (d) => d.max) || 1;
-        const y = d3.scaleLinear().domain([0, maxValue * 1.1]).range([innerRadius, outerRadius]);
+        const x = scaleBand().domain(range(12).map((i) => i.toString())).range([0, 2 * Math.PI]).align(0);
+        const maxValue = max(this.#data, (d) => d.max) || 1;
+        const y = scaleLinear().domain([0, maxValue * 1.1]).range([innerRadius, outerRadius]);
 
-        const svg = d3.select(this.chartContainer()!.nativeElement)
+        const svg = select(this.chartContainer()!.nativeElement)
             .append('svg')
             .attr('width', width)
             .attr('height', height)
@@ -72,7 +79,7 @@ export class WidgetRevenueRadialComponent {
 
         const g = svg.append('g');
 
-        const getBand = (d: any, position: 'min' | 'inner-dark' | 'inner-light' | 'median' | 'outer-light' | 'outer-dark' | 'max'): number => {
+        const getBand = (d: MonthlyRevenueData, position: 'min' | 'inner-dark' | 'inner-light' | 'median' | 'outer-light' | 'outer-dark' | 'max'): number => {
             const median = d.median;
             const lowerRange = median - d.min;
             const upperRange = d.max - median;
@@ -87,20 +94,20 @@ export class WidgetRevenueRadialComponent {
             }
         };
 
-        const layers = [
-            { getInner: (d: any) => getBand(d, 'min'), getOuter: (d: any) => getBand(d, 'inner-dark'), darken: 30 },
-            { getInner: (d: any) => getBand(d, 'inner-dark'), getOuter: (d: any) => getBand(d, 'inner-light'), darken: 20 },
-            { getInner: (d: any) => getBand(d, 'inner-light'), getOuter: (d: any) => getBand(d, 'outer-light'), darken: 0 },
-            { getInner: (d: any) => getBand(d, 'outer-light'), getOuter: (d: any) => getBand(d, 'outer-dark'), darken: 20 },
-            { getInner: (d: any) => getBand(d, 'outer-dark'), getOuter: (d: any) => getBand(d, 'max'), darken: 30 },
+        const layers: RadialLayer[] = [
+            { getInner: (d) => getBand(d, 'min'), getOuter: (d) => getBand(d, 'inner-dark'), darken: 30 },
+            { getInner: (d) => getBand(d, 'inner-dark'), getOuter: (d) => getBand(d, 'inner-light'), darken: 20 },
+            { getInner: (d) => getBand(d, 'inner-light'), getOuter: (d) => getBand(d, 'outer-light'), darken: 0 },
+            { getInner: (d) => getBand(d, 'outer-light'), getOuter: (d) => getBand(d, 'outer-dark'), darken: 20 },
+            { getInner: (d) => getBand(d, 'outer-dark'), getOuter: (d) => getBand(d, 'max'), darken: 30 },
         ];
 
         layers.forEach((layer, layerIndex) => {
-            const arc = d3.arc<any>()
-                .innerRadius((d: any) => y(layer.getInner(d)))
-                .outerRadius((d: any) => y(layer.getOuter(d)))
-                .startAngle((d: any, i: number) => x(i.toString())!)
-                .endAngle((d: any, i: number) => x(i.toString())! + x.bandwidth())
+            const arcPath = arc<unknown, MonthlyRevenueData>()
+                .innerRadius((d) => y(layer.getInner(d)))
+                .outerRadius((d) => y(layer.getOuter(d)))
+                .startAngle((_, i) => x(i.toString())!)
+                .endAngle((_, i) => x(i.toString())! + x.bandwidth())
                 .padAngle(0.02)
                 .padRadius(innerRadius);
 
@@ -108,31 +115,31 @@ export class WidgetRevenueRadialComponent {
 
             g.append('g').selectAll('path').data(this.#data).join('path')
                 .attr('fill', normalColor)
-                .attr('d', arc as any)
-                .attr('class', (d: any, i: number) => `segment-m${i} layer-${layerIndex}`);
+                .attr('d', arcPath as unknown as string)
+                .attr('class', (_, i) => `segment-m${i} layer-${layerIndex}`);
         });
 
-        const tooltip = d3.select('body').append('div')
+        const tooltip = select('body').append('div')
             .attr('class', 'radial-chart-tooltip')
             .style('position', 'absolute').style('visibility', 'hidden')
             .style('background-color', 'rgba(0, 0, 0, 0.9)').style('color', '#fff')
             .style('padding', '12px').style('border-radius', '4px')
             .style('font-size', '12px').style('pointer-events', 'none').style('z-index', '1000');
 
-        const hoverArc = d3.arc<any>()
+        const hoverArc = arc<unknown, MonthlyRevenueData>()
             .innerRadius(innerRadius).outerRadius(outerRadius)
-            .startAngle((d: any, i: number) => x(i.toString())!)
-            .endAngle((d: any, i: number) => x(i.toString())! + x.bandwidth())
+            .startAngle((_, i) => x(i.toString())!)
+            .endAngle((_, i) => x(i.toString())! + x.bandwidth())
             .padAngle(0.02).padRadius(innerRadius);
 
         g.append('g').selectAll('path').data(this.#data).join('path')
             .attr('fill', 'transparent')
-            .attr('d', hoverArc as any)
-            .on('mouseover', (event: any, d: any) => {
+            .attr('d', hoverArc as unknown as string)
+            .on('mouseover', (event: MouseEvent, d: MonthlyRevenueData) => {
                 const monthIndex = Array.from(this.#data).indexOf(d);
                 layers.forEach((layer, layerIndex) => {
                     const hoverColor = Color.fromVar('--color-primary-0', '').darken(layer.darken).lighten(15).toHexString();
-                    d3.selectAll(`.segment-m${monthIndex}.layer-${layerIndex}`).attr('fill', hoverColor);
+                    selectAll(`.segment-m${monthIndex}.layer-${layerIndex}`).attr('fill', hoverColor);
                 });
                 tooltip.style('visibility', 'visible').html(`
                     <div style="font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #444; padding-bottom: 4px;">${monthNames[monthIndex]}</div>
@@ -146,16 +153,16 @@ export class WidgetRevenueRadialComponent {
                     </table>
                 `);
             })
-            .on('mousemove', (event: any) => tooltip.style('top', event.pageY - 10 + 'px').style('left', event.pageX + 10 + 'px'))
+            .on('mousemove', (event: MouseEvent) => tooltip.style('top', event.pageY - 10 + 'px').style('left', event.pageX + 10 + 'px'))
             .on('mouseout', () => {
                 layers.forEach((layer, layerIndex) => {
                     const normalColor = Color.fromVar('--color-primary-0', '').darken(layer.darken).toHexString();
-                    d3.selectAll(`.layer-${layerIndex}`).attr('fill', normalColor);
+                    selectAll(`.layer-${layerIndex}`).attr('fill', normalColor);
                 });
                 tooltip.style('visibility', 'hidden');
             });
 
-        const medianPoints = this.#data.map((d: any, i: number) => {
+        const medianPoints = this.#data.map((d, i) => {
             const angle = x(i.toString())! + x.bandwidth() / 2;
             const radius = y(d.median);
             return { x: Math.cos(angle - Math.PI / 2) * radius, y: Math.sin(angle - Math.PI / 2) * radius };
@@ -163,16 +170,16 @@ export class WidgetRevenueRadialComponent {
 
         g.append('path')
             .datum(medianPoints)
-            .attr('d', d3.line().x((d: any) => d.x).y((d: any) => d.y).curve(d3.curveCardinalClosed.tension(0.5)) as any)
+            .attr('d', line<RadialPoint>().x((d) => d.x).y((d) => d.y).curve(curveCardinalClosed.tension(0.5)) as unknown as string)
             .attr('fill', 'none').attr('stroke', '#ffffff').attr('stroke-width', 2);
 
-        svg.append('g').attr('text-anchor', 'middle').call((g: any) =>
+        svg.append('g').attr('text-anchor', 'middle').call((g) =>
             g.selectAll('g').data(monthNames).join('g')
                 .attr('transform', (d: string, i: number) => {
                     const angle = ((x(i.toString())! + x.bandwidth() / 2) * 180) / Math.PI - 90;
                     return `rotate(${angle}) translate(${labelRadius}, 0)`;
                 })
-                .call((g: any) =>
+                .call((g) =>
                     g.append('text')
                         .attr('transform', (d: string, i: number) => {
                             const angle = ((x(i.toString())! + x.bandwidth() / 2) * 180) / Math.PI - 90;

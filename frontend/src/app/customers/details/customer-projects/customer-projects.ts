@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, afterNextRender, inject, signal, vi
 import { Router } from '@angular/router';
 import { ProjectService } from '@models/project/project.service';
 import { Project } from '@models/project/project.model';
-import moment from 'moment';
+import { dayjsMax } from '@constants/dates';
 import { ProjectStateFilterComponent } from '@app/projects/_shards/project-state-filter/project-state-filter.component';
 import { CustomerDetailGuard } from '@app/customers/customers.details.guard';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
@@ -23,7 +23,6 @@ import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragPreview } from '@angular/cdk/
     selector: 'customer-projects',
     templateUrl: './customer-projects.html',
     styleUrls: ['./customer-projects.scss'],
-    standalone: true,
     imports: [ToolbarComponent, ScrollbarComponent, ProjectStateFilterComponent, EmptyStateComponent, FormsModule, DatePipe, NgTemplateOutlet, Nx, AvatarComponent, ProjectComponent, NgbTooltipModule, MoneyShortPipe, PermissionsDirective, HotkeyDirective, CdkDropList, CdkDrag, CdkDragPreview],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -47,7 +46,7 @@ export class CustomerProjects {
     }
 
     reload() {
-        const filters = this.stateFilter().getFilters();
+        const filters = { ...this.stateFilter().getFilters() };
         const object = this.#parent.object();
         filters.withParents = true;
         this.#projectService.indexForCompany(object, filters).subscribe((data: Project[]) => {
@@ -83,7 +82,7 @@ export class CustomerProjects {
         const recurse = (_: Project[]) => _.forEach((item) => {
             recurse(item.var.subprojects);
             item.var.total = item.net + item.var.subprojects.reduce((a: number, b: Project) => a + b.var.total, 0);
-            item.var.latest = moment.max(item.momentCreated(), ...item.var.subprojects.map((a: Project) => a.momentCreated()));
+            item.var.latest = dayjsMax(item.createdAt(), ...item.var.subprojects.map((a: Project) => a.createdAt()));
         });
         recurse(result);
         return result.sort((a: Project, b: Project) => b.var.latest.diff(a.var.latest, 'seconds'));
@@ -114,7 +113,7 @@ export class CustomerProjects {
         if (draggedProject.id !== targetProject.id) this.#makeSubproject(draggedProject, targetProject);
     }
 
-    onAddProject = () => this.#projectService.addProject(this.#parent.object().id).subscribe((x: any) => this.#router.navigate(['/projects/' + x.id]));
+    onAddProject = () => this.#projectService.addProject(this.#parent.object().id).subscribe((x) => this.#router.navigate(['/projects/' + x.id]));
 
     #makeSubproject(draggedProject: Project, targetProject: Project) {
         if (this.#wouldCreateCircularDependency(draggedProject.id, targetProject.id)) return;

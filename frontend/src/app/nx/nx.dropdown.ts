@@ -1,14 +1,14 @@
-import { Component, ElementRef, inject, input, effect } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input } from '@angular/core';
 import { NxAction } from './nx.actions';
-import { NxService } from './nx.service';
+import { NxService, resolved } from './nx.service';
 import { AutopositionDirective } from '@directives/autoposition.directive';
 import { NxSubMenu } from './ns.submenu.directive';
 
 @Component({
     selector: 'nx-dropdown',
+    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: 'nx.dropdown.html',
     host: { class: 'dropdown-menu' },
-    standalone: true,
     imports: [NxSubMenu, AutopositionDirective],
     styles: [
         `
@@ -32,16 +32,6 @@ export class NxDropdown {
     el = inject(ElementRef);
     #service = inject(NxService);
 
-    constructor() {
-        effect(() => {
-            this.actions().forEach((a) => {
-                if (typeof a.children === 'function') {
-                    a.children = a.children();
-                }
-            });
-        });
-    }
-
-    children = (a: NxAction): NxAction[] | undefined => a.children as NxAction[];
+    children = (a: NxAction): NxAction[] | undefined => resolved<NxAction[] | undefined>(a.children);
     onClick = (a: NxAction) => this.#service.triggerAction(a);
 }

@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject, signal, TemplateRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, TemplateRef } from '@angular/core';
 import { tracked } from '@constants/tracked';
 import { User } from '@models/user/user.model';
-import moment from 'moment';
+import { dayjs } from '@constants/dates';
 import { UserService } from '@models/user/user.service';
 import { GlobalService } from '@models/global.service';
 import { environment } from 'src/environments/environment';
@@ -21,6 +21,8 @@ import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { UlCompactComponent } from '@shards/ul-compact/ul-compact.component';
+import { Serializable } from '@models/serializable';
+import { TbeRow } from '@models/api-response';
 
 interface TBlocks {
     paid: [number, string][];
@@ -33,12 +35,14 @@ interface TBlocks {
 }
 const newTBlocks = (month: string): TBlocks => ({ paid: [], vacation: [], worked: [], excluded: [], month: month, delta: 0, lastDelta: 0 });
 
+// A reflected project/company model with the time-based-employment extras the backend attaches.
+type TbeProjectRow = Serializable & { path: string; duration: number };
+
 @Component({
     selector: 'hr-employment',
     templateUrl: './hr-employment.component.html',
     styleUrls: ['./hr-employment.component.scss'],
     imports: [SmartLinkDirective, AvatarComponent, DatePipe, DecimalPipe, FormsModule, NgbDatepickerModule, NgbTooltipModule, UlCompactComponent, ToolbarComponent, Nx, AvatarComponent, HotkeyDirective, EmptyStateComponent],
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HrEmploymentComponent {
@@ -52,7 +56,7 @@ export class HrEmploymentComponent {
     protected readonly _user = signal<User | null>(null);
 
     readonly user = tracked(this._user);
-    projects = signal<any[]>([]);
+    projects = signal<TbeProjectRow[]>([]);
     employments = signal<UserEmployment[]>([]);
     tblocks = signal<Record<string, TBlocks>>({});
     roles = signal<string[]>([]);
@@ -60,15 +64,15 @@ export class HrEmploymentComponent {
 
     env = environment;
     remInput = 0;
-    addTbeDate: NgbDateStruct = { year: moment().year(), month: moment().month(), day: 25 };
+    addTbeDate: NgbDateStruct = { year: dayjs().year(), month: dayjs().month(), day: 25 };
     addTbeAmount = 0;
     readonly factor = (1 / 160) * 8 * (20 / 12);
 
     #maxDelta = 0;
     #minDelta = 0;
-    #tbe_table: any[] = [];
+    #tbe_table: TbeRow[] = [];
 
-    get isAdmin() { return this.#global.user?.hasRole('admin') ?? false; }
+    readonly isAdmin = computed(() => this.#global.user?.hasRole('admin') ?? false);
     get minDelta() { return this.#minDelta; }
 
     constructor() {
@@ -83,11 +87,11 @@ export class HrEmploymentComponent {
     reload() {
         const user = this.user();
         if (!user) return;
-        this.#userService.showTimeBasedEmploymentInfo(user).subscribe((data: any) => {
-            this.projects.set(data.tbe_projects?.map((project: any) => REFLECTION(project)) ?? []);
+        this.#userService.showTimeBasedEmploymentInfo(user).subscribe((data) => {
+            this.projects.set(data.tbe_projects?.map((project) => REFLECTION<TbeProjectRow>(project)) ?? []);
             this.#tbe_table = data.tbe_table ?? [];
-            this.employments.set(data.employments.map((_: any) => UserEmployment.fromJson(_)));
-            this.roles.set(data.roles.map((_: any) => _.name));
+            this.employments.set(data.employments.map((_) => UserEmployment.fromJson(_)));
+            this.roles.set(data.roles.map((_) => _.name));
 
             const blocks: Record<string, TBlocks> = {};
             for (const _ of this.#tbe_table) {
@@ -132,7 +136,7 @@ export class HrEmploymentComponent {
         this.remOutput.set((this.remInput + this.getTbeMonths().last()!.delta) / (1 - this.factor));
     }
 
-    open(content: TemplateRef<any>) {
+    open(content: TemplateRef<unknown>) {
         this.#modalService.open(content, { ariaLabelledBy: 'modal-basic-title' });
     }
 
@@ -143,7 +147,9 @@ export class HrEmploymentComponent {
     }
 
     onNewEmployment() {
-        this.#modal.open(ModalNewEmploymentComponent, this.user()).then((_: UserEmployment) => {
+        const user = this.user();
+        if (!user) return;
+        this.#modal.open(ModalNewEmploymentComponent, user).then((_) => {
             if (_) _.store().subscribe(() => this.reload());
         });
     }

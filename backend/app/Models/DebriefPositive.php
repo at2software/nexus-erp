@@ -10,7 +10,6 @@ class DebriefPositive extends BaseModel {
     protected $table    = 'debrief_positives';
     protected $fillable = ['title', 'description', 'debrief_problem_category_id', 'reported_by_user_id'];
     protected $appends  = ['class', 'icon'];
-    protected $access   = ['admin' => '*', 'project_manager' => 'cru'];
 
     public function projectDebriefs() {
         return $this->belongsToMany(DebriefProjectDebrief::class, 'debrief_positive_project_debrief')

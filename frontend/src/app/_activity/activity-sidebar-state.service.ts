@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { storageGet, storageSet } from '@constants/storage';
 
 @Injectable({ providedIn: 'root' })
 export class ActivitySidebarStateService {
@@ -21,14 +22,14 @@ export class ActivitySidebarStateService {
     }
 
     #saveSidebarState(isCollapsed: boolean): void {
-        localStorage.setItem(this.#STORAGE_KEY, isCollapsed.toString());
+        storageSet(this.#STORAGE_KEY, isCollapsed);
     }
 
     #restoreSidebarState(): void {
-        const savedState = localStorage.getItem(this.#STORAGE_KEY);
-        if (savedState === 'true') {
+        const savedState = storageGet<boolean | null>(this.#STORAGE_KEY, null);
+        if (savedState === true) {
             document.body.classList.add('activity-collapsed');
-        } else if (savedState === 'false') {
+        } else if (savedState === false) {
             document.body.classList.remove('activity-collapsed');
         }
     }

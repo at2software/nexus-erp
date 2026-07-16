@@ -5,6 +5,7 @@ import { ExpenseService } from './expense.service';
 import { getExpenseActions } from './expense.actions';
 import { Model } from '@constants/type-discriminators';
 import { tap } from 'rxjs';
+import { Dictionary } from '@constants/constants';
 
 export const REPEATING_MULT = { 30: 365, 31: 52, 32: 12, 33: 4, 34: 1 };
 @Model('Expense')
@@ -19,27 +20,30 @@ export class Expense extends Serializable {
     ends_at: string = '';
     matching_string: string = '';
     price: number = 0;
+    key: string = '';
+    value: number = 0;
 
     repeat: InvoiceItemTypeRepeating = InvoiceItemType.Monthly;
 
     doubleClickAction: number = 0;
     actions: NxAction[] = getExpenseActions(this);
+    
+    get yearlyPrice(): number {
+        return this.repeat in REPEATING_MULT ? REPEATING_MULT[this.repeat] * this.price : 0;
+    }
 
     getAllRepeatKeys = () => Object.keys(REPEATING_MULT).map((_) => parseInt(_));
     repeatString = () => this.repeatStringFor(this.repeat);
     repeatColor = () => this.repeatColorFor(this.repeat);
     repeatStringFor = (_: InvoiceItemType | number) => InvoiceItemType[_];
     repeatColorFor = (_: InvoiceItemType | number) => getInvoiceItemTypeRepeatColor(_);
-    get yearlyPrice(): number {
-        return this.repeat in REPEATING_MULT ? REPEATING_MULT[this.repeat] * this.price : 0;
-    }
 
     daysUntilNext(): number | null {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const anchor = this.starts_at ? new Date(this.starts_at) : new Date(today);
         anchor.setHours(0, 0, 0, 0);
-        let next = new Date(anchor);
+        const next = new Date(anchor);
         while (next < today) {
             switch (this.repeat) {
                 case 30: next.setDate(next.getDate() + 1); break;
@@ -52,7 +56,7 @@ export class Expense extends Serializable {
         }
         return Math.round((next.getTime() - today.getTime()) / 86400000);
     }
-    addCategoryChangeAction = (categories: Record<string, string>, index: number) => {
+    addCategoryChangeAction = (categories: Dictionary<string>, index: number) => {
         this.actions.splice(index, 0, {
             title: $localize`:@@i18n.common.changeCategory:change category`,
             group: true,

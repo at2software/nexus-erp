@@ -7,7 +7,6 @@ import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 
 @Component({
     selector: 'hr-stats-workload',
-    standalone: true,
     imports: [HrWorkloadComponent, EmptyStateComponent],
     templateUrl: './hr-stats-workload.component.html',
     styleUrls: ['./hr-stats-workload.component.scss'],

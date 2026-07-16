@@ -1,0 +1,56 @@
+:host {
+    position: relative;
+    display: block;
+    height: 100%;
+    min-height: 120px;
+    overflow: hidden;
+    border: 1px solid var(--bs-border-color, #444);
+    border-radius: 0.375rem;
+    background: #1e1e1e;
+}
+
+.ce-pre,
+.ce-ta {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 8px;
+    font: 12px/1.5 monospace;
+    tab-size: 2;
+    white-space: pre;
+    overflow: auto;
+    border: 0;
+}
+
+.ce-pre {
+    pointer-events: none;
+    color: #d4d4d4;
+
+    code {
+        font: inherit;
+    }
+}
+
+.ce-ta {
+    background: transparent;
+    color: transparent;
+    caret-color: #fff;
+    resize: none;
+    outline: none;
+}
+
+.ce-ta::selection {
+    background: rgba(120, 160, 255, 0.35);
+}
+
+// VS Code-ish token palette
+:host ::ng-deep {
+    .t-tag { color: #4ec9b0; }
+    .t-attr { color: #9cdcfe; }
+    .t-str { color: #ce9178; }
+    .t-com { color: #6a9955; }
+    .t-prop { color: #9cdcfe; }
+    .t-num { color: #b5cea8; }
+    .t-at { color: #c586c0; }
+    .t-punc { color: #808080; }
+}

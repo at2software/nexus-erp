@@ -2,7 +2,6 @@
 @let _annotations = annotations();
 @let _maxHeight = maxHeight();
 @let _object = object();
-@let _config = config();
 @let _isExpanded = isExpanded();
 @let _showModalLocalizationControls = showModalLocalizationControls();
 @let _isLocalized = isLocalized();
@@ -70,10 +69,30 @@
 
 <ng-template #content let-modal>
     <div class="modal-body">
-        <angular-editor #editor [config]="_config" [ngModel]="editorValue()" (ngModelChange)="editorValue.set($event)">
-            <ng-template #customButtons let-executeCommandFn="executeCommandFn">
+        <div [id]="toolbarId" class="rte-toolbar">
+            <span class="ql-formats">
+                <button class="ql-bold" type="button"><i>format_bold</i></button>
+                <button class="ql-italic" type="button"><i>format_italic</i></button>
+                <button class="ql-underline" type="button"><i>format_underline</i></button>
+            </span>
+            <span class="ql-formats">
+                <button class="ql-blockquote" type="button"><i>format_quote</i></button>
+                <select class="ql-header">
+                    <option value="3">H</option>
+                    <option selected></option>
+                </select>
+            </span>
+            <span class="ql-formats">
+                <button class="ql-list" value="ordered" type="button"><i>format_list_numbered</i></button>
+                <button class="ql-list" value="bullet" type="button"><i>format_list_bulleted</i></button>
+            </span>
+            <span class="ql-formats">
+                <button class="ql-link" type="button"><i>link</i></button>
+                <button class="ql-clean" type="button"><i>format_clear</i></button>
+            </span>
+            <span class="ql-formats">
                 @if (_showModalLocalizationControls && !_isLocalized) {
-                    <button aeButton title="localize" i18n-title="@@i18n.common.localize" (click)="localize()">
+                    <button type="button" title="localize" i18n-title="@@i18n.common.localize" (click)="localize()">
                         <i>translate</i>
                     </button>
                 }
@@ -87,11 +106,14 @@
                         <option value="remove" i18n="@@i18n.common.removeLocalization">remove localization</option>
                     </select>
                 }
-                <button aeButton title="Insert Image from Marketing Assets" (click)="onCustomImageInsert(executeCommandFn)">
+                <button type="button" title="Insert Image from Marketing Assets" (click)="openImageSelection()">
                     <i>collections</i>
                 </button>
-            </ng-template>
-        </angular-editor>
+            </span>
+        </div>
+        @if (editorReady()) {
+            <quill-editor [modules]="modules" [ngModel]="editorValue()" (ngModelChange)="editorValue.set($event)" [debounceTime]="300" (onEditorCreated)="onEditorCreated($event)"></quill-editor>
+        }
     </div>
     <button type="button" class="btn btn-fancy btn-fancy-be" (click)="modal.close('Save click')" i18n="@@i18n.common.save">save</button>
 </ng-template>

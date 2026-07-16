@@ -1,3 +1,4 @@
+import { Dictionary } from '@constants/constants';
 import { PluginInstance } from '@models/http/plugin.instance';
 import { ITaskPlugin } from './task.plugin.interface';
 import { PluginLink } from '@models/pluginLink/plugin-link.model';
@@ -32,11 +33,11 @@ export class TaskService extends PluginInstance implements ITaskPlugin {
     getPluginTypeName = () => 'nexus';
 
     // TaskService doesn't have external activity
-    getActivityComments = (_projectId: string = '', _maxInitialItems: number = 150, _resolveUser?: any): Observable<any[]> => of([]);
+    getActivityComments = (_projectId: string = '', _maxInitialItems: number = 150, _resolveUser?: (email?: string, username?: string, name?: string, pluginAttribute?: string) => unknown): Observable<never[]> => of([]);
     baseUrl = (): string => environment.envApi;
     canCreateTasks = (): boolean => true;
     myUser = () => NxGlobal.global.user;
-    indexTasks = () => this.aget('tasks', {}, this.#toTask);
+    indexTasks = (): Observable<Task[]> => this.aget('tasks', {}, this.#toTask) as unknown as Observable<Task[]>;
     getUsers = () => NxGlobal.global.team;
     getUserFor = (userId: string) => this.getUsers().find((_) => _.id === userId);
     getLabels = () => [];
@@ -57,11 +58,17 @@ export class TaskService extends PluginInstance implements ITaskPlugin {
         // No-op
     };
 
+    // Internal NEXUS tasks have no external tracker, so management/issue lookups are no-ops.
+    canManageProjectMembers = (): boolean => false;
+    canAdminister = (): boolean => false;
+    fetchIssue = (): Observable<{ href: string; state: number } | undefined> => of(undefined);
+    indexTasksPage = (): Observable<{ tasks: Task[]; hasMore: boolean }> => of({ tasks: [], hasMore: false });
+
     protected connect = (): Promise<void> => Promise.resolve();
     protected connectSub = (): Promise<void> => Promise.resolve();
 
-    #toTask = (payload: any): Task => {
-        const newTask = Task.fromJson(payload);
+    #toTask = (payload: unknown): Task => {
+        const newTask = Task.fromJson(payload as Dictionary);
         newTask.var.user = this.getUserFor(newTask.assignee?.id);
         newTask.var.compact = newTask.state == 1;
         newTask.httpService = this;

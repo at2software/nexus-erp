@@ -1,0 +1,40 @@
+<div class="modal d-block" tabindex="-1">
+    @let _item = item();
+    @let _currentProduct = currentProduct();
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" i18n="@@i18n.invoices.assignProductQty">assign product & qty</span>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <span class="input-group-text" i18n="@@i18n.common.product">product</span>
+                    <search-input class="p-0 flex-fill" only="Product" [has_icon]="true" [minSearch]="1" (itemSelected)="onSelect($event)" [query]="_currentProduct?.name ?? ''"> </search-input>
+                </div>
+                @if (_currentProduct) {
+                    <div class="d-flex align-items-center text-muted mb-3">
+                        <span class="flex-fill"></span>
+                        <span>{{ _item.price | money }} x {{ _item.qty }} {{ _item.unit_name }}</span>
+                    </div>
+                }
+                <div class="mb-2 hstack gap-2">
+                    <span class="text-truncate col-4" i18n="@@i18n.invoices.qtyFactor">multiply quantity by</span>
+                    <div class="input-group">
+                        <input type="number" step="0.01" class="form-control text-end" placeholder="1" [ngModel]="qtyFactor()" (ngModelChange)="qtyFactor.set($event)" />
+                        <span class="input-group-text text-muted">x</span>
+                    </div>
+                </div>
+                <div class="mb-2 hstack gap-2">
+                    <span class="text-truncate col-4" i18n="@@i18n.invoices.roundQtyTo">round up to nearest</span>
+                    <div class="input-group">
+                        <input type="number" step="0.001" class="form-control text-end" [ngModel]="roundTo()" (ngModelChange)="roundTo.set($event)" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" (click)="decline()" data-bs-dismiss="modal" i18n="@@i18n.common.cancel">cancel</button>
+                <button type="button" class="btn btn-primary" [disabled]="!canSubmit()" (click)="accept()" hotkey="CTRL+ENTER" i18n="@@i18n.common.ok">ok</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -14,6 +14,7 @@ import { getUserActions } from './user.actions';
 import { Model, TypeFromClass } from '@constants/type-discriminators';
 import { IHasFoci } from '@models/focus/hasFoci.interface';
 import { computed } from '@angular/core';
+import { storageGet, storageSet, storageRemove } from '@constants/storage';
 
 @Model('User')
 export class User extends VcardClass {
@@ -80,7 +81,7 @@ export class User extends VcardClass {
 
     // encryption
     initRsaEncryption() {
-        const pem = localStorage.getItem(User.COOKIE_ENC_KEY);
+        const pem = storageGet<string>(User.COOKIE_ENC_KEY, '');
         if (pem && pem.length) {
             this.importFromPem(pem, true);
         } else {
@@ -94,7 +95,7 @@ export class User extends VcardClass {
                 if (toggleSave) this.savesEncryptionCookie = true;
                 this.#assignRsaKeyPair(this.toKeyPair(decrypted));
             }
-        } catch (_x: any) {
+        } catch (_x: unknown) {
             window.alert('invalid PEM key');
             this.#deleteEncryptionCookie();
         } finally {
@@ -115,10 +116,10 @@ export class User extends VcardClass {
     #saveEncryptionCookie() {
         if (this.private_key) {
             this.savesEncryptionCookie = true;
-            localStorage.setItem(User.COOKIE_ENC_KEY, this.private_key!);
+            storageSet(User.COOKIE_ENC_KEY, this.private_key!);
         }
     }
-    addEncryption(key: string, value: any) {
+    addEncryption(key: string, value: string) {
         if (this.keyPair) {
             const enc = Encryption.fromJson();
             enc.key = key;
@@ -130,7 +131,7 @@ export class User extends VcardClass {
     #deleteEncryptionCookie() {
         if (this.savesEncryptionCookie) {
             this.savesEncryptionCookie = false;
-            localStorage.removeItem(User.COOKIE_ENC_KEY);
+            storageRemove(User.COOKIE_ENC_KEY);
         }
     }
 }

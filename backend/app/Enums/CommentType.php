@@ -2,11 +2,13 @@
 
 namespace App\Enums;
 
-use BenSampo\Enum\Enum;
+enum CommentType: int {
+    case Default = 0;
+    case Info    = 1;
+    case Warning = 2;
+    case Notice  = 3;
 
-final class CommentType extends Enum {
-    const Default = 0;
-    const Info    = 1;
-    const Warning = 2;
-    const Notice  = 3;
+    public static function asArray(): array {
+        return array_column(self::cases(), 'value', 'name');
+    }
 }

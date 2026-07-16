@@ -1,3 +1,4 @@
+import { Dictionary } from '@constants/constants';
 import { catchError, forkJoin, map, Observable, of } from 'rxjs';
 import { PluginInstance } from './plugin.instance';
 import { ITaskPlugin } from '../tasks/task.plugin.interface';
@@ -5,6 +6,11 @@ import { Task } from '../tasks/task.model';
 import { Label } from '../tasks/label.model';
 import { User } from '../user/user.model';
 import { PluginLink } from '../pluginLink/plugin-link.model';
+
+interface GitLabUser { id: number; name: string; username?: string; avatar_url?: string; email?: string; is_admin?: boolean; }
+interface GitLabIssue { iid: number; project_id: number; title: string; description?: string; assignee?: { id: number; name: string }; author?: { name?: string; email?: string; username?: string }; state: string; web_url: string; labels: string[]; references: { full: string }; _links: { project: string }; created_at?: string; }
+interface GitLabEvent { action_name?: string; author?: { name?: string; email?: string; username?: string }; push_data?: { ref?: string; commit_count?: number }; created_at?: string; }
+interface GitLabLabel { id: number; name: string; color: string; }
 
 export interface IRepositoryPlugin {
     IRepositoryPluginProperty: boolean;
@@ -18,6 +24,7 @@ export class GitLabPlugin extends PluginInstance implements ITaskPlugin, IReposi
     tasks: Task[] = [];
 
     _myUser!: User;
+    _isAdmin: boolean = false;
 
     #users: User[] = [];
     #labels: Label[] = [];
@@ -41,9 +48,20 @@ export class GitLabPlugin extends PluginInstance implements ITaskPlugin, IReposi
     getUserSelectionModalPath = () => '../../app/_modals/git-user-selection/git-user-selection.component';
     getInterfacePropertyName = () => 'IRepositoryPluginProperty';
     getPluginTypeName = () => 'gitlab';
-    indexMembers = () => this.aget(`${this.enc.value.url}api/v4/users`, {}, this.toUser);
-    indexLabels = () => this.get('labels', {}, (_: any) => new Label(_.color, _.name, _.id));
-    indexTasks = () => this.aget(`issues?assignee_id=${this.myUser().id}&state=opened`, {}, this.toTask);
+    indexMembers = (): Observable<unknown[]> => this.aget(`${this.enc.value.url}api/v4/users`, {}, this.toUser) as unknown as Observable<unknown[]>;
+    indexLabels = () => this.get('labels', {}, (_: unknown) => { const l = _ as GitLabLabel; return new Label(l.color, l.name, String(l.id)); });
+    indexTasks = (): Observable<Task[]> => {
+        const pageSize = 100;
+        return this.fetchAllPages((page) => this.aget(`issues?assignee_id=${this.myUser().id}&state=opened&per_page=${pageSize}&page=${page}`, {}, this.toTask) as unknown as Observable<Task[]>, pageSize);
+    };
+    indexTasksPage = (page: number, pageSize: number, openOnly: boolean, assignedOnly: boolean = true): Observable<{ tasks: Task[]; hasMore: boolean }> => {
+        const state = openOnly ? 'opened' : 'all';
+        const assigneeParam = assignedOnly ? `assignee_id=${this.myUser().id}&` : '';
+        return (this.aget(`issues?${assigneeParam}state=${state}&per_page=${pageSize}&page=${page}`, {}, this.toTask) as unknown as Observable<Task[]>).pipe(map((tasks) => ({ tasks, hasMore: tasks.length >= pageSize })));
+    };
+    // GitLab's issues API supports a real free-text `search` param, across both open and closed issues.
+    searchIssues = (query: string): Observable<Task[]> =>
+        this.aget(`issues?assignee_id=${this.myUser().id}&search=${encodeURIComponent(query)}&per_page=30`, {}, this.toTask) as unknown as Observable<Task[]>;
     showProject = () => this.get('');
     toPluginLink = (id: string) => PluginLink.fromJson({ type: 'git', url: this.enc.value.url + 'projects/' + id });
 
@@ -52,33 +70,45 @@ export class GitLabPlugin extends PluginInstance implements ITaskPlugin, IReposi
     reopen = (_: Task) => this.put(_.project_url + 'issues/' + _.id, { state_event: 'reopen' });
     destroy = (_: Task) => this.delete(_.project_url + 'issues/' + _.id);
     assign = (_: Task, user: User) => this.put(_.project_url + 'issues/' + _.id, { assignee_id: user.id });
-    addLabel = (_: Task, label: string) => this.put(_.project_url + 'issues/' + _.id, { add_labels: label });
-    removeLabel = (_: Task, label: string) => this.put(_.project_url + 'issues/' + _.id, { remove_labels: label });
+    addLabel = (_: Task, label: string): Observable<Task> => this.put(_.project_url + 'issues/' + _.id, { add_labels: label }) as unknown as Observable<Task>;
+    removeLabel = (_: Task, label: string): Observable<Task> => this.put(_.project_url + 'issues/' + _.id, { remove_labels: label }) as unknown as Observable<Task>;
 
     open = (_: Task) => window.open(_.href, '_blank');
 
+    // Capability detection — gated by the user's own GitLab token. Per-project Maintainer
+    // detection can be layered on later; for now only site admins manage members project-wide.
+    canManageProjectMembers = (): boolean => this.canAdminister();
+    canAdminister = (): boolean => (this.getRootInstance() as GitLabPlugin)._isAdmin;
+
+    fetchIssue = (issueId: string): Observable<{ href: string; state: number } | undefined> =>
+        this.get<GitLabIssue>('issues/' + issueId).pipe(
+            map((issue) => (issue ? { href: issue.web_url, state: issue.state?.toLowerCase() === 'closed' ? 1 : 0 } : undefined)),
+            catchError(() => of(undefined)),
+        );
+
     // Get activity for comments tab - returns combined events and issues
-    getActivityComments(projectId: string, maxInitialItems: number = 150, resolveUser?: (email?: string, username?: string, name?: string, pluginAttribute?: string) => any): Observable<any[]> {
+    getActivityComments(projectId: string, maxInitialItems: number = 150, resolveUser?: (email?: string, username?: string, name?: string, pluginAttribute?: string) => unknown): Observable<Dictionary[]> {
         // Clean projectId - remove 'projects/' prefix if present
         const cleanProjectId = projectId.replace(/^projects\//, '');
 
         const maxPages = Math.ceil(maxInitialItems / 50);
-        const pageRequests: Observable<any[]>[] = [];
+        const pageRequests: Observable<Dictionary[]>[] = [];
 
         for (let page = 1; page <= maxPages; page++) {
             pageRequests.push(this.#getActivityCommentsPage(cleanProjectId, page, resolveUser).pipe(catchError(() => of([]))));
         }
-        return forkJoin(pageRequests).pipe(map((pagesResults: any[][]) => pagesResults.flat().slice(0, maxInitialItems)));
+        return forkJoin(pageRequests).pipe(map((pagesResults: Dictionary[][]) => pagesResults.flat().slice(0, maxInitialItems)));
     }
 
     protected connect = () =>
         new Promise<void>((resolve, reject) => {
             this.get('user')
                 .pipe(catchError(() => this.handleError(reject)))
-                .subscribe((_: any) => {
-                    const u = this.toUser(_);
+                .subscribe((_) => {
+                    const u = this.toUser(_ as GitLabUser);
                     if (u) {
                         this._myUser = u;
+                        this._isAdmin = (_ as GitLabUser).is_admin ?? false;
                         resolve();
                     } else {
                         reject();
@@ -87,7 +117,8 @@ export class GitLabPlugin extends PluginInstance implements ITaskPlugin, IReposi
         });
 
     // ************** ITaskPlugin
-    protected toTask = (_: any): Task => {
+    protected toTask = (raw: unknown): Task => {
+        const _ = raw as GitLabIssue;
         const t = Task.fromJson({
             id: '' + _.iid,
             name: `[#${_.iid}] ${_.title}`,
@@ -97,11 +128,14 @@ export class GitLabPlugin extends PluginInstance implements ITaskPlugin, IReposi
             state: 'state' in _ && _.state.toLowerCase() == 'closed' ? 1 : 0,
             href: _.web_url,
             labels: _.labels,
-            project_url: _['_links'].project + '/',
+            // Mirrors PluginLink's own url shape for a GitLab project (see #toPluginLink) — NOT
+            // `_links.project`, which is the literal API url (different host path, e.g. with
+            // `api/v4/`) and would never match what's actually stored on the link.
+            project_url: `${this.enc.value.url}projects/${_.project_id}`,
             project_name: _.references.full,
             orig: _,
         });
-        t.var.user = this.getUserFor(_.assignee?.id);
+        t.var.user = this.getUserFor(String(_.assignee?.id ?? ''));
         t.var.compact = t.state == 1;
         t.httpService = this;
         return t;
@@ -109,7 +143,8 @@ export class GitLabPlugin extends PluginInstance implements ITaskPlugin, IReposi
     protected toGitIssue = (_: Task) => ({
         title: _.name,
     });
-    protected toUser = (data: any): User | undefined => {
+    protected toUser = (raw: unknown): User | undefined => {
+        const data = raw as GitLabUser | undefined;
         if (!data) {
             return undefined;
         }
@@ -125,9 +160,9 @@ export class GitLabPlugin extends PluginInstance implements ITaskPlugin, IReposi
     };
 
     #getRepositoryName = () => this._baseUrl.replace(/(https?:\/\/)?([^/]*).*/, '$2');
-    #getActivityCommentsPage(_projectId: string, page: number, resolveUser?: (email?: string, username?: string, name?: string, pluginAttribute?: string) => any): Observable<any[]> {
-        const events$ = this.aget(`events`, { per_page: 50, page }).pipe(
-            map((events: any[]) => {
+    #getActivityCommentsPage(_projectId: string, page: number, resolveUser?: (email?: string, username?: string, name?: string, pluginAttribute?: string) => unknown): Observable<Dictionary[]> {
+        const events$ = this.aget<GitLabEvent>(`events`, { per_page: 50, page }).pipe(
+            map((events) => {
                 if (!events) return [];
                 return events
                     .filter((e) => e.action_name === 'pushed to')
@@ -138,7 +173,7 @@ export class GitLabPlugin extends PluginInstance implements ITaskPlugin, IReposi
                         const authorEmail = event.author?.email;
                         const authorUsername = event.author?.username;
 
-                        const resolvedUser = resolveUser?.(authorEmail, authorUsername, authorName, 'X-NEXUS-GIT');
+                        const resolvedUser = resolveUser?.(authorEmail, authorUsername, authorName, 'X-NEXUS-GIT') as (Dictionary<unknown> & { id?: string; icon?: string }) | undefined;
 
                         let description = '';
                         if (!resolvedUser) {
@@ -151,7 +186,7 @@ export class GitLabPlugin extends PluginInstance implements ITaskPlugin, IReposi
                             user: resolvedUser || { name: authorName },
                             user_id: resolvedUser?.id,
                             is_mini: true,
-                            _icon: resolvedUser ? (resolvedUser as any)._icon : undefined,
+                            _icon: resolvedUser?.icon,
                             var: { source: 'git', ...(resolvedUser ? {} : { nicon: 'git' }) },
                             itemCount: events.length,
                         };
@@ -159,14 +194,14 @@ export class GitLabPlugin extends PluginInstance implements ITaskPlugin, IReposi
             }),
         );
 
-        const issues$ = this.aget(`issues`, {
+        const issues$ = this.aget<GitLabIssue>(`issues`, {
             state: 'all',
             per_page: 50,
             page,
             order_by: 'created_at',
             sort: 'desc',
         }).pipe(
-            map((issues: any[]) => {
+            map((issues) => {
                 if (!issues) return [];
                 return issues.map((issue) => {
                     const isClosed = issue.state === 'closed';
@@ -175,7 +210,7 @@ export class GitLabPlugin extends PluginInstance implements ITaskPlugin, IReposi
                     const authorEmail = issue.author?.email;
                     const authorUsername = issue.author?.username;
 
-                    const resolvedUser = resolveUser?.(authorEmail, authorUsername, authorName, 'X-NEXUS-GIT');
+                    const resolvedUser = resolveUser?.(authorEmail, authorUsername, authorName, 'X-NEXUS-GIT') as (Dictionary<unknown> & { id?: string; icon?: string }) | undefined;
 
                     let description = '';
                     if (!resolvedUser) {
@@ -188,7 +223,7 @@ export class GitLabPlugin extends PluginInstance implements ITaskPlugin, IReposi
                         user: resolvedUser || { name: authorName },
                         user_id: resolvedUser?.id,
                         is_mini: true,
-                        _icon: resolvedUser ? (resolvedUser as any)._icon : undefined,
+                        _icon: resolvedUser?.icon,
                         var: { source: 'git', ...(resolvedUser ? {} : { nicon: 'git' }) },
                         itemCount: issues.length,
                     };
@@ -196,6 +231,6 @@ export class GitLabPlugin extends PluginInstance implements ITaskPlugin, IReposi
             }),
         );
 
-        return forkJoin([events$.pipe(catchError(() => of([]))), issues$.pipe(catchError(() => of([])))]).pipe(map(([events, issues]) => [...events, ...issues]));
+        return forkJoin([events$.pipe(catchError(() => of<Dictionary[]>([]))), issues$.pipe(catchError(() => of<Dictionary[]>([])))]).pipe(map(([events, issues]) => [...events, ...issues]));
     }
 }

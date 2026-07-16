@@ -2,7 +2,7 @@
 @let _nicon = nicon();
 @if (_comment.is_mini) {
     <div class="px-3 hstack p-1 gap-2 font-monospace text-muted align-items-start" [nx]="_comment">
-        @if (_nicon || _comment.var?.nicon) {
+        @if (_nicon || _comment.var.nicon) {
             <div class="text-end" style="font-size: 1.2em">
                 <n>{{ _nicon || _comment.var.nicon }}</n>
             </div>
@@ -15,7 +15,7 @@
     </div>
 } @else {
     <div class="px-3 hstack p-1 gap-2 align-items-start" title="{{ _comment.created_at | date }}" [nx]="_comment">
-        @if (_nicon || _comment.var?.nicon) {
+        @if (_nicon || _comment.var.nicon) {
             <div style="font-size: 1.5em; margin-top: 0.25rem">
                 <n>{{ _nicon || _comment.var.nicon }}</n>
             </div>

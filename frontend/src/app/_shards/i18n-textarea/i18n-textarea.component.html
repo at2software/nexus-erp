@@ -1,23 +1,31 @@
 <div class="mb-3">
+    @let _label = label();
+    @let _isLocalized = isLocalized();
     <div class="d-flex justify-content-between align-items-center mb-2">
-        @if (label()) {
-            <label for="i18n-textarea-input" class="form-label mb-0">{{ label() }}</label>
+        @if (_label) {
+            <label for="i18n-textarea-input" class="form-label mb-0">{{ _label }}</label>
         }
-        @if (!isLocalized) {
+        @if (!_isLocalized) {
             <button type="button" class="btn btn-sm btn-outline-primary" (click)="localize()">
                 <i style="font-size: 1rem; vertical-align: middle">translate</i>
                 <span i18n="@@i18n.common.localize">localize</span>
             </button>
         }
-        @if (isLocalized) {
-            <select class="form-select form-select-sm w-auto" [ngModel]="selectedLocaleKey" (ngModelChange)="onLocaleChange($event)">
-                @for (variant of availableLocales; track variant.language + variant.formality) {
-                    <option [value]="variant.language + '-' + variant.formality">
-                        {{ variant.label }}
-                    </option>
-                }
-                <option value="remove" i18n="@@i18n.common.removeLocalization">remove localization</option>
-            </select>
+        @if (_isLocalized) {
+            <div ngbDropdown>
+                <button type="button" class="btn btn-sm btn-outline-primary" ngbDropdownToggle>
+                    {{ selectedLocaleLabel() }}
+                </button>
+                <div ngbDropdownMenu>
+                    @for (variant of availableLocales(); track variant.language + variant.formality) {
+                        <button ngbDropdownItem (click)="onLocaleChange(variant.language + '-' + variant.formality)">
+                            {{ variant.label }}
+                        </button>
+                    }
+                    <div class="dropdown-divider"></div>
+                    <button ngbDropdownItem (click)="onLocaleChange('remove')" i18n="@@i18n.common.removeLocalization">remove localization</button>
+                </div>
+            </div>
         }
     </div>
     <textarea id="i18n-textarea-input" class="form-control" [(ngModel)]="textValue" [placeholder]="placeholder()" [rows]="rows()"></textarea>

@@ -3,14 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CommentType;
-use App\Http\Middleware\Auth;
 use App\Models\Comment;
-use App\Traits\ControllerHasPermissionsTrait;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class CommentController extends Controller {
-    use ControllerHasPermissionsTrait;
-
     public function store(Request $request) {
         $new     = new Comment;
         $parent  = Comment::fromPath($request->path);

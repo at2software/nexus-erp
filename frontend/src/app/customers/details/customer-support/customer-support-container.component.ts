@@ -6,7 +6,6 @@ import { ProjectSupportComponent } from '@app/projects/id/project-support/projec
 @Component({
     selector: 'customer-support-container',
     template: '@if (company()) {<project-support [parent]="company()!"></project-support>}',
-    standalone: true,
     imports: [ProjectSupportComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

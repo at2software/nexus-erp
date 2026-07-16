@@ -17,9 +17,9 @@ class KeycloakAuthMiddleware {
             return $response;
         }
 
-        $baseUrl  = env('KEYCLOAK_BASE_URL', '');
-        $realm    = env('KEYCLOAK_REALM', '');
-        $clientid = env('KEYCLOAK_CLIENT_ID', '');
+        $baseUrl  = config('keycloak.base_url');
+        $realm    = config('keycloak.realm');
+        $clientid = config('keycloak.client_id');
 
         $client  = new Client(['base_uri' => $baseUrl]);
         $headers = ['Content-Type' => 'application/x-www-form-urlencoded'];

@@ -6,8 +6,6 @@ import { TabPlaceholderInfoComponent } from '@app/settings/_shards/tab-placehold
 @Component({
     selector: 'app-settings-projects',
     templateUrl: './settings-projects.component.html',
-    styleUrls: ['./settings-projects.component.scss'],
-    standalone: true,
     imports: [ScrollbarComponent, RouterModule, TabPlaceholderInfoComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

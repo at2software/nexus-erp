@@ -15,8 +15,9 @@
         </div>
         <div style="width: 130px">
             <div class="ratio ratio-1x1">
-                @if (_donutChartOptions[user.id]) {
-                    <div echarts [options]="_donutChartOptions[user.id]" class="w-100 h-100"></div>
+                @let _donutOptions = _donutChartOptions[user.id];
+                @if (_donutOptions) {
+                    <div echarts [options]="_donutOptions" class="w-100 h-100"></div>
                 }
             </div>
         </div>

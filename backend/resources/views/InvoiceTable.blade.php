@@ -15,7 +15,7 @@
     </thead>
     <tbody>
     @foreach($items as $item)
-        @switch($item->type)
+        @switch($item->type->value)
             @case(0)
                 <tr>
                     <td class="text-end align-top">{{ $item->sPosition }}</td>
@@ -100,7 +100,7 @@
                 @break
             @default
                 <tr>
-                    <td colspan="7">{{ $item->type }} not implemented</td>
+                    <td colspan="7">{{ $item->type->value }} not implemented</td>
                 </tr>
                 @break
         @endswitch

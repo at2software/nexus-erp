@@ -7,7 +7,6 @@ import { RouterModule } from '@angular/router';
     selector: 'project-detail-settings',
     imports: [RouterModule],
     templateUrl: './project-detail-settings.component.html',
-    styleUrl: './project-detail-settings.component.scss',
 })
 export class ProjectDetailSettingsComponent {
     parent = inject(ProjectDetailGuard);

@@ -114,7 +114,7 @@ class UptimeMonitorController extends Controller {
             ->where('checked_at', '>=', Carbon::now()->subHours(24))
             ->get();
 
-        $uptime24h = $last24Hours->count() > 0
+        $uptime24h = $last24Hours->isNotEmpty()
             ? round(($last24Hours->where('status', 'up')->count() / $last24Hours->count()) * 100, 2)
             : 100.0;
         return response()->json([

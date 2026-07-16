@@ -1,13 +1,15 @@
+@let _suggested = suggested();
+@let _observed = observed();
 <div class="card mb-3">
     <div class="card-header hstack gap-2">
         <span class="flex-fill" i18n="@@i18n.marketing.suggested_for_remarketing">suggested for remarketing</span>
-        <span class="badge bg-primary rounded-pill">{{ suggestedList.length }}</span>
+        <span class="badge bg-primary rounded-pill">{{ _suggested.length }}</span>
     </div>
     <ul class="list-group list-group-flush">
-        @for (item of suggestedList; track item.id) {
+        @for (item of _suggested; track item.id) {
             <ng-container *ngTemplateOutlet="row; context: { $implicit: item }"></ng-container>
         }
-        @if (!suggestedList.length) {
+        @if (!_suggested.length) {
             <li class="list-group-item text-muted small text-center py-3" i18n="@@i18n.marketing.no_suggestions">no suggestions available</li>
         }
     </ul>
@@ -16,13 +18,13 @@
 <div class="card mb-3">
     <div class="card-header hstack gap-2">
         <span class="flex-fill" i18n="@@i18n.common.remarketing_intervals">remarketing intervals</span>
-        <span class="badge bg-primary rounded-pill">{{ observedList.length }}</span>
+        <span class="badge bg-primary rounded-pill">{{ _observed.length }}</span>
     </div>
     <ul class="list-group list-group-flush">
-        @for (item of observedList; track item.id) {
+        @for (item of _observed; track item.id) {
             <ng-container *ngTemplateOutlet="row; context: { $implicit: item }"></ng-container>
         }
-        @if (!observedList.length) {
+        @if (!_observed.length) {
             <li class="list-group-item text-muted small text-center py-3" i18n="@@i18n.marketing.no_remarketing_intervals">no remarketing intervals configured</li>
         }
     </ul>
@@ -34,7 +36,7 @@
         <div class="hstack gap-3 align-items-center">
             <avatar [object]="item"></avatar>
             <div class="flex-fill text-truncate fw-medium">{{ item.name }}</div>
-            <small class="text-muted text-nowrap remarketing-revenue" ngbTooltip="revenue last 12 months" i18n-ngbTooltip="@@i18n.marketing.revenue_last_12_months">{{ item.var.revenue_12 | money }}</small>
+            <small class="text-muted text-nowrap remarketing-revenue" ngbTooltip="revenue last 12 months" i18n-ngbTooltip="@@i18n.marketing.revenue_last_12_months">{{ item.revenue_12 | money }}</small>
             <small class="text-muted text-nowrap remarketing-date text-end" ngbTooltip="last contact" i18n-ngbTooltip="@@i18n.marketing.last_contact">{{ item.updated_at | date }}</small>
             <div class="d-flex align-items-center gap-1">
                 <select class="form-select form-select-sm remarketing-select" [autosave]="item" [(ngModel)]="item.remarketing_interval">
