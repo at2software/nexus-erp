@@ -6,6 +6,8 @@ NEXUS combines CRM, project management, invoicing, time tracking, HR, marketing 
 
 > Built for digital agencies, IT service companies, consultancies, and software development teams.
 
+![NEXUS dashboard](docs/screenshots/dashboard-overview.png)
+
 ---
 
 ## Features
@@ -22,6 +24,20 @@ NEXUS combines CRM, project management, invoicing, time tracking, HR, marketing 
 | **Sentinels** | Visual no-code automation — triggers, conditions, commands |
 | **Uptime Monitoring** | HTTP health checks with alerting via email and team chat |
 | **Calendar** | CalDAV and CardDAV protocol support for universal device sync |
+
+---
+
+## Screenshots
+
+| | |
+|---|---|
+| **Projects** — timeline, budget, milestones ![Project overview](docs/screenshots/project-overview.png) | **CRM** — customer profile with revenue analytics ![Customer profile](docs/screenshots/customer-profile.png) |
+| **Time Tracking** — daily sessions and breaks ![Time tracking](docs/screenshots/hr-people.png) | **Invoicing** — live invoice editor ![Invoicing](docs/screenshots/invoicing-example.png) |
+| **Capacity Planning** — workload heatmap per person ![Capacity planning](docs/screenshots/time-tracking.png) | **Marketing** — prospect funnel (Sankey) ![Marketing funnel](docs/screenshots/marketing.png) |
+
+**Sentinels** — visual no-code automation (triggers → conditions → actions):
+
+![Sentinel automation](docs/screenshots/sentinels.png)
 
 ---
 
