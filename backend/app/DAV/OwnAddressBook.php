@@ -7,12 +7,12 @@ namespace App\DAV;
 use Sabre\CardDAV\AddressBook;
 
 /**
- * The AddressBook class represents a CardDAV addressbook, owned by a specific user.
+ * CardDAV address book node with NEXUS-specific read-only ACLs.
  *
- * The AddressBook can contain multiple vcards
+ * Adapted from sabre/dav's AddressBook class.
+ * Portions Copyright (C) fruux GmbH (https://fruux.com/), original author
+ * Evert Pot (http://evertpot.com/)
  *
- * @copyright Copyright (C) fruux GmbH (https://fruux.com/)
- * @author Evert Pot (http://evertpot.com/)
  * @license http://sabre.io/license/ Modified BSD License
  */
 class OwnAddressBook extends AddressBook {

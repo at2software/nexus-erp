@@ -7,9 +7,11 @@ use Sabre\DAVACL\PrincipalBackend\PDO;
 use Sabre\Uri;
 
 /**
- * This is an authentication backend that uses a database to manage passwords.
+ * Principal backend that resolves DAV principals from NEXUS users.
  *
- * @copyright Copyright (C) fruux GmbH (https://fruux.com/)
+ * Adapted from sabre/dav's PDO principal backend.
+ * Portions Copyright (C) fruux GmbH (https://fruux.com/)
+ *
  * @license http://sabre.io/license/ Modified BSD License
  */
 class OwnPrincipalBackend extends PDO {
@@ -22,8 +24,6 @@ class OwnPrincipalBackend extends PDO {
 
     /**
      * Creates the backend object.
-     *
-     * If the filename argument is passed in, it will parse out the specified file fist.
      */
     public function __construct(\PDO $pdo) {
         $this->pdo = $pdo;

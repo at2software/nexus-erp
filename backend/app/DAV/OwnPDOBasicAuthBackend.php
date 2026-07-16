@@ -6,9 +6,12 @@ use Sabre\DAV\Auth\Backend\AbstractBasic;
 use Sabre\HTTP;
 
 /**
- * This is an authentication backend that uses a database to manage passwords.
+ * HTTP Basic authentication backend that validates DAV credentials
+ * against NEXUS user accounts.
  *
- * @copyright Copyright (C) fruux GmbH (https://fruux.com/)
+ * Adapted from sabre/dav's PDO auth backend.
+ * Portions Copyright (C) fruux GmbH (https://fruux.com/)
+ *
  * @license http://sabre.io/license/ Modified BSD License
  */
 class OwnPDOBasicAuthBackend extends AbstractBasic {
@@ -21,8 +24,6 @@ class OwnPDOBasicAuthBackend extends AbstractBasic {
 
     /**
      * Creates the backend object.
-     *
-     * If the filename argument is passed in, it will parse out the specified file fist.
      */
     public function __construct(\PDO $pdo) {
         $this->pdo = $pdo;

@@ -7,9 +7,12 @@ use Sabre\CardDAV;
 use Sabre\CardDAV\Backend\PDO;
 
 /**
- * This is an authentication backend that uses a database to manage passwords.
+ * CardDAV backend that exposes NEXUS contacts as a read-only address book
+ * per user.
  *
- * @copyright Copyright (C) fruux GmbH (https://fruux.com/)
+ * Adapted from sabre/dav's PDO CardDAV backend.
+ * Portions Copyright (C) fruux GmbH (https://fruux.com/)
+ *
  * @license http://sabre.io/license/ Modified BSD License
  */
 class OwnCardDAVBackend extends PDO {
@@ -22,8 +25,6 @@ class OwnCardDAVBackend extends PDO {
 
     /**
      * Creates the backend object.
-     *
-     * If the filename argument is passed in, it will parse out the specified file fist.
      */
     public function __construct(\PDO $pdo) {
         $this->pdo = $pdo;

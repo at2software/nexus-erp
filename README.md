@@ -203,6 +203,12 @@ npx ng serve --configuration=de   # → http://localhost:4200
 
 ---
 
+## AI-Assisted Development
+
+The core of NEXUS — architecture, data model, UI design, and business logic — is handcrafted, built over years of daily use in our own company. AI agents (Claude) assist with some parts of the codebase, most notably the Docker packaging for this public release and initial drafts of some newer features. Every AI-generated addition is reviewed by a human before it lands.
+
+---
+
 ## License
 
 NEXUS is licensed under the **Business Source License 1.1 (BSL)**. Key terms:
@@ -214,6 +220,10 @@ NEXUS is licensed under the **Business Source License 1.1 (BSL)**. Key terms:
 BSL is a *source-available* license, not an OSI-approved open-source license. The source code is publicly available and forkable, but with the commercial-use restrictions described above.
 
 See [LICENSE.md](LICENSE.md) for the full terms or contact [info@at2-software.com](mailto:info@at2-software.com) for commercial licensing.
+
+### Third-Party Code
+
+NEXUS builds on the open-source libraries declared in `backend/composer.json` and `frontend/package.json`. Beyond those dependencies, the CalDAV/CardDAV integration in `backend/app/DAV/` contains classes adapted from [sabre/dav](https://sabre.io/) backend code — portions Copyright (C) fruux GmbH, licensed under the [Modified BSD License](http://sabre.io/license/). Attribution is retained in the affected files.
 
 ---
 
