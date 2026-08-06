@@ -1,4 +1,5 @@
 import type { NxAction } from '@models/_core/nx.actions';
+import type { Serializable } from '@models/_core/serializable';
 import { VcardClass } from '@models/vcard/vcard-class.model';
 import { Vcard } from '@models/vcard/vcard';
 import { Type } from '@models/_core/hydrate';
@@ -93,9 +94,9 @@ export class MarketingProspect extends VcardClass implements IHasMarker {
 
     getPersonal = (): VcardClass | undefined => this.company_contact?.contact ?? this;
 
-    override afterDeserialize(json: Dictionary): void {
+    override afterDeserialize(json: Dictionary, seen?: WeakSet<Serializable>): void {
         this.#ensureVcardNameFields();
-        super.afterDeserialize(json);
+        super.afterDeserialize(json, seen);
     }
 
     #ensureVcardNameFields() {

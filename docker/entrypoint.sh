@@ -23,6 +23,12 @@ set_env APP_DIR      "/backend"
 set_env API_URL      "${APP_URL:-http://localhost:3200/backend}/api/"
 set_env APP_AUTH     "${APP_AUTH:-token}"
 
+# Origin of APP_URL without its path, used as the CORS and trusted-proxy defaults
+APP_ORIGIN=$(printf '%s' "${APP_URL:-http://localhost:3200/backend}" | sed -E 's#^(https?://[^/]+).*#\1#')
+
+set_env CORS_ALLOWED_ORIGINS "${CORS_ALLOWED_ORIGINS:-$APP_ORIGIN}"
+set_env TRUSTED_PROXIES      "${TRUSTED_PROXIES:-127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}"
+
 set_env DB_HOST      "${DB_HOST:-db}"
 set_env DB_PORT      "${DB_PORT:-3306}"
 set_env DB_DATABASE  "${DB_DATABASE:-nexus}"
@@ -81,7 +87,15 @@ fi
 # ── Migrations ────────────────────────────────────────────────────────────────
 # Run migrations; failures are logged but do not crash the container to avoid
 # infinite restart loops caused by partially-applied DDL on failed migrations.
-php artisan migrate --force 2>&1 || echo "WARNING: One or more migrations failed — check logs above."
+#
+# Reverb is not up until supervisord starts at the end of this script, so a
+# ShouldBroadcastNow event raised by a migration would abort it on a refused
+# connection — the initial seed creates the admin user and does exactly that.
+if BROADCAST_CONNECTION=null php artisan migrate --force 2>&1; then
+    MIGRATE_OK=1
+else
+    MIGRATE_OK=0
+fi
 
 # ── Storage symlink ───────────────────────────────────────────────────────────
 php artisan storage:link --quiet 2>/dev/null || true
@@ -89,8 +103,16 @@ php artisan storage:link --quiet 2>/dev/null || true
 # ── Seed on first boot ────────────────────────────────────────────────────────
 SEEDED_FLAG="$BACKEND/storage/app/.seeded"
 if [ ! -f "$SEEDED_FLAG" ]; then
-    php artisan db:seed --class=DatabaseSeeder --force --quiet 2>/dev/null || true
+    BROADCAST_CONNECTION=null php artisan db:seed --class=DatabaseSeeder --force --quiet 2>/dev/null || true
     touch "$SEEDED_FLAG"
+fi
+
+if [ "$MIGRATE_OK" = "0" ]; then
+    echo "################################################################"
+    echo "#  MIGRATIONS FAILED — see the output above.                   #"
+    echo "#  The schema is incomplete and there may be no admin account. #"
+    echo "#  The container starts anyway to avoid a restart loop.        #"
+    echo "################################################################"
 fi
 
 # ── Package discovery (skipped during build, run here with .env present) ─────

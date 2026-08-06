@@ -37,8 +37,8 @@ export class DebriefProblem extends Serializable {
     @Type(()=>User) created_by?: User;
     @Type(()=>DebriefSolution) solutions: DebriefSolution[] = [];
 
-    override afterDeserialize(json: unknown): void {
-        super.afterDeserialize(json);
+    override afterDeserialize(json: unknown, seen?: WeakSet<Serializable>): void {
+        super.afterDeserialize(json, seen);
         const pivotSeverity = (json as { pivot?: { severity?: string } })?.pivot?.severity;
         if (!this.severity && pivotSeverity) this.severity = pivotSeverity as DebriefProblem['severity'];
     }

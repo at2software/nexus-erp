@@ -9,7 +9,7 @@
 
 <div class="app-scroll">
     <div class="container-app">
-        @if (init()) {
+        @if (authResolved()) {
             <router-outlet></router-outlet>
         }
     </div>

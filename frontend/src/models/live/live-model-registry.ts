@@ -3,6 +3,8 @@ import type { Serializable } from '@models/_core/serializable';
 
 export class LiveModelRegistry {
     static #instances = new Map<string, WeakRef<Serializable>[]>();
+    static #registeredUnder = new WeakMap<Serializable, string>();
+    static #nested = new WeakSet<Serializable>();
     static #finalizer = new FinalizationRegistry<string>((key) => LiveModelRegistry.#prune(key));
 
     static #updated = new Subject<Serializable>();
@@ -15,12 +17,23 @@ export class LiveModelRegistry {
     static register(instance: Serializable): void {
         if (!instance.class || !instance.id) return;
         const key = LiveModelRegistry.keyFor(instance.class, instance.id);
+        if (LiveModelRegistry.#registeredUnder.get(instance) === key) return;
+        LiveModelRegistry.#registeredUnder.set(instance, key);
         const refs = LiveModelRegistry.#instances.get(key) ?? [];
-        if (refs.some((ref) => ref.deref() === instance)) return;
         refs.push(new WeakRef(instance));
         LiveModelRegistry.#instances.set(key, refs);
         LiveModelRegistry.#finalizer.register(instance, key);
     }
+
+    /**
+     * A nested instance is owned by the relation that hydrated it, so a live-sync refetch must
+     * skip it: its parent replaces it wholesale on the next `fromJson`. Refetching it instead
+     * re-hydrates its own relations, and for any payload that embeds its own class and id
+     * (`project.companys_active_projects` contains the project itself) each pass triples the
+     * registered copies, so the next broadcast triples again.
+     */
+    static markNested(instance: Serializable): void { LiveModelRegistry.#nested.add(instance); }
+    static isNested(instance: Serializable): boolean { return LiveModelRegistry.#nested.has(instance); }
 
     static lookup(className: string, id: string | number): Serializable[] {
         const key = LiveModelRegistry.keyFor(className, id);

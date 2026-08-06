@@ -2,7 +2,6 @@ import { DestroyRef, Directive, ElementRef, inject, input, output, OnInit, OnDes
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { fromEvent } from 'rxjs';
 import { Serializable } from '@models/_core/serializable';
-import { Toast } from '@shards/toast/toast';
 
 @Directive({
     selector: '[autosave]',
@@ -62,10 +61,7 @@ export class AutosaveDirective implements OnInit, OnDestroy {
         if ('update' in this.autosave()) {
             this.autosave()
                 .update(payload)
-                .subscribe((result) => {
-                    this.saved.emit(result);
-                    Toast.show("saved");
-                });
+                .subscribe((result) => this.saved.emit(result));
         }
     }
 }

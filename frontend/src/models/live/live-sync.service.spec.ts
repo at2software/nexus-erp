@@ -6,9 +6,10 @@ import { GlobalService } from '@models/global.service';
 import { WebSocketService, DataChangedPayload } from '@services/websocket.service';
 import { LiveSyncService } from '@models/live/live-sync.service';
 import { Vacation } from '@models/vacation/vacation.model';
+import { VacationGrant } from '@models/vacation/vacation-grant.model';
 
 beforeAll(() => {
-    NxStatic.global = { tables: [{ name: 'vacations', columns: [] }] } as unknown as GlobalService;
+    NxStatic.global = { tables: [{ name: 'vacations', columns: [] }, { name: 'vacation_grants', columns: [] }] } as unknown as GlobalService;
 });
 
 describe('LiveSyncService only refetches instances that opted in', () => {
@@ -70,5 +71,20 @@ describe('LiveSyncService only refetches instances that opted in', () => {
         expect(get).toHaveBeenCalledTimes(1);
         expect(detail.comment).toBe('new');
         expect(row.comment).toBe('new');
+    });
+
+    it('skips copies nested inside another payload, which their own parent re-hydrates', () => {
+        const detail = Vacation.fromJson({ id: '4', class: 'Vacation', comment: 'old' });
+        const grant = VacationGrant.fromJson({ id: '9', class: 'VacationGrant', vacations: [{ id: '4', class: 'Vacation', comment: 'old' }] });
+        const [nested] = grant.vacations;
+        const get = vi.fn(() => of({ id: '4', class: 'Vacation', comment: 'new' }));
+        detail.httpService = { get } as unknown as Vacation['httpService'];
+        detail.liveSyncEnabled = true;
+
+        touch('4');
+
+        expect(get).toHaveBeenCalledTimes(1);
+        expect(detail.comment).toBe('new');
+        expect(nested.comment).toBe('old');
     });
 });

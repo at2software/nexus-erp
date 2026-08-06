@@ -58,9 +58,10 @@ export class LiveSyncService {
             return;
         }
 
-        const [sample] = instances;
+        const targets = instances.filter((_) => _.liveSyncEnabled || !LiveModelRegistry.isNested(_));
+        const [sample] = targets;
         sample.httpService.get(sample.apiPathWithId()).subscribe({
-            next: (json) => this.#applyOrDefer(key, instances, json, payload),
+            next: (json) => this.#applyOrDefer(key, targets, json, payload),
             error: () => this.#signalOrDefer(key, payload),
         });
     }

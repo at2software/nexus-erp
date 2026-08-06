@@ -98,8 +98,8 @@ export abstract class Serializable implements INxContextMenu {
         return this;
     }
 
-    afterDeserialize(json: unknown): void {
-        initNestedSerializables(this, json);
+    afterDeserialize(json: unknown, seen?: WeakSet<Serializable>): void {
+        initNestedSerializables(this, json, seen);
         untracked(() => {
             this.captureBaseline();
             this.#state.set(json);

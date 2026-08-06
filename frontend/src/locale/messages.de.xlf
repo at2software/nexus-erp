@@ -2626,6 +2626,12 @@
         <target>Zeitbasiert</target>
       </segment>
     </unit>
+    <unit id="i18n.dashboard.revenue12m">
+      <segment>
+        <source>Revenue (12m)</source>
+        <target>Umsatz (12M)</target>
+      </segment>
+    </unit>
     <unit id="i18n.dashboard.revenueThisYear">
       <segment>
         <source>revenue this year</source>
@@ -5759,6 +5765,24 @@
         <target>Version</target>
       </segment>
     </unit>
+    <unit id="i18n.milestones.invoiceItemsWithoutMilestone">
+      <segment>
+        <source>invoice items without milestone</source>
+        <target>Rechnungspositionen ohne Meilenstein</target>
+      </segment>
+    </unit>
+    <unit id="i18n.milestones.noInvoiceItemsWithoutMilestone">
+      <segment>
+        <source>all invoice items are linked to a milestone</source>
+        <target>alle Rechnungspositionen sind einem Meilenstein zugeordnet</target>
+      </segment>
+    </unit>
+    <unit id="i18n.milestones.addMilestone">
+      <segment>
+        <source>add milestone</source>
+        <target>Meilenstein hinzufügen</target>
+      </segment>
+    </unit>
     <unit id="i18n.milestones.unassigned">
       <segment>
         <source>Unassigned Milestones</source>
@@ -6579,6 +6603,66 @@
       <segment>
         <source>write a longer introduction</source>
         <target>eine längere Einleitung schreiben</target>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.reliabilityHigh">
+      <segment>
+        <source>high reliability</source>
+        <target>hohe Zuverlässigkeit</target>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.reliabilityModerate">
+      <segment>
+        <source>moderate reliability</source>
+        <target>mittlere Zuverlässigkeit</target>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.reliabilityLow">
+      <segment>
+        <source>low reliability — use with caution</source>
+        <target>geringe Zuverlässigkeit — mit Vorsicht verwenden</target>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.reliabilityUnknown">
+      <segment>
+        <source>ML estimate · reliability not yet available</source>
+        <target>ML-Schätzung · Zuverlässigkeit noch nicht verfügbar</target>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.estimatePrefix">
+      <segment>
+        <source>ML estimate</source>
+        <target>ML-Schätzung</target>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.beatsBaseline">
+      <segment>
+        <source>beats the naive baseline (<ph id="0" equiv="PH" disp="summary.baseline_label"/> <ph id="1" equiv="PH_1" disp="summary.baseline_value"/>)</source>
+        <target>übertrifft die naive Baseline (<ph id="0" equiv="PH" disp="summary.baseline_label"/> <ph id="1" equiv="PH_1" disp="summary.baseline_value"/>)</target>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.doesNotBeatBaseline">
+      <segment>
+        <source>does not beat the naive baseline (<ph id="0" equiv="PH" disp="summary.baseline_label"/> <ph id="1" equiv="PH_1" disp="summary.baseline_value"/>) — treat as a rough guide only</source>
+        <target>übertrifft die naive Baseline nicht (<ph id="0" equiv="PH" disp="summary.baseline_label"/> <ph id="1" equiv="PH_1" disp="summary.baseline_value"/>) — nur als grober Anhaltspunkt zu verwenden</target>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.trainedOnSamples">
+      <segment>
+        <source>trained on <ph id="0" equiv="PH" disp="summary.n"/> samples</source>
+        <target>trainiert mit <ph id="0" equiv="PH" disp="summary.n"/> Datensätzen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.typicalError">
+      <segment>
+        <source>R² <ph id="0" equiv="PH" disp="summary.r2"/> · typical error <ph id="1" equiv="PH_1" disp="errorValue"/></source>
+        <target>R² <ph id="0" equiv="PH" disp="summary.r2"/> · typischer Fehler <ph id="1" equiv="PH_1" disp="errorValue"/></target>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.churnedF1">
+      <segment>
+        <source>churned-F1 <ph id="0" equiv="PH" disp="summary.value"/> · recall <ph id="1" equiv="PH_1" disp="summary.recall"/></source>
+        <target>Abwanderungs-F1 <ph id="0" equiv="PH" disp="summary.value"/> · Recall <ph id="1" equiv="PH_1" disp="summary.recall"/></target>
       </segment>
     </unit>
     <unit id="i18n.ml.f1Recall">

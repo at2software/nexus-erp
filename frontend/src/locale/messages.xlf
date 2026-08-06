@@ -4871,6 +4871,14 @@
         <source>lead success rate of the last 12 months</source>
       </segment>
     </unit>
+    <unit id="i18n.dashboard.revenue12m">
+      <notes>
+        <note category="location">src/app/dashboard/widgets/widget-revenue-current-year/widget-revenue-current-year.component.ts:79,96</note>
+      </notes>
+      <segment>
+        <source>Revenue (12m)</source>
+      </segment>
+    </unit>
     <unit id="i18n.dashboard.revenueThisYear">
       <notes>
         <note category="location">src/app/dashboard/widgets/widget-revenue-current-year/widget-revenue-current-year.component.html:23,24</note>
@@ -9987,6 +9995,30 @@
         <source>version</source>
       </segment>
     </unit>
+    <unit id="i18n.milestones.invoiceItemsWithoutMilestone">
+      <notes>
+        <note category="location">src/app/projects/-/projects-milestones/projects-milestones.component.html:13</note>
+      </notes>
+      <segment>
+        <source>invoice items without milestone</source>
+      </segment>
+    </unit>
+    <unit id="i18n.milestones.noInvoiceItemsWithoutMilestone">
+      <notes>
+        <note category="location">src/app/projects/-/projects-milestones/projects-milestones.component.html:17,18</note>
+      </notes>
+      <segment>
+        <source>all invoice items are linked to a milestone</source>
+      </segment>
+    </unit>
+    <unit id="i18n.milestones.addMilestone">
+      <notes>
+        <note category="location">src/models/invoice/invoice-item.actions.ts:48</note>
+      </notes>
+      <segment>
+        <source>add milestone</source>
+      </segment>
+    </unit>
     <unit id="i18n.milestones.unassigned">
       <notes>
         <note category="location">src/app/projects/-/projects-milestones/projects-milestones.component.html:12,13</note>
@@ -11086,6 +11118,86 @@
       </notes>
       <segment>
         <source>write a longer introduction</source>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.reliabilityHigh">
+      <notes>
+        <note category="location">src/directives/ml-reliability.directive.ts:58</note>
+      </notes>
+      <segment>
+        <source>high reliability</source>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.reliabilityModerate">
+      <notes>
+        <note category="location">src/directives/ml-reliability.directive.ts:59</note>
+      </notes>
+      <segment>
+        <source>moderate reliability</source>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.reliabilityLow">
+      <notes>
+        <note category="location">src/directives/ml-reliability.directive.ts:60</note>
+      </notes>
+      <segment>
+        <source>low reliability — use with caution</source>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.reliabilityUnknown">
+      <notes>
+        <note category="location">src/directives/ml-reliability.directive.ts:94</note>
+      </notes>
+      <segment>
+        <source>ML estimate · reliability not yet available</source>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.estimatePrefix">
+      <notes>
+        <note category="location">src/directives/ml-reliability.directive.ts:106</note>
+      </notes>
+      <segment>
+        <source>ML estimate</source>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.beatsBaseline">
+      <notes>
+        <note category="location">src/directives/ml-reliability.directive.ts:98</note>
+      </notes>
+      <segment>
+        <source>beats the naive baseline (<ph id="0" equiv="PH" disp="summary.baseline_label"/> <ph id="1" equiv="PH_1" disp="summary.baseline_value"/>)</source>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.doesNotBeatBaseline">
+      <notes>
+        <note category="location">src/directives/ml-reliability.directive.ts:99</note>
+      </notes>
+      <segment>
+        <source>does not beat the naive baseline (<ph id="0" equiv="PH" disp="summary.baseline_label"/> <ph id="1" equiv="PH_1" disp="summary.baseline_value"/>) — treat as a rough guide only</source>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.trainedOnSamples">
+      <notes>
+        <note category="location">src/directives/ml-reliability.directive.ts:100</note>
+      </notes>
+      <segment>
+        <source>trained on <ph id="0" equiv="PH" disp="summary.n"/> samples</source>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.typicalError">
+      <notes>
+        <note category="location">src/directives/ml-reliability.directive.ts:117</note>
+      </notes>
+      <segment>
+        <source>R² <ph id="0" equiv="PH" disp="summary.r2"/> · typical error <ph id="1" equiv="PH_1" disp="errorValue"/></source>
+      </segment>
+    </unit>
+    <unit id="i18n.ml.churnedF1">
+      <notes>
+        <note category="location">src/directives/ml-reliability.directive.ts:122</note>
+      </notes>
+      <segment>
+        <source>churned-F1 <ph id="0" equiv="PH" disp="summary.value"/> · recall <ph id="1" equiv="PH_1" disp="summary.recall"/></source>
       </segment>
     </unit>
     <unit id="i18n.ml.f1Recall">

@@ -28,6 +28,11 @@ Open `.env` and set at minimum:
 
 All other variables have sensible defaults and can be left unchanged for a first run.
 
+Behind a TLS-terminating reverse proxy, set `APP_URL` to the public `https://` URL and
+make sure the proxy sends `X-Forwarded-Proto`. Proxies on loopback or a private network
+are trusted out of the box; for anything else set `TRUSTED_PROXIES` (a comma-separated
+list of IPs/CIDRs, or `*`). `CORS_ALLOWED_ORIGINS` defaults to the origin of `APP_URL`.
+
 ### 2. Start NEXUS
 
 ```bash

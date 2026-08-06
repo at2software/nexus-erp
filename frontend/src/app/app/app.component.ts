@@ -28,9 +28,8 @@ const BREAKPOINT_ACTIVITY = 1700;
 })
 export class AppComponent {
     #tooltipConfig = inject(NgbTooltipConfig);
-    #global = inject(GlobalService);
 
-    init = toSignal(this.#global.init.pipe(map(() => true)), { initialValue: false });
+    authResolved = inject(GlobalService).authResolved;
     navigating = inject(RouteChangeListenerService).navigating;
 
     #narrow = toSignal(

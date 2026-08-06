@@ -60,6 +60,7 @@ export class GlobalService extends NexusHttpService<Serializable> {
     selectedSubObject: unknown;
 
     readonly loaded = signal(false);
+    readonly authResolved = signal(false);
     readonly encryptionsValid = signal(false);
     readonly navigationItems = signal<NavigationItem[]>([]);
     readonly bottomNavigationItems = signal<NavigationItem[]>([]);
@@ -100,12 +101,15 @@ export class GlobalService extends NexusHttpService<Serializable> {
     constructor() {
         super();
         setTimeout(() => {
-            if (AuthenticationService.sysinfo?.method === 'token') {
-                const token = getCookie('api_token');
-                if (!token) return;
-                this.setTokenInterceptor(token);
-                this.reload();
+            if (AuthenticationService.sysinfo?.method === 'keycloak') return;
+
+            const token = AuthenticationService.sysinfo?.method === 'token' ? getCookie('api_token') : '';
+            if (!token) {
+                this.authResolved.set(true);
+                return;
             }
+            this.setTokenInterceptor(token);
+            this.reload();
         });
     }
 
@@ -115,6 +119,7 @@ export class GlobalService extends NexusHttpService<Serializable> {
         this.http().get(environment.envApi + 'users/environment').subscribe({
             next: (_) => this.setUserEnvironment(_ as UserEnvironmentDto),
             error: (_) => {
+                this.authResolved.set(true);
                 if (AuthenticationService.sysinfo?.method === 'token') {
                     deleteCookie('api_token');
                     delete NexusHttpInterceptor.headers[environment.envApi];
@@ -141,6 +146,7 @@ export class GlobalService extends NexusHttpService<Serializable> {
 
     setUserEnvironment = async (env: UserEnvironmentDto | undefined) => {
         if ((await this.#auth.isLoggedIn()) && (!env || !('user' in env))) {
+            this.authResolved.set(true);
             this.#router.navigate(['/environment404']);
             return;
         }
@@ -190,6 +196,7 @@ export class GlobalService extends NexusHttpService<Serializable> {
             this.#factory.getPluginInstances();
             this.#initializeNavigationItems();
             this.loaded.set(true);
+            this.authResolved.set(true);
             this.#initialized.next(true);
         });
         this.user.initRsaEncryption();

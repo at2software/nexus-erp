@@ -166,6 +166,16 @@ MAIL_PORT=587
 MAIL_FROM_ADDRESS=noreply@example.com
 ```
 
+### Behind a reverse proxy
+
+```env
+APP_URL=https://nexus.example.com
+TRUSTED_PROXIES=127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+CORS_ALLOWED_ORIGINS=https://nexus.example.com
+```
+
+Set `APP_URL` to the public `https://` URL and make sure the proxy sends `X-Forwarded-Proto`. Proxies on loopback or a private network are trusted by default; for anything else list its IP or CIDR in `TRUSTED_PROXIES` (or use `*`). `CORS_ALLOWED_ORIGINS` defaults to the origin of `APP_URL`.
+
 ### Keycloak SSO
 
 ```env
