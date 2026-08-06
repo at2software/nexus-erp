@@ -4,12 +4,6 @@ namespace App\Services\Project;
 
 use App\ML\ProjectQuoteDataset;
 
-/**
- * Empirical acceptance-rate curve for one quote-acceptance feature — quantile
- * buckets of the same eligible/labeled pool ProjectQuoteDataset trains on, so
- * this chart shows exactly what the model sees, not a separately-computed
- * metric.
- */
 class ProjectQuoteSignalCurveService {
     private const BUCKETS          = 10;
     private const MIN_BUCKET_COUNT = 5;

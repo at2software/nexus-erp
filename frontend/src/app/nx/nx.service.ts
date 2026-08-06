@@ -1,19 +1,21 @@
 import { Nx } from './nx.directive';
-import { Injectable, Injector, inject } from '@angular/core';
-import { NxAction, NxActionType } from './nx.actions';
-import { INxContextMenu } from './nx.contextmenu.interface';
+import { Injector, inject, Service } from '@angular/core';
+import { NxAction, NxActionType, resolveDoubleClickAction } from '@models/_core/nx.actions';
+import { INxContextMenu } from '@models/_core/nx.contextmenu.interface';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { Router } from '@angular/router';
 import { GlobalService } from '@models/global.service';
-import { NxGlobal } from './nx.global';
+import { NxStatic } from './nx.static';
 import { NexusHttp } from '@models/http/http.nexus';
 import { Observable, Subject } from 'rxjs';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { HttpClient } from '@angular/common/http';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
 import { ModalBaseService } from '../_modals/modal-base-service';
 import { Title } from '@angular/platform-browser';
-import { MODEL_REGISTRY_TOKEN } from '@constants/model-registry.token';
+import { MODEL_REGISTRY_TOKEN } from '@constants/model/model-registry.token';
+import { resolved } from '@constants/resolved';
+import { resolveModal } from '@models/_core/modal-registry';
 
 const DOUBLE_CLICK_INTERVAL = 200;
 
@@ -24,22 +26,18 @@ const sub = (_: NxAction): NxAction[] => {
     return data;
 };
 
-export const resolved = <T>(_: T | (() => T)): T => (typeof _ == 'function' ? (_ as () => T)() : _);
-
 export interface ContextMenuTrigger {
     objects: Nx[];
     event: MouseEvent;
 }
 
-/** A DOM element with the `Nx` directive attached (see `Nx.nx` host binding). */
 type NxElement = Element & { nx: Nx };
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class NxService {
     #doubleClickTimeout?: ReturnType<typeof setTimeout>;
     #doubleClickObject?: Nx;
     #lastObject?: Nx;
-    // Holds whatever the interrupting modal resolved with; shape varies per action (see NxAction.interrupt).
     #interruptResult: unknown;
     selected: Nx[] = [];
     #service = inject(NexusHttp);
@@ -53,15 +51,15 @@ export class NxService {
     MODEL_REGISTRY_TOKEN = inject(MODEL_REGISTRY_TOKEN);
 
     constructor() {
-        NxGlobal.service = this.#service;
-        NxGlobal.router = this.#router;
-        NxGlobal.injector = this.#injector;
-        NxGlobal.global = this.#glob;
-        NxGlobal.http = this.#http;
-        NxGlobal.title = this.#title;
-        NxGlobal.nxService = this;
-        NxGlobal.modalService = this.#modalSvc;
-        NxGlobal.MODEL_REGISTRY_TOKEN = this.MODEL_REGISTRY_TOKEN;
+        NxStatic.service = this.#service;
+        NxStatic.router = this.#router;
+        NxStatic.injector = this.#injector;
+        NxStatic.global = this.#glob;
+        NxStatic.http = this.#http;
+        NxStatic.title = this.#title;
+        NxStatic.nxService = this;
+        NxStatic.modalService = this.#modalSvc;
+        NxStatic.MODEL_REGISTRY_TOKEN = this.MODEL_REGISTRY_TOKEN;
     }
 
     #onContextMenuSubject = new Subject<ContextMenuTrigger>();
@@ -102,14 +100,11 @@ export class NxService {
     onDoubleClick = (o: Nx) => {
         this.unselectAll();
         this.select(o);
-        const nx = o.nx();
-        if (nx.doubleClickAction in nx.actions) {
-            this.triggerAction(nx.actions[nx.doubleClickAction]);
-        }
+        const action = resolveDoubleClickAction(o.nx().actions);
+        if (action) this.triggerAction(action);
     };
 
     onCtrlShiftClick = (o: Nx, event: MouseEvent) => {
-        // CTRL+SHIFT+Click: Open primary action in new tab
         event.preventDefault();
         this.unselectAll();
         this.select(o);
@@ -119,9 +114,8 @@ export class NxService {
             window.open(url, '_blank');
             return;
         }
-        if (nx.doubleClickAction in nx.actions) {
-            this.triggerAction(nx.actions[nx.doubleClickAction]);
-        }
+        const action = resolveDoubleClickAction(nx.actions);
+        if (action) this.triggerAction(action);
     };
 
     getParent = () => this.#lastObject?.el.nativeElement.parentElement;
@@ -178,10 +172,10 @@ export class NxService {
     #isSelected = (o: Nx): boolean => this.selected.includes(o);
 
     static _filteredActions(actions: NxAction[]): NxAction[] {
-        const selectionCount = NxGlobal.nxService.selected.length;
+        const selectionCount = NxStatic.nxService.selected.length;
         if (selectionCount === 0) return [];
 
-        const dom = NxGlobal.nxService.selected[0];
+        const dom = NxStatic.nxService.selected[0];
         const domContext = dom.context()?.toLocaleLowerCase();
 
         return actions
@@ -196,7 +190,7 @@ export class NxService {
                 if (selectionCount > 1 && !action.group) return false;
                 if (action.roles) {
                     const requiredRoles = action.roles.split('|').map((r) => r.trim()).filter(Boolean);
-                    if (!NxGlobal.global.user?.hasAnyRole(requiredRoles)) return false;
+                    if (!NxStatic.global.user?.hasAnyRole(requiredRoles)) return false;
                 }
                 return action.on ? action.on() : true;
             })
@@ -236,7 +230,7 @@ export class NxService {
             this.#lastObject?.singleActionResolved.emit({ action: e, object: this.#lastObject, remaining });
 
         const propagateFinalized = (e: NxAction) => {
-            NxGlobal.global.onActionsResolved.next({ object: this.#lastObject!.nx(), action: e });
+            NxStatic.global.onActionsResolved.next({ object: this.#lastObject!.nx(), action: e });
             this.#lastObject?.actionsResolved.emit({ action: e, object: this.#lastObject, remaining: 0 });
         };
 
@@ -250,12 +244,11 @@ export class NxService {
         }
 
         const interrupt = matchedActions[0].interrupt
-            ? NxGlobal.modalService.open(matchedActions[0].interrupt.service, matchedActions[0].interrupt.args)
+            ? NxStatic.modalService.open(resolveModal(matchedActions[0].interrupt.service), matchedActions[0].interrupt.args)
             : Promise.resolve();
 
         interrupt
             .then((result: unknown) => {
-                // An interrupt modal resolves `undefined`/falsy when cancelled — skip the action in that case.
                 if (matchedActions[0].interrupt && !result) return;
                 this.#interruptResult = result;
                 let stackCount = this.selected.length;
@@ -264,7 +257,6 @@ export class NxService {
                     const selTables = sel.tables();
                     const action = NxService.flatActions(selNx.actions).find((_) => _.title == _action.title);
                     if (action?.action) {
-                        // Mirrors NxActionResolve's `success` callback — payload shape is per-action.
                         const resolve = (data: unknown = undefined) => {
                             stackCount--;
                             propagate(action, stackCount);
@@ -275,7 +267,6 @@ export class NxService {
                                 if (target) tables.remove(target);
                             }
                             if (data && resolvedType === NxActionType.Creative && Array.isArray(selTables)) {
-                                // A Creative action resolves with the freshly created row to append.
                                 selTables.push(data as INxContextMenu);
                             }
                             if (stackCount === 0) propagateFinalized(action);

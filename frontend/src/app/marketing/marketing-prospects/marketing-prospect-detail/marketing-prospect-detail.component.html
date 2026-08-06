@@ -5,7 +5,7 @@
 @let _pendingActivities = pendingActivities();
 @let _completedActivities = completedActivities();
 <div class="row">
-    <div class="col-6">
+    <div class="col-12 col-md-6">
         @if (_prospect && !_prospect.company_contact_id) {
             <toolbar>
                 <button type="button" class="btn btn-primary" (click)="convertProspect()" i18n-ngbTooltip="@@i18n.marketing.convertToContact" ngbTooltip="convert to contact">
@@ -83,13 +83,13 @@
                 <div class="card mb-3">
                     <div class="card-header" i18n="@@i18n.marketing.pending_activities">pending activities</div>
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table stackedTable class="table table-hover mb-0">
                             <tbody>
                                 @for (activity of _pendingActivities; track activity.id) {
-                                    <tr [class.table-active]="_selectedActivity?.id === activity.id" [nx]="activity" [tables]="_pendingActivities" [nxContext]="{ component: this }" (actionsResolved)="onActivityActionsResolved()" (click)="selectedActivity.set(_selectedActivity?.id === activity.id ? undefined : activity)" style="cursor: pointer">
+                                    <tr [class.table-active]="_selectedActivity?.id === activity.id" [nx]="activity" [tables]="_pendingActivities" [nxContext]="{ component: this }" (actionsResolved)="onActivityActionsResolved()" (click)="selectedActivity.set(_selectedActivity?.id === activity.id ? undefined : activity)" class="cursor-pointer">
 
                                         <td class="text-center" style="width: 20px;">
-                                            <a class="text-primary cursor-pointer" href="/marketing/initiatives/12" (click)="$event.stopPropagation()">
+                                            <a class="text-primary cursor-pointer" [routerLink]="['/marketing', 'initiatives', activity.marketing_initiative_activity?.marketing_initiative_id]" (click)="$event.stopPropagation()">
                                                 <i>chevron_left</i>
                                             </a>
                                         </td>
@@ -115,9 +115,10 @@
                                             </div>
                                         </td>
                                         <td>
-                                            @if (activity.marketing_activity?.performance_metrics?.length) {
+                                            @let listedMetrics = activity.marketing_activity?.performance_metrics ?? [];
+                                            @if (listedMetrics.length) {
                                                 <div class="d-flex flex-wrap gap-2">
-                                                    @for (metric of activity.marketing_activity?.performance_metrics; track metric.id) {
+                                                    @for (metric of listedMetrics; track metric.id) {
                                                         <button class="btn btn-plain px-1" [disabled]="true" [ngbTooltip]="metric.name">
                                                         <i [style.color]="metric.getIconColor()" [ngbTooltip]="metric.name">{{ metric.getIcon() }}</i>
                                                         </button>
@@ -149,10 +150,10 @@
                 <div class="card mb-3">
                     <div class="card-header" i18n="@@i18n.marketing.recent_completed_activities">recent completed activities</div>
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table stackedTable class="table table-hover mb-0">
                             <tbody>
                                 @for (activity of _completedActivities; track activity.id) {
-                                    <tr [class.table-active]="_selectedActivity?.id === activity.id" [nx]="activity" (actionsResolved)="onActivityActionsResolved()" (click)="selectedActivity.set(_selectedActivity?.id === activity.id ? undefined : activity)" style="cursor: pointer">
+                                    <tr [class.table-active]="_selectedActivity?.id === activity.id" [nx]="activity" (actionsResolved)="onActivityActionsResolved()" (click)="selectedActivity.set(_selectedActivity?.id === activity.id ? undefined : activity)" class="cursor-pointer">
                                         <td style="width: 40px">
                                             @if (activity.status === 'completed') {
                                                 <i class="text-success" style="font-size: 1.2rem">check_circle</i>
@@ -181,9 +182,10 @@
                                             }
                                         </td>
                                         <td>
-                                            @if (activity.marketing_activity?.performance_metrics?.length) {
+                                            @let compactMetrics = activity.marketing_activity?.performance_metrics ?? [];
+                                            @if (compactMetrics.length) {
                                                 <div class="d-flex flex-wrap gap-1 align-items-center">
-                                                    @for (metric of activity.marketing_activity?.performance_metrics; track metric.id) {
+                                                    @for (metric of compactMetrics; track metric.id) {
                                                         <i [style.color]="metric.getIconColor()" style="font-size: 1rem" [ngbTooltip]="metric.name">
                                                             {{ metric.getIcon() }}
                                                         </i>
@@ -197,7 +199,7 @@
                                             <small class="text-muted text-nowrap">{{ activity.completed_at | date: 'shortDate' }}</small>
                                         </td>
                                         <td class="text-end" style="width: 24px">
-                                            <a class="text-primary cursor-pointer" href="/marketing/initiatives/12" (click)="$event.stopPropagation()">
+                                            <a class="text-primary cursor-pointer" [routerLink]="['/marketing', 'initiatives', activity.marketing_initiative_activity?.marketing_initiative_id]" (click)="$event.stopPropagation()">
                                                 <i>chevron_right</i>
                                             </a>
                                         </td>
@@ -221,7 +223,7 @@
     </div>
 
     <!-- Right panel -->
-    <div class="col-6">
+    <div class="col-12 col-md-6">
         <!-- Notes -->
         @if (_prospect) {
             <div class="card mb-3">

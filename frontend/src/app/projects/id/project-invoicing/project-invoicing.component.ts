@@ -8,12 +8,12 @@ import { ProjectDetailGuard } from '@app/projects/project-details.guard';
 import { Assignee } from '@models/assignee/assignee.model';
 import { AssignmentService } from '@models/assignee/assignment.service';
 import { CompanyContact } from '@models/company/company-contact.model';
-import { BillingConsideration } from '@models/api-response';
+import { BillingConsiderationDto } from '@models/_core/api-response';
 import { GlobalService } from '@models/global.service';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { ProjectService } from '@models/project/project.service';
 import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 import { PdfCreationType } from '@enums/PdfCreationType';
 import { InvoiceItemType } from '@enums/invoice-item.type';
 import { InvoiceVatHandling } from '@enums/invoice.vat-handling';
@@ -21,29 +21,25 @@ import { Invoice } from '@models/invoice/invoice.model';
 import { InvoicePrepareWrapper } from '@app/invoices/_shards/invoice-prepare-wrapper/invoice-prepare-wrapper';
 import { ToastService } from '@shards/toast/toast.service';
 import { ProbabilityCurvePoint } from './project-invoicing-gauge.component';
-import { dayjs } from '@constants/dates';
+import { dayjs } from '@constants/date/dates';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
 import { ModalEditInvoiceItemComponent } from '@app/_modals/modal-edit-invoice-item/modal-edit-invoice-item.component';
 import { ModalInvoiceDiscountComponent } from '@app/_modals/modal-invoice-discount/modal-invoice-discount.component';
 import { ModalInvoiceAddInstalmentComponent } from '@app/_modals/modal-invoice-add-instalment/modal-invoice-add-instalment.component';
 import { SafePipe } from '@pipes/safe.pipe';
 import { MoneyPipe } from '@pipes/money.pipe';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, forkJoin, map, of } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { QuoteAcceptancePrediction, QuoteAcceptanceSuggestion } from '@models/api-response';
+import { modelListResource, modelResource } from '@models/http/model-resource';
+import { QuoteAcceptanceSuggestionDto } from '@models/_core/api-response';
 import { MlReliabilityDirective } from '@directives/ml-reliability.directive';
-
-export enum TInvoicing {
-    Quote,
-    PartialInvoice,
-    SupportInvoice,
-    FinalInvoice,
-}
+import { TInvoicing } from '@models/project/invoicing-type';
+import { AvatarComponent } from '@shards/avatar/avatar.component';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'project-detail-quote',
-    imports: [FormsModule, DatePipe, DecimalPipe, PercentPipe, ToolbarComponent, InvoicePrepareWrapper, NComponent, NgbTooltipModule, NgbDropdownModule, SafePipe, MoneyPipe, MlReliabilityDirective],
+    imports: [AvatarComponent, FormsModule, DatePipe, DecimalPipe, PercentPipe, ToolbarComponent, InvoicePrepareWrapper, NComponent, NgbTooltipModule, NgbDropdownModule, SafePipe, MoneyPipe, MlReliabilityDirective],
     templateUrl: './project-invoicing.component.html',
     styleUrl: './project-invoicing.component.scss',
 })
@@ -61,11 +57,9 @@ export class ProjectInvoicingComponent {
     personalized?: CompanyContact;
     invoiceNumber = Invoice.formattedInvoiceNumber();
     invoicingType = signal<number>(TInvoicing.Quote);
-    quoteDescriptions = signal<string[]>([]);
     invoicedUntil?: string = undefined;
     isCreatingInvoice = signal(false);
-    currentBillingConsiderations = signal<BillingConsideration[]>([]);
-    quoteAcceptancePrediction = signal<QuoteAcceptancePrediction | null>(null);
+    currentBillingConsiderations = signal<BillingConsiderationDto[]>([]);
     budgetCurve: ProbabilityCurvePoint[] = [];
     timeMult: number = 1;
     project = this.#parent.object();
@@ -94,11 +88,6 @@ export class ProjectInvoicingComponent {
         const net = this.#parent.object().net ?? 0;
         return net > 0 ? Math.min(1, this.invoicedTotal() / net) : 0;
     });
-    // The [mlReliability] tooltip already surfaces the full reliability summary, but the
-    // card itself must stay hidden entirely if a later retrain ever degrades the model
-    // below the "beats baseline" bar — showing a probability nobody should trust would be
-    // worse than showing nothing. GlobalService.setting() is the same raw param source
-    // MlReliabilityDirective reads from.
     quoteAcceptanceReliable = computed((): boolean => {
         const raw = this.#global.setting('ML_RELIABILITY_PROJECT_QUOTE_ACCEPTANCE');
         if (!raw) return false;
@@ -113,7 +102,19 @@ export class ProjectInvoicingComponent {
 
     #timeCurve: ProbabilityCurvePoint[] = [];
 
-    constructor() {        
+    readonly #quoteDescriptions = modelListResource(
+        () => this.#parent.object()?.id || undefined,
+        (projectId) => this.#projectService.indexQuoteDescriptions(projectId).pipe(map((d) => d.map((s) => s.toString()))),
+    );
+    readonly quoteDescriptions = this.#quoteDescriptions.value;
+
+    readonly #quoteAcceptancePrediction = modelResource(
+        () => (this.invoicingType() === TInvoicing.Quote ? this.#parent.object()?.id || undefined : undefined),
+        (projectId) => this.#projectService.showQuoteAcceptancePrediction(projectId).pipe(catchError(() => of(null))),
+    );
+    readonly quoteAcceptancePrediction = this.#quoteAcceptancePrediction.value;
+
+    constructor() {
         this.#route.url.pipe(takeUntilDestroyed()).subscribe((segments) => this.invoicingType.set(this.#typeFromRoute(segments[0]?.path)));
 
         effect(() => {
@@ -125,26 +126,7 @@ export class ProjectInvoicingComponent {
                 .map((a) => Assignee.fromJson(a))
                 .first()?.assignee as CompanyContact;
 
-            this.quoteDescriptions.set([]);
-            this.#projectService.indexQuoteDescriptions(object).subscribe((d) => {
-                this.quoteDescriptions.set(d.map((s) => s.toString()));
-            });
             this.invoicedUntil = '';
-        });
-
-        // Separate effect (not the one above): fetching this on every tab switch (not
-        // just when the project itself changes) is intentional, but it must only run
-        // for the quote view — the other tabs have no use for an acceptance prediction.
-        effect(() => {
-            const object = this.#parent.object();
-            const type = this.invoicingType();
-            if (type !== TInvoicing.Quote) {
-                this.quoteAcceptancePrediction.set(null);
-                return;
-            }
-            this.#projectService.showQuoteAcceptancePrediction(object)
-                .pipe(catchError(() => of(null)))
-                .subscribe((prediction) => this.quoteAcceptancePrediction.set(prediction));
         });
     }
 
@@ -200,7 +182,7 @@ export class ProjectInvoicingComponent {
         }
     }
 
-    onConsiderationsChanged = (considerations: BillingConsideration[]) => {
+    onConsiderationsChanged = (considerations: BillingConsiderationDto[]) => {
         setTimeout(() => this.currentBillingConsiderations.set(considerations));
     };
 
@@ -225,7 +207,6 @@ export class ProjectInvoicingComponent {
         this.invoicingContent()?.table()?.clear();
         const callback = () => {
             this.isCreatingInvoice.set(false);
-            // A draft is just a downloaded preview — no number is consumed and no invoice exists to navigate to.
             if (draft) return;
             this.#global.reloadInvoiceNumber().subscribe(() => {
                 this.#gotoCompanyInvoices();
@@ -234,7 +215,7 @@ export class ProjectInvoicingComponent {
         const type = this.invoicingType();
         switch (type) {
             case 0:
-                this.#projectService.makePdf(project, PdfCreationType.Create);
+                this.#projectService.makePdf(project, PdfCreationType.Create, () => this.#parent.reload());
                 setTimeout(() => this.isCreatingInvoice.set(false), 500);
                 break;
             case 1:
@@ -267,8 +248,7 @@ export class ProjectInvoicingComponent {
         return project.company.employees.filter((e) => !e.is_retired);
     };
 
-    /** One fixed localized template per feature+direction — mirrors the backend's "structured data only, no hardcoded sentences" rule (App\ML\ProjectQuoteWhatIf). */
-    suggestionText(s: QuoteAcceptanceSuggestion): string {
+    suggestionText(s: QuoteAcceptanceSuggestionDto): string {
         const to = Math.round(s.to);
         const from = Math.round(s.from);
         const points = (s.to - s.from).toFixed(0);

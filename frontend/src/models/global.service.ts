@@ -1,30 +1,28 @@
-import { Enum } from '@models/enum';
-import { Injectable, inject, signal } from '@angular/core';
+import { Enum } from '@models/_core/enum';
+import { inject, signal, Service } from '@angular/core';
 import { APP_BASE_HREF } from '@angular/common';
-import { environment } from 'src/environments/environment';
+import { environment } from '@environments/environment';
 import { User } from '@models/user/user.model';
-import { Param } from '@models/param.model';
-import { ReplaySubject, Subject, firstValueFrom, map, tap } from 'rxjs';
+import { Param } from '@models/param/param.model';
+import { BehaviorSubject, ReplaySubject, Subject, filter, firstValueFrom, map, tap } from 'rxjs';
 import { Encryption } from '@models/encryption/encryption.model';
 import { AuthenticationService } from './auth.service';
 import { deleteCookie, getCookie } from '@constants/cookies';
-import { NexusHttpInterceptor } from '@app/http.interceptor';
+import { NexusHttpInterceptor } from '@models/http/http-headers';
 import { HttpHeaders } from '@angular/common/http';
-import { resolved } from '@app/nx/nx.service';
-import { PluginInstanceFactory } from './http/plugin.instance.factory';
+import { resolved } from '@constants/resolved';
+import { PluginInstanceFactory } from './http/plugins/plugin.instance.factory';
 import { Router } from '@angular/router';
-import { NxGlobal } from '@app/nx/nx.global';
 import { Project } from './project/project.model';
-import { LeadSource } from './project/lead_source.model';
+import { LeadSource } from './project/lead-source.model';
 import { ProjectState } from './project/project-state.model';
 import { NexusHttpService } from './http/http.nexus';
-import { Serializable } from './serializable';
-import type { NxAction } from '@app/nx/nx.actions';
-import type { INxContextMenu } from '@app/nx/nx.contextmenu.interface';
+import { Serializable } from '@models/_core/serializable';
+import type { NxAction } from '@models/_core/nx.actions';
+import type { INxContextMenu } from '@models/_core/nx.contextmenu.interface';
 import { Dictionary } from '@constants/constants';
-import { Dashboard, TableRelation, TableSchema, UserEnvironment } from '@models/api-response';
+import { DashboardDto, TableRelationDto, TableSchemaDto, UserEnvironmentDto } from '@models/_core/api-response';
 
-/** DEV: override your own role_names for testing. Set to null to disable. */
 const DEV_ROLES: string[] | null = null; // e.g. ['user', 'invoicing']
 
 interface NavigationItem {
@@ -34,31 +32,30 @@ interface NavigationItem {
     visible: boolean;
 }
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class GlobalService extends NexusHttpService<Serializable> {
-    // inject fields
     readonly #auth = inject(AuthenticationService);
     readonly #factory = inject(PluginInstanceFactory);
     readonly #router = inject(Router);
     readonly #baseHref = inject(APP_BASE_HREF);
 
-    // public fields
     apiPath = '';
-    tables!: TableSchema[];
-    relations!: TableRelation[];
+    tables!: TableSchemaDto[];
+    relations!: TableRelationDto[];
     accessors: Dictionary<Dictionary<string>> = {};
     user: User | undefined;
     team!: User[];
     teamAll!: User[];
     enum!: Dictionary;
     encryptions: Encryption[] = [];
-    dashboards!: Dashboard[];
+    dashboards!: DashboardDto[];
      
     settings!: Record<string, any>;
     readonly lead_sources = signal<LeadSource[]>([]);
     project_states: ProjectState[] = [];
     roles: unknown[] = [];
     euCountries!: string[];
+    me_id: string = '';
     selectedRootObject: unknown;
     selectedSubObject: unknown;
 
@@ -70,7 +67,6 @@ export class GlobalService extends NexusHttpService<Serializable> {
     readonly env = environment;
     readonly supportedLanguages: string[] = ['en', 'de'];
 
-    // private fields
     #plugins: Dictionary = {};
     #locale: string = 'de';
 
@@ -78,8 +74,17 @@ export class GlobalService extends NexusHttpService<Serializable> {
     readonly onObjectSelected = this.#onObjectSelected.asObservable();
     readonly #onRootObjectSelected = new ReplaySubject<unknown>(1);
     readonly onRootObjectSelected = this.#onRootObjectSelected.asObservable();
-    readonly #init = new ReplaySubject<void>(1);
-    readonly init = this.#init.asObservable();
+    readonly #initialized = new BehaviorSubject(false);
+    readonly initialized$ = this.#initialized.asObservable();
+    readonly init = this.#initialized.pipe(
+        filter(Boolean),
+        map(() => undefined),
+    );
+
+    invalidateInit = () => {
+        this.loaded.set(false);
+        this.#initialized.next(false);
+    };
 
     get locale(): string { return this.#locale; }
     set locale(newLocale: string) {
@@ -101,8 +106,6 @@ export class GlobalService extends NexusHttpService<Serializable> {
                 this.setTokenInterceptor(token);
                 this.reload();
             }
-            // For Keycloak, reload() will be called after authentication is confirmed
-            // in the auth guard to ensure the JWT token is available
         });
     }
 
@@ -110,7 +113,7 @@ export class GlobalService extends NexusHttpService<Serializable> {
 
     reload = () =>
         this.http().get(environment.envApi + 'users/environment').subscribe({
-            next: (_) => this.setUserEnvironment(_ as UserEnvironment),
+            next: (_) => this.setUserEnvironment(_ as UserEnvironmentDto),
             error: (_) => {
                 if (AuthenticationService.sysinfo?.method === 'token') {
                     deleteCookie('api_token');
@@ -136,7 +139,7 @@ export class GlobalService extends NexusHttpService<Serializable> {
         );
     };
 
-    setUserEnvironment = async (env: UserEnvironment | undefined) => {
+    setUserEnvironment = async (env: UserEnvironmentDto | undefined) => {
         if ((await this.#auth.isLoggedIn()) && (!env || !('user' in env))) {
             this.#router.navigate(['/environment404']);
             return;
@@ -166,7 +169,7 @@ export class GlobalService extends NexusHttpService<Serializable> {
         this.roles = env.roles || [];
         this.euCountries = env.eu_countries;
 
-        NxGlobal.ME_ID = env.settings.ME_ID as string;
+        this.me_id = env.settings.ME_ID as string;
 
         this.user.encryptionInitialized.subscribe(() => {
             const nexus = Encryption.fromJson({ key: 'nexus' });
@@ -187,7 +190,7 @@ export class GlobalService extends NexusHttpService<Serializable> {
             this.#factory.getPluginInstances();
             this.#initializeNavigationItems();
             this.loaded.set(true);
-            this.#init.next();
+            this.#initialized.next(true);
         });
         this.user.initRsaEncryption();
     };

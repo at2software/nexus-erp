@@ -23,7 +23,6 @@ class Focus extends BaseModel {
         ];
     }
 
-    // Cascades a save to the parent (Project or Company), which broadcasts itself as 'updated'.
     protected $touches = ['user', 'parent'];
 
     public function parent() {

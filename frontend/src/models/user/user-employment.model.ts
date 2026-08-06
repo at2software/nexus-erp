@@ -1,8 +1,7 @@
-import { Serializable } from '../serializable';
-import { UserService } from './user.service';
-import { NxAction } from '@app/nx/nx.actions';
+import { Serializable } from '@models/_core/serializable';
+import { NxAction } from '@models/_core/nx.actions';
 import { getUserEmploymentActions } from './user-employment.actions';
-import { Model } from '@constants/type-discriminators';
+import { Model } from '@constants/model/type-discriminators';
 
 @Model('UserEmployment')
 export class UserEmployment extends Serializable {
@@ -22,9 +21,8 @@ export class UserEmployment extends Serializable {
     su: number = 0;
     hpw: number = 0;
 
-    SERVICE = UserService;
 
-    actions: NxAction[] = getUserEmploymentActions(this);
+    protected override buildActions(): NxAction[] { return getUserEmploymentActions(this) }
 
     apiPath = (): any => 'users/' + this.user_id + '/employment';
     hpwArray = () => [this.mo, this.tu, this.we, this.th, this.fr, this.sa, this.su];

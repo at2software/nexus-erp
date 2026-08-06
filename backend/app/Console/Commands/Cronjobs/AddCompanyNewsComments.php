@@ -11,22 +11,15 @@ use Illuminate\Console\Command;
 
 class AddCompanyNewsComments extends Command {
     /**
-     * The name and signature of the console command.
-     *
      * @var string
      */
     protected $signature = 'cron:add-company-news-comments';
 
     /**
-     * The console command description.
-     *
      * @var string
      */
     protected $description = 'Adds comments to companies based on news from Handelsregister and Bundesanzeiger';
 
-    /**
-     * Execute the console command.
-     */
     public function handle() {
         $companies       = Company::whereNotNull('commercial_register')->whereNot('is_deprecated', true)->get();
         $handelsRegister = app(HandelsRegister::class);
@@ -36,7 +29,6 @@ class AddCompanyNewsComments extends Command {
             $commentCount = 0;
             $this->info('Processing: '.$company->name);
 
-            // Check Handelsregister for insolvency
             $registerInfo = $handelsRegister->process($company->commercial_register);
             if (! empty($registerInfo) && ! empty($registerInfo['fehlerhaft'])) {
                 $commentText = '[Handelsregister] Registernummer fehlerhaft: '.$company->commercial_register;
@@ -67,7 +59,6 @@ class AddCompanyNewsComments extends Command {
                 }
             }
 
-            // Check Bundesanzeiger for new publications (searched by company name)
             $reports = $bundesanzeiger->process($company->name);
 
             if (! empty($reports)) {

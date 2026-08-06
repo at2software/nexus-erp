@@ -53,18 +53,14 @@ class Param extends BaseModel {
             return $response;
         }
 
-        // Apply filters first
         if ($since) {
             $query->where('created_at', '>', Carbon::createFromTimestamp($since));
         }
 
-        // Get max updated_at efficiently
         $maxUpdatedAt = $query->max('updated_at');
         $maxUpdatedAt = $maxUpdatedAt ? Carbon::parse($maxUpdatedAt) : null;
 
-        // Optimize based on clustering requirement
         if ($cluster && ($dateFormat = Param::dateFormatFor($cluster))) {
-            // Use raw SQL for better performance when clustering is needed
             $data = $query->selectRaw('
                 DATE_FORMAT(created_at, ?) AS x,
                 value AS y,
@@ -82,7 +78,6 @@ class Param extends BaseModel {
                     'max' => (float)$item->max,
                 ]);
         } else {
-            // Simple query when no clustering needed
             $data = $query->select(['created_at', 'value'])
                 ->orderBy('created_at')
                 ->get()
@@ -105,12 +100,10 @@ class Param extends BaseModel {
         return $clone;
     }
     public function getFallbackAttribute() {
-        // Ensure value is resolved first to determine if fallback was used
         $this->value;
         return $this->fallen_back;
     }
 
-    // Modern attribute accessors
     protected function value(): Attribute {
         return Attribute::make(
             get: function () {
@@ -118,7 +111,6 @@ class Param extends BaseModel {
                     return $this->pending_value;
                 }
 
-                // Cache the resolved value to avoid multiple queries
                 if (! isset($this->cached_value)) {
                     // Use ->first()?->value to ensure Eloquent casts (like I18n) are applied
                     $d = $this->getRel()?->first()?->value ?? null;
@@ -126,7 +118,6 @@ class Param extends BaseModel {
                         $this->fallen_back = true;
                         $d                 = $this->dataForPoly(self::nullPoly())?->first()?->value ?? null;
 
-                        // If still null, check config for default value
                         if ($d === null) {
                             $keys = config('params');
                             if (! empty($keys[$this->key]['default'])) {
@@ -189,7 +180,6 @@ class Param extends BaseModel {
                 }
             }
 
-            // Clear pending changes after save
             $this->clearPendingChanges();
             return true;
         }
@@ -198,16 +188,13 @@ class Param extends BaseModel {
         return parent::save($options);
     }
     public function delete() {
-        // Delete the linked param instance for this model, not the base Param
         if ($this->model && $data = $this->getRel(false)?->first()) {
             return $data->delete();
         }
 
-        // Only delete the base Param if no model is linked (shouldn't happen in normal use)
         return parent::delete();
     }
     public function getDirty() {
-        // Exclude virtual attributes from dirty tracking
         $dirty = parent::getDirty();
         unset($dirty['value'], $dirty['created_at'], $dirty['updated_at']);
         return $dirty;
@@ -249,13 +236,6 @@ class Param extends BaseModel {
         return $this->type::create($data);
     }
 
-    /**
-     * Summary of get
-     *
-     * @param mixed $key
-     * @param mixed $attrs type, history
-     * @param mixed $doNotCreate
-     */
     public static function get($key, $attrs = [], $doNotCreate = false): ?Param {
         if (! empty(self::$paramCache[$key])) {
             return self::$paramCache[$key];
@@ -290,7 +270,6 @@ class Param extends BaseModel {
 
         $data = [];
 
-        // For global settings (null poly), use direct queries to avoid issues
         if (is_null($poly['parent_id']) && is_null($poly['parent_type'])) {
             $floatResults = FloatParam::getLatestGlobalValuesWithKeys();
             foreach ($floatResults as $result) {
@@ -307,7 +286,6 @@ class Param extends BaseModel {
                 $data[$result->key] = $result->value;
             }
         } else {
-            // For specific entities, use trait method
             $floatResults = FloatParam::getLatestValuesWithKeys($poly);
             foreach ($floatResults as $result) {
                 $data[$result->key] = (float)$result->value;
@@ -341,40 +319,27 @@ class Param extends BaseModel {
         }
     }
 
-    /**
-     * Get the localized value for a specific language and formality.
-     * If value is an i18n array, returns the matching variant's text.
-     * If value is a plain string, returns it as-is.
-     */
     public function localizedValue(?string $language = 'de', ?string $formality = 'formal'): ?string {
         return self::localizeI18nValue($this->value, $language, $formality);
     }
 
-    /**
-     * Same variant-picking logic as localizedValue(), extracted so callers
-     * that already have a raw (I18n-cast) value in hand — e.g. from a bulk
-     * query — can reuse it without instantiating a Param wrapper per row.
-     */
     public static function localizeI18nValue($value, ?string $language = 'de', ?string $formality = 'formal'): ?string {
         if (! is_array($value)) {
             return $value;
         }
 
-        // Find matching variant
         foreach ($value as $variant) {
             if (($variant['language'] ?? '') === $language && ($variant['formality'] ?? '') === $formality) {
                 return $variant['text'] ?? '';
             }
         }
 
-        // Fallback to de-formal
         foreach ($value as $variant) {
             if (($variant['language'] ?? '') === 'de' && ($variant['formality'] ?? '') === 'formal') {
                 return $variant['text'] ?? '';
             }
         }
 
-        // Last resort: return first variant's text
         return $value[0]['text'] ?? '';
     }
 }

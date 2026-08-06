@@ -64,13 +64,9 @@ class CommandController extends Controller {
         return $map;
     }
 
-    /**
-     * Execute a command
-     */
     public function execute(Request $request) {
         $data = $this->getBody();
 
-        // Debug logging
         Log::info('Command execution request:', (array)$data);
 
         $commandName = $data->command ?? null;
@@ -80,16 +76,13 @@ class CommandController extends Controller {
             return response()->json(['error' => 'The command field is required.'], 422);
         }
 
-        // Security check - only allow whitelisted commands
         if (! $this->isCommandAllowed($commandName)) {
             return response()->json(['error' => 'Command not allowed'], 403);
         }
 
         try {
-            // Create a buffered output to capture the command output
             $output = new BufferedOutput;
 
-            // Execute the command
             $exitCode = Artisan::call($commandName, $arguments, $output);
 
             $commandOutput = $output->fetch();
@@ -112,9 +105,6 @@ class CommandController extends Controller {
         }
     }
 
-    /**
-     * Get command details including arguments/options
-     */
     public function show(Request $request, string $commandName) {
         if (! $this->isCommandAllowed($commandName)) {
             return response()->json(['error' => 'Command not allowed'], 403);

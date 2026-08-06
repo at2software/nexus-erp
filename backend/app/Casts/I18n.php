@@ -10,7 +10,6 @@ class I18n implements CastsAttributes {
     public function __construct(protected string $markerValue = '@@i18n') {}
 
     public function get(Model $model, string $key, mixed $value, array $attributes): mixed {
-        // If value is the marker, return array of i18n objects
         if ($value === $this->markerValue && $model->exists) {
             $i18nRecords = $model->relationLoaded('i18n')
                 ? $model->getRelation('i18n')
@@ -28,11 +27,9 @@ class I18n implements CastsAttributes {
             }
         }
 
-        // Plain string value
         return $value;
     }
     public function set(Model $model, string $key, mixed $value, array $attributes): mixed {
-        // Handle array of i18n objects: [{ language: "en", formality: "informal", text: "..." }, ...]
         if (is_array($value) && isset($value[0]) && is_array($value[0]) && isset($value[0]['language'])) {
             if (! $model->exists) {
                 $pending              = $model->__pendingI18n ?? [];
@@ -41,7 +38,6 @@ class I18n implements CastsAttributes {
                 return $this->markerValue;
             }
 
-            // Update each variant
             foreach ($value as $variant) {
                 if (isset($variant['language']) && isset($variant['text'])) {
                     I18nModel::updateOrCreate(
@@ -69,14 +65,12 @@ class I18n implements CastsAttributes {
                 return $this->markerValue;
             }
 
-            // Check if this is the first localization (no existing i18n records)
             $existingI18n = I18nModel::where([
                 'parent_type' => $model::class,
                 'parent_id'   => $model->getKey(),
             ])->exists();
 
             if (! $existingI18n) {
-                // First time localizing - create all 4 variants with the same text
                 $variants = [
                     ['language' => 'de', 'formality' => 'formal'],
                     ['language' => 'de', 'formality' => 'informal'],
@@ -94,7 +88,6 @@ class I18n implements CastsAttributes {
                     ]);
                 }
             } else {
-                // Update specific variant
                 I18nModel::updateOrCreate(
                     [
                         'parent_type' => $model::class,
@@ -110,7 +103,6 @@ class I18n implements CastsAttributes {
             return $this->markerValue;
         }
 
-        // Plain string value - if currently localized, remove all i18n records
         if ($model->exists && $model->getRawOriginal($key) === $this->markerValue) {
             I18nModel::where([
                 'parent_type' => $model::class,
@@ -118,7 +110,6 @@ class I18n implements CastsAttributes {
             ])->delete();
         }
 
-        // Store as plain value
         return $value;
     }
 }

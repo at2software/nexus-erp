@@ -132,7 +132,7 @@
                     style="overflow: visible;"
                 >
                     <div xmlns="http://www.w3.org/1999/xhtml" class="header-content-wrapper">
-                        <div class="project-label" [style.left.px]="_viewportLeft + 16" style="text-shadow: 0 0 3px #000" (click)="navigateToProject(row.project!)" (keydown.enter)="navigateToProject(row.project!)" (keydown.space)="navigateToProject(row.project!)" tabindex="0" role="button">
+                        <div class="project-label cursor-pointer" [style.left.px]="_viewportLeft + 16" style="text-shadow: 0 0 3px #000" (click)="navigateToProject(row.project!)" (keydown.enter)="navigateToProject(row.project!)" (keydown.space)="navigateToProject(row.project!)" tabindex="0" role="button">
                             {{ row.project.name }}
                         </div>
                         <div class="header-add-button" [style.left.px]="_viewportRight - 50" ngbDropdown #dropdown="ngbDropdown" placement="bottom-end" container="body" (openChange)="onDropdownOpenChange()">

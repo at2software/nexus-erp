@@ -133,7 +133,10 @@ return [
     'team_monitor_api_key' => env('TEAM_MONITOR_API_KEY', ''),
 
     'api_url'     => env('API_URL', env('APP_URL', 'http://localhost')),
-    'reverb_key'  => env('REVERB_APP_KEY', 'nexus-key'),
+    // Must be the key Reverb registers its app under - config/reverb.php reads PUSHER_APP_KEY.
+    // No fallback on purpose: a wrong key looks identical to a working one until the socket
+    // is already open and Reverb answers 4001 "Application does not exist".
+    'reverb_key'  => env('PUSHER_APP_KEY', env('REVERB_APP_KEY')),
     'nexus_debug' => (bool)env('NEXUS_DEBUG', false),
 
     'cipher' => 'AES-256-CBC',

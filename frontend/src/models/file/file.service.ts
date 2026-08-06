@@ -1,13 +1,11 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Invoice } from '@models/invoice/invoice.model';
 import { NexusHttpService } from '../http/http.nexus';
 import { File } from './file.model';
 import { InvoiceReminder } from '../invoice/invoice-reminder.model';
 
-@Injectable({
-    providedIn: 'root',
-})
+@Service()
 export class FileService extends NexusHttpService<File> {
     public apiPath = 'files';
     override readonly model = File;
@@ -28,6 +26,6 @@ export class FileService extends NexusHttpService<File> {
     }
 
     uploadWithProgress = (path: string, file: FormData) =>
-        this.http().request<any>('POST', this.baseUrl() + path, { body: file, reportProgress: true, observe: 'events' });
+        this.http().request<any>('POST', this.baseUrl() + path, { body: file, reportUploadProgress: true, observe: 'events' });
     uploadTravelExpenses = (files: FormData, success?: () => void) => this.postBlob('users/travel-expenses', files, success);
 }

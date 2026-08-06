@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
-import { StatsService } from '@models/stats-service';
+import { modelListResource } from '@models/http/model-resource';
+import { StatsService } from '@models/stats.service';
 import { GlobalService } from '@models/global.service';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { Color } from '@constants/Color';
@@ -8,7 +9,7 @@ import { EChartsSimpleOptions, ECHARTS_DEFAULT_TOOLTIP_OPTIONS, ECHARTS_DONUT_IT
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { Dictionary } from '@constants/constants';
 import type { EChartsOption, SeriesOption } from 'echarts';
-import { ChartAxisTooltipParam } from '@models/api-response';
+import { ChartAxisTooltipParamDto } from '@models/_core/api-response';
 
 interface FocusCategoryData {
     id: number;
@@ -34,9 +35,12 @@ export class HrStatsFocusCategoriesComponent {
     #statsService = inject(StatsService);
     #global = inject(GlobalService);
 
-    users = signal<FocusCategoryData[]>([]);
-    chartOptions = signal<Record<number, EChartsOption>>({});
-    donutChartOptions = signal<Record<number, EChartsOption | null>>({});
+    readonly #focusCategories = modelListResource<FocusCategoryData>(() => this.#statsService.showFocusCategories());
+    readonly users = computed(() =>
+        [...this.#focusCategories.value()].sort((a, b) => this.#global.team.findIndex((t) => t.id === a.id.toString()) - this.#global.team.findIndex((t) => t.id === b.id.toString())),
+    );
+    readonly chartOptions = computed(() => Object.fromEntries(this.users().map((user) => [user.id, this.#createChartOptions(user)])));
+    readonly donutChartOptions = computed(() => Object.fromEntries(this.users().map((user) => [user.id, this.#createDonutChartOptions(user)])));
 
     #categoryColors = {
         orga: '#333333',
@@ -46,27 +50,6 @@ export class HrStatsFocusCategoriesComponent {
         budget_projects: Color.fromVar('blue').toHexString(),
         internal_projects: Color.fromVar('purple').toHexString(),
     };
-
-    constructor() {
-        this.#statsService.showFocusCategories().subscribe((response: FocusCategoryData[]) => {
-            const sorted = response.sort((a, b) => {
-                const teamA = this.#global.team.findIndex((t) => t.id === a.id.toString());
-                const teamB = this.#global.team.findIndex((t) => t.id === b.id.toString());
-                return teamA - teamB;
-            });
-
-            const charts: Record<number, EChartsOption> = {};
-            const donuts: Record<number, EChartsOption | null> = {};
-            sorted.forEach((user) => {
-                charts[user.id] = this.#createChartOptions(user);
-                donuts[user.id] = this.#createDonutChartOptions(user);
-            });
-
-            this.users.set(sorted);
-            this.chartOptions.set(charts);
-            this.donutChartOptions.set(donuts);
-        });
-    }
 
     #createChartOptions(user: FocusCategoryData): EChartsOption {
         const months = this.#getAllMonths(user);
@@ -86,15 +69,13 @@ export class HrStatsFocusCategoriesComponent {
             tooltip: {
                 ...EChartsSimpleOptions.tooltip,
                 formatter: (rawParams: unknown) => {
-                    const params = rawParams as ChartAxisTooltipParam[];
+                    const params = rawParams as ChartAxisTooltipParamDto[];
                     const month = params[0].axisValue;
                     let tooltipContent = `<div class="p-2"><strong>${month}</strong><br/>`;
 
-                    // Separate categories and required hours line
                     const categoryParams = params.filter((p) => p.seriesName !== $localize`@@i18n.hr.required_hours`);
                     const requiredParam = params.find((p) => p.seriesName === $localize`@@i18n.hr.required_hours`);
 
-                    // Show categories first
                     let totalActual = 0;
                     categoryParams.reverse().forEach((param) => {
                         if (param.value && param.value > 0) {
@@ -105,13 +86,11 @@ export class HrStatsFocusCategoriesComponent {
                         }
                     });
 
-                    // Show sum of categories
                     if (categoryParams.length > 0) {
                         const totalValue = totalActual.toFixed(1);
                         tooltipContent += `<br/><div class="d-flex justify-content-between"><strong>${$localize`@@i18n.hr.total_actual`}</strong><strong class="ms-2">${totalValue}h</strong></div>`;
                     }
 
-                    // Show required hours at the bottom
                     if (requiredParam?.value && requiredParam.value > 0) {
                         const requiredColor = requiredParam.color;
                         const requiredValue = requiredParam.value.toFixed(1);
@@ -204,10 +183,9 @@ export class HrStatsFocusCategoriesComponent {
         const totalTime = Object.values(categoryTotals).reduce((sum, value) => sum + value, 0);
 
         if (totalTime === 0) {
-            return null; // No data to show
+            return null;
         }
 
-        // Calculate profitable work percentage
         const profitableCategories = ['budget_projects', 'time_based_projects', 'time_based_customers'];
         const profitableTime = profitableCategories.reduce((sum, category) => {
             return sum + (categoryTotals[category] || 0);

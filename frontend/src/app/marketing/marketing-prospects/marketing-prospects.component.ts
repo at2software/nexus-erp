@@ -1,22 +1,23 @@
 import { Dictionary } from '@constants/constants';
-import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, linkedSignal, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { from, mergeMap, switchMap, tap, toArray } from 'rxjs';
+import { from, mergeMap, toArray } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { NgbDropdownModule, NgbModal, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { MarketingService } from '@models/marketing/marketing.service';
-import { MarketingProspect } from '@models/marketing/marketing.prospect.model';
+import { MarketingProspect } from '@models/marketing/marketing-prospect.model';
 import { MarketingInitiative } from '@models/marketing/marketing-initiative.model';
+import { modelListResource, modelResource } from '@models/http/model-resource';
 import { Nx } from '@app/nx/nx.directive';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
-import { NxGlobal } from '@app/nx/nx.global';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
+import { GlobalService } from '@models/global.service';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { MarketingCsvImportModalComponent, parseCsv } from './marketing-csv-import-modal/marketing-csv-import-modal.component';
-import type { CsvColumnMapping, CsvImportResult } from '@models/api-response';
+import type { CsvColumnMappingDto, CsvImportResultDto } from '@models/_core/api-response';
 import { storageGet, storageSet } from '@constants/storage';
 
 @Component({
@@ -28,6 +29,7 @@ import { storageGet, storageSet } from '@constants/storage';
 })
 export class MarketingProspectsComponent {
     #marketingService = inject(MarketingService);
+    #global = inject(GlobalService);
     #route = inject(ActivatedRoute);
     #router = inject(Router);
     #inputModalService = inject(InputModalService);
@@ -36,9 +38,6 @@ export class MarketingProspectsComponent {
 
     protected readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
 
-    isLoading = signal(false);
-    prospects = signal<MarketingProspect[]>([]);
-    initiatives = signal<MarketingInitiative[]>([]);
     initiativeFilter = signal('');
     userFilter = signal('');
     selectedProspectId = signal('');
@@ -52,7 +51,36 @@ export class MarketingProspectsComponent {
         { key: 'on_hold',      label: $localize`:@@i18n.marketing.on_hold:on hold`,           badgeClass: 'bg-secondary rounded-pill', icon: MarketingProspect.STATUS_ICONS['on_hold'],      selected: true },
     ]);
 
-    availableUsers    = computed(() => NxGlobal.global.team ?? []);
+    #filtersSettled = signal(!this.#route.snapshot.firstChild?.params['id']);
+    #prospectParams = computed<Dictionary | undefined>(() => this.#filtersSettled()
+        ? {
+            ...(this.initiativeFilter() && { marketing_initiative_id: parseInt(this.initiativeFilter()) }),
+            ...(this.userFilter() && { user_id: parseInt(this.userFilter()) }),
+        }
+        : undefined);
+    #prospects = modelListResource(this.#prospectParams, (params) => this.#marketingService.indexProspects(params));
+    isLoading = this.#prospects.isLoading;
+    prospects = linkedSignal(() => this.#prospects.value());
+
+    #initiatives = modelResource(() => this.#marketingService.indexInitiatives({ status: 'active' }));
+    #overdueScan = modelListResource(
+        () => (this.userFilter() ? { user_id: parseInt(this.userFilter()) } : {}),
+        (params: Dictionary) => this.#marketingService.indexProspects(params),
+    );
+    initiatives = computed(() => {
+        const initiatives = this.#initiatives.value()?.data ?? [];
+        const counts = new Map<string, number>();
+        for (const p of this.#overdueScan.value()) {
+            if (!p.has_overdue_activities || !p.marketing_initiative?.id) continue;
+            if (['unresponsive', 'disqualified', 'on_hold'].includes(p.status)) continue;
+            const key = String(p.marketing_initiative.id);
+            counts.set(key, (counts.get(key) ?? 0) + 1);
+        }
+        initiatives.forEach((i) => (i.overdue_prospects_count = counts.get(String(i.id)) ?? 0));
+        return initiatives;
+    });
+
+    availableUsers    = computed(() => this.#global.team ?? []);
     selectedUser      = computed(() => this.availableUsers().find(u => String(u.id) === this.userFilter()));
     selectedUserName  = computed(() => this.selectedUser()?.fullName() ?? this.userFilter());
     totalOverdueCount = computed(() => this.initiatives().reduce((sum, i) => sum + (i.overdue_prospects_count ?? 0), 0));
@@ -76,8 +104,8 @@ export class MarketingProspectsComponent {
     constructor() {
         this.#restoreFiltersFromLocalStorage();
 
-        if (!this.userFilter() && NxGlobal.global.user) {
-            this.userFilter.set(NxGlobal.global.user.id.toString());
+        if (!this.userFilter() && this.#global.user) {
+            this.userFilter.set(this.#global.user.id.toString());
         }
 
         const directId = this.#route.snapshot.firstChild?.params['id'];
@@ -89,63 +117,19 @@ export class MarketingProspectsComponent {
                         this.initiativeFilter.set(String(initiativeId));
                         this.#saveFiltersToLocalStorage();
                     }
-                    this.#loadInitiatives();
-                    this.#loadProspects();
+                    this.#filtersSettled.set(true);
                 },
-                error: () => { this.#loadInitiatives(); this.#loadProspects(); },
+                error: () => this.#filtersSettled.set(true),
             });
-        } else {
-            this.#loadInitiatives();
-            this.#loadProspects();
         }
 
         this.#route.firstChild?.params.pipe(takeUntilDestroyed()).subscribe(params => {
             this.selectedProspectId.set(params['id'] ?? '');
         });
-    }
 
-    #loadInitiatives() {
-        const params: Dictionary = this.userFilter() ? { user_id: parseInt(this.userFilter()) } : {};
-        this.#marketingService
-            .indexInitiatives({ status: 'active' })
-            .pipe(
-                tap((response) => this.initiatives.set(response.data)),
-                switchMap(() => this.#marketingService.indexProspects(params)),
-            )
-            .subscribe({
-                next: (prospects: MarketingProspect[]) => {
-                    const counts = new Map<string, number>();
-                    prospects.forEach(p => {
-                        if (p.has_overdue_activities && p.marketing_initiative?.id && !['unresponsive', 'disqualified', 'on_hold'].includes(p.status)) {
-                            const key = String(p.marketing_initiative.id);
-                            counts.set(key, (counts.get(key) || 0) + 1);
-                        }
-                    });
-                    this.initiatives.update(inits => {
-                        inits.forEach(i => i.overdue_prospects_count = counts.get(String(i.id)) ?? 0);
-                        return [...inits];
-                    });
-                },
-                error: () => { /** no-op */},
-            });
-    }
-
-    #loadProspects() {
-        this.isLoading.set(true);
-        const params = {
-            ...(this.initiativeFilter() && { marketing_initiative_id: parseInt(this.initiativeFilter()) }),
-            ...(this.userFilter() && { user_id: parseInt(this.userFilter()) }),
-        };
-        this.#marketingService.indexProspects(params).subscribe({
-            next: (response) => {
-                this.prospects.set(response);
-                this.isLoading.set(false);
-                if (!this.#route.firstChild) {
-                    const first = this.filteredProspects()[0];
-                    if (first) this.#router.navigate(['/marketing/prospects', first.id]);
-                }
-            },
-            error: () => this.isLoading.set(false),
+        effect(() => {
+            const first = this.filteredProspects()[0];
+            if (first && !this.#route.firstChild) this.#router.navigate(['/marketing/prospects', first.id]);
         });
     }
 
@@ -157,25 +141,21 @@ export class MarketingProspectsComponent {
     setUserFilter(id: string | number | null) {
         this.userFilter.set(id ? String(id) : '');
         this.#saveFiltersToLocalStorage();
-        this.#loadInitiatives();
-        this.#loadProspects();
     }
 
     setInitiativeFilter(id: string | number | null) {
         this.initiativeFilter.set(id ? String(id) : '');
         this.#saveFiltersToLocalStorage();
-        this.#loadProspects();
     }
 
     isSubscribedToInitiative(initiative: MarketingInitiative): boolean {
-        const checkId = this.userFilter() ? parseInt(this.userFilter()) : NxGlobal.global.user?.id;
+        const checkId = this.userFilter() ? parseInt(this.userFilter()) : this.#global.user?.id;
         return initiative.users?.some(u => u.id === checkId) ?? false;
     }
 
     actionsResolved = () => this.prospects.update(p => [...p]);
 
     navigateToProspect(event: Event, prospect: MarketingProspect) {
-        // `(keydown.enter)` types $event as the generic Event; both MouseEvent and KeyboardEvent carry the modifier flags.
         const e = event as MouseEvent | KeyboardEvent;
         if (!e.ctrlKey && !e.shiftKey) this.#router.navigate(['/marketing/prospects', prospect.id]);
     }
@@ -209,7 +189,7 @@ export class MarketingProspectsComponent {
                     this.prospects.update(p => [created, ...p]);
                     this.#router.navigate(['/marketing/prospects', created.id]);
                 },
-                error: () => this.#loadProspects(),
+                error: () => this.#prospects.reload(),
             });
         }).catch(() => {
             // no action
@@ -263,7 +243,7 @@ export class MarketingProspectsComponent {
                 currentInitiativeId: this.initiativeFilter(),
                 existingNames,
             });
-            modalRef.result.then((result: CsvImportResult) => this.#doImport(result)).catch(() => {
+            modalRef.result.then((result: CsvImportResultDto) => this.#doImport(result)).catch(() => {
                 // no action
             });
         };
@@ -271,19 +251,18 @@ export class MarketingProspectsComponent {
         (event.target as HTMLInputElement).value = '';
     }
 
-    #doImport(result: CsvImportResult) {
+    #doImport(result: CsvImportResultDto) {
         const { mappings, rows, initiativeId, leadSourceId } = result;
         const existing = new Set(
             this.prospects().flatMap(p => [p.getName()?.toLowerCase(), p.company()?.toLowerCase()]).filter(Boolean)
         );
         const getField = (row: string[], field: string) => {
-            const idx = mappings.findIndex((m: CsvColumnMapping) => m.field === field);
+            const idx = mappings.findIndex((m: CsvColumnMappingDto) => m.field === field);
             return idx >= 0 ? (row[idx] ?? '').trim() : '';
         };
         const toImport = rows.filter(row => {
             const org = getField(row, 'org').toLowerCase();
             const fn  = getField(row, 'fn').toLowerCase();
-            // skip rows with no usable identity at all
             if (!org && !fn && !getField(row, 'family_name') && !getField(row, 'given_name') && !getField(row, 'email')) return false;
             return (!org || !existing.has(org)) && (!fn || !existing.has(fn));
         });

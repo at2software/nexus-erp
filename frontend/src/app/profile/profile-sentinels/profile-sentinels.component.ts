@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { ActionEmitterType } from '@app/nx/nx.directive';
-import { Sentinel } from '@models/sentinels/sentinel.model';
-import { SentinelService } from '@models/sentinels/sentinel.service';
+import { modelListResource } from '@models/http/model-resource';
+import { Sentinel } from '@models/sentinel/sentinel.model';
+import { SentinelService } from '@models/sentinel/sentinel.service';
 import { Nx } from '@app/nx/nx.directive';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
@@ -18,13 +19,10 @@ export class ProfileSentinelsComponent {
     #sentinelService = inject(SentinelService);
     #router = inject(Router);
 
-    sentinels = signal<Sentinel[]>([]);
+    readonly #sentinels = modelListResource(() => this.#sentinelService.index());
+    readonly sentinels = this.#sentinels.value;
 
-    constructor() {
-        this.#reload();
-    }
-
-    #reload = () => this.#sentinelService.index().subscribe((_) => this.sentinels.set(_));
+    #reload = () => this.#sentinels.reload();
 
     store = () =>
         new Sentinel().store().subscribe((_) => {

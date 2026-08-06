@@ -29,7 +29,6 @@ class Cashflow extends Command {
             $widgetController          = new WidgetController;
             $CASHFLOW_CUSTOMER_SUPPORT = $widgetController->GET_CASHFLOW_CUSTOMER_SUPPORT($baseWage)->getSum;
 
-            // Optimize unpaid calculation - already optimized with withSum
             $CASHFLOW_CUSTOMER_UNPAID = Company::whereHas('foci_unpaid_last_month')
                 ->withSum('foci_unpaid_last_month', 'duration')
                 ->whereNot('id', Param::get('ME_ID')->value)
@@ -49,13 +48,12 @@ class Cashflow extends Command {
             $CASHFLOW_INVOICES_RECURRING          = $widgetController->GET_CASHFLOW_INVOICES_RECURRING()->getSum;
             $CASHFLOW_INVOICES_PREPARED           = 0;
 
-            $CASHFLOW_INVOICES_PREPARED = Company::getAllWithSupportItems()->sum('support_net');
-            $CASHFLOW_INVOICES_PREPARED += Project::getAllWithSupportItems()->sum('support_net');
+            $CASHFLOW_INVOICES_PREPARED = Company::getAllWithSupportItems()->sum('net_remaining');
+            $CASHFLOW_INVOICES_PREPARED += Project::getAllWithSupportItems()->sum('net_remaining');
             $CASHFLOW_INVOICES_PREPARED += InvoiceItem::whereStage(1)->whereNull('invoice_id')->sum('net');
 
             $CASHFLOW_COMPANIES_TIMEBASED = 0;  // new directive: foci on customers w/o projects is unpaid
 
-            // Optimize expenses calculation to avoid loading all into memory
             $CASHFLOW_ANNUAL_EXPENSES = 0;
             Expense::chunk(100, function ($expenses) use (&$CASHFLOW_ANNUAL_EXPENSES) {
                 foreach ($expenses as $expense) {

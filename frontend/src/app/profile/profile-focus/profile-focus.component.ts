@@ -1,11 +1,11 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { modelListResource } from '@models/http/model-resource';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { HrFocusTableComponent } from '@app/hr/hr-focus-table/hr-focus-table.component';
 import { WidgetMyWorkingTimeComponent } from '@dashboard/widgets/widget-my-working-time/widget-my-working-time.component';
 import { NgbProgressbarModule } from '@ng-bootstrap/ng-bootstrap';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
-import { Focus } from '@models/focus/focus.model';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { GlobalService } from '@models/global.service';
 import { UserService } from '@models/user/user.service';
@@ -21,15 +21,12 @@ export class ProfileFocusComponent {
     #userService = inject(UserService);
 
     readonly user = this.#global.user!;
-    maxFocusSum = signal(0);
-    focusSum = signal<Focus[]>([]);
 
-    constructor() {
-        this.#userService.showFoci30DStats(this.user).subscribe((r: Focus[]) => {
-            for (const _ of r) _.fixParent();
-            const sorted = r.sort((a, b) => b.duration - a.duration);
-            this.focusSum.set(sorted);
-            this.maxFocusSum.set(Math.max(...r.map((_) => _.duration)));
-        });
-    }
+    readonly #foci30d = modelListResource(() => this.#userService.showFoci30DStats(this.user));
+    readonly focusSum = computed(() => {
+        const foci = [...this.#foci30d.value()];
+        foci.forEach((_) => _.fixParent());
+        return foci.sort((a, b) => b.duration - a.duration);
+    });
+    readonly maxFocusSum = computed(() => this.focusSum().first()?.duration ?? 0);
 }

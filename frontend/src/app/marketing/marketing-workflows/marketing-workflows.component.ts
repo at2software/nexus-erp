@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, linkedSignal, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { modelListResource } from '@models/http/model-resource';
 
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -28,7 +29,8 @@ export class MarketingWorkflowsComponent {
 
     readonly STATS_COLORS = ActivityStatsColors;
 
-    workflows = signal<MarketingWorkflow[]>([]);
+    #loaded = modelListResource(() => this.#marketingService.indexWorkflows());
+    workflows = linkedSignal(() => this.#loaded.value());
     currentWorkflowId: string | null = null;
 
     showCreateModal = signal(false);
@@ -39,22 +41,13 @@ export class MarketingWorkflowsComponent {
     };
 
     constructor() {
-        // Monitor child route params to track current workflow
         this.#route.firstChild?.params.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe((params) => {
             this.currentWorkflowId = params['id'] || null;
         });
 
-        this.loadWorkflows();
-    }
-
-    loadWorkflows() {
-        this.#marketingService.indexWorkflows().subscribe((workflows: MarketingWorkflow[]) => {
-            this.workflows.set(workflows);
-
-            // Auto-select first workflow if none is selected
-            if (workflows.length > 0 && !this.currentWorkflowId) {
-                this.#router.navigate(['/marketing/workflows', workflows[0].id]);
-            }
+        effect(() => {
+            const first = this.workflows()[0];
+            if (first && !this.currentWorkflowId) this.#router.navigate(['/marketing/workflows', first.id]);
         });
     }
 
@@ -70,7 +63,6 @@ export class MarketingWorkflowsComponent {
             .subscribe((workflow: MarketingWorkflow) => {
                 this.workflows.update((arr) => [...arr, workflow]);
                 this.resetCreateForm();
-                // Navigate to newly created workflow
                 this.#router.navigate(['/marketing/workflows', workflow.id]);
             });
     }
@@ -81,7 +73,6 @@ export class MarketingWorkflowsComponent {
         this.#marketingService.destroyWorkflow(workflow.id).subscribe(() => {
             this.workflows.update((arr) => arr.filter((w) => w.id !== workflow.id));
             if (this.currentWorkflowId === workflow.id) {
-                // Navigate to first remaining workflow or no selection
                 const remaining = this.workflows();
                 if (remaining.length > 0) {
                     this.#router.navigate(['/marketing/workflows', remaining[0].id]);

@@ -35,7 +35,6 @@ class StandingOrders extends Command {
         foreach ($recurringItems as $item) {
             $this->logToFile("Processing item ID: {$item->id}, Type: {$item->type->value}, Next recurrence: {$item->next_recurrence_at}, Text: ".substr($item->text, 0, 50));
 
-            // Store original values for debugging
             $original_next_recurrence = $item->next_recurrence_at->copy();
             $this->logToFile("  Original next_recurrence_at: {$original_next_recurrence}");
             $this->logToFile('  Current time: '.now());

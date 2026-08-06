@@ -1,7 +1,14 @@
 <nx-contextmenu></nx-contextmenu>
 
+@if (navigating()) {
+    <div class="route-loading" role="status" aria-live="polite">
+        <spinner [size]="64" />
+        <span class="visually-hidden" i18n="@@i18n.common.loading">loading</span>
+    </div>
+}
+
 <div class="app-scroll">
-    <div class="container">
+    <div class="container-app">
         @if (init()) {
             <router-outlet></router-outlet>
         }

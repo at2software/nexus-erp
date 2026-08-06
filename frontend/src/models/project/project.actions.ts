@@ -1,5 +1,5 @@
-import { NxAction, NxActionType } from '@app/nx/nx.actions';
-import { NxGlobal, TBroadcast } from '@app/nx/nx.global';
+import { NxAction, NxActionType } from '@models/_core/nx.actions';
+import { nx, TBroadcast } from '@models/_core/nx-bridge';
 const i18n1Week = $localize`:@@i18n.common.1week:1 week`;
 const i18nNWeeks = (count: number) => $localize`:@@i18n.common.nweeks:${count} weeks`;
 const i18n1Month = $localize`:@@i18n.common.1month:1 month`;
@@ -7,9 +7,10 @@ const i18nNMonths = (count: number) => $localize`:@@i18n.common.nmonths:${count}
 import { Company } from '@models/company/company.model';
 import { ConnectionProjects } from '@models/company/connection-projects.model';
 import { CompanyContact } from '@models/company/company-contact.model';
-import { VcardRow } from '@models/vcard/VcardRow';
+import { VcardRow } from '@models/vcard/vcard-row';
 import { Project } from './project.model';
-import { ModalInputComponent, ModalInputResult } from '@app/_modals/modal-input/modal-input.component';
+import { MODAL } from '@models/_core/modal-registry';
+import { ModalInputResult } from '@models/_core/modal-results';
 
 const POSTPONE_DURATIONS = [
     { title: i18n1Week, duration: 1 },
@@ -22,13 +23,13 @@ const POSTPONE_DURATIONS = [
 ];
 
 export const getProjectActions = (self: Project) => [
-    { title: $localize`:@@i18n.common.open:open`, action: () => self.navigateTo(self.frontendUrl()) },
-    ...NxGlobal.clipboardActions(self),
+    { title: $localize`:@@i18n.common.open:open`, doubleClick: true, action: () => self.navigateTo(self.frontendUrl()) },
+    ...nx().clipboardActions(self),
     {
         title: $localize`:@@i18n.project.duplicate:duplicate project`,
         group: true,
         roles: 'project_manager',
-        interrupt: { service: ModalInputComponent, args: { title: $localize`:@@i18n.project.duplicateName:name for the duplicated project`, get initialValue() { return self.name; } } },
+        interrupt: { service: MODAL.input, args: { title: $localize`:@@i18n.project.duplicateName:name for the duplicated project`, get initialValue() { return self.name; } } },
         action: (_a: unknown, _b: unknown, interruptResult: ModalInputResult | undefined) => {
             const name = interruptResult?.text?.trim();
             if (name) self.duplicate(name);
@@ -43,11 +44,11 @@ export const getProjectActions = (self: Project) => [
     {
         title: $localize`:@@i18n.common.setState:set state`,
         group: true,
-        children: () => NxGlobal.global.getAllowedSucceedingProjectStatesFor(self).map((state) => ({ title: state.name, group: true, action: () => self.setState({ state: state.id }) })),
+        children: () => nx().global.getAllowedSucceedingProjectStatesFor(self).map((state) => ({ title: state.name, group: true, action: () => self.setState({ state: state.id }) })),
     },
     {
         title: $localize`:@@i18n.project.extendReminder:extend reminder`,
-        on: () => '' + NxGlobal.global.user?.getParam('PROJECTS_POSTPONE_WITH_COMMENT') !== '1',
+        on: () => '' + nx().global.user?.getParam('PROJECTS_POSTPONE_WITH_COMMENT') !== '1',
         group: true,
         children: () =>
             POSTPONE_DURATIONS.map(({ title, duration }) => ({
@@ -58,23 +59,22 @@ export const getProjectActions = (self: Project) => [
     },
     {
         title: $localize`:@@i18n.project.extendReminder:extend reminder`,
-        on: () => '' + NxGlobal.global.user?.getParam('PROJECTS_POSTPONE_WITH_COMMENT') === '1',
+        on: () => '' + nx().global.user?.getParam('PROJECTS_POSTPONE_WITH_COMMENT') === '1',
         group: true,
         children: () => {
             return POSTPONE_DURATIONS.map(({ title, duration }) => ({
                 title: title + ' 💬',
                 group: true,
-                interrupt: { service: ModalInputComponent, args: { title: $localize`:@@i18n.project.postponeComment:Comment for postponing` } },
+                interrupt: { service: MODAL.input, args: { title: $localize`:@@i18n.project.postponeComment:Comment for postponing` } },
                 action: (_a: unknown, _b: unknown, interruptResult: { text: string }) => self.postpone(duration, undefined, interruptResult.text),
             }));
         },
     },
-    // Project manager
     {
         title: $localize`:@@i18n.project.setProjectManager:set project manager`,
         on: () => !self.project_manager_id,
         group: true,
-        children: NxGlobal.global.team
+        children: nx().global.team
             .filter((_) => !_.is_retired && (_.role_names.includes('project_manager') || _.role_names.includes('admin')))
             .map((user) => ({
                 title: user.getName(),
@@ -87,14 +87,14 @@ export const getProjectActions = (self: Project) => [
         title: $localize`:@@i18n.project.addParticipant:add participant...`,
         group: true,
         on: (): boolean => {
-            const currentRoot = NxGlobal.getCurrentRoot();
+            const currentRoot = nx().getCurrentRoot();
             if (!currentRoot) return false;
             const company = currentRoot instanceof Company ? currentRoot : currentRoot instanceof Project ? currentRoot.company : null;
             if (!company) return false;
             return (company?.available_connections?.length ?? 0) > 0;
         },
         children: () => {
-            const currentRoot = NxGlobal.getCurrentRoot();
+            const currentRoot = nx().getCurrentRoot();
             if (!currentRoot) return [];
             const company = currentRoot instanceof Company ? currentRoot : currentRoot instanceof Project ? currentRoot.company : null;
             return (company?.available_connections ?? []).map((connection: ConnectionProjects) => ({
@@ -120,13 +120,13 @@ export const getProjectActions = (self: Project) => [
         title: $localize`:@@i18n.project.noGitRequired:no git required`,
         on: () => !self.no_git_required,
         group: true,
-        action: () => self.update({ no_git_required: true }).subscribe(() => NxGlobal.broadcast({ type: TBroadcast.Update, data: self })),
+        action: () => self.update({ no_git_required: true }).subscribe(() => nx().broadcast({ type: TBroadcast.Update, data: self })),
     },
     {
         title: $localize`:@@i18n.project.undoNoGitRequired:undo: no git required`,
         on: () => !!self.no_git_required,
         group: true,
-        action: () => self.update({ no_git_required: false }).subscribe(() => NxGlobal.broadcast({ type: TBroadcast.Update, data: self })),
+        action: () => self.update({ no_git_required: false }).subscribe(() => nx().broadcast({ type: TBroadcast.Update, data: self })),
     },
     {
         title: 'Contact...',
@@ -152,7 +152,6 @@ function getContactActions(self: Project): NxAction[] {
         const actions: NxAction[] = [];
         const name: string = cc.getName() || cc.contact.card()?.name || 'Contact';
         const card = cc.card();
-        // Phone numbers
         (card?.get('TEL') ?? []).forEach((p: VcardRow) => {
             actions.push({
                 title: `Call ${name}`,
@@ -174,7 +173,6 @@ function getContactActions(self: Project): NxAction[] {
                 });
             }
         });
-        // Email addresses
         (card?.get('EMAIL') ?? []).forEach((p: VcardRow) => {
             actions.push({
                 title: `Email ${name}`,

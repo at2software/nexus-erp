@@ -79,7 +79,6 @@ class RefreshCustomerPredictions extends Command {
         return 0;
     }
 
-    /** Writes the per-company FloatParam and returns 1 if a value was stored, 0 otherwise. */
     private function storeIfPredicted(Company $company, string $key, ?float $value): int {
         if ($value === null) {
             return 0;

@@ -2,9 +2,9 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivityTabComponent } from '../activity-tab.component';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
-import { LiveSharingService, ActiveSharing } from '@models/live-sharing.service';
-import { WebSocketService } from 'src/services/websocket.service';
-import { environment } from 'src/environments/environment';
+import { LiveSharingService, ActiveSharing } from '@models/live/live-sharing.service';
+import { WebSocketService } from '@services/websocket.service';
+import { environment } from '@environments/environment';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,

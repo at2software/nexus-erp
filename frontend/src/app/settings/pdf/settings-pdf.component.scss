@@ -4,7 +4,6 @@
     display: block;
 }
 
-// Pin the editor to the content area below the fixed header so both panes get full height.
 .pdf-editor {
     position: fixed;
     top: $header-height;

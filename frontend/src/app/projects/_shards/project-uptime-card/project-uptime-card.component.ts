@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
+import { modelListResource } from '@models/http/model-resource';
 
 import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { Project } from '@models/project/project.model';
@@ -24,47 +25,35 @@ export class ProjectUptimeCardComponent {
     readonly project = input.required<Project>();
     readonly trackedProject = tracked(this.project);
 
-    monitors = signal<UptimeMonitor[]>([]);
-    allMonitors = signal<UptimeMonitor[]>([]);
-    loading = signal(true);
-
     #service = inject(UptimeMonitorService);
     #modalService = inject(UptimeMonitorModalService);
 
+    readonly #monitors = modelListResource(
+        () => this.project().id,
+        (projectId) => this.#service.index({ project_id: projectId }),
+    );
+    readonly monitors = this.#monitors.value;
+    readonly loading = this.#monitors.isLoading;
+
+    readonly #allMonitors = modelListResource(() => this.#service.index());
+    readonly allMonitors = computed(() => {
+        const linked = new Set(this.monitors().map((m) => m.id));
+        return this.#allMonitors.value().filter((m) => !linked.has(m.id));
+    });
+
     constructor() {
-        effect(() => this.#loadMonitors(this.trackedProject()));
-        this.#loadAllMonitors();
-    }
-
-    #loadMonitors(project: Project = this.trackedProject()) {
-        this.loading.set(true);
-        this.#service.index({ project_id: project.id }).subscribe({
-            next: (monitors) => {
-                this.monitors.set(monitors);
-                this.#setupMonitorCallbacks();
-                this.loading.set(false);
-            },
-            error: () => this.loading.set(false),
-        });
-    }
-
-    #loadAllMonitors() {
-        this.#service.index().subscribe({
-            next: (monitors) => this.allMonitors.set(monitors.filter((m) => !this.monitors().some((pm) => pm.id === m.id))),
-        });
-    }
-
-    #setupMonitorCallbacks() {
-        this.monitors().forEach((monitor) => {
-            monitor.var.onTestRequested = (m: UptimeMonitor) => this.#testMonitor(m);
-            monitor.var.onEditRequested = (m: UptimeMonitor) => this.#openEditModal(m);
-            monitor.var.onEditSuccess = () => this.#loadMonitors();
-            monitor.var.onUnlinkFromProject = (m: UptimeMonitor) => this.#unlinkMonitor(m);
-        });
+        effect(() =>
+            this.monitors().forEach((monitor) => {
+                monitor.var.onTestRequested = (m: UptimeMonitor) => this.#testMonitor(m);
+                monitor.var.onEditRequested = (m: UptimeMonitor) => this.#openEditModal(m);
+                monitor.var.onEditSuccess = () => this.#monitors.reload();
+                monitor.var.onUnlinkFromProject = (m: UptimeMonitor) => this.#unlinkMonitor(m);
+            }),
+        );
     }
 
     #openEditModal(monitor: UptimeMonitor) {
-        this.#modalService.open(monitor).then(() => this.#loadMonitors()).catch(() => void 0);
+        this.#modalService.open(monitor).then(() => this.#monitors.reload()).catch(() => void 0);
     }
 
     #testMonitor(monitor: UptimeMonitor) {
@@ -77,7 +66,7 @@ export class ProjectUptimeCardComponent {
                 if (check.response_time) message += $localize`:@@i18n.uptime.responseTime:response time` + `: ${check.response_time}ms\n`;
                 if (check.error_message) message += '\n' + $localize`:@@i18n.common.error:error` + `:\n${check.error_message}`;
                 alert(message);
-                this.#loadMonitors();
+                this.#monitors.reload();
             },
             error: (err) => alert($localize`:@@i18n.uptime.testFailed:test failed` + `:\n${err?.error?.message || err?.message || 'Unknown error'}`),
         });
@@ -85,24 +74,24 @@ export class ProjectUptimeCardComponent {
 
     createNew() {
         this.#modalService.open(undefined, [this.trackedProject().id]).then(() => {
-            this.#loadMonitors();
-            this.#loadAllMonitors();
+            this.#monitors.reload();
+            this.#allMonitors.reload();
         }).catch(() => void 0);
     }
 
     linkExisting(monitor: UptimeMonitor) {
         const projectIds = [...(monitor.projects?.map((p) => p.id) || []), this.trackedProject().id];
-        this.#service.update(monitor.id, { project_ids: projectIds } as any).subscribe(() => {
-            this.#loadMonitors();
-            this.#loadAllMonitors();
+        monitor.update({ project_ids: projectIds } as any).subscribe(() => {
+            this.#monitors.reload();
+            this.#allMonitors.reload();
         });
     }
 
     #unlinkMonitor(monitor: UptimeMonitor) {
         const projectIds = (monitor.projects?.map((p) => p.id) || []).filter((id) => id !== this.trackedProject().id);
-        this.#service.update(monitor.id, { project_ids: projectIds } as any).subscribe(() => {
-            this.#loadMonitors();
-            this.#loadAllMonitors();
+        monitor.update({ project_ids: projectIds } as any).subscribe(() => {
+            this.#monitors.reload();
+            this.#allMonitors.reload();
         });
     }
 }

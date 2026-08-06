@@ -1,9 +1,9 @@
 @let _user = user();
 <div class="row">
-    <div class="col-3">
+    <div class="col-12 col-md-3">
         <profile-vacation-widget></profile-vacation-widget>
     </div>
-    <div class="col-9">
+    <div class="col-12 col-md-9">
         @if (_user) {
             <hr-vacation [user]="_user"></hr-vacation>
         }

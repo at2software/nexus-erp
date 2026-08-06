@@ -109,7 +109,6 @@ class SupportLoadModel {
             foreach ($testRows as $row) {
                 $testSamples[]         = self::toSample($row);
                 $actual[]              = $row[SupportLoadDataset::LABEL];
-                // Persistence baseline: next window = trailing window of the same length.
                 $baselinePredictions[] = max(0.0, (float)$row['trailing_3m_support_hours']);
             }
             $testing = Unlabeled::build($testSamples);
@@ -153,7 +152,6 @@ class SupportLoadModel {
         return $result;
     }
 
-    /** Train the given estimator on the full dataset and persist it to disk. */
     public static function train(array $rows, Learner $estimator): PersistentModel {
         $samples = array_map(fn ($row) => self::toSample($row), $rows);
         $labels  = array_map(fn ($row) => SupportLoadDataset::logLabel($row[SupportLoadDataset::LABEL]), $rows);

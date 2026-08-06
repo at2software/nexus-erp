@@ -11,7 +11,6 @@ class ProjectMilestonesService {
         $milestones = $project->milestones()->with(['dependants', 'dependees', 'tasks', 'invoiceItems'])->orderBy('position')->get();
         $milestones->each->append('children');
 
-        // Load tasks assigned to current user for the project
         $projectTasks = Task::where('parent_type', 'App\\Models\\Project')
             ->where('parent_id', $project->id)
             ->whereExists(function ($query) use ($currentUserId) {

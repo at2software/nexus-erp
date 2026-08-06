@@ -1,14 +1,14 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { StatsService } from '@models/stats-service';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
+import { StatsService } from '@models/stats.service';
 import { BaseWidgetComponent } from '../base.widget.component';
 import { EChartsRangeAreaOptions, EChartsDualShadowAreaStyle } from '@charts/echarts-presets';
 import { Color } from '@constants/Color';
 import { MoneyShortPipe } from '@pipes/mshort.pipe';
-import { dayjs } from '@constants/dates';
+import { dayjs } from '@constants/date/dates';
 import { WIDGET_SHARED } from '../widgets.shared';
 import type { EChartsOption } from 'echarts';
 import type { EChartsType, TopLevelFormatterParams } from 'echarts/types/dist/shared';
-import { LinearRegressionData } from '@models/api-response';
+import { LinearRegressionDataDto } from '@models/_core/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,64 +23,66 @@ export class WidgetLinearRegressionForecastComponent extends BaseWidgetComponent
     #moneyPipe = inject(MoneyShortPipe);
     #echartsInstance: EChartsType | undefined;
 
-    chartOptions = signal<EChartsOption>({ ...EChartsRangeAreaOptions, series: [] });
-    data = signal<LinearRegressionData | null>(null);
-
     defaultOptions = () => ({});
 
-    reload(): void {
-        this.#stats?.get('stats/linear-regression-forecast').subscribe((data: LinearRegressionData) => {
-            this.data.set(data);
+    readonly #forecast = this.optionsResource(() => this.#stats.showLinearRegressionForecast());
+    readonly data = computed<LinearRegressionDataDto | null>(() => this.#forecast.value() ?? null);
 
-            const sorted = data.historical_data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            const categories = sorted.map((item) => dayjs(item.date).valueOf());
-            const forecasts = sorted.map((item) => item.forecast);
-            const expenses = sorted.map((item) => item.annual_expenses ?? null);
-            const revenue_12 = sorted.map((item) => item.revenue_12 ?? null);
+    readonly chartOptions = computed<EChartsOption>(() => {
+        const data = this.data();
+        if (!data) return { ...EChartsRangeAreaOptions, series: [] };
 
-            const ci99 = sorted.map((item) => this.#ci(item.forecast, item.standard_error, 99));
-            const ci95 = sorted.map((item) => this.#ci(item.forecast, item.standard_error, 95));
-            const ci68 = sorted.map((item) => this.#ci(item.forecast, item.standard_error, 68));
+        const sorted = [...data.historical_data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const categories = sorted.map((item) => dayjs(item.date).valueOf());
+        const forecasts = sorted.map((item) => item.forecast);
+        const expenses = sorted.map((item) => item.annual_expenses ?? null);
+        const revenue_12 = sorted.map((item) => item.revenue_12 ?? null);
 
-            const yMax = (this.#median(ci99.map((c) => c.upper)) ?? 0) * 1.2;
-            const row = (label: string, cls: string, value: string) =>
-                `<div class="hstack gap-2"><span class="font-monospace ${cls}">${label}:</span><span class="ms-auto font-monospace">${value}</span></div>`;
+        const ci99 = sorted.map((item) => this.#ci(item.forecast, item.standard_error, 99));
+        const ci95 = sorted.map((item) => this.#ci(item.forecast, item.standard_error, 95));
+        const ci68 = sorted.map((item) => this.#ci(item.forecast, item.standard_error, 68));
 
-            this.chartOptions.set({
-                ...this.chartOptions(),
-                yAxis: { ...this.chartOptions().yAxis, min: 0, max: yMax },
-                tooltip: {
-                    ...this.chartOptions().tooltip,
-                    formatter: (params: TopLevelFormatterParams) => {
-                        const arr = [params].flat();
-                        if (!arr?.length) return '';
-                        const i = arr[0].dataIndex!;
-                        const forecast = forecasts[i];
-                        const { standard_error: se, r2 } = sorted[i];
-                        const revenue = revenue_12[i];
-                        const deviation = revenue ? Math.abs(revenue / forecast - 1) * 100 : 0;
-                        return `<div class="p-2">
-                            <div class="fw-bold mb-1">${dayjs(categories[i]).format('YYYY-MM')}</div>
-                            ${row('Forecast', 'text-white fw-bold', this.#moneyPipe.transform(forecast))}
-                            ${row('R²', 'text-muted', `${(r2 * 100).toFixed(1)}%`)}
-                            ${row('Std. Error', 'text-muted', this.#moneyPipe.transform(se))}
-                            ${row('Expenses', 'text-yellow', this.#moneyPipe.transform(expenses[i]))}
-                            ${revenue ? row(`reality (Δ ${deviation.toFixed(1)}%)`, 'text-primary', this.#moneyPipe.transform(revenue)) : ''}
-                        </div>`;
-                    },
+        const yMax = (this.#median(ci99.map((c) => c.upper)) ?? 0) * 1.2;
+        const row = (label: string, cls: string, value: string) =>
+            `<div class="hstack gap-2"><span class="font-monospace ${cls}">${label}:</span><span class="ms-auto font-monospace">${value}</span></div>`;
+
+        return ({
+            ...EChartsRangeAreaOptions,
+            yAxis: { ...EChartsRangeAreaOptions.yAxis, min: 0, max: yMax },
+            tooltip: {
+                ...EChartsRangeAreaOptions.tooltip,
+                formatter: (params: TopLevelFormatterParams) => {
+                    const arr = [params].flat();
+                    if (!arr?.length) return '';
+                    const i = arr[0].dataIndex!;
+                    const forecast = forecasts[i];
+                    const { standard_error: se, r2 } = sorted[i];
+                    const revenue = revenue_12[i];
+                    const deviation = revenue ? Math.abs(revenue / forecast - 1) * 100 : 0;
+                    return `<div class="p-2">
+                        <div class="fw-bold mb-1">${dayjs(categories[i]).format('YYYY-MM')}</div>
+                        ${row('Forecast', 'text-white fw-bold', this.#moneyPipe.transform(forecast))}
+                        ${row('R²', 'text-muted', `${(r2 * 100).toFixed(1)}%`)}
+                        ${row('Std. Error', 'text-muted', this.#moneyPipe.transform(se))}
+                        ${row('Expenses', 'text-yellow', this.#moneyPipe.transform(expenses[i]))}
+                        ${revenue ? row(`reality (Δ ${deviation.toFixed(1)}%)`, 'text-primary', this.#moneyPipe.transform(revenue)) : ''}
+                    </div>`;
                 },
-                series: [
-                    ...this.#confidenceBand('confidence99', ci99, categories, 35, 0.3, 1),
-                    ...this.#confidenceBand('confidence95', ci95, categories, 30, 0.4, 3),
-                    ...this.#confidenceBand('confidence68', ci68, categories, 25, 0.5, 5),
-                    { name: 'Forecast', type: 'line', symbol: 'none', z: 10, lineStyle: { color: Color.fromVar('primary').darken(20).toHexString(), width: 2 }, data: forecasts.map((f, i) => [categories[i], f]) },
-                    { name: 'Expenses', type: 'line', symbol: 'none', z: 11, lineStyle: { color: Color.fromVar('red').toHexString(), width: 2, type: 'dashed' }, data: expenses.map((v, i) => [categories[i], v]) },
-                    { name: 'real Revenue', type: 'line', symbol: 'none', zlevel: 1, z: 12, lineStyle: { color: '#ffffff', width: 2 }, data: revenue_12.map((v, i) => [categories[i], v]) },
-                ],
-            } as EChartsOption);
+            },
+            series: [
+                ...this.#confidenceBand('confidence99', ci99, categories, 35, 0.3, 1),
+                ...this.#confidenceBand('confidence95', ci95, categories, 30, 0.4, 3),
+                ...this.#confidenceBand('confidence68', ci68, categories, 25, 0.5, 5),
+                { name: 'Forecast', type: 'line', symbol: 'none', z: 10, lineStyle: { color: Color.fromVar('primary').darken(20).toHexString(), width: 2 }, data: forecasts.map((f, i) => [categories[i], f]) },
+                { name: 'Expenses', type: 'line', symbol: 'none', z: 11, lineStyle: { color: Color.fromVar('red').toHexString(), width: 2, type: 'dashed' }, data: expenses.map((v, i) => [categories[i], v]) },
+                { name: 'real Revenue', type: 'line', symbol: 'none', zlevel: 1, z: 12, lineStyle: { color: '#ffffff', width: 2 }, data: revenue_12.map((v, i) => [categories[i], v]) },
+            ],
+        } as EChartsOption);
+    });
 
-            this.#echartsInstance?.setOption(this.chartOptions(), true);
-        });
+    constructor() {
+        super();
+        effect(() => this.#echartsInstance?.setOption(this.chartOptions(), true));
     }
 
     #median(numbers: number[]): number | null {

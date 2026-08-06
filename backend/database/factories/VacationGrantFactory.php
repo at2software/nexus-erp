@@ -13,8 +13,6 @@ class VacationGrantFactory extends Factory {
     protected $model = VacationGrant::class;
 
     /**
-     * Define the model's default state.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array {

@@ -1,7 +1,7 @@
 ﻿import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { MantisPlugin } from '@models/http/plugin.mantis';
+import { MantisPlugin } from '@models/http/plugins/plugin.mantis';
 import { User } from '@models/user/user.model';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 

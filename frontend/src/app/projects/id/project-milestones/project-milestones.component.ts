@@ -1,16 +1,17 @@
 ﻿import { ProjectService } from '@models/project/project.service';
-import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, viewChild, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { modelResource } from '@models/http/model-resource';
 import { Project } from '@models/project/project.model';
 import { Assignee } from '@models/assignee/assignee.model';
-import { Milestone } from '@models/milestones/milestone.model';
+import { Milestone } from '@models/milestone/milestone.model';
 import { ProjectDetailGuard } from '@app/projects/project-details.guard';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { NgbTooltipModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 import { ConfirmationService } from '@app/_modals/modal-confirm/confirmation.service';
 import { Toast } from '@shards/toast/toast';
-import { Task } from '@models/tasks/task.model';
+import { Task } from '@models/task/task.model';
 import { CustomGanttComponent, GanttRow } from '@app/projects/_shards/custom-gantt/custom-gantt.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { storageGet, storageSet } from '@constants/storage';
@@ -34,9 +35,6 @@ export class ProjectMilestonesComponent {
     project!: Project;
     assignees: T_ASSIGNMENT[] = [];
     currentViewMode: string = storageGet('projectMilestonesViewMode', 'Week');
-    ganttRows = signal<GanttRow[]>([]);
-    isLoading = signal(true);
-    #isInitialized = false;
 
     parent = inject(ProjectDetailGuard);
 
@@ -45,87 +43,41 @@ export class ProjectMilestonesComponent {
     #inputModalService = inject(InputModalService);
     #confirmationService = inject(ConfirmationService);
 
+    readonly #milestones = modelResource(
+        () => this.parent.object()?.id || undefined,
+        (projectId) => this.#projectService.indexMilestones(projectId),
+    );
+    readonly isLoading = this.#milestones.isLoading;
+
+    readonly ganttRows = computed<GanttRow[]>(() => {
+        const project = this.parent.object();
+        const data = this.#milestones.value();
+        if (!project || !data) return [];
+
+        const milestones = data.milestones || [];
+        milestones.forEach((milestone) => (milestone.project = project));
+
+        const rows: GanttRow[] = [{ type: 'header', data: project, project }];
+        (data.project_tasks || []).forEach((task: Task) => rows.push({ type: 'task', data: task, project }));
+        milestones.forEach((milestone: Milestone) => {
+            rows.push({ type: 'milestone', data: milestone, project });
+            (milestone.tasks || []).forEach((task: Task) => rows.push({ type: 'task', data: task, project, milestone }));
+        });
+        return rows;
+    });
+
     constructor() {
+        effect(() => (this.project = this.parent.object()));
         effect(() => {
-            this.project = this.parent.object();
-            if (!this.#isInitialized) {
-                this.#isInitialized = true;
-                this.loadMilestones();
-            }
+            const project = this.parent.object();
+            const data = this.#milestones.value();
+            if (!project || !data) return;
+            project.milestones = data.milestones || [];
+            project.tasks = data.project_tasks || [];
         });
     }
 
-    loadMilestones() {
-        if (!this.project?.id) {
-            return;
-        }
-
-        this.isLoading.set(true);
-        this.#projectService
-            .indexMilestones(this.project.id)
-            .pipe(takeUntilDestroyed(this.#destroyRef))
-            .subscribe({
-                next: (response) => {
-                    const projectTasks = response.project_tasks || [];
-
-                    const milestones = (response.milestones || []).map((item) => {
-                        const milestone = Milestone.fromJson(item);
-                        milestone.project = this.project;
-                        return milestone;
-                    });
-
-                    this.project.milestones = milestones;
-                    this.project.tasks = projectTasks;
-                    this.#prepareGanttRows();
-                    this.isLoading.set(false);
-                },
-                error: (error: unknown) => {
-                    console.error('Error loading milestones:', error);
-                    this.isLoading.set(false);
-                },
-            });
-    }
-
-    #prepareGanttRows() {
-        const rows: GanttRow[] = [];
-
-        // Add header row for project
-        rows.push({
-            type: 'header',
-            data: this.project,
-            project: this.project,
-        });
-
-        // Add project-level tasks
-        (this.project.tasks || []).forEach((task: Task) => {
-            rows.push({
-                type: 'task',
-                data: task,
-                project: this.project,
-            });
-        });
-
-        // Add milestones and their tasks
-        (this.project.milestones || []).forEach((milestone: Milestone) => {
-            rows.push({
-                type: 'milestone',
-                data: milestone,
-                project: this.project,
-            });
-
-            // Add tasks for this milestone
-            ((milestone as any).tasks || []).forEach((task: Task) => {
-                rows.push({
-                    type: 'task',
-                    data: task,
-                    project: this.project,
-                    milestone: milestone,
-                });
-            });
-        });
-
-        this.ganttRows.set(rows);
-    }
+    loadMilestones = () => this.#milestones.reload();
 
     find = (id: string): T_ASSIGNMENT => this.assignees.find((x) => x.assignee.id == id) ?? this.assignees[0];
 
@@ -170,19 +122,16 @@ export class ProjectMilestonesComponent {
             return;
         }
 
-        // Use bulk conversion endpoint
         this.#projectService
             .convertInvoiceItemsToMilestones(this.project.id)
             .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe({
                 next: (response) => {
                     if (response.milestones_created > 0) {
-                        // Reload milestones to reflect changes
                         this.loadMilestones();
                     }
                 },
                 error: (error) => {
-                    // Keep error logging for debugging purposes
                     console.error('Error converting invoice items to milestones:', error);
                 },
             });
@@ -207,14 +156,13 @@ export class ProjectMilestonesComponent {
                 dialogSize: 'sm',
             })
             .then(() => {
-                // User confirmed - proceed with deletion
                 this.#projectService
                     .wipeMilestones(this.project.id.toString())
                     .pipe(takeUntilDestroyed(this.#destroyRef))
                     .subscribe({
                         next: () => {
                             Toast.success($localize`:@@i18n.milestones.allMilestonesDeleted:All milestones deleted successfully`);
-                            this.loadMilestones(); // Reload to clear the list
+                            this.loadMilestones();
                         },
                         error: (error) => {
                             Toast.error($localize`:@@i18n.milestones.errorDeletingMilestones:Failed to delete milestones`);

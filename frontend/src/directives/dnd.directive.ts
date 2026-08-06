@@ -1,4 +1,4 @@
-import { Directive, ElementRef, inject, input, NgZone, output } from '@angular/core';
+import { Directive, ElementRef, inject, input, output } from '@angular/core';
 import { HttpEventType } from '@angular/common/http';
 import { Toast, ToastItem } from '@shards/toast/toast';
 import { forkJoin, last, Observable, tap } from 'rxjs';
@@ -17,7 +17,6 @@ export class DndDirective {
 
     readonly #fileService = inject(FileService);
     readonly #el = inject(ElementRef<HTMLElement>);
-    readonly #zone = inject(NgZone);
 
     formData = new FormData();
     fileNames: string[] = [];
@@ -27,29 +26,25 @@ export class DndDirective {
         const el = this.#el.nativeElement;
         el.classList.add('dnd-item');
 
-        // All drag handlers run outside Angular's zone so they never trigger
-        // change detection. Only onDrop re-enters the zone to emit outputs.
-        this.#zone.runOutsideAngular(() => {
-            el.addEventListener('dragenter', (e: DragEvent) => {
-                e.preventDefault();
-                e.stopPropagation();
-            });
-            el.addEventListener('dragover', (e: DragEvent) => {
-                e.preventDefault();
-                e.stopPropagation();
-                el.classList.add('dnd-item-drag');
-            });
-            el.addEventListener('dragleave', (e: DragEvent) => {
-                e.preventDefault();
-                e.stopPropagation();
-                el.classList.remove('dnd-item-drag');
-            });
-            el.addEventListener('drop', (e: DragEvent) => {
-                e.preventDefault();
-                e.stopPropagation();
-                el.classList.remove('dnd-item-drag');
-                this.#zone.run(() => this.#handleDrop(e));
-            });
+        el.addEventListener('dragenter', (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        el.addEventListener('dragover', (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            el.classList.add('dnd-item-drag');
+        });
+        el.addEventListener('dragleave', (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            el.classList.remove('dnd-item-drag');
+        });
+        el.addEventListener('drop', (e: DragEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            el.classList.remove('dnd-item-drag');
+            this.#handleDrop(e);
         });
     }
 

@@ -3,6 +3,8 @@
 return [
     // Info block
     'project'         => 'Projekt',
+    'quote_number'    => 'Angebots-Nr.',
+    'valid_until'     => 'Gültig bis',
     'contact_person'  => 'Ansprechpartner',
     'phone'           => 'Tel',
     'email'           => 'E-Mail',
@@ -38,7 +40,14 @@ return [
     'yearly_recurring'    => 'Jährliche Wiederholung',
 
     // Page counter
-    'page' => 'Seite',
+    'page'    => 'Seite',
+    'page_of' => 'von',
+
+    // Acceptance block
+    'acceptance_title' => 'Angebotsannahme',
+    'acceptance_hint'  => 'Mit Ihrer Unterschrift erteilen Sie uns den Auftrag zu den vorstehenden Konditionen.',
+    'place_date'       => 'Ort, Datum',
+    'signature'        => 'Unterschrift / Stempel',
 
     // Document titles
     'quote'         => 'Angebot',

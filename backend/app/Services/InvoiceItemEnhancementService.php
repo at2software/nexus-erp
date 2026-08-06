@@ -39,6 +39,7 @@ class InvoiceItemEnhancementService {
         $item->text   = nl2br($item->text);
         $item->eprice = Invoice::format($item->price_discounted);
         $item->etotal = Invoice::format($item->total);
+        $item->eqty   = Invoice::formatQty($item->qty);
 
         if (in_array($item->type, Invoice::ITEMS_NEED_INFO)) {
             $pos++;

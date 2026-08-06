@@ -2,6 +2,7 @@
 
 namespace App\Builders;
 
+use App\Models\Company;
 use App\Models\CompanyContact;
 use App\Models\Contact;
 use App\Traits\HasParamsBuilder;
@@ -25,6 +26,19 @@ class CompanyBuilder extends BaseBuilder {
     public function whereActive() {
         return $this->where('is_deprecated', false);
     }
+    public function whereNotDraft() {
+        return $this->whereRaw('(flags & ?) = 0', [Company::FLAG_DRAFT]);
+    }
+    public function whereDraft() {
+        return $this->whereRaw('(flags & ?) != 0', [Company::FLAG_DRAFT]);
+    }
+    public function draftByPhone($phoneNumber) {
+        $digits = preg_replace('/\D/', '', (string)$phoneNumber);
+        if ($digits === '') {
+            return null;
+        }
+        return $this->whereDraft()->where('vcard', 'LIKE', '%X-KNOWNSEQ-DRAFT:'.$digits.'%')->first();
+    }
     public function whereCorporation() {
         return $this->whereRaw('vcard REGEXP ?', ['(?i)(^|\n)ORG.*:.* (GmbH|AG|KG)(\s+.*)?($|\n)']);
     }
@@ -32,7 +46,7 @@ class CompanyBuilder extends BaseBuilder {
         return $this->whereNull('commercial_register');
     }
     public function whereCustomerNumberIsMissing() {
-        return $this->where('customer_number', '')->orWhere('customer_number', null);
+        return $this->whereNotDraft()->where(fn ($q) => $q->where('customer_number', '')->orWhere('customer_number', null));
     }
     public function whereHasUnbilledFoci() {
         return $this->whereHas('foci_unbilled')->withSum('foci_unbilled', 'duration');
@@ -45,14 +59,14 @@ class CompanyBuilder extends BaseBuilder {
 
         foreach ($searchVariants as $variant) {
             $regex   = $this->buildPhoneRegex($variant);
-            $company = self::where('vcard', 'REGEXP', $regex)->first();
+            $company = self::where('vcard', 'REGEXP', $regex)->whereRaw('(flags & ?) = 0', [Company::FLAG_DRAFT])->first();
             if ($company) {
                 return $company;
             }
         }
         foreach ($searchVariants as $variant) {
             $regex          = $this->buildPhoneRegex($variant);
-            $companyContact = CompanyContact::where('vcard', 'REGEXP', $regex)->first();
+            $companyContact = CompanyContact::where('vcard', 'REGEXP', $regex)->whereHas('company', fn ($q) => $q->whereNotDraft())->first();
             if ($companyContact) {
                 return $companyContact->company;
             }
@@ -60,8 +74,11 @@ class CompanyBuilder extends BaseBuilder {
         foreach ($searchVariants as $variant) {
             $regex   = $this->buildPhoneRegex($variant);
             $contact = Contact::where('vcard', 'REGEXP', $regex)->first();
-            if ($contact && $contact->companies->isNotEmpty()) {
-                return $contact->companies->first();
+            if ($contact) {
+                $company = $contact->companies->first(fn ($c) => ! $c->isDraft());
+                if ($company) {
+                    return $company;
+                }
             }
         }
         return null;

@@ -1,14 +1,16 @@
+import { Page } from '@models/http/http.nexus';
 import { Dictionary } from '@constants/constants';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, effect, inject, input, TemplateRef, untracked } from '@angular/core';
-import { dayjs, Dayjs } from '@constants/dates';
+import { dayjs, Dayjs } from '@constants/date/dates';
 import { Observable } from 'rxjs';
 import { Focus } from '@models/focus/focus.model';
 import { User } from '@models/user/user.model';
 import { FocusService } from '@models/focus/focus.service';
 import { Vacation } from '@models/vacation/vacation.model';
 import { VacationService } from '@models/vacation/vacation.service';
+import { modelListResource } from '@models/http/model-resource';
 import { NgbDateStruct, NgbDatepickerModule, NgbModal, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { Company } from '@models/company/company.model';
 import { Project } from '@models/project/project.model';
 import { GlobalService } from '@models/global.service';
@@ -21,6 +23,7 @@ import { PermissionsDirective } from '@directives/permissions.directive';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { HrFocusSummaryTabComponent } from './hr-focus-summary-tab/hr-focus-summary-tab.component';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 export interface TFocusDay {
     foci: Focus[];
@@ -36,7 +39,7 @@ export interface TFocusDay {
     selector: 'hr-focus-table',
     templateUrl: './hr-focus-table.component.html',
     styleUrls: ['./hr-focus-table.component.scss'],
-    imports: [NgbTooltipModule, Nx, DatePipe, DecimalPipe, ContinuousMarkerComponent, NgbDatepickerModule, FormsModule, PermissionsDirective, HotkeyDirective, HrFocusSummaryTabComponent, SearchInputComponent],
+    imports: [StackedTableDirective, NgbTooltipModule, Nx, DatePipe, DecimalPipe, ContinuousMarkerComponent, NgbDatepickerModule, FormsModule, PermissionsDirective, HotkeyDirective, HrFocusSummaryTabComponent, SearchInputComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HrFocusTableComponent {
@@ -50,22 +53,24 @@ export class HrFocusTableComponent {
     #vacationService = inject(VacationService);
 
     days: TFocusDay[] = [];
-    observer: Observable<Focus[]> = undefined!;
+    observer: Observable<Page<Focus>> = undefined!;
     addFocusDate: NgbDateStruct | undefined;
-    // Initial month shown by the datepicker until a date is picked (its `startDate` input is non-nullable).
     protected readonly defaultFocusDate: NgbDateStruct = (() => {
         const now = new Date();
         return { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() };
     })();
     addFocusTime: { hour: number; minute: number } = { hour: 10, minute: 0 };
     addFocusDuration = 0;
-    // Optional Project/Company parent picked in the create modal; defaults to Orga when left empty.
     addFocusParent: Serializable | undefined;
 
     #parents: Dictionary<{ path?: string; name: string }> = {};
-    #vacations: Vacation[] = [];
 
     readonly canManageFoci = computed(() => this.#global.user?.hasAnyRole(['admin', 'hr']) ?? false);
+
+    readonly #absences = modelListResource(
+        () => this.user().id,
+        (userId) => this.#vacationService.indexAbsences(userId),
+    );
 
     constructor() {
         effect(() => {
@@ -74,14 +79,13 @@ export class HrFocusTableComponent {
                 this.days = [];
                 this.#parents = {};
                 this.observer = this.#focusService.indexFor(user);
-                this.#vacations = [];
-                this.#vacationService.indexAbsences(user).subscribe((vacations) => {
-                    this.#vacations = vacations;
-                    this.days.forEach((day) => {
-                        day.vacation = this.#vacationForDay(day.moment);
-                    });
-                    this.#cdr.markForCheck();
-                });
+            });
+        });
+        effect(() => {
+            this.#absences.value();
+            untracked(() => {
+                this.days.forEach((day) => (day.vacation = this.#vacationForDay(day.moment)));
+                this.#cdr.markForCheck();
             });
         });
     }
@@ -136,7 +140,7 @@ export class HrFocusTableComponent {
     addDay = (m: Dayjs): number => {
         const node: TFocusDay = {
             date: m.format(this.#dayFormatString()),
-            weekend: m.weekday() % 6 == 0,
+            weekend: m.isoWeekday() >= 6,
             vacation: this.#vacationForDay(m),
             foci: [],
             details: false,
@@ -158,7 +162,7 @@ export class HrFocusTableComponent {
     fociAsSerializable = () => this.days as unknown[] as Serializable[];
 
     #vacationForDay = (m: Dayjs): Vacation | null =>
-        this.#vacations.find((v) => m.isSameOrAfter(dayjs(v.time_started().toDate()), 'day') && m.isSameOrBefore(dayjs(v.time_ended().toDate()), 'day')) ?? null;
+        this.#absences.value().find((v) => m.isSameOrAfter(dayjs(v.time_started().toDate()), 'day') && m.isSameOrBefore(dayjs(v.time_ended().toDate()), 'day')) ?? null;
 
     #dayFormatString = () => 'DD.MM.YYYY';
     #dayFormat = (_: string) => dayjs(_).format(this.#dayFormatString());

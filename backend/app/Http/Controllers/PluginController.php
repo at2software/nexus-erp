@@ -97,7 +97,6 @@ abstract class PluginController extends Controller {
                     $instances[] = $instance;
                 }
             } catch (\Exception $e) {
-                // Skip controllers that can't be instantiated or aren't properly configured
                 continue;
             }
         }

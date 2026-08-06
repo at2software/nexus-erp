@@ -4,28 +4,32 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { ActivityTabComponent } from '@activity/activity-tab.component';
-import { NxGlobal } from '@app/nx/nx.global';
+import { ClipboardService } from '@app/nx/clipboard.service';
+import { SelectionService } from '@app/nx/selection.service';
 import { GlobalService } from '@models/global.service';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
+import { AvatarComponent } from '@shards/avatar/avatar.component';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'activity-tab-copypaste',
     templateUrl: './tab-copypaste.component.html',
     styleUrls: ['./tab-copypaste.component.scss'],
-    imports: [ActivityTabComponent, ScrollbarComponent, NgbTooltipModule],
+    imports: [AvatarComponent, ActivityTabComponent, ScrollbarComponent, NgbTooltipModule],
 })
 export class TabCopypasteComponent {
     #global = inject(GlobalService);
     #activityService = inject(ActivityService);
+    #clipboard = inject(ClipboardService);
+    #selection = inject(SelectionService);
 
     tab = viewChild.required(ActivityTabComponent);
 
-    protected hasClips = toSignal(NxGlobal.onClipboardChanged, { initialValue: false });
+    protected hasClips = toSignal(this.#clipboard.onChanged, { initialValue: false });
     #rootObject = toSignal(this.#global.onRootObjectSelected);
 
     constructor() {
-        this.#global.init.subscribe(() => NxGlobal.loadClipboardCookies());
+        this.#global.init.subscribe(() => this.#clipboard.loadFromStorage());
 
         effect(() => {
             if (this.hasClips()) {
@@ -37,23 +41,23 @@ export class TabCopypasteComponent {
 
         effect(() => {
             const root = this.#rootObject();
-            if (root instanceof Serializable) NxGlobal.setCurrentRoot(root);
+            if (root instanceof Serializable) this.#selection.setRoot(root);
         });
     }
 
-    getKeys = () => NxGlobal.getClipKeys();
-    getClips = (className: string) => NxGlobal.getClips()[className] || [];
-    rootAcceptsChildren = (_: string) => NxGlobal.getCurrentRoot()?.acceptsChild(NxGlobal.getClips()[_][0]) ?? false;
-    acceptsChild = (_: Serializable) => NxGlobal.getCurrentRoot()?.acceptsChild(_);
-    removeAll = (className: string) => NxGlobal.unclipAll(className);
+    getKeys = () => this.#clipboard.getClipKeys();
+    getClips = (className: string) => this.#clipboard.getClips()[className] || [];
+    rootAcceptsChildren = (_: string) => this.#selection.getRoot()?.acceptsChild(this.#clipboard.getClips()[_][0]) ?? false;
+    acceptsChild = (_: Serializable) => this.#selection.getRoot()?.acceptsChild(_);
+    removeAll = (className: string) => this.#clipboard.unclipAll(className);
 
     insertAll(_: string) {
-        NxGlobal.getClips()[_].forEach((x: Serializable) => x.setParent(NxGlobal.getCurrentRoot()!));
-        NxGlobal.unclipAll(_);
+        this.#clipboard.getClips()[_].forEach((x: Serializable) => x.setParent(this.#selection.getRoot()!));
+        this.#clipboard.unclipAll(_);
     }
 
     insert(_: Serializable) {
-        _.setParent(NxGlobal.getCurrentRoot()!);
-        NxGlobal.unclip(_);
+        _.setParent(this.#selection.getRoot()!);
+        this.#clipboard.unclip(_);
     }
 }

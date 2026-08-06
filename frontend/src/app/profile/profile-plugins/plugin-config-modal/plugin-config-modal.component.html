@@ -22,19 +22,19 @@
     <!-- Mattermost -->
     @if (plugin.type === 'mattermost') {
         <div class="row">
-            <div class="col-4">
+            <div class="col-12 col-md-6 col-xl-4">
                 <div class="form-floating mb-3">
                     <input type="url" class="form-control" id="url" [(ngModel)]="plugin.value.url" />
                     <label for="url" i18n="@@i18n.common.url">URL</label>
                 </div>
             </div>
-            <div class="col-4">
+            <div class="col-12 col-md-6 col-xl-4">
                 <div class="form-floating mb-3">
                     <input type="text" class="form-control" id="team" [(ngModel)]="plugin.value.team" />
                     <label for="team" i18n="@@i18n.common.team">team</label>
                 </div>
             </div>
-            <div class="col-4">
+            <div class="col-12 col-md-6 col-xl-4">
                 <div class="form-floating mb-3">
                     <input type="password" class="form-control" id="token" [(ngModel)]="plugin.value.token" />
                     <label for="token" i18n="@@i18n.common.token">token</label>
@@ -50,13 +50,13 @@
     <!-- GitLab -->
     @if (plugin.type === 'git') {
         <div class="row">
-            <div class="col-6">
+            <div class="col-12 col-md-6">
                 <div class="form-floating mb-3">
                     <input type="url" class="form-control" id="url" placeholder="https://your-git-domain.tld/" [(ngModel)]="plugin.value.url" />
                     <label for="url" i18n="@@i18n.common.url">URL</label>
                 </div>
             </div>
-            <div class="col-6">
+            <div class="col-12 col-md-6">
                 <div class="form-floating mb-3">
                     <input type="password" class="form-control" id="token" [(ngModel)]="plugin.value.token" />
                     <label for="token" i18n="@@i18n.common.token">token</label>
@@ -72,19 +72,19 @@
     <!-- MantisBT -->
     @if (plugin.type === 'mantis') {
         <div class="row">
-            <div class="col-4">
+            <div class="col-12 col-md-6 col-xl-4">
                 <div class="form-floating mb-3">
                     <input type="url" class="form-control" id="url" placeholder="https://mantis.mydomain/" [(ngModel)]="plugin.value.url" />
                     <label for="url" i18n="@@i18n.common.url">URL</label>
                 </div>
             </div>
-            <div class="col-4">
+            <div class="col-12 col-md-6 col-xl-4">
                 <div class="form-floating mb-3">
                     <input type="password" class="form-control" id="token" [(ngModel)]="plugin.value.token" />
                     <label for="token" i18n="@@i18n.common.token">token</label>
                 </div>
             </div>
-            <div class="col-4">
+            <div class="col-12 col-md-6 col-xl-4">
                 <div class="form-floating mb-3">
                     <input type="text" class="form-control" id="filterId" placeholder="123" [(ngModel)]="plugin.value.filterId" />
                     <label for="filterId" i18n="@@i18n.mantis.filterId">filter ID</label>
@@ -134,13 +134,13 @@
     <!-- Slack -->
     @if (plugin.type === 'slack') {
         <div class="row">
-            <div class="col-6">
+            <div class="col-12 col-md-6">
                 <div class="form-floating mb-3">
                     <input type="url" class="form-control" id="url" placeholder="https://myworkspace.slack.com/" [(ngModel)]="plugin.value.url" />
                     <label for="url" i18n="@@i18n.common.url">URL</label>
                 </div>
             </div>
-            <div class="col-6">
+            <div class="col-12 col-md-6">
                 <div class="form-floating mb-3">
                     <input type="password" class="form-control" id="token" [(ngModel)]="plugin.value.token" />
                     <label for="token" i18n="@@i18n.common.token">token</label>
@@ -152,25 +152,25 @@
     <!-- LocalAI Proxy -->
     @if (plugin.type === 'local_ai') {
         <div class="row">
-            <div class="col-3">
+            <div class="col-12 col-md-6 col-xl-3">
                 <div class="form-floating mb-3">
                     <input type="url" class="form-control" id="url" [(ngModel)]="plugin.value.url" placeholder="http://localhost:8080" />
                     <label for="url" i18n="@@i18n.common.url">URL</label>
                 </div>
             </div>
-            <div class="col-3">
+            <div class="col-12 col-md-6 col-xl-3">
                 <div class="form-floating mb-3">
                     <input type="text" class="form-control" id="login" [(ngModel)]="plugin.value.login" />
                     <label for="login" i18n="@@i18n.common.login">login</label>
                 </div>
             </div>
-            <div class="col-3">
+            <div class="col-12 col-md-6 col-xl-3">
                 <div class="form-floating mb-3">
                     <input type="password" class="form-control" id="password" [(ngModel)]="plugin.value.password" />
                     <label for="password" i18n="@@i18n.common.password">password</label>
                 </div>
             </div>
-            <div class="col-3">
+            <div class="col-12 col-md-6 col-xl-3">
                 <div class="form-floating mb-3">
                     <select class="form-select" id="model" [(ngModel)]="plugin.value.model">
                         <option value="" disabled i18n="@@i18n.profile.selectModel">select model</option>

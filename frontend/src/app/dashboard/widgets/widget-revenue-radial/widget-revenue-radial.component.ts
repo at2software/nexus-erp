@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, viewChild } from '@angular/core';
+import { modelListResource } from '@models/http/model-resource';
 import { arc, curveCardinalClosed, line, max, range, scaleBand, scaleLinear, select, selectAll } from 'd3';
 import { InvoiceService } from '@models/invoice/invoice.service';
 import { NComponent } from '@shards/n/n.component';
@@ -37,23 +38,17 @@ export class WidgetRevenueRadialComponent {
 
     #invoiceService = inject(InvoiceService);
     #moneyPipe = inject(MoneyPipe);
-    #data: MonthlyRevenueData[] = [];
-    loading = signal(true);
+
+    readonly #ranges = modelListResource<MonthlyRevenueData>(() => this.#invoiceService.getMonthlyRevenueRanges());
+    readonly loading = this.#ranges.isLoading;
+    readonly #data = computed(() => this.#ranges.value());
 
     constructor() {
-        afterNextRender(() => this.#loadData());
-    }
-
-    #loadData() {
-        this.#invoiceService.getMonthlyRevenueRanges().subscribe((data) => {
-            this.#data = data as MonthlyRevenueData[];
-            this.loading.set(false);
-            setTimeout(() => this.#createChart(), 0);
-        });
+        effect(() => this.#data().length && setTimeout(() => this.#createChart()));
     }
 
     #createChart() {
-        if (!this.chartContainer() || !this.#data.length) return;
+        if (!this.chartContainer() || !this.#data().length) return;
 
         select(this.chartContainer()!.nativeElement).selectAll('*').remove();
 
@@ -67,7 +62,7 @@ export class WidgetRevenueRadialComponent {
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
         const x = scaleBand().domain(range(12).map((i) => i.toString())).range([0, 2 * Math.PI]).align(0);
-        const maxValue = max(this.#data, (d) => d.max) || 1;
+        const maxValue = max(this.#data(), (d) => d.max) || 1;
         const y = scaleLinear().domain([0, maxValue * 1.1]).range([innerRadius, outerRadius]);
 
         const svg = select(this.chartContainer()!.nativeElement)
@@ -113,7 +108,7 @@ export class WidgetRevenueRadialComponent {
 
             const normalColor = Color.fromVar('--color-primary-0', '').darken(layer.darken).toHexString();
 
-            g.append('g').selectAll('path').data(this.#data).join('path')
+            g.append('g').selectAll('path').data(this.#data()).join('path')
                 .attr('fill', normalColor)
                 .attr('d', arcPath as unknown as string)
                 .attr('class', (_, i) => `segment-m${i} layer-${layerIndex}`);
@@ -132,11 +127,11 @@ export class WidgetRevenueRadialComponent {
             .endAngle((_, i) => x(i.toString())! + x.bandwidth())
             .padAngle(0.02).padRadius(innerRadius);
 
-        g.append('g').selectAll('path').data(this.#data).join('path')
+        g.append('g').selectAll('path').data(this.#data()).join('path')
             .attr('fill', 'transparent')
             .attr('d', hoverArc as unknown as string)
             .on('mouseover', (event: MouseEvent, d: MonthlyRevenueData) => {
-                const monthIndex = Array.from(this.#data).indexOf(d);
+                const monthIndex = Array.from(this.#data()).indexOf(d);
                 layers.forEach((layer, layerIndex) => {
                     const hoverColor = Color.fromVar('--color-primary-0', '').darken(layer.darken).lighten(15).toHexString();
                     selectAll(`.segment-m${monthIndex}.layer-${layerIndex}`).attr('fill', hoverColor);
@@ -162,7 +157,7 @@ export class WidgetRevenueRadialComponent {
                 tooltip.style('visibility', 'hidden');
             });
 
-        const medianPoints = this.#data.map((d, i) => {
+        const medianPoints = this.#data().map((d, i) => {
             const angle = x(i.toString())! + x.bandwidth() / 2;
             const radius = y(d.median);
             return { x: Math.cos(angle - Math.PI / 2) * radius, y: Math.sin(angle - Math.PI / 2) * radius };

@@ -1,8 +1,10 @@
-import { ChangeDetectionStrategy, Component, inject, signal, TemplateRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, linkedSignal, signal, TemplateRef } from '@angular/core';
+import { modelListResource, modelResource } from '@models/http/model-resource';
 import { FormsModule } from '@angular/forms';
 import { NgbDropdownModule, NgbModal, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { VaultService } from '@models/vault.service';
-import { ParamService } from '@models/param.service';
+import { ParamService } from '@models/param/param.service';
+import { Param } from '@models/param/param.model';
 import { Toast } from '@shards/toast/toast';
 import { NComponent } from '@shards/n/n.component';
 import { Dictionary } from '@constants/constants';
@@ -69,9 +71,7 @@ const DEFAULT_PIPELINE_JOBS: TPipelineJob[] = [
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SettingsConnectorsComponent {
-    vaults = signal<TVault[]>([]);
     currentVault = signal<TVault | undefined>(undefined);
-    pipelineJobs = signal<TPipelineJob[]>([]);
     tanChallenge = signal<TTanChallenge | null>(null);
     tanInput = signal('');
     bankName = signal<string | null>(null);
@@ -82,29 +82,42 @@ export class SettingsConnectorsComponent {
     #paramService = inject(ParamService);
     #modalService = inject(NgbModal);
 
-    constructor() {
-        this.#vaultService.index().subscribe((response: TVault[]) => {
-            response.forEach((vault) => {
-                const map: Dictionary<string> = {};
-                Object.keys(vault.keys).forEach((key) => (map[`${vault.prefix}_${key}`] = ''));
-                vault.map = map;
-            });
-            this.vaults.set(response);
-            if (response.some((v) => v.prefix === 'GITLAB')) this.#loadPipelineJobs();
-        });
-    }
+    readonly #vaults = modelListResource(() => this.#vaultService.index());
+    readonly vaults = linkedSignal(() =>
+        this.#vaults.value().map((vault) => ({
+            prefix: vault.prefix,
+            name: vault.name,
+            active: vault.active,
+            keys: vault.keys,
+            missing: vault.missing,
+            map: Object.fromEntries(Object.keys(vault.keys).map((key) => [`${vault.prefix}_${key}`, ''])),
+        })),
+    );
+
+    readonly #pipelineParam = modelResource(
+        () => (this.vaults().some((_) => _.prefix === 'GITLAB') ? 'params/SETTINGS_GIT_PIPELINE' : undefined),
+        (key) => this.#paramService.show(key),
+    );
+    readonly pipelineJobs = linkedSignal(() => {
+        try {
+            const parsed = JSON.parse(String(this.#pipelineParam.value()?.value));
+            return Array.isArray(parsed) ? (parsed as TPipelineJob[]) : [...DEFAULT_PIPELINE_JOBS];
+        } catch {
+            return [...DEFAULT_PIPELINE_JOBS];
+        }
+    });
 
     openVaultModal(vault: TVault, content: TemplateRef<unknown>) {
         this.currentVault.set(vault);
         this.tanChallenge.set(null);
         this.tanInput.set('');
         this.bankName.set(null);
-        if (vault.prefix === 'GITLAB') this.#loadPipelineJobs();
+        if (vault.prefix === 'GITLAB') this.#pipelineParam.reload();
         this.#modalService.open(content, { size: 'lg' });
     }
 
     checkCredentials() {
-        this.#vaultService.update(this.currentVault()!.map).subscribe((response) => {
+        this.#vaultService.checkCredentials(this.currentVault()!.map).subscribe((response) => {
             if (response.success) {
                 Toast.success('Connection test successful / Credentials saved');
                 this.currentVault.update((v) => (v ? { ...v, active: true } : v));
@@ -127,7 +140,6 @@ export class SettingsConnectorsComponent {
                     this.tanInput.set('');
                     this.currentVault.update((v) => (v ? { ...v, active: true } : v));
                 }
-                // waiting=true for decoupled is handled by the polling loop
             });
     }
 
@@ -143,7 +155,7 @@ export class SettingsConnectorsComponent {
     }
 
     savePipelineJobs() {
-        this.#paramService.update('params/SETTINGS_GIT_PIPELINE', { value: JSON.stringify(this.pipelineJobs()) }).subscribe(() => {
+        Param.write('params/SETTINGS_GIT_PIPELINE', JSON.stringify(this.pipelineJobs())).subscribe(() => {
             Toast.success('Pipeline settings saved');
         });
     }
@@ -203,19 +215,5 @@ export class SettingsConnectorsComponent {
                 });
         };
         setTimeout(poll, 3000);
-    }
-
-    #loadPipelineJobs() {
-        this.#paramService.show('params/SETTINGS_GIT_PIPELINE').subscribe({
-            next: (param) => {
-                try {
-                    const parsed = JSON.parse(param.value as string);
-                    this.pipelineJobs.set(Array.isArray(parsed) ? parsed : [...DEFAULT_PIPELINE_JOBS]);
-                } catch {
-                    this.pipelineJobs.set([...DEFAULT_PIPELINE_JOBS]);
-                }
-            },
-            error: () => this.pipelineJobs.set([...DEFAULT_PIPELINE_JOBS]),
-        });
     }
 }

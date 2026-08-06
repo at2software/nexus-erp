@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { modelResource } from '@models/http/model-resource';
 import { RouterModule } from '@angular/router';
 import { NComponent } from '@shards/n/n.component';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
@@ -11,42 +11,34 @@ import { WidgetService } from '@models/widget.service';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { MoneyShortPipe } from '@pipes/mshort.pipe';
 import { TabTasksBaseComponent } from '../tab-tasks-base.component';
+import { Nx } from '@app/nx/nx.directive';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'tab-tasks-invoiceable',
     templateUrl: './tab-tasks-invoiceable.component.html',
-    imports: [NComponent, AvatarComponent, RouterModule, NgbTooltipModule, MoneyShortPipe, DecimalPipe],
+    imports: [NComponent, AvatarComponent, RouterModule, NgbTooltipModule, MoneyShortPipe, DecimalPipe, Nx],
 })
 export class TabTasksInvoiceableComponent extends TabTasksBaseComponent {
-    timeBased = signal<Project[]>([]);
-    customerSupport = signal<Company[]>([]);
-    preparedInvoices = signal<(Company | Project)[]>([]);
-
     #widgetService = inject(WidgetService);
 
+    #timeBased = modelResource(this.ready, () => this.#widgetService.indexCashflow('PROJECTS_TIMEBASED', {}, Project));
+    #customerSupport = modelResource(this.ready, () => this.#widgetService.indexCashflow('CUSTOMER_SUPPORT', {}, Company));
+    #preparedInvoices = modelResource(this.ready, () => this.#widgetService.preparedInvoices());
+
+    timeBased = computed(() => this.#positiveDesc([this.#timeBased.value()?.objects ?? []].flat(), (p) => p.uninvoiced_hours));
+    customerSupport = computed(() => this.#positiveDesc([this.#customerSupport.value()?.objects ?? []].flat(), (c) => c.foci_unbilled_sum_duration));
+    preparedInvoices = computed(() => {
+        const objects = Object.values(this.#preparedInvoices.value() ?? {})
+            .map((x) => REFLECTION<Company | Project>(x))
+            .filter((x) => x instanceof Company || x instanceof Project);
+        return this.#positiveDesc(objects, (x) => x.net_remaining);
+    });
+
     override reload() {
-        this.#widgetService
-            .indexCashflow('PROJECTS_TIMEBASED', {}, Project)
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe((response) => {
-                this.timeBased.set(this.#positiveDesc([response.objects].flat(), (p) => p.uninvoiced_hours));
-            });
-        this.#widgetService
-            .indexCashflow('CUSTOMER_SUPPORT', {}, Company)
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe((response) => {
-                this.customerSupport.set(this.#positiveDesc([response.objects].flat(), (c) => c.foci_unbilled_sum_duration));
-            });
-        this.#widgetService
-            .preparedInvoices()
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe((response) => {
-                const objects = Object.values(response)
-                    .map((x) => REFLECTION<Company | Project>(x))
-                    .filter((x) => x instanceof Company || x instanceof Project);
-                this.preparedInvoices.set(this.#positiveDesc(objects, (x) => x.net_remaining));
-            });
+        this.#timeBased.reload();
+        this.#customerSupport.reload();
+        this.#preparedInvoices.reload();
     }
 
     #positiveDesc = <T>(items: T[], by: (item: T) => number | null | undefined): T[] => items

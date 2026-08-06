@@ -1,4 +1,4 @@
-<table class="table mb-0" enableTableExport [filenamePrefix]="'project_detail_billing'" cdk-table [dataSource]="sortedItems" fixedLayout nx-table>
+<table stackedTable class="table mb-0" enableTableExport [filenamePrefix]="'project_detail_billing'" cdk-table [dataSource]="sortedItems" fixedLayout nx-table>
     <ng-container cdkColumnDef="icons">
         <th cdk-header-cell *cdkHeaderCellDef class="text-center" style="width: 20px"></th>
         <td cdk-cell *cdkCellDef="let x" class="px-3">
@@ -7,7 +7,7 @@
     </ng-container>
 
     <ng-container cdkColumnDef="createdAt">
-        <th cdk-header-cell *cdkHeaderCellDef class="text-end text-truncate sortable" (click)="sortByColumn('created_at')" tabindex="0" (keydown.enter)="sortByColumn('created_at')">
+        <th cdk-header-cell *cdkHeaderCellDef class="text-end text-truncate sortable" (click)="sortByColumn('created_at')" tabindex="0" (keydown.enter)="sortByColumn('created_at')" style="width: 100px">
             <span class="capitalize-first" i18n="@@i18n.common.created_at">created at</span>
             {{ getSortIcon('created_at') }}
         </th>
@@ -17,7 +17,7 @@
     </ng-container>
 
     <ng-container cdkColumnDef="companyIcon">
-        <th cdk-header-cell *cdkHeaderCellDef class="sortable" (click)="sortByColumn('company_id')" tabindex="0" (keydown.enter)="sortByColumn('company_id')">
+        <th cdk-header-cell *cdkHeaderCellDef class="sortable" (click)="sortByColumn('company_id')" tabindex="0" (keydown.enter)="sortByColumn('company_id')" style="width: 44px">
             {{ getSortIcon('company_id') }}
         </th>
         <td cdk-cell *cdkCellDef="let x" class="text-start">
@@ -31,17 +31,17 @@
     </ng-container>
 
     <ng-container cdkColumnDef="name">
-        <th cdk-header-cell *cdkHeaderCellDef class="sortable" (click)="sortByColumn('name')" tabindex="0" (keydown.enter)="sortByColumn('name')"><span class="capitalize-first" i18n="@@i18n.common.name">name</span> {{ getSortIcon('name') }}</th>
+        <th cdk-header-cell *cdkHeaderCellDef class="sortable" (click)="sortByColumn('name')" tabindex="0" (keydown.enter)="sortByColumn('name')" style="width: 40%"><span class="capitalize-first" i18n="@@i18n.common.name">name</span> {{ getSortIcon('name') }}</th>
         <td cdk-cell *cdkCellDef="let x" class="text-truncate">
             {{ x.name }}
         </td>
     </ng-container>
 
     <ng-container cdkColumnDef="assignees">
-        <th cdk-header-cell *cdkHeaderCellDef class="text-truncate">
+        <th cdk-header-cell *cdkHeaderCellDef class="text-truncate" style="width: 110px">
             <span class="capitalize-first" i18n="@@i18n.common.assignees">assignees</span>
         </th>
-        <td cdk-cell *cdkCellDef="let x" style="width: 3rem">
+        <td cdk-cell *cdkCellDef="let x" class="overflow-hidden">
             <div class="avatars-stack">
                 @for (user of x.assigned_users; track user.id) {
                     <avatar [object]="user"></avatar>
@@ -51,14 +51,14 @@
     </ng-container>
 
     <ng-container cdkColumnDef="net">
-        <th cdk-header-cell *cdkHeaderCellDef class="text-end sortable" (click)="sortByColumn('net')" tabindex="0" (keydown.enter)="sortByColumn('net')"><span class="capitalize-first" i18n="@@i18n.common.net">net</span> {{ getSortIcon('net') }}</th>
+        <th cdk-header-cell *cdkHeaderCellDef class="text-end sortable" (click)="sortByColumn('net')" tabindex="0" (keydown.enter)="sortByColumn('net')" style="width: 100px"><span class="capitalize-first" i18n="@@i18n.common.net">net</span> {{ getSortIcon('net') }}</th>
         <td cdk-cell *cdkCellDef="let x" class="text-end">
             <div class="text-muted small">{{ x.net | money }}</div>
         </td>
     </ng-container>
 
     <ng-container cdkColumnDef="dueAt">
-        <th cdk-header-cell *cdkHeaderCellDef class="text-center"></th>
+        <th cdk-header-cell *cdkHeaderCellDef class="text-center" style="width: 44px"></th>
         <td cdk-cell *cdkCellDef="let x" class="text-center position-relative py-0 overflow-visible">
             <div class="input-group">
                 <input class="d-none" ngbDatepicker #d="ngbDatepicker" [footerTemplate]="footerTemplate" [(ngModel)]="x.due_at" (dateSelect)="x.update()" [positionTarget]="datediv" placement="bottom-left" />

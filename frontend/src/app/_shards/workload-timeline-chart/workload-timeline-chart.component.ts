@@ -1,5 +1,5 @@
 import { Dictionary } from '@constants/constants';
-import type { ProjectTimelineEntry, TimeValuePoint } from '@models/api-response';
+import type { ProjectTimelineEntryDto, TimeValuePointDto } from '@models/_core/api-response';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { User } from '@models/user/user.model';
 import { Color } from '@constants/Color';
@@ -9,7 +9,7 @@ import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS } from '@charts/echarts-presets';
 
 interface TimelineRow {
     user: User;
-    data: TimeValuePoint[];
+    data: TimeValuePointDto[];
 }
 interface WorkloadChart {
     options: Dictionary;
@@ -27,11 +27,10 @@ const MS_PER_DAY = 86_400_000;
     imports: [NgxEchartsDirective, AvatarComponent],
 })
 export class WorkloadTimelineChartComponent {
-    timeline = input<ProjectTimelineEntry[] | undefined>();
+    timeline = input<ProjectTimelineEntryDto[] | undefined>();
 
     chart = computed<WorkloadChart | null>(() => this.#buildWorkloadChart(this.timeline()));
 
-    /** Heatmap cell color: primary alpha ramp up to 100%, blend into danger up to 150%, solid danger beyond. */
     #heatmapColor(percentage: number, primary: Color, danger: Color): string {
         if (percentage <= 100) {
             const { r, g, b } = primary.toRgb();
@@ -47,12 +46,11 @@ export class WorkloadTimelineChartComponent {
         return danger.toHexString();
     }
 
-    #buildWorkloadChart(timeline?: ProjectTimelineEntry[]): WorkloadChart | null {
+    #buildWorkloadChart(timeline?: ProjectTimelineEntryDto[]): WorkloadChart | null {
         timeline ??= [];
         const clusters = [...new Set(timeline.flatMap((entry) => entry.data.map((point) => point.period)))].sort();
         if (!timeline.length || !clusters.length) return null;
 
-        // detect cluster interval from the gap between consecutive dates
         const gapDays = clusters.length >= 2 ? (Date.parse(clusters[1]) - Date.parse(clusters[0])) / MS_PER_DAY : 0;
         const clusterType = gapDays >= 300 ? 'year' : gapDays >= 20 ? 'month' : gapDays >= 5 ? 'week' : 'day';
         const workingDays = WORKING_DAYS_PER_CLUSTER[clusterType];
@@ -61,7 +59,6 @@ export class WorkloadTimelineChartComponent {
             .filter((entry) => entry.user)
             .map((entry) => ({ user: User.fromJson(entry.user), data: entry.data }));
         const developers = rows.map((row) => row.user.getName() || 'Unknown');
-        // hours per cluster, with gaps filled as 0 and aligned to the sorted cluster axis
         const hoursPerCluster = rows.map((row) => {
             const byMonth = new Map(row.data.map((point) => [point.period, Number(point.value) || 0]));
             return clusters.map((cluster) => byMonth.get(cluster) ?? 0);
@@ -116,9 +113,7 @@ export class WorkloadTimelineChartComponent {
                 },
             },
             grid: [
-                // timeline grid (top)
                 { top: 20, height: 120, left: 50, right: 40, containLabel: false },
-                // heatmap grid (bottom)
                 { top: 140, bottom: 60, left: 50, right: 40, containLabel: false, height: developers.length * 20 },
             ],
             xAxis: [
@@ -207,7 +202,6 @@ export class WorkloadTimelineChartComponent {
         return {
             options,
             height: 160 + developers.length * 20,
-            // reversed so the avatar overlay (top-down DOM) matches the heatmap y-axis (bottom-up)
             users: rows.map((row) => row.user).reverse(),
         };
     }

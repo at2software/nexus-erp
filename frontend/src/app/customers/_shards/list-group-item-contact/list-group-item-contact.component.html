@@ -42,7 +42,7 @@
     </span>
     <div class="d-flex gap-1">
         @for (item of icons(); track item.instance) {
-            <a (click)="openProfile(item.instance, $event)" (keyup.enter)="openProfile(item.instance, $event)" tabindex="0" [ngbTooltip]="item.tooltip" container="parent" placement="bottom" style="cursor: pointer">
+            <a (click)="openProfile(item.instance, $event)" (keyup.enter)="openProfile(item.instance, $event)" tabindex="0" [ngbTooltip]="item.tooltip" container="parent" placement="bottom" class="cursor-pointer">
                 <n [class]="item.iconClass">{{ item.icon }}</n>
             </a>
         }

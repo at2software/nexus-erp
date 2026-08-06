@@ -10,19 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
-/**
- * Shared per-company snapshot machinery for Model A (CustomerRevenueDataset) and
- * Model B (CustomerIntervalDataset). Both models train on historical "snapshots" —
- * a company + a cutoff date — rather than one row per company, because a single
- * row per company would give too few training examples and would waste years of
- * history that's only usable as of a particular point in time.
- *
- * Leakage boundary (shared by both models): a snapshot's FEATURES may only use
- * invoices with `created_at <= cutoff`. What differs per model is the LABEL
- * window after the cutoff (see CustomerRevenueDataset/CustomerIntervalDataset).
- */
 class CustomerSnapshots {
-    /** Cutolffs are generated quarterly to avoid near-duplicate snapshots swamping company groups. */
     public const CUTOFF_STEP_MONTHS = 3;
 
     /** Exclude the own company (ME_ID) and deprecated/inactive customers — mirrors CompanyBuilder::whereActive(). */
@@ -49,11 +37,6 @@ class CustomerSnapshots {
     }
 
     /**
-     * Candidate cutoff dates for a company: quarterly steps between its earliest
-     * and latest (non-cancelled) invoice dates. Callers filter these down further
-     * (e.g. requiring a minimum pre-cutoff history and a full post-cutoff label
-     * window still present in the data).
-     *
      * @param Collection<int, Invoice> $invoices oldest-first, from invoicesFor()
      * @return Carbon[]
      */
@@ -74,17 +57,14 @@ class CustomerSnapshots {
         return $cutoffs;
     }
 
-    /** Invoices strictly at or before the cutoff — the only ones features may see. */
     public static function invoicesBefore(Collection $invoices, Carbon $cutoff): Collection {
         return $invoices->filter(fn ($invoice) => Carbon::parse($invoice->created_at)->lte($cutoff))->values();
     }
 
-    /** Invoices strictly after the cutoff — only the label extraction may see these. */
     public static function invoicesAfter(Collection $invoices, Carbon $cutoff): Collection {
         return $invoices->filter(fn ($invoice) => Carbon::parse($invoice->created_at)->gt($cutoff))->values();
     }
 
-    /** Invoices in (cutoff, cutoff + $months months] — Model A's label window. */
     public static function invoicesInWindow(Collection $invoices, Carbon $cutoff, int $months): Collection {
         $end = $cutoff->copy()->addMonths($months);
         return $invoices->filter(function ($invoice) use ($cutoff, $end) {
@@ -93,7 +73,6 @@ class CustomerSnapshots {
         })->values();
     }
 
-    /** Sum of `net` across a set of already-loaded invoices (their invoiceItems must be eager-loaded). */
     public static function sumNet(Collection $invoices): float {
         return (float)$invoices->sum(fn ($invoice) => $invoice->net);
     }
@@ -116,11 +95,6 @@ class CustomerSnapshots {
     }
 
     /**
-     * Candidate cutoff dates for a company's foci history — the same quarterly
-     * scheme as candidateCutoffs(), but keyed on `started_at` (when the work
-     * happened) rather than an invoice's `created_at`, since Focus rows don't
-     * share that column.
-     *
      * @param Collection<int, Focus> $foci oldest-first, from fociFor()
      * @return Carbon[]
      */
@@ -141,25 +115,14 @@ class CustomerSnapshots {
         return $cutoffs;
     }
 
-    /** Foci strictly at or before the cutoff (by `started_at`) — the only ones features may see. */
     public static function fociBefore(Collection $foci, Carbon $cutoff): Collection {
         return $foci->filter(fn ($focus) => Carbon::parse($focus->started_at)->lte($cutoff))->values();
     }
 
-    /** Foci strictly after the cutoff (by `started_at`) — only the label extraction may see these. */
     public static function fociAfter(Collection $foci, Carbon $cutoff): Collection {
         return $foci->filter(fn ($focus) => Carbon::parse($focus->started_at)->gt($cutoff))->values();
     }
 
-    /**
-     * Foci in (cutoff, cutoff + $months months] by `started_at` — the support-load label
-     * window. Uses `addMonthsNoOverflow` (not `addMonths`): cutoffs are always end-of-month
-     * (see candidateCutoffs/fociCandidateCutoffs), and plain `addMonths` on a day-31 cutoff
-     * silently overflows into the FOLLOWING month when the target month is shorter (e.g.
-     * Jan 31 + 3 months = May 1, not Apr 30) — a day off is enough to leak an extra focus
-     * into the label window on roughly half of all quarterly cutoffs. NoOverflow clamps to
-     * the target month's actual last day instead.
-     */
     public static function fociInWindow(Collection $foci, Carbon $cutoff, int $months): Collection {
         $end = $cutoff->copy()->addMonthsNoOverflow($months);
         return $foci->filter(function ($focus) use ($cutoff, $end) {
@@ -168,7 +131,6 @@ class CustomerSnapshots {
         })->values();
     }
 
-    /** Sum of `duration` across a set of already-loaded foci — the `sumNet` sibling for support hours. */
     public static function sumDuration(Collection $foci): float {
         return (float)$foci->sum(fn ($focus) => $focus->duration);
     }
@@ -201,8 +163,6 @@ class CustomerSnapshots {
     }
 
     /**
-     * Consecutive inter-purchase gaps in days across an ordered date sequence.
-     *
      * @param Collection<int, Carbon> $dates oldest first
      * @return float[]
      */

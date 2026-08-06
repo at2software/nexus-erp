@@ -12,8 +12,6 @@ namespace App\Services\FinTs\Native;
  */
 class HbciSegment {
     /**
-     * Builds a segment string.
-     *
      * @param string $name Segment name (e.g. "HKSAL")
      * @param int $seq Segment sequence number
      * @param int $version Segment version
@@ -36,7 +34,6 @@ class HbciSegment {
         return self::escape((string)$value);
     }
 
-    /** Escapes special HBCI characters inside a data value. */
     public static function escape(string $value): string {
         return str_replace(['?', '+', ':', "'"], ['??', '?+', '?:', "?'"], $value);
     }

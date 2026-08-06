@@ -1,11 +1,10 @@
-import { Serializable } from '../serializable';
-import { MarketingService } from './marketing.service';
-import { NxActionType } from '@app/nx/nx.actions';
-import { Type } from 'class-transformer';
+import { Serializable } from '@models/_core/serializable';
+import { NxAction, NxActionType } from '@models/_core/nx.actions';
+import { Type } from '@models/_core/hydrate';
 import { MarketingPerformanceMetric } from './marketing-performance-metrics.model';
 import { IActivityBase } from './activity-base.interface';
-import { Model } from '@constants/type-discriminators';
-import type { ActivityStats } from '@models/api-response';
+import { Model } from '@constants/model/type-discriminators';
+import type { ActivityStatsDto } from '@models/_core/api-response';
 
 export type QuickActionType = 'EMAIL' | 'LINKEDIN' | 'LINKEDIN_SEARCH' | 'CALL' | null;
 
@@ -19,7 +18,6 @@ export class MarketingActivity extends Serializable implements IActivityBase {
         skipped: 'bg-purple',
     };
 
-    SERVICE = MarketingService;
 
     marketing_workflow_id!: string;
     name!: string;
@@ -30,61 +28,60 @@ export class MarketingActivity extends Serializable implements IActivityBase {
     parent_activity_id?: string;
     quick_action?: QuickActionType;
 
-    // Stats added dynamically by backend
-    stats?: ActivityStats;
+    stats?: ActivityStatsDto;
 
     @Type(()=>MarketingPerformanceMetric) performance_metrics?: MarketingPerformanceMetric[];
     @Type(()=>MarketingActivity) child_activities?: MarketingActivity[];
     @Type(()=>MarketingActivity) parent_activity?: MarketingActivity;
 
-    doubleClickAction = 0;
-    actions = [
-        {
-            title: $localize`:@@i18n.common.edit:edit`,
-            action: () => {
-                const context = (this as any).__nxContext;
-                if (context?.component) {
-                    context.component.openEditActivityModal(this);
-                }
+    protected override buildActions(): NxAction[] {
+        return [
+            {
+                title: $localize`:@@i18n.common.edit:edit`,
+                doubleClick: true,
+                action: (_success?: (v: unknown) => void, nxContext?: unknown) => {
+                    const context = nxContext as { component?: { openEditActivityModal(_: MarketingActivity): void } } | undefined;
+                    context?.component?.openEditActivityModal(this);
+                },
             },
-        },
-        {
-            title: $localize`:@@i18n.marketing.mark_as_required:mark as required`,
-            on: () => !this.is_required,
-            action: () => {
-                this.update({ is_required: true }).subscribe();
+            {
+                title: $localize`:@@i18n.marketing.mark_as_required:mark as required`,
+                on: () => !this.is_required,
+                action: () => {
+                    this.update({ is_required: true }).subscribe();
+                },
             },
-        },
-        {
-            title: $localize`:@@i18n.marketing.mark_as_optional:mark as optional`,
-            on: () => this.is_required,
-            action: () => {
-                this.update({ is_required: false }).subscribe();
+            {
+                title: $localize`:@@i18n.marketing.mark_as_optional:mark as optional`,
+                on: () => this.is_required,
+                action: () => {
+                    this.update({ is_required: false }).subscribe();
+                },
             },
-        },
-        {
-            title: $localize`:@@i18n.marketing.add_external_dependency:add external dependency`,
-            on: () => !this.has_external_dependency,
-            action: () => {
-                this.update({ has_external_dependency: true }).subscribe();
+            {
+                title: $localize`:@@i18n.marketing.add_external_dependency:add external dependency`,
+                on: () => !this.has_external_dependency,
+                action: () => {
+                    this.update({ has_external_dependency: true }).subscribe();
+                },
             },
-        },
-        {
-            title: $localize`:@@i18n.marketing.remove_external_dependency:remove external dependency`,
-            on: () => this.has_external_dependency,
-            action: () => {
-                this.update({ has_external_dependency: false }).subscribe();
+            {
+                title: $localize`:@@i18n.marketing.remove_external_dependency:remove external dependency`,
+                on: () => this.has_external_dependency,
+                action: () => {
+                    this.update({ has_external_dependency: false }).subscribe();
+                },
             },
-        },
-        {
-            title: $localize`:@@i18n.common.delete:delete`,
-            group: true,
-            type: NxActionType.Destructive,
-            action: () =>
-                this.modalConfirm().then(() => {
-                    this.delete().subscribe();
-                }),
-            roles: 'marketing',
-        },
-    ];
+            {
+                title: $localize`:@@i18n.common.delete:delete`,
+                group: true,
+                type: NxActionType.Destructive,
+                action: () =>
+                    this.modalConfirm().then(() => {
+                        this.delete().subscribe();
+                    }),
+                roles: 'marketing',
+            },
+        ];
+    }
 }

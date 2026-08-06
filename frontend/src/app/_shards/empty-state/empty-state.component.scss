@@ -33,7 +33,6 @@ $image-size: 9rem;
         &.image-size-3 { $mod: 0.6;  width: $mod * $image-size; height: $mod * $image-size; }
         &.image-size-9 { $mod: 1.33; width: $mod * $image-size; height: $mod * $image-size; }
 
-        // Existing flat-design images
         &.select     { background-image: url('../../../assets/empty-state/nothing-selected.png'); }
         &.description     { background-image: url('../../../assets/empty-state/empty-description.png?2'); }
         &.shrug      { background-image: url('../../../assets/empty-state/nothing-selected.png'); }
@@ -43,7 +42,6 @@ $image-size: 9rem;
         &.chart      { background-image: url('../../../assets/empty-state/empty-charts.jpeg'); }
         &.check      { background-image: url('../../../assets/empty-state/checkmark.png'); }
 
-        // Module photo images — circular crop with cover sizing
         &.projects, &.invoices, &.hr, &.customers, &.marketing,
         &.products, &.profile, &.settings, &.dashboard, &.calendar, &.document {
             background-size: cover;

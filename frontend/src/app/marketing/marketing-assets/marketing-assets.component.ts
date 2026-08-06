@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
+import { modelListResource } from '@models/http/model-resource';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -11,9 +12,10 @@ import { TextParamEditorComponent } from '@shards/text-param-editor/text-param-e
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { GuidedTourComponent } from '@shards/guided-tour/guided-tour.component';
 import { Observable } from 'rxjs';
-import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, map, tap } from 'rxjs/operators';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { Dictionary } from '@constants/constants';
+import { CdkDrag, CdkDragDrop, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 
 interface AssetCategory {
     name: string;
@@ -27,22 +29,17 @@ interface AssetCategory {
     selector: 'marketing-assets',
     templateUrl: './marketing-assets.component.html',
     styleUrls: ['./marketing-assets.component.scss'],
-    imports: [DatePipe, FormsModule, NgbDropdownModule, NgbTooltipModule, NgbTypeaheadModule, DndDirective, Nx, TextParamEditorComponent, EmptyStateComponent, GuidedTourComponent, SpinnerComponent],
+    imports: [DatePipe, FormsModule, NgbDropdownModule, NgbTooltipModule, NgbTypeaheadModule, DndDirective, Nx, TextParamEditorComponent, EmptyStateComponent, GuidedTourComponent, SpinnerComponent, CdkDropList, CdkDrag, CdkDropListGroup],
 })
 export class MarketingAssetsComponent {
     #marketingService = inject(MarketingService);
     #route = inject(ActivatedRoute);
 
-    assets = signal<File[]>([]);
-    categories = signal<AssetCategory[]>([]);
-    loading = signal(true);
-    selectedCategory = 'Brand Assets';
     searchQuery = '';
     searchTags = '';
-    newTagInput = '';
-    allTags: string[] = [];
 
-    // Asset categories based on research
+    #tagSelected = false;
+
     defaultCategories: AssetCategory[] = [
         { name: 'Brand Assets', icon: 'branding_watermark', color: 'primary', count: 0 },
         { name: 'Social Media', icon: 'share', color: 'info', count: 0 },
@@ -53,49 +50,54 @@ export class MarketingAssetsComponent {
         { name: 'Documents', icon: 'description', color: 'dark', count: 0 },
     ];
 
-    constructor() {
-        // Check for category parameter from route
-        const category = this.#route.snapshot.paramMap.get('category');
-        if (category) {
-            this.selectedCategory = decodeURIComponent(category);
-        }
+    #filters = signal({
+        category: decodeURIComponent(this.#route.snapshot.paramMap.get('category') ?? '') || 'Brand Assets',
+        query: '',
+        tags: '',
+    });
+    selectedCategory = computed(() => this.#filters().category);
 
-        this.loadAssets();
-        this.initializeCategories();
-    }
+    #assets = modelListResource(this.#filters, (f) =>
+        this.#marketingService.indexMarketingAssets(f.category, f.query, f.tags).pipe(tap((assets) => assets.forEach((asset) => this.#wireCategoryChangeAction(asset)))),
+    );
+    assets = linkedSignal(() => this.#assets.value());
+    loading = this.#assets.isLoading;
 
-    loadAssets() {
-        this.loading.set(true);
-        this.#marketingService.indexMarketingAssets(this.selectedCategory, this.searchQuery, this.searchTags).subscribe({
-            next: (data) => {
-                this.assets.set(data);
-                this.loadCategoryCounts();
-                this.updateAllTags();
-                this.loading.set(false);
-            },
-            error: () => this.loading.set(false),
-        });
-    }
+    #allAssets = modelListResource(() => this.#marketingService.indexMarketingAssets('', '', ''));
+    categories = computed(() => this.defaultCategories.map((c) => ({ ...c, count: this.#allAssets.value().filter((a) => a.category === c.name).length })));
 
-    loadCategoryCounts() {
-        // Fetch all assets without category filter to get accurate counts
-        this.#marketingService.indexMarketingAssets('', '', '').subscribe((allAssets) => {
-            this.categories.update((categories) =>
-                categories.map((category) => ({
-                    ...category,
-                    count: allAssets.filter((asset: File) => asset.category === category.name).length,
-                })),
-            );
-        });
-    }
-
-    initializeCategories() {
-        this.categories.set([...this.defaultCategories]);
-    }
+    allTags = computed(() => Array.from(new Set(this.assets().flatMap((a) => a.tags ?? []))).sort());
 
     onFilesUploaded() {
-        // Called when DND directive successfully uploads files
-        this.loadAssets(); // Refresh the asset list
+        this.#assets.reload();
+        this.#allAssets.reload();
+    }
+
+    onDropOnGrid() {}
+
+    onDropOnCategory(event: CdkDragDrop<File[]>, categoryName: string) {
+        if (event.previousContainer === event.container) return;
+
+        const asset = event.item.data as File;
+        if (!asset || asset.category === categoryName) return;
+
+        this.#marketingService.updateMarketingAssetCategory(asset.id, categoryName).subscribe(() => this.#onAssetRecategorized());
+    }
+
+    #onAssetRecategorized() {
+        this.#assets.reload();
+        this.#allAssets.reload();
+    }
+
+    #wireCategoryChangeAction(asset: File) {
+        const otherCategories = this.defaultCategories.filter((c) => c.name !== asset.category);
+        asset.actions.splice(asset.actions.length - 1, 0, {
+            title: this.changeCategoryLabel,
+            children: otherCategories.map((c) => ({
+                title: c.name,
+                action: () => this.#marketingService.updateMarketingAssetCategory(asset.id, c.name).subscribe(() => this.#onAssetRecategorized()),
+            })),
+        });
     }
 
     categorizeFile(file: File): string {
@@ -116,22 +118,11 @@ export class MarketingAssetsComponent {
     }
 
     filterByCategory(category: string) {
-        this.selectedCategory = category === this.selectedCategory ? '' : category;
-        this.loadAssets();
+        this.#filters.update((f) => ({ ...f, category: category === f.category ? '' : category }));
     }
 
     onSearch() {
-        this.loadAssets();
-    }
-
-    updateAllTags() {
-        const tagSet = new Set<string>();
-        this.assets().forEach((asset) => {
-            if (asset.tags) {
-                asset.tags.forEach((tag) => tagSet.add(tag));
-            }
-        });
-        this.allTags = Array.from(tagSet).sort();
+        this.#filters.update((f) => ({ ...f, query: this.searchQuery, tags: this.searchTags }));
     }
 
     #setAssetTags(asset: File, newTags: string[]) {
@@ -145,10 +136,7 @@ export class MarketingAssetsComponent {
         const currentTags = asset.tags || [];
         if (!currentTags.includes(tag.trim())) {
             const newTags = [...currentTags, tag.trim()];
-            this.#marketingService.updateMarketingAssetTags(asset.id, newTags).subscribe(() => {
-                this.#setAssetTags(asset, newTags);
-                this.updateAllTags();
-            });
+            this.#marketingService.updateMarketingAssetTags(asset.id, newTags).subscribe(() => this.#setAssetTags(asset, newTags));
         }
     }
 
@@ -156,24 +144,30 @@ export class MarketingAssetsComponent {
         if (!asset.tags) return;
 
         const newTags = asset.tags.filter((tag) => tag !== tagToRemove);
-        this.#marketingService.updateMarketingAssetTags(asset.id, newTags).subscribe(() => {
-            this.#setAssetTags(asset, newTags);
-            this.updateAllTags();
-        });
+        this.#marketingService.updateMarketingAssetTags(asset.id, newTags).subscribe(() => this.#setAssetTags(asset, newTags));
     }
 
     onTagInputKeyup(event: KeyboardEvent, asset: File, input: HTMLInputElement) {
-        if (event.key === 'Enter' && input.value.trim()) {
-            const tagValue = input.value.trim();
-            this.addTagToAsset(asset, tagValue);
-            input.value = '';
-            event.preventDefault();
-        }
+        const afterSelection = this.#tagSelected;
+        this.#tagSelected = false;
+
+        if (event.key !== 'Enter' || afterSelection || !input.value.trim()) return;
+
+        this.addTagToAsset(asset, input.value);
+        this.#clearTagInput(input);
+        event.preventDefault();
     }
 
-    onTagSelected(event: NgbTypeaheadSelectItemEvent, asset: File) {
+    onTagSelected(event: NgbTypeaheadSelectItemEvent, asset: File, input: HTMLInputElement) {
         event.preventDefault();
+        this.#tagSelected = true;
         this.addTagToAsset(asset, event.item);
+        this.#clearTagInput(input);
+    }
+
+    #clearTagInput(input: HTMLInputElement) {
+        input.value = '';
+        input.dispatchEvent(new Event('input'));
     }
 
     onTagSearchSelected(event: NgbTypeaheadSelectItemEvent) {
@@ -186,7 +180,7 @@ export class MarketingAssetsComponent {
         text$.pipe(
             debounceTime(200),
             distinctUntilChanged(),
-            map((term) => (term.length < 1 ? [] : this.allTags.filter((tag) => tag.toLowerCase().indexOf(term.toLowerCase()) > -1).slice(0, 10))),
+            map((term) => (term.length < 1 ? [] : this.allTags().filter((tag) => tag.toLowerCase().indexOf(term.toLowerCase()) > -1).slice(0, 10))),
         );
 
     getCategoryColor(categoryName: string | undefined): string {
@@ -230,6 +224,7 @@ export class MarketingAssetsComponent {
     }
 
     uncategorizedLabel = $localize`:@@i18n.marketing.uncategorized:uncategorized`;
+    changeCategoryLabel = $localize`:@@i18n.common.changeCategory:change category`;
 
     getRemoveTagTitle(tag: string): string {
         return $localize`:@@i18n.marketing.click_to_remove_tag:click to remove: ${tag}`;

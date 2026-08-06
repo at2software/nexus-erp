@@ -1,7 +1,7 @@
-import { jsonSafe } from '@constants/jsonSafe';
+import { jsonSafe } from '@constants/object/jsonSafe';
 import { short } from '@constants/short';
 import { subPath } from '@constants/subPath';
-import { objectMap, objectRemoveEmpty } from '@constants/objectMap';
+import { objectMap, objectRemoveEmpty } from '@constants/object/objectMap';
 
 describe('jsonSafe', () => {
     it('returns undefined for undefined input', () => {

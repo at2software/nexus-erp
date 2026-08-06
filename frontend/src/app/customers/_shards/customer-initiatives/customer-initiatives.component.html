@@ -18,7 +18,7 @@
                     <span class="small text-nowrap" [class.text-danger]="activity.isOverdue()" [class.text-muted]="!activity.isOverdue()">{{ activity.scheduled_at | date: 'dd.MM.' }}</span>
                     <span class="text-truncate small flex-fill">{{ activity.marketing_prospect?.company_contact?.getName() }}</span>
                     <span class="text-truncate text-muted small" style="max-width: 40%">{{ activity.marketing_initiative_activity?.getName() }}</span>
-                    <avatar [object]="activity.marketing_prospect?.user" size="24" [ngbTooltip]="activity.marketing_prospect?.user?.getName()" container="body"></avatar>
+                    <avatar [object]="activity.marketing_prospect?.user" size="sm" [ngbTooltip]="activity.marketing_prospect?.user?.getName()" container="body"></avatar>
                 </li>
             }
         </ul>

@@ -38,7 +38,7 @@ class HandleProjectStateTransitionAction {
                 $props        = PluginMattermostController::buildWebhookProps($name, $icon);
                 $userIds      = $project->assigned_users->pluck('id')->toArray();
                 $featuresText = PHP_EOL.'#### Bestellte Features:'.PHP_EOL;
-                $featuresText .= $project->invoiceItems->map(fn ($item) => "* [ ] $item->text ($item->qty $item->unit_name)")->implode(PHP_EOL);
+                $featuresText .= $project->orderedFeatures->map(fn ($item) => "* [ ] $item->text ($item->qty $item->unit_name)")->implode(PHP_EOL);
 
                 Bus::chain([
                     new ChatGetOrCreateChannelJob($project),

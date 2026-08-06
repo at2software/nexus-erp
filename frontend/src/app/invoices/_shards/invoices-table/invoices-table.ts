@@ -1,3 +1,4 @@
+import { Page } from '@models/http/http.nexus';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Invoice } from '@models/invoice/invoice.model';
@@ -13,16 +14,17 @@ import { ProgressBarComponent } from '@shards/progress-bar/progress-bar.componen
 import { MoneyPipe } from '@pipes/money.pipe';
 import { ContinuousMarkerComponent } from '@shards/continuous/continuous.marker.component';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 @Component({
     selector: 'invoices-table',
     changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './invoices-table.html',
-    imports: [DatePipe, Nx, NComponent, AvatarComponent, ProgressBarComponent, MoneyPipe, ContinuousMarkerComponent, NgbTooltipModule],
+    imports: [StackedTableDirective, DatePipe, Nx, NComponent, AvatarComponent, ProgressBarComponent, MoneyPipe, ContinuousMarkerComponent, NgbTooltipModule],
 })
 export class InvoicesTable {
     invoices = input<Invoice[]>([]);
-    observer = input<Observable<Invoice[]>>();
+    observer = input<Observable<Page<Invoice>>>();
     context = input<string>('invoice.table');
 
     #fileService = inject(FileService);

@@ -1,14 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, output } from '@angular/core';
 import { CompanyService } from '@models/company/company.service';
 import { Connection } from '@models/company/connection.model';
 import { Company } from '@models/company/company.model';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
+import { map } from 'rxjs';
 import { NgbPopoverModule } from '@ng-bootstrap/ng-bootstrap';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
 import { Nx } from '@app/nx/nx.directive';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
-import { NxGlobal } from '@app/nx/nx.global';
+import { GlobalService } from '@models/global.service';
 import { tracked } from '@constants/tracked';
+import { modelListResource } from '@models/http/model-resource';
 
 @Component({
     selector: 'connections-list',
@@ -25,32 +27,29 @@ export class ConnectionsListComponent {
     added = output<Connection>();
     updated = output<void>();
 
-    connections = signal<Connection[]>([]);
+    #global = inject(GlobalService);
+    #companyService = inject(CompanyService);
+
+    readonly #connections = modelListResource(
+        () => this.company()?.id || undefined,
+        (id) =>
+            this.#companyService.showConnections(id).pipe(
+                map((connections) => {
+                    for (const c of connections) c.addCompanyAction(c.otherCompany(this.company()!));
+                    return connections;
+                }),
+            ),
+    );
+    connections = linkedSignal(this.#connections.value);
+
     filteredConnections = computed(() => {
         const company = this.trackedCompany();
         const connections = this.connections();
         if (!this.hideMyCompany() || !company) return connections;
-        return connections.filter((c) => c.otherCompany(company)?.id !== NxGlobal.ME_ID);
+        return connections.filter((c) => c.otherCompany(company)?.id !== this.#global.me_id);
     });
 
-    #companyService = inject(CompanyService);
-
-    constructor() {
-        effect(() => {
-            this.company();
-            this.reload();
-        });
-    }
-
-    reload() {
-        const company = this.company();
-        if (!company) return;
-
-        this.#companyService.showConnections(company).subscribe((data) => {
-            data.forEach((c) => c.addCompanyAction(c.otherCompany(company)));
-            this.connections.set(data);
-        });
-    }
+    reload = () => this.#connections.reload();
 
     singleActionResolved() {
         this.updated.emit();

@@ -1,3 +1,4 @@
+import { Page } from '@models/http/http.nexus';
 import { ChangeDetectionStrategy, Component, inject, model, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { CASHFLOW_CHART_CHARTS, CASHFLOW_CHART_I18N, CASHFLOW_CHART_ICONS, CASHFLOW_CHART_KEYS } from '@dashboard/widgets/widget-cashflow/widget-cashflow.options';
@@ -8,6 +9,7 @@ import { DndDirective } from '@directives/dnd.directive';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { MoneyPipe } from '@pipes/money.pipe';
 import { Expense } from '@models/expense/expense.model';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 interface TKeyData {
     key: string;
@@ -22,13 +24,13 @@ interface TDay {
     selector: 'invoices-cash-flow',
     templateUrl: './invoices-cash-flow.component.html',
     styleUrls: ['./invoices-cash-flow.component.scss'],
-    imports: [NgbTooltipModule, ContinuousMarkerComponent, MoneyPipe, DndDirective, EmptyStateComponent],
+    imports: [StackedTableDirective, NgbTooltipModule, ContinuousMarkerComponent, MoneyPipe, DndDirective, EmptyStateComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InvoicesCashFlowComponent {
     data = model<TDay[]>([]);
     readonly keys = CASHFLOW_CHART_KEYS;
-    observer = signal<Observable<Expense[]> | undefined>(undefined);
+    observer = signal<Observable<Page<Expense>> | undefined>(undefined);
 
     #invoiceService = inject(InvoiceService);
 

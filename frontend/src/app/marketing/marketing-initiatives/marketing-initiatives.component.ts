@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, linkedSignal, signal, untracked } from '@angular/core';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { MarketingService } from '@models/marketing/marketing.service';
 import { MarketingInitiative } from '@models/marketing/marketing-initiative.model';
+import { modelResource } from '@models/http/model-resource';
 import { FormsModule } from '@angular/forms';
 import { Nx } from '@app/nx/nx.directive';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
@@ -21,14 +22,15 @@ export class MarketingInitiativesComponent {
     #router = inject(Router);
     #route = inject(ActivatedRoute);
 
-    initiatives = signal<MarketingInitiative[]>([]);
-    allInitiatives = signal<MarketingInitiative[]>([]);
-    isLoading = signal<boolean>(false);
-    showCreateModal = signal(false);
-    showRootOnly = true;
+    #initiatives = modelResource(() => this.#marketingService.indexInitiatives());
+    isLoading = this.#initiatives.isLoading;
 
-    searchTerm = '';
-    statusFilter = 'active';
+    allInitiatives = linkedSignal<MarketingInitiative[]>(() => this.#initiatives.value()?.data ?? []);
+
+    showCreateModal = signal(false);
+    showRootOnly = signal(true);
+    searchTerm = signal('');
+    statusFilter = signal('active');
 
     newInitiative: Partial<MarketingInitiative> = {
         name: '',
@@ -36,75 +38,48 @@ export class MarketingInitiativesComponent {
         status: 'active',
     };
 
-    stats = signal({
-        total: 0,
-        active: 0,
-        paused: 0,
-        completed: 0,
+    initiatives = computed(() => {
+        const term = this.searchTerm().toLowerCase();
+        const status = this.statusFilter();
+        return this.allInitiatives()
+            .filter((i) => !term || i.name?.toLowerCase().includes(term) || i.description?.toLowerCase().includes(term))
+            .filter((i) => !status || i.status === status)
+            .filter((i) => !this.showRootOnly() || !i.parent_id)
+            .sort((a, b) => (b.prospects_count || 0) - (a.prospects_count || 0));
+    });
+
+    stats = computed(() => {
+        const all = this.allInitiatives();
+        return {
+            total: all.length,
+            active: all.filter((i) => i.status === 'active').length,
+            paused: all.filter((i) => i.status === 'paused').length,
+            completed: all.filter((i) => i.status === 'completed').length,
+        };
     });
 
     constructor() {
-        this.loadInitiatives();
-    }
-
-    loadInitiatives() {
-        this.isLoading.set(true);
-        this.#marketingService.indexInitiatives().subscribe((response) => {
-            this.allInitiatives.set(response.data);
-            this.#applyFilters();
-            this.#calculateStats(this.allInitiatives());
-            this.isLoading.set(false);
-
-            const initiatives = this.initiatives();
-            if (!this.#route.firstChild?.snapshot.params['id'] && initiatives.length > 0) {
-                this.#router.navigate(['/marketing/initiatives', initiatives[0].id]);
-            }
+        effect(() => {
+            const first = this.initiatives()[0];
+            if (!first) return;
+            untracked(() => {
+                if (!this.#route.firstChild?.snapshot.params['id']) this.#router.navigate(['/marketing/initiatives', first.id]);
+            });
         });
-    }
-
-    #applyFilters() {
-        let filtered = this.allInitiatives();
-        if (this.searchTerm) {
-            const term = this.searchTerm.toLowerCase();
-            filtered = filtered.filter((i) => i.name?.toLowerCase().includes(term) || i.description?.toLowerCase().includes(term));
-        }
-        if (this.statusFilter) {
-            filtered = filtered.filter((i) => i.status === this.statusFilter);
-        }
-        if (this.showRootOnly) {
-            filtered = filtered.filter((i) => !i.parent_id);
-        }
-        filtered = [...filtered].sort((a, b) => (b.prospects_count || 0) - (a.prospects_count || 0));
-        this.initiatives.set(filtered);
     }
 
     createInitiative() {
         if (!this.newInitiative.name) return;
         this.#marketingService.storeInitiative(this.newInitiative).subscribe((initiative: MarketingInitiative) => {
-            this.initiatives.update((arr) => [initiative, ...arr]);
             this.allInitiatives.update((arr) => [initiative, ...arr]);
             this.resetCreateForm();
-            this.#calculateStats(this.allInitiatives());
         });
     }
 
-    filterByStatus = (status: string) => {
-        this.statusFilter = status;
-        this.#applyFilters();
-    };
+    filterByStatus = (status: string) => this.statusFilter.set(status);
 
     resetCreateForm() {
         this.newInitiative = { name: '', description: '', status: 'active' };
         this.showCreateModal.set(false);
-    }
-
-    #calculateStats(allInitiatives?: MarketingInitiative[]) {
-        const initiatives = allInitiatives || this.initiatives();
-        this.stats.set({
-            total: initiatives.length,
-            active: initiatives.filter((i) => i.status === 'active').length,
-            paused: initiatives.filter((i) => i.status === 'paused').length,
-            completed: initiatives.filter((i) => i.status === 'completed').length,
-        });
     }
 }

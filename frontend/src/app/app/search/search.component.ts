@@ -1,7 +1,7 @@
 import { Router } from '@angular/router';
 import { ChangeDetectionStrategy, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 
 type SearchResult = Serializable & { company_id?: string };
 

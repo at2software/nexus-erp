@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, effect, EventEmitter, inject, input, untracked } from '@angular/core';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { ToastService } from '../toast/toast.service';
 import { Observable, OperatorFunction } from 'rxjs';
 import { debounceTime, map } from 'rxjs/operators';
@@ -33,7 +33,6 @@ export class InputGroupComponent {
         });
     }
 
-    // typeahead
     taValue = (x: { name: string }) => x.name;
     taKey = (x: { key: string; name: string }) => x.key;
     taSelect = (x: NgbTypeaheadSelectItemEvent<{ key: string; name: string }>) => this.updateModel(x.item.key);
@@ -49,7 +48,6 @@ export class InputGroupComponent {
             ),
         );
 
-    // general
     get value() {
         return this.typeahead() ? this.typeahead()!.find((x) => x.key == this.model)?.name : this.model;
     }

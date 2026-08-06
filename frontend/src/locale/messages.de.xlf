@@ -934,6 +934,18 @@
         <target>erfordert Aufmerksamkeit</target>
       </segment>
     </unit>
+    <unit id="i18n.common.tooManyRequests">
+      <segment>
+        <source>too many requests - please wait a moment and try again</source>
+        <target>zu viele Anfragen - bitte einen Moment warten und erneut versuchen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.loadFailed">
+      <segment>
+        <source>could not load the requested entry</source>
+        <target>der angeforderte Eintrag konnte nicht geladen werden</target>
+      </segment>
+    </unit>
     <unit id="i18n.common.requiresReview">
       <segment>
         <source>requires review</source>
@@ -968,6 +980,12 @@
       <segment>
         <source>load all remaining pages from database</source>
         <target>Alle verbleibenden Seiten aus der Datenbank laden</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.insertCurrentDate">
+      <segment>
+        <source>Insert current date</source>
+        <target>Aktuelles Datum einfügen</target>
       </segment>
     </unit>
     <unit id="i18n.common.localize">
@@ -1160,6 +1178,18 @@
       <segment>
         <source>Sign in</source>
         <target>Einloggen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.login_failed">
+      <segment>
+        <source>login failed, please check your credentials</source>
+        <target>Anmeldung fehlgeschlagen, bitte Zugangsdaten prüfen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.vacationRequest">
+      <segment>
+        <source>vacation request</source>
+        <target>Urlaubsantrag</target>
       </segment>
     </unit>
     <unit id="i18n.common.year">
@@ -1436,6 +1466,18 @@
       <segment>
         <source>contacts</source>
         <target>kontakte</target>
+      </segment>
+    </unit>
+    <unit id="i18n.contacts.personalDetails">
+      <segment>
+        <source>personal details</source>
+        <target>Persönliche Daten</target>
+      </segment>
+    </unit>
+    <unit id="i18n.contacts.employmentAt">
+      <segment>
+        <source>employment at</source>
+        <target>Angestellt bei</target>
       </segment>
     </unit>
     <unit id="i18n.common.add">
@@ -1912,6 +1954,72 @@
         <target>Import aus Impressum</target>
       </segment>
     </unit>
+    <unit id="i18n.knownseq.unknown_caller">
+      <segment>
+        <source>unknown caller — start taking notes</source>
+        <target>Unbekannter Anrufer – jetzt Notizen aufnehmen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.knownseq.keep_caller">
+      <segment>
+        <source>keep caller</source>
+        <target>Anrufer speichern</target>
+      </segment>
+    </unit>
+    <unit id="i18n.knownseq.edit_company">
+      <segment>
+        <source>edit company details</source>
+        <target>Firmendetails bearbeiten</target>
+      </segment>
+    </unit>
+    <unit id="i18n.knownseq.caller_number">
+      <segment>
+        <source>caller number</source>
+        <target>Rufnummer</target>
+      </segment>
+    </unit>
+    <unit id="i18n.knownseq.lookup">
+      <segment>
+        <source>reverse lookup</source>
+        <target>Rückwärtssuche</target>
+      </segment>
+    </unit>
+    <unit id="i18n.knownseq.number_unrecognized">
+      <segment>
+        <source>could not classify this number</source>
+        <target>Nummer konnte nicht zugeordnet werden</target>
+      </segment>
+    </unit>
+    <unit id="i18n.knownseq.caller_name">
+      <segment>
+        <source>caller name</source>
+        <target>Anrufername</target>
+      </segment>
+    </unit>
+    <unit id="i18n.knownseq.discard_caller">
+      <segment>
+        <source>discard caller?</source>
+        <target>Anrufer verwerfen?</target>
+      </segment>
+    </unit>
+    <unit id="i18n.knownseq.discard_caller_confirm">
+      <segment>
+        <source>Discard this caller and everything noted during the call?</source>
+        <target>Diesen Anrufer und alle während des Gesprächs erfassten Notizen verwerfen?</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.discard">
+      <segment>
+        <source>discard</source>
+        <target>Verwerfen</target>
+      </segment>
+    </unit>
+    <unit id="i18n.common.website">
+      <segment>
+        <source>website</source>
+        <target>Website</target>
+      </segment>
+    </unit>
     <unit id="i18n.common.language">
       <segment>
         <source>language</source>
@@ -2060,6 +2168,42 @@
       <segment>
         <source>default product</source>
         <target>Standardprodukt</target>
+      </segment>
+    </unit>
+    <unit id="i18n.project.quoteIntroText">
+      <segment>
+        <source>intro text — salutation and opening, above the price table</source>
+        <target>Einleitungstext — Anrede und Einstieg, über der Preistabelle</target>
+      </segment>
+    </unit>
+    <unit id="i18n.project.quotePriceTable">
+      <segment>
+        <source>price table — generated from the project items</source>
+        <target>Preistabelle — wird aus den Projektpositionen erzeugt</target>
+      </segment>
+    </unit>
+    <unit id="i18n.project.quoteClosingText">
+      <segment>
+        <source>closing text — below the price table, including the signature; the acceptance block follows automatically</source>
+        <target>Schlusstext — unter der Preistabelle, inklusive Signatur; der Annahmeblock folgt automatisch</target>
+      </segment>
+    </unit>
+    <unit id="i18n.project.quoteLegalText">
+      <segment>
+        <source>terms &amp; conditions — annexed on its own page, small type, two columns</source>
+        <target>AGB — als Anhang auf eigener Seite, kleine Schrift, zweispaltig</target>
+      </segment>
+    </unit>
+    <unit id="i18n.project.quoteNumber">
+      <segment>
+        <source>quote number</source>
+        <target>Angebotsnummer</target>
+      </segment>
+    </unit>
+    <unit id="i18n.project.quoteValidFor">
+      <segment>
+        <source>quote valid for</source>
+        <target>Angebot gültig für</target>
       </segment>
     </unit>
     <unit id="i18n.projects.leadSource">
@@ -2396,6 +2540,12 @@
       <segment>
         <source>time-based projects</source>
         <target>zeitbasierte Projekte</target>
+      </segment>
+    </unit>
+    <unit id="i18n.widget.invoiceManager.headline">
+      <segment>
+        <source>currently invoiceable in total: uninvoiced hours on time-based projects, unbilled customer support and prepared invoice items</source>
+        <target>aktuell insgesamt abrechenbar: nicht abgerechnete Stunden zeitbasierter Projekte, offener Kundensupport und vorbereitete Rechnungspositionen</target>
       </segment>
     </unit>
     <unit id="i18n.common.birthdaysAndJubilees">
@@ -2786,6 +2936,12 @@
       <segment>
         <source>new sick note</source>
         <target>Neue Krankmeldung</target>
+      </segment>
+    </unit>
+    <unit id="i18n.profile.sickPeriodRequired">
+      <segment>
+        <source>please pick the period you were sick</source>
+        <target>Bitte wähle den Zeitraum aus, in dem du krank warst</target>
       </segment>
     </unit>
     <unit id="i18n.profile.sickPeriod">
@@ -5303,6 +5459,12 @@
         <target>Bitte wählen Sie links einen Urlaubsanspruch aus</target>
       </segment>
     </unit>
+    <unit id="i18n.profile.noActiveLeaveAllowance">
+      <segment>
+        <source>No active leave allowance — yours has expired or has not been granted yet. Please contact HR.</source>
+        <target>Kein aktiver Urlaubsanspruch — Ihr Anspruch ist abgelaufen oder wurde noch nicht gewährt. Bitte wenden Sie sich an die Personalabteilung.</target>
+      </segment>
+    </unit>
     <unit id="i18n.common.pendingTimeOffRequest">
       <segment>
         <source>pending time off requests</source>
@@ -5805,12 +5967,6 @@
       <segment>
         <source>Test failed</source>
         <target>Test fehlgeschlagen</target>
-      </segment>
-    </unit>
-    <unit id="i18n.common.quickLinks">
-      <segment>
-        <source>quick links</source>
-        <target>Schnellzugriff</target>
       </segment>
     </unit>
     <unit id="i18n.common.unassigned">
@@ -6956,8 +7112,7 @@
     <unit id="i18n.settings.systemLanguageIso">
       <segment>
         <source>system language (ISO 639-1)</source>
-        <target>
-        </target>
+        <target>Systemsprache (ISO 639-1)</target>
       </segment>
     </unit>
     <unit id="i18n.settings.countryIso">
@@ -7818,6 +7973,18 @@
       <segment>
         <source>assign to...</source>
         <target>Zuweisen an...</target>
+      </segment>
+    </unit>
+    <unit id="i18n.tasks.addCoAssignee">
+      <segment>
+        <source>add co-assignee...</source>
+        <target>Co-Bearbeiter hinzufügen...</target>
+      </segment>
+    </unit>
+    <unit id="i18n.tasks.removeCoAssignee">
+      <segment>
+        <source>remove co-assignee...</source>
+        <target>Co-Bearbeiter entfernen...</target>
       </segment>
     </unit>
     <unit id="i18n.milestone.setDuration">

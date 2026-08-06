@@ -1,15 +1,9 @@
-// German Travel Allowance Data for 2025
-// Based on ARVVwV 2025 (Allgemeine Verwaltungsvorschrift über die Neufestsetzung der Auslandstage- und Auslandsübernachtungsgelder)
 
-import { TravelAllowanceRates } from '@models/api-response';
+import { TravelAllowanceRatesDto } from '@models/_core/api-response';
 
-// Travel allowance rates for 2025 (amounts in EUR)
-// Source: BMF "Steuerliche Behandlung von Reisekosten und Reisekostenvergütungen bei betrieblich und beruflich veranlassten Auslandsreisen ab 1. Januar 2025"
-export const TRAVEL_ALLOWANCE_DATA: TravelAllowanceRates[] = [
-    // Germany (domestic travel)
+export const TRAVEL_ALLOWANCE_DATA: TravelAllowanceRatesDto[] = [
     { country: 'Deutschland', kleinePauschale: 14, grossePauschale: 28, uebernachtung: 20 },
 
-    // Major European countries
     { country: 'Österreich', kleinePauschale: 26, grossePauschale: 39, uebernachtung: 88 },
     { country: 'Schweiz', kleinePauschale: 40, grossePauschale: 60, uebernachtung: 143 },
     { country: 'Frankreich', kleinePauschale: 39, grossePauschale: 58, uebernachtung: 159 },
@@ -25,7 +19,6 @@ export const TRAVEL_ALLOWANCE_DATA: TravelAllowanceRates[] = [
     { country: 'Polen', kleinePauschale: 20, grossePauschale: 30, uebernachtung: 66 },
     { country: 'Tschechien', kleinePauschale: 22, grossePauschale: 33, uebernachtung: 75 },
 
-    // Major non-European countries
     { country: 'Vereinigtes Königreich', kleinePauschale: 44, grossePauschale: 66, uebernachtung: 163 },
     { country: 'USA', kleinePauschale: 44, grossePauschale: 66, uebernachtung: 308 },
     { country: 'Kanada', kleinePauschale: 35, grossePauschale: 53, uebernachtung: 133 },
@@ -36,7 +29,6 @@ export const TRAVEL_ALLOWANCE_DATA: TravelAllowanceRates[] = [
     { country: 'Singapur', kleinePauschale: 35, grossePauschale: 53, uebernachtung: 163 },
     { country: 'Südkorea', kleinePauschale: 30, grossePauschale: 45, uebernachtung: 119 },
 
-    // Additional European countries
     { country: 'Griechenland', kleinePauschale: 28, grossePauschale: 42, uebernachtung: 96 },
     { country: 'Portugal', kleinePauschale: 27, grossePauschale: 41, uebernachtung: 89 },
     { country: 'Irland', kleinePauschale: 35, grossePauschale: 53, uebernachtung: 141 },
@@ -49,7 +41,6 @@ export const TRAVEL_ALLOWANCE_DATA: TravelAllowanceRates[] = [
     { country: 'Lettland', kleinePauschale: 23, grossePauschale: 35, uebernachtung: 75 },
     { country: 'Litauen', kleinePauschale: 23, grossePauschale: 35, uebernachtung: 75 },
 
-    // Rest of world (sample countries with standard rates)
     { country: 'Brasilien', kleinePauschale: 25, grossePauschale: 38, uebernachtung: 89 },
     { country: 'Argentinien', kleinePauschale: 25, grossePauschale: 38, uebernachtung: 85 },
     { country: 'Chile', kleinePauschale: 28, grossePauschale: 42, uebernachtung: 96 },
@@ -63,12 +54,10 @@ export const TRAVEL_ALLOWANCE_DATA: TravelAllowanceRates[] = [
     { country: 'Ukraine', kleinePauschale: 20, grossePauschale: 30, uebernachtung: 66 },
 ];
 
-// Helper function to get travel allowance rates by country name
-export function getTravelAllowanceByCountry(countryName: string): TravelAllowanceRates | undefined {
+export function getTravelAllowanceByCountry(countryName: string): TravelAllowanceRatesDto | undefined {
     return TRAVEL_ALLOWANCE_DATA.find((rate) => rate.country === countryName);
 }
 
-// Helper function to get all available countries
 export function getAvailableCountries(): string[] {
     return TRAVEL_ALLOWANCE_DATA.map((rate) => rate.country).sort();
 }

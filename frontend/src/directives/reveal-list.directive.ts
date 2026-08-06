@@ -1,12 +1,10 @@
-import { AfterViewInit, Directive, ElementRef, NgZone, OnDestroy, inject } from '@angular/core';
+import { AfterViewInit, Directive, ElementRef, OnDestroy, inject } from '@angular/core';
 
 @Directive({
     selector: '[revealList]',
-    standalone: true,
 })
 export class RevealListDirective implements AfterViewInit, OnDestroy {
     readonly #el = inject(ElementRef<HTMLElement>);
-    readonly #zone = inject(NgZone);
 
     #observer?: MutationObserver;
     #raf = 0;
@@ -17,17 +15,15 @@ export class RevealListDirective implements AfterViewInit, OnDestroy {
         const host = this.#el.nativeElement;
         this.#lastHeight = host.getBoundingClientRect().height;
 
-        this.#zone.runOutsideAngular(() => {
-            this.#observer = new MutationObserver((mutations) => {
-                const hasListChanges = mutations.some((m) => m.type === 'childList' || m.type === 'characterData');
-                if (hasListChanges) this.#scheduleAnimation();
-            });
+        this.#observer = new MutationObserver((mutations) => {
+            const hasListChanges = mutations.some((m) => m.type === 'childList' || m.type === 'characterData');
+            if (hasListChanges) this.#scheduleAnimation();
+        });
 
-            this.#observer.observe(host, {
-                childList: true,
-                subtree: true,
-                characterData: true,
-            });
+        this.#observer.observe(host, {
+            childList: true,
+            subtree: true,
+            characterData: true,
         });
     }
 

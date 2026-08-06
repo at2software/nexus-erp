@@ -39,6 +39,8 @@ class Company extends BaseModel {
     use SoftDeletes;
     use VcardTrait;
 
+    public const FLAG_DRAFT = 0x01;
+
     protected $fillable = ['vcard', 'created_at', 'updated_at', 'customer_number', 'company_id', 'contact_id', 'net', 'flags', 'vat_id'];
     protected $appends  = ['icon', 'class', 'path', 'name', 'needs_vat_handling', 'address', 'has_time_budget'];
     protected $hidden   = ['deleted_at'];
@@ -86,33 +88,22 @@ class Company extends BaseModel {
         return $this->invoicesUnpaid()->count();
     }
 
-    /** Convenience accessor: the raw ML_PREDICTED_REVENUE_12M param value, or null (Model A). */
     public function getMlPredictedRevenue12mAttribute(): ?float {
         return $this->getFloatParam('ML_PREDICTED_REVENUE_12M');
     }
 
-    /** Convenience accessor: the raw ML_PREDICTED_INTERVAL_DAYS param value, or null (Model B). */
     public function getMlPredictedIntervalDaysAttribute(): ?float {
         return $this->getFloatParam('ML_PREDICTED_INTERVAL_DAYS');
     }
 
-    /** Convenience accessor: the raw ML_CHURN_PROBABILITY_12M param value [0,1], or null (Model C). */
     public function getMlChurnProbability12mAttribute(): ?float {
         return $this->getFloatParam('ML_CHURN_PROBABILITY_12M');
     }
 
-    /** Convenience accessor: the raw ML_PREDICTED_SUPPORT_HOURS param value, or null (support-load forecast). */
     public function getMlPredictedSupportHoursAttribute(): ?float {
         return $this->getFloatParam('ML_PREDICTED_SUPPORT_HOURS');
     }
 
-    /**
-     * Model B ("when to contact again") derived prediction: ML_PREDICTED_INTERVAL_DAYS
-     * (written by cron:refresh-customer-predictions) added to the company's most
-     * recent invoice date. Deliberately NOT persisted anywhere — always derived on
-     * read from the param + latestInvoice, so it can never go stale independent of
-     * them. Null if there's no trained prediction or no invoice history yet.
-     */
     public function getMlPredictedNextPurchaseAtAttribute(): ?Carbon {
         $intervalDays = $this->ml_predicted_interval_days;
         if ($intervalDays === null) {
@@ -127,20 +118,11 @@ class Company extends BaseModel {
         return $lastInvoiceAt->copy()->addDays((int)round($intervalDays));
     }
 
-    /** True once the ML-predicted next-purchase date is in the past — a "contact this customer now" signal. */
     public function getMlOverdueForContactAttribute(): bool {
         $predicted = $this->ml_predicted_next_purchase_at;
         return $predicted !== null && $predicted->isPast();
     }
 
-    /**
-     * Date-only string form of ml_predicted_next_purchase_at, safe to append() onto
-     * a JSON list payload. Appending the Carbon-typed accessor directly would
-     * serialize through toJSON()/UTC, which can display a day off from the
-     * Europe/Berlin app timezone (the same toArray() date-shift pitfall other
-     * date-range code in this codebase works around) — this pre-converts to a
-     * plain 'Y-m-d' string instead, same as indexOverdueForContact() already does.
-     */
     public function getMlPredictedNextPurchaseDateAttribute(): ?string {
         return $this->ml_predicted_next_purchase_at?->toDateString();
     }
@@ -173,7 +155,6 @@ class Company extends BaseModel {
     public function getBillingConsiderationsAttribute(): array {
         $considerations = [];
 
-        // Check for repeating invoice items triggering in next 4 weeks
         $upcomingRepeating = $this->invoiceItems()
             ->whereIn('type', InvoiceItemType::Repeating)
             ->whereBefore(now()->addWeeks(4), 'next_recurrence_at')
@@ -187,7 +168,6 @@ class Company extends BaseModel {
             ];
         }
 
-        // Check for time-based projects with uninvoiced foci
         $timeBasedProjects = $this->projects()
             ->where('is_time_based', true)
             ->wherePreparedOrRunning()
@@ -285,10 +265,29 @@ class Company extends BaseModel {
         return (new FociTimelineQuery(fn () => $this->projectFoci()))->get();
     }
 
-    // API functions
+    public function isDraft(): bool {
+        return ((int)$this->flags & self::FLAG_DRAFT) !== 0;
+    }
+
+    public function purgeDraft(): void {
+        if (! $this->isDraft()) {
+            return;
+        }
+        $this->comments()->get()->each->delete();
+        $this->projects()->get()->each->delete();
+        foreach ($this->companyContacts()->with('contact')->get() as $cc) {
+            $contact = $cc->contact;
+            $cc->delete();
+            if ($contact && $contact->companyContacts()->doesntExist()) {
+                $contact->delete();
+            }
+        }
+        $this->delete();
+    }
+
     public function createEmployee() {
         $contact = Contact::create(['vcard' => "FN:New Employee\nN:Employee;New;;;"]);
-        CompanyContact::create(['vcard' => "EMAIL:\nTEL;type=voice,work:\nTEL;type=cell,work:", 'company_id' => $this->id, 'contact_id' => $contact->id]);
+        return CompanyContact::create(['vcard' => "EMAIL:\nTEL;type=voice,work:\nTEL;type=cell,work:", 'company_id' => $this->id, 'contact_id' => $contact->id])->load('contact.companies');
     }
     public function createProject(string $name = 'New project', ?int $parentProjectId = null, ?int $userId = null) {
         $payload = [
@@ -336,25 +335,19 @@ class Company extends BaseModel {
         return $this->invoiceItems()->whereStage(0)->whereIn('type', [...Invoice::ITEMS_ADDING_TO_INVOICE, InvoiceItemType::Header])->whereInvoiceId(null)->oldest('position');
     }
 
-    // companies have no draft-quote workflow, so both regular (0) and support (1) stage items count as prepared
     public function supportItems() {
         return $this->invoiceItems()->whereIn('stage', [0, 1])->whereIn('type', InvoiceItemType::TotalRemaining)->whereInvoiceId(null);
     }
 
-    /**
-     * scrapes webpage imprints to parse company information
-     */
     public static function scrapeWebpage(string $url, ?Company $original = null): string {
         NLog::info('ScrapeWebpage: Starting', ['url' => $url]);
 
         $initialVcard = $original ? $original->vcard : '';
 
-        // Clean old vcard data
         $initialVcard = preg_replace('/\\n(ORG|FN|PHOTO).*?\\n/is', "\n", $initialVcard);
         $initialVcard = preg_replace('/\\n(ORG|FN|PHOTO).*?$/is', "\n", $initialVcard);
         $initialVcard = preg_replace('/^(ORG|FN|PHOTO).*?\\n/is', "\n", $initialVcard);
 
-        // Ensure URL has protocol
         preg_match('/https?:\\/\\//is', $url) || $url = 'https://'.$url;
 
         try {
@@ -381,7 +374,6 @@ class Company extends BaseModel {
             throw $e;
         }
 
-        // Build new vcard
         $vcard = $initialVcard.PHP_EOL;
         $vcard .= 'FN:'.($info->FN ?: @$original?->vcard->getFirstValue('FN')).PHP_EOL;
         $vcard .= 'ORG:'.($info->ORG ?: @$original?->vcard->getFirstValue('ORG')).PHP_EOL;
@@ -390,7 +382,6 @@ class Company extends BaseModel {
             $vcard .= 'ADR;type=work:'.implode(';', $_).PHP_EOL;
         }
 
-        // Add phone numbers with type detection
         foreach ($info->TEL as $tel) {
             $number    = is_object($tel) ? $tel->number : (is_array($tel) ? $tel['number'] : $tel);
             $type      = is_object($tel) ? $tel->type : (is_array($tel) ? $tel['type'] : 'phone');
@@ -406,7 +397,6 @@ class Company extends BaseModel {
             $vcard .= 'EMAIL;type=work:'.$_.PHP_EOL;
         }
 
-        // Add social media URLs with appropriate type
         if (! empty($info->SOCIAL_MEDIA)) {
             foreach ($info->SOCIAL_MEDIA as $socialUrl) {
                 $type = 'social';
@@ -436,10 +426,8 @@ class Company extends BaseModel {
             $vcard .= 'PHOTO;encoding=b;type=image/png:,'.$info->PHOTO.PHP_EOL;
         }
 
-        // Optimize vcard: remove duplicates and normalize
         $vcard = self::optimizeVcard($vcard);
 
-        // Store VAT ID and managing director in company if available and original exists
         if ($original) {
             if (! empty($info->VAT_ID) && empty($original->vat_id)) {
                 $original->vat_id = $info->VAT_ID;
@@ -455,9 +443,6 @@ class Company extends BaseModel {
         return $vcard;
     }
 
-    /**
-     * Optimize vcard: normalize phone numbers, remove duplicates, clean up formatting
-     */
     private static function optimizeVcard(string $vcard): string {
         $lines     = explode("\n", $vcard);
         $optimized = [];
@@ -473,23 +458,19 @@ class Company extends BaseModel {
                 continue;
             }
 
-            // Normalize phone numbers
             if (preg_match('/^TEL[^:]*:(.+)$/i', $line, $matches)) {
                 $phoneNumber = trim($matches[1]);
                 $normalized  = VcardTrait::normalizePhoneNumber($phoneNumber);
 
-                // Check for duplicates
                 $key = preg_replace('/[^\d]/', '', $normalized);
                 if (isset($seen['TEL'][$key])) {
                     continue; // Skip duplicate
                 }
                 $seen['TEL'][$key] = true;
 
-                // Rebuild line with normalized number
                 $line = preg_replace('/:(.+)$/', ':'.$normalized, $line);
             }
 
-            // Remove duplicate emails (case-insensitive)
             if (preg_match('/^EMAIL[^:]*:(.+)$/i', $line, $matches)) {
                 $email = strtolower(trim($matches[1]));
                 if (isset($seen['EMAIL'][$email])) {
@@ -498,7 +479,6 @@ class Company extends BaseModel {
                 $seen['EMAIL'][$email] = true;
             }
 
-            // Remove duplicate addresses (case-insensitive comparison)
             if (preg_match('/^ADR[^:]*:(.+)$/i', $line, $matches)) {
                 $address = strtolower(trim($matches[1]));
                 if (isset($seen['ADR'][$address])) {
@@ -510,7 +490,6 @@ class Company extends BaseModel {
             $optimized[] = $line;
         }
 
-        // Remove empty lines
         $result = implode(PHP_EOL, $optimized);
         $result = preg_replace('/\n[\s\n]*\n/is', "\n", $result);
         return $result;

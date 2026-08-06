@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { HrDetailGuard } from './hr-details.guard';
-import { NxGlobal } from '@app/nx/nx.global';
+import { NxStatic } from '@app/nx/nx.static';
 
 export const HR_ROUTES: Routes = [
     {
@@ -32,7 +32,7 @@ export const HR_ROUTES: Routes = [
                     { path: '**', redirectTo: 'contact' },
                 ],
             },
-            { path: '**', redirectTo: () => (NxGlobal.global?.user?.id ?? '') + '/contact' },
+            { path: '**', redirectTo: () => (NxStatic.global?.user?.id ?? '') + '/contact' },
         ],
     },
 ];

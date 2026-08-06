@@ -10,12 +10,10 @@ use Illuminate\Support\Facades\Log;
 
 class AuthenticateBroadcasting {
     public function handle($request, Closure $next) {
-        // FIRST: Change default guard to prevent Keycloak from being instantiated initially
         Config::set('auth.defaults.guard', 'api-token');
 
         Log::info('Broadcasting auth middleware called');
 
-        // Extract Bearer token from Authorization header
         if ($request->hasHeader('Authorization')) {
             $authHeader = $request->header('Authorization');
             $token      = preg_replace('/^Bearer /i', '', $authHeader);
@@ -26,10 +24,8 @@ class AuthenticateBroadcasting {
             ]);
 
             if (strlen($token) > 0) {
-                // Try API token first
                 $user = User::where('api_token', $token)->first();
 
-                // If not found and token looks like a JWT, try Keycloak
                 if (! $user && str_contains($token, '.')) {
                     try {
                         Config::set('auth.defaults.guard', 'api');

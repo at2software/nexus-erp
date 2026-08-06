@@ -1,12 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { MarketingService } from '@models/marketing/marketing.service';
-import { MarketingProspect } from '@models/marketing/marketing.prospect.model';
+import { MarketingProspect } from '@models/marketing/marketing-prospect.model';
 import { MarketingProspectActivity } from '@models/marketing/marketing-prospect-activity.model';
+import { modelResource } from '@models/http/model-resource';
 import { Nx } from '@app/nx/nx.directive';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
@@ -18,12 +20,13 @@ import { personalized } from '@constants/personalized';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { GlobalService } from '@models/global.service';
 import { Dictionary } from '@constants/constants';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'marketing-prospect-detail',
     templateUrl: './marketing-prospect-detail.component.html',
-    imports: [DatePipe, FormsModule, NgbTooltipModule, Nx, VcardComponent, ToolbarComponent, RteComponent, RouterLink, SpinnerComponent],
+    imports: [StackedTableDirective, DatePipe, FormsModule, NgbTooltipModule, Nx, VcardComponent, ToolbarComponent, RteComponent, RouterLink, SpinnerComponent],
 })
 export class MarketingProspectDetailComponent {
     #marketingService = inject(MarketingService);
@@ -31,36 +34,21 @@ export class MarketingProspectDetailComponent {
     #modal = inject(ModalBaseService);
     #globalService = inject(GlobalService);
 
-    prospect        = signal<MarketingProspect | undefined>(undefined);
-    isLoading       = signal(true);
+    #prospectId = toSignal(this.#route.params.pipe(map(params => params['id'] as string | undefined)));
+    #prospectRes = modelResource(this.#prospectId, id => this.#marketingService.showProspect(id));
+
+    prospect        = linkedSignal(() => this.#prospectRes.value());
+    isLoading       = this.#prospectRes.isLoading;
     vcardCollapsed  = signal(true);
     selectedActivity = signal<MarketingProspectActivity | undefined>(undefined);
-    activities      = signal<MarketingProspectActivity[]>([]);
+    activities      = linkedSignal(() => this.prospect()?.activities ?? []);
 
     pendingActivities   = computed(() => this.activities().filter(a => a.status === 'pending'));
     completedActivities = computed(() => this.activities().filter(a => ['completed', 'skipped'].includes(a.status)));
 
     constructor() {
-        this.#route.params.pipe(takeUntilDestroyed()).subscribe(params => {
-            if (params['id']) this.#loadProspectDetails(params['id']);
-        });
-
         this.#globalService.onActionsResolved.pipe(takeUntilDestroyed()).subscribe(({ object }) => {
-            if (object instanceof MarketingProspect && String(object.id) === String(this.prospect()?.id)) {
-                this.#loadProspectDetails(this.prospect()!.id);
-            }
-        });
-    }
-
-    #loadProspectDetails(id: string) {
-        this.isLoading.set(true);
-        this.#marketingService.showProspect(id).subscribe({
-            next: (prospect: MarketingProspect) => {
-                this.prospect.set(prospect);
-                this.activities.set(prospect.activities ?? []);
-                this.isLoading.set(false);
-            },
-            error: () => this.isLoading.set(false),
+            if (object instanceof MarketingProspect && String(object.id) === String(this.#prospectId())) this.#prospectRes.reload();
         });
     }
 
@@ -123,7 +111,7 @@ export class MarketingProspectDetailComponent {
             .then(result => {
                 if (!result) return;
                 this.#marketingService.convertProspect(this.prospect()!.id, result).subscribe({
-                    next: () => this.#loadProspectDetails(this.prospect()!.id),
+                    next: () => this.#prospectRes.reload(),
                     error: () => alert('Failed to convert prospect. Please try again.'),
                 });
             });

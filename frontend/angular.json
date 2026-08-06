@@ -154,7 +154,10 @@
               "buildTarget": "NEXUS:build:de"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "development",
+          "options": {
+            "proxyConfig": "proxy.conf.json"
+          }
         },
         "extract-i18n": {
           "builder": "@angular/build:extract-i18n",
@@ -165,9 +168,14 @@
           }
         },
         "test": {
-          "builder": "@angular-builders/jest:run",
+          "builder": "@angular/build:unit-test",
           "options": {
-            "config": "./jest.config.ts"
+            "tsConfig": "tsconfig.spec.json",
+            "runner": "vitest",
+            "runnerConfig": "vitest.config.ts",
+            "setupFiles": [
+              "src/setup-test.ts"
+            ]
           }
         },
         "lint": {

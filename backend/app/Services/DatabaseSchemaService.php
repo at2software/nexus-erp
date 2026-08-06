@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class DatabaseSchemaService {
+    public const CACHE_KEY = 'schema.tables';
+
     public function getTables(): array {
         $database       = config('database.connections.mysql.database');
         $excludedTables = ['sentinel_triggers', 'sentinel_users', 'failed_jobs', 'role_has_permissions', 'migrations', 'milestone_milestones', 'float_params', 'string_params', 'text_params', 'password_resets', 'translations', 'model_has_permissions', 'model_has_roles', 'permissions', 'roles', 'role_has_permission'];

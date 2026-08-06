@@ -1,15 +1,12 @@
 @use "sass:map";
 @use "sass:color";
 
-// Background surfaces (dark theme only)
 $bg-darker : #050909;  // deepest surface, near-black green-gray
 $bg-card   : #101818;  // cards
 $bg-body   : #162020;  // body / modals / navbars
 $bg-hover  : #1d2929;  // hover states
 $bg-muted  : #233232;  // inputs / secondary containers
 
-// Single source of truth for every named/brand color.
-// `--color-<name>`, `--bs-<name>`, `.bg-<name>` and `.text-<name>` are all derived from this map.
 $custom-colors: (
     'blue'           : #135BCD,                              // projects
     'indigo'         : #391AD2,
@@ -40,9 +37,6 @@ $custom-colors: (
     'card'           : $bg-card,
 );
 
-// --- Standalone Sass API ---
-// Consumed by component stylesheets via `@use 'colors' as *` and by
-// _bootstrap-setup.scss. Brand hues mirror the map above.
 $blue   : map.get($custom-colors, 'blue');
 $indigo : map.get($custom-colors, 'indigo');
 $purple : map.get($custom-colors, 'purple');
@@ -64,8 +58,6 @@ $primary-3: map.get($custom-colors, 'primary-3');
 // in component styles. Candidate for unification later.
 $primary-4: #005d4e;
 
-// Soft semantic tones used as component surfaces/gradients. Intentionally lighter
-// than the saturated map values that drive --bs-* and .bg-*/.text-* utilities.
 $success: #6bf57e;
 $warning: #e2f56b;
 $danger : #f57e6b;

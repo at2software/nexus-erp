@@ -14,7 +14,6 @@ if (! function_exists('logStackTrace')) {
     function logStackTrace(string $message = 'Stack trace', int $limit = 10): array {
         $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, $limit + 5);
 
-        // Filter out internal functions
         $filtered = array_filter($trace, function ($item) {
             $file = $item['file'] ?? '';
             return ! str_contains($file, 'vendor/') &&
@@ -23,7 +22,6 @@ if (! function_exists('logStackTrace')) {
                    ! empty($file);
         });
 
-        // Reformat for cleaner output
         $formatted = array_map(function ($item) {
             $file     = str_replace(base_path().DIRECTORY_SEPARATOR, '', $item['file'] ?? '');
             $line     = $item['line'] ?? '';
@@ -42,7 +40,6 @@ if (! function_exists('logWithBindings')) {
         $sql      = $query->toSql();
         $bindings = $query->getBindings();
 
-        // Replace ? with actual bindings
         $fullQuery = Str::replaceArray('?', collect($bindings)->map(function ($binding) {
             if (is_null($binding)) {
                 return 'NULL';

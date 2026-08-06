@@ -1,12 +1,13 @@
 import { Dictionary } from '@constants/constants';
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
 import { Observable } from 'rxjs';
+import { modelResource } from '@models/http/model-resource';
 
 import { FormsModule } from '@angular/forms';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { Serializable } from '@models/serializable';
-import { ParamService } from '@models/param.service';
-import { ParamValueResponse } from '@models/api-response';
+import { Serializable } from '@models/_core/serializable';
+import { ParamService } from '@models/param/param.service';
+import { ParamValueDto } from '@models/_core/api-response';
 
 export interface PaymentPlanStep {
     percentage: number;
@@ -29,51 +30,35 @@ export function sortSteps<T extends { trigger: string }>(steps: T[]): T[] {
 export class PaymentPlanEditorComponent {
     object = input<Serializable>();
 
-    steps = signal<PaymentPlanStep[]>([]);
     editSteps: PaymentPlanStep[] = [];
     isEditing = signal(false);
-    isFallback = signal(false);
-    activeTierLabel = signal('');
 
     #paramService = inject(ParamService);
 
-    constructor() {
-        effect(() => {
-            this.object();
-            untracked(() => this.load());
-        });
-    }
+    readonly #plan = modelResource(
+        () => this.object()?.id || undefined,
+        () => this.object()!.showParam('PROJECT_PAYMENT_PLAN', { fallback: false }) as Observable<ParamValueDto>,
+    );
+    readonly #tiers = modelResource(
+        () => (this.#plan.hasValue() && !this.#plan.value()?.value ? 'params/PROJECT_PAYMENT_PLAN_TIERS' : undefined),
+        (key) => this.#paramService.show(key),
+    );
 
-    load() {
-        const object = this.object();
-        if (!object) return;
-        (object.showParam('PROJECT_PAYMENT_PLAN', { fallback: false }) as Observable<ParamValueResponse>).subscribe((data) => {
-            if (data?.value) {
-                this.isFallback.set(false);
-                this.activeTierLabel.set('');
-                this.steps.set(sortSteps(this.#parseSteps(data.value)));
-            } else {
-                this.#loadTierFallback();
-            }
-        });
-    }
+    readonly #resolved = computed(() => {
+        const own = this.#plan.hasValue() ? this.#plan.value()?.value : undefined;
+        if (own) return { steps: sortSteps(this.#parseSteps(own)), isFallback: false, label: '' };
+        if (!this.#tiers.hasValue()) return { steps: [] as PaymentPlanStep[], isFallback: false, label: '' };
 
-    #loadTierFallback() {
         const budget = (this.object() as unknown as { net?: number } | undefined)?.net ?? 0;
-        this.#paramService.show('params/PROJECT_PAYMENT_PLAN_TIERS').subscribe((data) => {
-            const tiers = this.#parseTiers(data?.value);
-            const tier = tiers.find((t) => t.threshold === null || budget < t.threshold) ?? tiers[tiers.length - 1];
-            if (tier) {
-                this.isFallback.set(true);
-                this.activeTierLabel.set(tier.label ?? '');
-                this.steps.set(sortSteps(tier.steps ?? []));
-            } else {
-                this.isFallback.set(true);
-                this.activeTierLabel.set('');
-                this.steps.set([]);
-            }
-        });
-    }
+        const tiers = this.#parseTiers(this.#tiers.value()?.value);
+        const tier = tiers.find((t) => t.threshold === null || budget < t.threshold) ?? tiers[tiers.length - 1];
+        return { steps: sortSteps(tier?.steps ?? []), isFallback: true, label: tier?.label ?? '' };
+    });
+    readonly #state = linkedSignal(this.#resolved);
+
+    steps = computed(() => this.#state().steps);
+    isFallback = computed(() => this.#state().isFallback);
+    activeTierLabel = computed(() => this.#state().label);
 
     startEdit() {
         this.editSteps = this.steps().map((s) => ({ ...s }));
@@ -95,9 +80,7 @@ export class PaymentPlanEditorComponent {
         this.object()
             ?.updateParam('PROJECT_PAYMENT_PLAN', { value: json })
             .subscribe(() => {
-                this.steps.set(this.editSteps.map((s) => ({ ...s })));
-                this.isFallback.set(false);
-                this.activeTierLabel.set('');
+                this.#state.set({ steps: this.editSteps.map((s) => ({ ...s })), isFallback: false, label: '' });
                 this.isEditing.set(false);
             });
     }
@@ -105,7 +88,7 @@ export class PaymentPlanEditorComponent {
     revertToDefault() {
         this.object()
             ?.updateParam('PROJECT_PAYMENT_PLAN', { value: null })
-            .subscribe(() => this.load());
+            .subscribe(() => this.#plan.reload());
     }
 
     addStep() {

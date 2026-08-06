@@ -36,39 +36,31 @@ class CalDAVController extends Controller {
 
         $server->setBaseUri($rootUri);
 
-        // Auth plugin
         $authBackend = new OwnPDOBasicAuthBackend($pdo);
         $authPlugin  = new DAV\Auth\Plugin($authBackend);
         $server->addPlugin($authPlugin);
-        // ACL plugin
         $aclPlugin = new DAVACL\Plugin;
         $server->addPlugin($aclPlugin);
 
         $icsPlugin = new ICSExportPlugin;
         $server->addPlugin($icsPlugin);
 
-        // And off we go!
         $server->start();
     }
     public function createCardDAVServer($pdo) {
-        // Backends
         $principalBackend = new OwnPrincipalBackend($pdo);
         $caldendarBackend = new OwnCalDAVBackend($pdo);
 
-        // Directory tree
         $tree = [
             new DAVACL\PrincipalCollection($principalBackend),
             new CalDAV\CalendarRoot($principalBackend, $caldendarBackend),
         ];
 
-        // The object tree needs in turn to be passed to the server class
         $server = new DAV\Server($tree);
 
-        // CardDAV plugin
         $caldavPlugin = new CalDAV\Plugin;
         $server->addPlugin($caldavPlugin);
 
-        // Sync plugin
         $syncPlugin = new DAV\Sync\Plugin;
         $server->addPlugin($syncPlugin);
 

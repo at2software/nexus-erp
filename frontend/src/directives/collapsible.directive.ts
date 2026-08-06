@@ -1,11 +1,11 @@
-import { DestroyRef, Directive, ElementRef, NgZone, inject, input, OnInit, Renderer2 } from '@angular/core';
+import { DestroyRef, Directive, effect, ElementRef, inject, input, Renderer2 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { fromEvent } from 'rxjs';
 
 @Directive({
     selector: '[collapsible]',
 })
-export class CollapsibleDirective implements OnInit {
+export class CollapsibleDirective {
     readonly container = input.required<HTMLElement>({ alias: 'collapsible' });
 
     readonly #el = inject(ElementRef);
@@ -22,20 +22,15 @@ export class CollapsibleDirective implements OnInit {
         el.style.cursor = 'pointer';
         el.style.userSelect = 'none';
 
-        const destroyRef = inject(DestroyRef);
-        inject(NgZone).runOutsideAngular(() => {
-            fromEvent(el, 'click')
-                .pipe(takeUntilDestroyed(destroyRef))
-                .subscribe(() => {
-                    if (this.#isCollapsed()) this.#re.removeClass(el, 'collapsed');
-                    else this.#re.addClass(el, 'collapsed');
-                    this.#updateVisuals();
-                });
-        });
-    }
+        fromEvent(el, 'click')
+            .pipe(takeUntilDestroyed(inject(DestroyRef)))
+            .subscribe(() => {
+                if (this.#isCollapsed()) this.#re.removeClass(el, 'collapsed');
+                else this.#re.addClass(el, 'collapsed');
+                this.#updateVisuals();
+            });
 
-    ngOnInit() {
-        this.#updateVisuals();
+        effect(() => this.#updateVisuals());
     }
 
     #isCollapsed = (): boolean => this.#el.nativeElement.classList.contains('collapsed');

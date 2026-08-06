@@ -23,7 +23,6 @@ class ComputeTimeBasedAssignmentAverages extends Command {
         $threeMonthsAgo = now()->subMonths(3)->startOfDay();
         $processedCount = 0;
 
-        // Get all running time-based OR internal projects
         $projects = Project::where(function ($query) {
             $query->where('is_time_based', true)
                 ->orWhere('is_internal', true);
@@ -48,7 +47,6 @@ class ComputeTimeBasedAssignmentAverages extends Command {
             }
         }
 
-        // Get all company assignments
         $companies = Company::whereHas('assignees', function ($query) {
             $query->where('assignee_type', User::class);
         })
@@ -88,14 +86,12 @@ class ComputeTimeBasedAssignmentAverages extends Command {
         $breakDays = $user->getBreakDays($threeMonthsAgo, now());
         $hpwArray  = $user->getHpwArray();
 
-        // Get total hours from foci for this user on this parent in last 3 months
         $totalHours = Focus::where('parent_type', $parentType)
             ->where('parent_id', $parent->id)
             ->where('user_id', $user->id)
             ->where('started_at', '>=', $threeMonthsAgo)
             ->sum('duration');
 
-        // Calculate total available working days in the period (excluding weekends, vacation, sick, holidays)
         $period               = CarbonPeriod::create($threeMonthsAgo, now());
         $availableWorkingDays = 0;
 
@@ -103,16 +99,13 @@ class ComputeTimeBasedAssignmentAverages extends Command {
             $dayOfWeek = $date->dayOfWeekIso - 1;
             $dateStr   = $date->format('Y-m-d');
 
-            // Count if it's a working day (hpw > 0) and NOT a break day
             if (($hpwArray[$dayOfWeek] ?? 0) > 0 && ! isset($breakDays[$dateStr])) {
                 $availableWorkingDays++;
             }
         }
 
-        // Calculate average hours per available working day
         $avgHpd = $availableWorkingDays > 0 ? $totalHours / $availableWorkingDays : 0;
 
-        // Only save if there's actual data
         if ($totalHours > 0 && $availableWorkingDays > 0) {
             $param        = $assignment->param('ASSIGNMENT_AVG_HPD');
             $param->value = round($avgHpd, 2);

@@ -1,9 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 import { NexusHttpService } from '../http/http.nexus';
 import { DeletionRequest } from './deletion-request.model';
-import { Serializable } from '../serializable';
+import { Serializable } from '@models/_core/serializable';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class DeletionRequestService extends NexusHttpService<DeletionRequest> {
     public apiPath = 'deletion_requests';
     override readonly model = DeletionRequest;

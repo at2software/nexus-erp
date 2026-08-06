@@ -1,8 +1,9 @@
+import { InvoiceItemType } from '@enums/invoice-item.type';
 import { ChangeDetectionStrategy, Component, inject, viewChild } from '@angular/core';
 import { tracked } from '@constants/tracked';
 import { ModalEditInvoiceItemComponent } from '@app/_modals/modal-edit-invoice-item/modal-edit-invoice-item.component';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
-import { dayjs } from '@constants/dates';
+import { dayjs } from '@constants/date/dates';
 import { InvoicesStandingComponent } from '@app/invoices/-/invoices-standing/invoices-standing.component';
 import { CustomerDetailGuard } from '../../customers.details.guard';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
@@ -23,7 +24,9 @@ export class CustomerStandingOrdersComponent {
     company = tracked(this.#parent.object);
     standing = viewChild.required(InvoicesStandingComponent);
 
-    onCreate(rec: number) {
+    readonly InvoiceItemType = InvoiceItemType;
+
+    onCreate(rec: InvoiceItemType) {
         const item = InvoiceItem.fromJson({});
         const company = this.company();
         this.#modal.open(ModalEditInvoiceItemComponent, item, company).then((response) => {

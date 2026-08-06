@@ -16,7 +16,6 @@ class ResetFinishedProjectAssignments extends Command {
     public function handle() {
         $this->info('Checking for assignments on finished projects...');
 
-        // Get all assignments with hours_weekly > 0 for projects
         $assignments = Assignment::where('assignee_type', User::class)
             ->where('parent_type', Project::class)
             ->where('hours_weekly', '>', 0)
@@ -28,7 +27,6 @@ class ResetFinishedProjectAssignments extends Command {
         foreach ($assignments as $assignment) {
             $project = $assignment->parent;
 
-            // Check if project exists and has a finished state
             if ($project && $project->state && $project->state->progress == ProjectState::Finished) {
                 $oldHours                 = $assignment->hours_weekly;
                 $assignment->hours_weekly = 0;

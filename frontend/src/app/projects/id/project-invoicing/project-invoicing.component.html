@@ -301,9 +301,7 @@
             @for (x of getAssignedContacts(); track 'contact:' + x.id) {
                 <li>
                     <a class="dropdown-item pointer d-flex align-items-center gap-2" (click)="onAddCompanyContact(x)" (keyup.enter)="onAddCompanyContact(x)" tabindex="0">
-                        <div class="avatar avatar-sm">
-                            <img class="avatar-img" [src]="x.icon" alt="" />
-                        </div>
+                        <avatar [object]="x" size="sm"></avatar>
                         <span>{{ x.getName() }}</span>
                     </a>
                 </li>

@@ -1,24 +1,20 @@
 import { Dictionary } from '@constants/constants';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { MarketingService } from '@models/marketing/marketing.service';
-import { dayjs, Dayjs } from '@constants/dates';
+import { modelResource } from '@models/http/model-resource';
+import { dayjs, Dayjs } from '@constants/date/dates';
 import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
 import { FormsModule } from '@angular/forms';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { forkJoin } from 'rxjs';
 import { SankeyChartComponent } from '@charts/sankey-chart/sankey-chart.component';
 import { ChartProgressComponent } from '@charts/chart-progress/chart-progress.component';
 
 import { GlobalService } from '@models/global.service';
-import { LeadSourceService } from '@models/project/lead_source.service';
-import { LeadSource } from '@models/project/lead_source.model';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { LeadSource } from '@models/project/lead-source.model';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
-import { MarketingDashboardStats, RemarketingResponse, SankeyData } from '@models/api-response';
-import { MarketingPerformanceMetric } from '@models/marketing/marketing-performance-metrics.model';
-import { File } from '@models/file/file.model';
+import { ProspectStatsDto } from '@models/_core/api-response';
 import { storageGet, storageSet } from '@constants/storage';
 
 @Component({
@@ -29,11 +25,7 @@ import { storageGet, storageSet } from '@constants/storage';
     imports: [NgxDaterangepickerMd, FormsModule, NgbTooltipModule, SankeyChartComponent, ChartProgressComponent, SpinnerComponent],
 })
 export class MarketingDashboardComponent {
-    #destroyRef = inject(DestroyRef);
-
     funnelMode: 'count' | 'money' = 'count';
-    funnelData = signal<SankeyData | undefined>(undefined);
-    loadingFunnel = signal(false);
     creation_span?: { startDate: Dayjs; endDate: Dayjs };
 
     presetRanges = {
@@ -47,170 +39,85 @@ export class MarketingDashboardComponent {
     service = inject(MarketingService);
     router = inject(Router);
     #global = inject(GlobalService);
-    #leadSourceSvc = inject(LeadSourceService);
     #input = inject(InputModalService);
 
-    // Assets properties
-    assetCategories: { name: string; icon: string; color: string; count: number }[] = [];
-    loadingAssets = signal(false);
+    #funnelFilters = signal<Dictionary>({});
+    #funnel = modelResource(this.#funnelFilters, (filters) => this.service.getFunnel(filters));
+    funnelData = this.#funnel.value;
+    loadingFunnel = this.#funnel.isLoading;
 
-    // Overview stats
-    stats = signal({
-        initiatives: { total: 0, active: 0 },
-        prospects: { total: 0, new: 0, engaged: 0, converted: 0, unresponsive: 0, disqualified: 0, on_hold: 0 },
-        activities: { pending: 0, overdue: 0 },
+    #initiatives = modelResource(() => this.service.indexInitiatives());
+    #prospectStats = modelResource(() => this.service.showProspectStats());
+    #dashboard = modelResource(() => this.service.getDashboardStats());
+    #remarketing = modelResource(() => this.service.getRemarketing());
+
+    dashboardStats = this.#dashboard.value;
+    loadingDashboard = this.#dashboard.isLoading;
+    remarketing = this.#remarketing.value;
+    loadingRemarketing = this.#remarketing.isLoading;
+
+    stats = computed(() => {
+        const initiatives = this.#initiatives.value()?.data ?? [];
+        const p: ProspectStatsDto = this.#prospectStats.value() ?? {};
+        return {
+            initiatives: {
+                total: initiatives.length,
+                active: initiatives.filter((i) => i.status === 'active').length,
+            },
+            prospects: {
+                total: p.total || 0,
+                new: p.by_status?.new || 0,
+                engaged: p.by_status?.engaged || 0,
+                converted: p.by_status?.converted || 0,
+                unresponsive: p.by_status?.unresponsive || 0,
+                disqualified: p.by_status?.disqualified || 0,
+                on_hold: p.by_status?.on_hold || 0,
+            },
+            activities: {
+                pending: p.activities_pending || 0,
+                overdue: p.activities_overdue || 0,
+            },
+        };
     });
 
-    // Extended dashboard data
-    dashboardStats = signal<MarketingDashboardStats | null>(null);
-    loadingDashboard = signal(true);
-    remarketing = signal<RemarketingResponse | null>(null);
-    loadingRemarketing = signal(true);
-    kpiMetrics: MarketingPerformanceMetric[] = [];
-    loadingMetrics = signal(true);
-    activitySchedule = signal<{ day: string; date: string; total: number; completed: number; pending: number; isToday: boolean }[]>([]);
-
-    constructor() {
-        this.reload();
-        this.loadAssetStats();
-        this.loadOverviewStats();
-        this.loadDashboardStats();
-        this.loadRemarketing();
-        this.loadKpiMetrics();
-    }
-
-    toggleFunnelMode() {
-        this.funnelMode = this.funnelMode === 'count' ? 'money' : 'count';
-    }
-    reload() {
-        this.reloadFunnel();
-    }
-    getFilters() {
-        const filters: Dictionary = {};
-        if (this.creation_span?.startDate && this.creation_span?.endDate) {
-            filters.created_after = this.creation_span.startDate.format('DD.MM.YYYY');
-            filters.created_before = this.creation_span.endDate.add(1, 'day').format('DD.MM.YYYY');
-        }
-        return filters;
-    }
-    reloadFunnel() {
-        this.funnelData.set(undefined);
-        this.loadingFunnel.set(true);
-        this.service.getFunnel(this.getFilters()).subscribe({
-            next: (response) => {
-                this.funnelData.set(response);
-                this.loadingFunnel.set(false);
-            },
-            error: () => this.loadingFunnel.set(false),
-        });
-    }
-    clearSelection = () => (this.creation_span = undefined);
-    onCreationUpdated = () => this.reload();
-
-    loadOverviewStats() {
-        forkJoin({
-            initiatives: this.service.indexInitiatives(),
-            prospects: this.service.showProspectStats(),
-        })
-            .pipe(takeUntilDestroyed(this.#destroyRef))
-            .subscribe({
-                next: (response) => {
-                    const initiatives = response.initiatives.data;
-                    const p = response.prospects;
-                    this.stats.set({
-                        initiatives: {
-                            total: initiatives.length,
-                            active: initiatives.filter((i) => i.status === 'active').length,
-                        },
-                        prospects: {
-                            total: p.total || 0,
-                            new: p.by_status?.new || 0,
-                            engaged: p.by_status?.engaged || 0,
-                            converted: p.by_status?.converted || 0,
-                            unresponsive: p.by_status?.unresponsive || 0,
-                            disqualified: p.by_status?.disqualified || 0,
-                            on_hold: p.by_status?.on_hold || 0,
-                        },
-                        activities: {
-                            pending: p.activities_pending || 0,
-                            overdue: p.activities_overdue || 0,
-                        },
-                    });
-                },
-                error: (err) => console.error('Error loading overview stats:', err),
-            });
-    }
-
-    loadDashboardStats() {
-        this.loadingDashboard.set(true);
-        this.service
-            .getDashboardStats()
-            .pipe(takeUntilDestroyed(this.#destroyRef))
-            .subscribe({
-                next: (data) => {
-                    this.dashboardStats.set(data);
-                    this.buildActivitySchedule();
-                    this.loadingDashboard.set(false);
-                },
-                error: () => {
-                    this.loadingDashboard.set(false);
-                },
-            });
-    }
-
-    loadRemarketing() {
-        this.loadingRemarketing.set(true);
-        this.service
-            .getRemarketing()
-            .pipe(takeUntilDestroyed(this.#destroyRef))
-            .subscribe({
-                next: (data) => {
-                    this.remarketing.set(data);
-                    this.loadingRemarketing.set(false);
-                },
-                error: () => {
-                    this.loadingRemarketing.set(false);
-                },
-            });
-    }
-
-    loadKpiMetrics() {
-        this.loadingMetrics.set(true);
-        this.service
-            .indexMetrics()
-            .pipe(takeUntilDestroyed(this.#destroyRef))
-            .subscribe({
-                next: (data) => {
-                    this.kpiMetrics = data;
-                    this.loadingMetrics.set(false);
-                },
-                error: () => {
-                    this.loadingMetrics.set(false);
-                },
-            });
-    }
-
-    buildActivitySchedule() {
+    activitySchedule = computed(() => {
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const heatmap = this.dashboardStats()?.heatmap ?? [];
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const schedule = [];
-        for (let i = 0; i <= 6; i++) {
+        return Array.from({ length: 7 }, (_, i) => {
             const d = new Date(today);
             d.setDate(d.getDate() + i);
-            const dateStr = d.toISOString().split('T')[0];
-            const entry = (this.dashboardStats()?.heatmap || []).find((h) => h.date === dateStr);
-            schedule.push({
+            const date = d.toISOString().split('T')[0];
+            const entry = heatmap.find((h) => h.date === date);
+            return {
                 day: i === 0 ? 'Today' : dayNames[d.getDay()],
-                date: dateStr,
+                date,
                 total: entry?.total || 0,
                 completed: entry?.completed || 0,
                 pending: entry?.pending || 0,
                 isToday: i === 0,
-            });
-        }
-        this.activitySchedule.set(schedule);
+            };
+        });
+    });
+
+    toggleFunnelMode() {
+        this.funnelMode = this.funnelMode === 'count' ? 'money' : 'count';
     }
+
+    clearSelection = () => {
+        this.creation_span = undefined;
+        this.onCreationUpdated();
+    };
+
+    onCreationUpdated = () => {
+        const span = this.creation_span;
+        this.#funnelFilters.set(
+            span?.startDate && span?.endDate
+                ? { created_after: span.startDate.format('DD.MM.YYYY'), created_before: span.endDate.add(1, 'day').format('DD.MM.YYYY') }
+                : {},
+        );
+    };
 
     agingBars = computed(() => {
         const aging = this.dashboardStats()?.aging;
@@ -234,7 +141,7 @@ export class MarketingDashboardComponent {
     onNewLeadSource() {
         this.#input.open('Please enter the name of the new source').then((response) => {
             if (response) {
-                this.#leadSourceSvc.store(response.text).subscribe((_) => this.#global.lead_sources.update((sources) => [...sources, LeadSource.fromJson(_)]));
+                LeadSource.fromJson({}).store({ name: response.text }).subscribe((created) => this.#global.lead_sources.update((sources) => [...sources, created]));
             }
         });
     }
@@ -257,33 +164,4 @@ export class MarketingDashboardComponent {
         this.router.navigate(['/marketing/prospects']);
     }
 
-    loadAssetStats() {
-        this.loadingAssets.set(true);
-        this.service.indexMarketingAssets('', '', '').subscribe(
-            (assets) => {
-                const defaultCategories = [
-                    { name: 'Brand Assets', icon: 'branding_watermark', color: 'primary' },
-                    { name: 'Social Media', icon: 'share', color: 'info' },
-                    { name: 'Email Templates', icon: 'email', color: 'success' },
-                    { name: 'Presentations', icon: 'slideshow', color: 'warning' },
-                    { name: 'Print Materials', icon: 'print', color: 'secondary' },
-                    { name: 'Video Content', icon: 'videocam', color: 'danger' },
-                    { name: 'Documents', icon: 'description', color: 'dark' },
-                ];
-                const categoryCounts: Dictionary<number> = {};
-                assets.forEach((asset: File) => {
-                    if (asset.category) categoryCounts[asset.category] = (categoryCounts[asset.category] || 0) + 1;
-                });
-                this.assetCategories = defaultCategories.map((c) => ({ ...c, count: categoryCounts[c.name] || 0 })).filter((c) => c.count > 0);
-                this.loadingAssets.set(false);
-            },
-            () => {
-                this.loadingAssets.set(false);
-            },
-        );
-    }
-
-    navigateToAssets(categoryName: string) {
-        this.router.navigate(['/marketing/assets', encodeURIComponent(categoryName)]);
-    }
 }

@@ -26,6 +26,10 @@ export const CUSTOMERS_ROUTES: Routes = [
                 },
             },
             {
+                path: 'knownseq/draft/:number',
+                loadComponent: () => import('./-/customers-known-sequitur/knownseq-draft.component').then((m) => m.KnownSequiturDraftComponent),
+            },
+            {
                 path: 'knownseq/:id',
                 loadComponent: () => import('./-/customers-known-sequitur-search/customers-known-sequitur-search.component').then((m) => m.CustomersKnownSequiturSearchComponent),
             },
@@ -192,7 +196,7 @@ export const CUSTOMERS_ROUTES: Routes = [
             },
             {
                 path: 'knownseq',
-                loadComponent: () => import('./-/customers-known-sequitur/customers-known-sequitur.component').then((m) => m.CustomersKnownSequiturComponent),
+                loadComponent: () => import('./-/customers-known-sequitur/knownseq-resolved.component').then((m) => m.KnownSequiturResolvedComponent),
                 data: {
                     nav: {
                         title: 'KnownSeq',

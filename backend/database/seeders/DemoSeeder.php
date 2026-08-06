@@ -32,11 +32,6 @@ class DemoSeeder extends Seeder {
         return $this->_DemoSeederData ??= new DemoSeederData;
     }
 
-    /**
-     * Run the database seeds.
-     * Simulates 5 years of activity for a growing software agency (Digitech GmbH)
-     * with 6 employees joining at different stages.
-     */
     public function run(): void {
         $startDay = Carbon::now()->subYears(5)->startOfMonth();
 
@@ -48,7 +43,6 @@ class DemoSeeder extends Seeder {
         $this->createUserEmployments($startDay);
         $this->createVacationGrants($startDay);
 
-        // Give each day-1 employee an initial customer + project
         $dayOneUsers = User::query()->where('created_at', '<=', $startDay->copy()->addDay())->get();
         foreach ($dayOneUsers as $activeUser) {
             $customer       = $this->createNewCustomer($startDay);
@@ -60,8 +54,6 @@ class DemoSeeder extends Seeder {
 
         $this->createPerDayActivities($startDay);
 
-        // Generate historical param snapshots AFTER daily activities
-        // so that CASHFLOW values reflect actual invoice data
         $this->createParamHistory($startDay);
     }
 
@@ -70,7 +62,6 @@ class DemoSeeder extends Seeder {
     // -------------------------------------------------------------------------
 
     public function createSystemParams(): void {
-        // Invoice numbering
         $this->setParam('INVOICE_NO_PREFIX', 'RE', StringParam::class, false);
         $this->setParam('INVOICE_NO_CURRENT', 1, FloatParam::class, false);
         $this->setParam('INVOICE_NO_DIGITS', 4, FloatParam::class, false);
@@ -81,7 +72,6 @@ class DemoSeeder extends Seeder {
         $this->setParam('INVOICE_HOURLY_WAGE', 110, FloatParam::class, false);
         $this->setParam('INVOICE_HPD', 8, FloatParam::class, false);
 
-        // HR defaults
         $this->setParam('HR_HOURLY_WAGE', 90, FloatParam::class, true);
         $this->setParam('HR_HPD', 7.8, FloatParam::class, true);
         $this->setParam('HR_WORKDAYS', 21, FloatParam::class, true);
@@ -107,7 +97,6 @@ class DemoSeeder extends Seeder {
             $newUser->password = $user['password'];
             $newUser->save();
 
-            // Set created_at to hire date so daily loop can filter by it
             DB::table('users')->where('id', $newUser->id)->update([
                 'created_at' => $hiredAt->toDateTimeString(),
                 'updated_at' => $hiredAt->toDateTimeString(),
@@ -203,7 +192,6 @@ class DemoSeeder extends Seeder {
             return;
         }
 
-        // Only users hired on or before this day work
         $activeUsers = User::query()
             ->whereNull('deleted_at')
             ->where('created_at', '<=', $currentDay->toDateTimeString())
@@ -215,7 +203,6 @@ class DemoSeeder extends Seeder {
 
         $userCount = $activeUsers->count();
 
-        // Scale customer/project creation with team size
         $percentage_new_customer = max(3, min(10, $userCount * 2));
         $percentage_new_project  = max(3, min(8, $userCount));
         $percentage_project_won  = 5;
@@ -230,7 +217,6 @@ class DemoSeeder extends Seeder {
             }
         }
 
-        // A project gets won and assigned to least-loaded user
         if (rand(1, 100) <= $percentage_project_won) {
             $project = Project::query()->whereProgress(ProjectState::Prepared)->inRandomOrder()->first();
             if ($project) {
@@ -261,7 +247,6 @@ class DemoSeeder extends Seeder {
             }
         }
 
-        // Finish projects and invoice them
         foreach (Project::query()->whereProgress(ProjectState::Running)->get() as $project) {
             $percentageDone = $project->progress;
             if ($percentageDone <= 80) {
@@ -278,7 +263,6 @@ class DemoSeeder extends Seeder {
             }
         }
 
-        // Pay open invoices (2% chance per day)
         foreach (Invoice::whereNull('paid_at')->get() as $unpaidInvoice) {
             if (rand(1, 100) <= 2) {
                 $unpaidInvoice->paid_at = $currentDay;
@@ -310,16 +294,10 @@ class DemoSeeder extends Seeder {
     // Param history
     // -------------------------------------------------------------------------
 
-    /**
-     * Generate monthly historical snapshots for statistics params.
-     * Covers CASHFLOW_ANNUAL_EXPENSES, CASHFLOW_BANK_BALANCE, HR_HOURLY_WAGE, HR_HPD, HR_WORKDAYS.
-     * Values grow realistically as the team expands over 5 years.
-     */
     public function createParamHistory(Carbon $startDay): void {
         $current = $startDay->copy()->startOfMonth();
         $end     = Carbon::now()->startOfMonth();
 
-        // Ensure all history-enabled params exist in DB
         $expensesParam    = Param::get('CASHFLOW_ANNUAL_EXPENSES', ['type' => FloatParam::class, 'history' => true]);
         $bankParam        = Param::get('CASHFLOW_BANK_BALANCE', ['type' => FloatParam::class, 'history' => true]);
         $hrWageParam      = Param::get('HR_HOURLY_WAGE', ['type' => FloatParam::class, 'history' => true]);
@@ -333,34 +311,28 @@ class DemoSeeder extends Seeder {
         while ($current->lte($end)) {
             $snapshotDate = $current->copy()->endOfMonth()->subDay();
 
-            // How many employees were active this month
             $employeeCount = DB::table('users')
                 ->whereNull('deleted_at')
                 ->where('created_at', '<=', $snapshotDate->toDateTimeString())
                 ->count();
             $employeeCount = max(1, $employeeCount);
 
-            // Annual expenses: base 80k overhead + 60k per employee (salary, taxes, benefits)
             $annualExpenses = 80000 + ($employeeCount * 60000);
             $annualExpenses += rand(-3000, 5000); // slight noise
 
-            // Monthly revenue approximation from invoices in this month
             $monthlyRevenue = DB::table('invoices')
                 ->whereYear('created_at', $current->year)
                 ->whereMonth('created_at', $current->month)
                 ->sum('net');
             $monthlyRevenue = (float)$monthlyRevenue;
 
-            // Bank balance: drifts with revenue minus monthly expenses
             $monthlyExpenses = $annualExpenses / 12;
             $bankBalance += $monthlyRevenue - $monthlyExpenses;
             $bankBalance = max(5000, $bankBalance + rand(-2000, 2000)); // floor + noise
 
-            // Hourly wage grows by ~3/yr starting at 90
             $hourlyWage = 90 + ($monthsElapsed / 12) * 3;
             $hourlyWage = round($hourlyWage + rand(-1, 2), 2);
 
-            // Revenue trend (DEG_12M) - rolling 12-month revenue estimate
             $deg12m = DB::table('invoices')
                 ->where('created_at', '>=', $current->copy()->subYear()->toDateTimeString())
                 ->where('created_at', '<=', $snapshotDate->toDateTimeString())

@@ -1,5 +1,5 @@
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
-import { deepCopy } from '@constants/deepClone';
+import { deepCopy } from '@constants/object/deepClone';
 import { InvoiceItemType } from '@enums/invoice-item.type';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { InvoiceItemService } from '@models/invoice/invoice-item.service';

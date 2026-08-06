@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, HostListener, inject, linkedSignal, signal, viewChild } from '@angular/core';
+import { modelResource } from '@models/http/model-resource';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
@@ -6,13 +7,8 @@ import { CodeEditorComponent } from '@app/_shards/code-editor/code-editor.compon
 import { PdfTemplateService } from '@models/pdf-template.service';
 import { Toast } from '@shards/toast/toast';
 
-/** A4 page width in CSS px at 96dpi (210mm); the preview is zoomed to fit this into col-9. */
 const A4_WIDTH_PX = (210 * 96) / 25.4;
 
-/** Geometry shim that recreates DomPDF's first-page model in the browser preview:
- *  the letterhead blocks are absolutely positioned with negative offsets that DomPDF
- *  resolves against the page content origin (the big @page:first top margin). We wrap
- *  the body in `.pdf-page > .pdf-flow` so those offsets anchor to the same origin. */
 const SHIM_CSS = `
 html,body{margin:0;padding:0;background:#525659;}
 body{padding:24px 0;}
@@ -23,7 +19,6 @@ body{padding:24px 0;}
 [data-pdfedit-id]{cursor:pointer;}
 [data-pdfedit-id]:hover{outline:1px dashed rgba(178,210,53,.6);outline-offset:1px;}`;
 
-/** Injected into the preview iframe; reports clicks and applies live edits via postMessage. */
 const CLIENT_SCRIPT = `(function(){
   var HL='2px solid #b2d235';var sel=null;
   function send(t,d){d=d||{};d.source='pdfedit';d.type=t;parent.postMessage(d,'*');}
@@ -73,14 +68,6 @@ type StyleProp = 'fontSize' | 'color' | 'fontWeight' | 'fontStyle' | 'textAlign'
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SettingsPdfComponent {
-    readonly html = signal('');
-    readonly css = signal('');
-    readonly baseUrl = signal('');
-    readonly pdfBase = signal('');
-    readonly logoUrl = signal('');
-    readonly hasOriginal = signal(false);
-
-    readonly loading = signal(true);
     readonly saving = signal(false);
     readonly rendering = signal(false);
     readonly dirty = signal(false);
@@ -100,25 +87,26 @@ export class SettingsPdfComponent {
     #zoom = 1;
     #ro?: ResizeObserver;
 
+    readonly #template = modelResource(() => this.#svc.load());
+    readonly loading = this.#template.isLoading;
+    readonly baseUrl = computed(() => this.#template.value()?.baseUrl ?? '');
+    readonly pdfBase = computed(() => this.#template.value()?.pdfBase ?? '');
+    readonly html = linkedSignal(() => this.#template.value()?.html ?? '');
+    readonly css = linkedSignal(() => this.#template.value()?.css ?? '');
+    readonly logoUrl = linkedSignal(() => this.#template.value()?.logoUrl ?? '');
+    readonly hasOriginal = linkedSignal(() => this.#template.value()?.hasOriginal ?? false);
+
     constructor() {
         inject(DestroyRef).onDestroy(() => {
             this.#ro?.disconnect();
             if (this.#objectUrl) URL.revokeObjectURL(this.#objectUrl);
         });
-        this.#svc.load().subscribe((t) => {
-            this.html.set(t.html);
-            this.css.set(t.css);
-            this.baseUrl.set(t.baseUrl);
-            this.pdfBase.set(t.pdfBase);
-            this.logoUrl.set(t.logoUrl);
-            this.hasOriginal.set(t.hasOriginal);
-            this.loading.set(false);
+        effect(() => {
+            if (!this.#template.hasValue()) return;
             this.dirty.set(false);
             setTimeout(() => this.reloadPreview());
         });
     }
-
-    // ---- preview rendering ------------------------------------------------
 
     reloadPreview(attempt = 0) {
         const frame = this.iframe()?.nativeElement;
@@ -131,7 +119,6 @@ export class SettingsPdfComponent {
         frame.srcdoc = this.#buildSrcdoc();
     }
 
-    /** Observe the preview pane so the page is re-zoomed to fit its width on resize. */
     #ensureObserver(frame: HTMLIFrameElement) {
         if (this.#ro) return;
         const pane = frame.parentElement;
@@ -142,12 +129,9 @@ export class SettingsPdfComponent {
         this.#ro.observe(pane);
     }
 
-    /** Returns true when the zoom factor changed. */
     #recalcZoom(frame: HTMLIFrameElement): boolean {
         const pane = frame.parentElement;
         if (!pane || !pane.clientWidth) return false;
-        // True fit-to-width: zoom up as well as down so the page fills col-9 and the
-        // font size scales with it (zoom reflows, so upscaled text stays crisp).
         const fit = Math.min(3, Math.max(0.2, (pane.clientWidth - 24) / A4_WIDTH_PX));
         const rounded = Math.round(fit * 1000) / 1000;
         if (rounded === this.#zoom) return false;
@@ -159,13 +143,9 @@ export class SettingsPdfComponent {
         const doc = this.#parse(this.html());
         this.#assignIds(doc);
 
-        // resolve relative asset paths (bootstrap, fonts, logo) against the backend
         const base = doc.querySelector('base') ?? doc.head.insertBefore(doc.createElement('base'), doc.head.firstChild);
         base.setAttribute('href', this.baseUrl());
 
-        // drop the on-disk stylesheet link; the live (possibly edited) css wins instead.
-        // Inlining moves the css out of pdf/styles.css, so rewrite its relative asset
-        // urls (e.g. the @font-face .ttf) to absolute pdf/ paths or they 404 → wrong font.
         doc.querySelectorAll('link[href*="styles.css"]').forEach((l) => l.remove());
         const userCss = doc.createElement('style');
         userCss.textContent = this.css().replace(/url\(\s*(['"]?)(?!https?:|data:|\/|#)/gi, `url($1${this.pdfBase()}`);
@@ -175,7 +155,6 @@ export class SettingsPdfComponent {
         shim.textContent = SHIM_CSS + `\nhtml{zoom:${this.#zoom};}`;
         doc.head.appendChild(shim);
 
-        // wrap letterhead + content so absolute offsets anchor to the page content origin
         const page = doc.createElement('div');
         page.className = 'pdf-page';
         const flow = doc.createElement('div');
@@ -213,13 +192,10 @@ export class SettingsPdfComponent {
         return s.replace(/\[(documentTitle|address|headerInfo|dayNow|pageLabel|content)\]/g, (m) => tokens[m] ?? m);
     }
 
-    // ---- selection + element editing -------------------------------------
-
     @HostListener('window:message', ['$event'])
     onMessage(e: MessageEvent) {
         const d = e.data;
         if (!d || d.source !== 'pdfedit' || d.type !== 'select') return;
-        // id == null means the page background was clicked: fall back to whole-document editing
         if (d.id == null) {
             this.selected.set(null);
             return;
@@ -327,9 +303,6 @@ export class SettingsPdfComponent {
         this.reloadPreview();
     }
 
-    // ---- code editing -----------------------------------------------------
-
-    /** Edit the whole template.html (nothing selected). */
     onFullHtmlChange(value: string) {
         this.html.set(value);
         this.#scheduleReload();
@@ -340,7 +313,6 @@ export class SettingsPdfComponent {
         this.#scheduleReload();
     }
 
-    /** Edit only the selected element's outerHTML and splice it back into the template. */
     onScopedHtmlChange(snippet: string) {
         const sel = this.selected();
         if (!sel) {
@@ -355,14 +327,13 @@ export class SettingsPdfComponent {
         try {
             el.outerHTML = snippet;
         } catch {
-            return; // incomplete markup while typing — ignore until it parses
+            return; // incomplete markup while typing - ignore until it parses
         }
         this.html.set(this.#serialize(doc));
         this.dirty.set(true);
         this.#scheduleReload();
     }
 
-    /** Leave element scope and edit the full document again. */
     editFullDocument() {
         this.selected.set(null);
         this.#post({ type: 'deselect' });
@@ -373,8 +344,6 @@ export class SettingsPdfComponent {
         clearTimeout(this.#reloadTimer);
         this.#reloadTimer = setTimeout(() => this.reloadPreview(), 350);
     }
-
-    // ---- persistence + actions -------------------------------------------
 
     save() {
         this.saving.set(true);
@@ -427,8 +396,6 @@ export class SettingsPdfComponent {
         this.pdfUrl.set(null);
     }
 
-    // ---- helpers ----------------------------------------------------------
-
     #applyToCanonical(id: string, mutate: (el: HTMLElement) => void) {
         const doc = this.#parse(this.html());
         this.#assignIds(doc);
@@ -440,7 +407,6 @@ export class SettingsPdfComponent {
         this.dirty.set(true);
     }
 
-    /** outerHTML of an element with the internal edit-ids stripped. */
     #cleanOuter(el: HTMLElement): string {
         const clone = el.cloneNode(true) as HTMLElement;
         clone.removeAttribute('data-pdfedit-id');

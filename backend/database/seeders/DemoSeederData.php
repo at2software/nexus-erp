@@ -20,15 +20,10 @@ class DemoSeederData extends Seeder {
         return $this->_faker;
     }
 
-    /**
-     * Returns 6 fixed employees with realistic hire dates relative to $startDay.
-     * Growth story: 3 founders → +1 at year 1 → +1 at year 2.5 → +1 at year 3.5
-     */
     public function users(Carbon $startDay): array {
         $faker = $this->faker();
 
         $hireOffsets = [
-            // [months_offset, name, email, role, title, birthdate]
             [0,  'anna.mueller',   'anna.mueller',   'admin',           'Geschäftsführerin', '1985-03-12'],
             [0,  'thomas.weber',   'thomas.weber',   'project_manager', 'Senior Developer',  '1983-07-24'],
             [0,  'lisa.schmidt',   'lisa.schmidt',   'user',       'Full-Stack Developer', '1990-11-05'],

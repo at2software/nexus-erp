@@ -5,7 +5,7 @@ import { TextParamEditorComponent } from '@shards/text-param-editor/text-param-e
 import { InvoicePrepare } from '@app/invoices/_shards/invoice-prepare/invoice-prepare';
 import { CustomerPaymentDetailsComponent } from '@app/customers/_shards/customer-payment-details/customer-payment-details.component';
 import { Company } from '@models/company/company.model';
-import { BillingConsideration } from '@models/api-response';
+import { BillingConsiderationDto } from '@models/_core/api-response';
 import { Project } from '@models/project/project.model';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { SafePipe } from '@pipes/safe.pipe';
@@ -23,7 +23,7 @@ export class InvoicePrepareWrapper {
     stageFilter = input<number | undefined>(undefined);
     annotationType = input<'invoice' | 'quote' | 'support' | 'none'>('invoice');
     showMiniCards = input<boolean>(true);
-    additionalBillingConsiderations = input<BillingConsideration[]>([]);
+    additionalBillingConsiderations = input<BillingConsiderationDto[]>([]);
     allowedNewItems = input<('item' | 'paydown' | 'group' | 'discount')[]>(['item', 'paydown', 'group', 'discount']);
     withInstalments = input<boolean>(true);
     mode = input<'invoice' | 'quote'>('invoice');
@@ -31,11 +31,11 @@ export class InvoicePrepareWrapper {
     projectPaymentDuration = input<string | undefined>(undefined);
     onChangeProjectPaymentDuration = input<(() => void) | undefined>(undefined);
     onRemoveProjectPaymentDuration = input<(() => void) | undefined>(undefined);
-    considerationsChanged = output<BillingConsideration[]>();
+    considerationsChanged = output<BillingConsiderationDto[]>();
 
     readonly table = viewChild(InvoicePrepare);
 
-    readonly allBillingConsiderations = signal<BillingConsideration[]>([]);
+    readonly allBillingConsiderations = signal<BillingConsiderationDto[]>([]);
 
     readonly prefixKey = computed(() => (this.mode() === 'quote' ? 'PROJECT_PREFIX' : 'INVOICE_PREFIX'));
     readonly suffixKey = computed(() => (this.mode() === 'quote' ? 'PROJECT_SUFFIX' : 'INVOICE_SUFFIX'));
@@ -82,7 +82,7 @@ export class InvoicePrepareWrapper {
         this.#recalculateBillingConsiderations(items);
     }
 
-    trackBillingConsideration(_index: number, item: BillingConsideration) {
+    trackBillingConsideration(_index: number, item: BillingConsiderationDto) {
         return item.invoice_item_id || item.label + item.type || _index;
     }
 

@@ -25,12 +25,10 @@
         border: 3px colors.$primary solid;
     }
 
-    // SVG-specific styles for nx directive
     rect, path, circle, ellipse, line, polyline, polygon {
         transition: stroke 0.2s, fill 0.2s, opacity 0.2s;
     }
 
-    // Hover effect for SVG elements
     &:hover rect:not([fill="transparent"]),
     &:hover path:not([fill="none"]),
     &:hover circle:not([fill="transparent"]),
@@ -39,7 +37,6 @@
         filter: brightness(1.1);
     }
 
-    // Active (selected) state for SVG elements
     &.active rect:not([fill="transparent"]),
     &.active path:not([fill="none"]),
     &.active circle:not([fill="transparent"]),

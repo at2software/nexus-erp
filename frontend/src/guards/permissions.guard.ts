@@ -1,11 +1,9 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { ActivatedRouteSnapshot, Router, UrlTree } from '@angular/router';
 import { map, Observable } from 'rxjs';
 import { RoleService } from '@models/user/role.service';
 
-@Injectable({
-    providedIn: 'root',
-})
+@Service()
 export class PermissionsGuard {
     #roleService: RoleService = inject(RoleService);
     #router: Router = inject(Router);

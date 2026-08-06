@@ -1,8 +1,8 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { dayjs } from '@constants/dates';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { dayjs } from '@constants/date/dates';
 import { GlobalService } from '@models/global.service';
-import { Vacation } from '@models/vacation/vacation.model';
+import { modelListResource } from '@models/http/model-resource';
 import { VacationService } from '@models/vacation/vacation.service';
 import { LoadingPipe } from '@pipes/loading.pipe';
 
@@ -16,27 +16,13 @@ export class ProfileVacationWidgetComponent {
     global = inject(GlobalService);
     #vacationService = inject(VacationService);
 
-    totalVacationHours = signal<number | undefined>(undefined);
-    totalVacationDays = signal<number | undefined>(undefined);
-
-    constructor() {
-        this.#reload();
-    }
-
-    #reload() {
-        const user = this.global.user!;
-        this.#vacationService.indexGrants(user).subscribe((grants) => {
-            let hours = 0;
-            let days = 0;
-            grants.forEach((grant) => {
-                grant.vacations.sort((a: Vacation, b: Vacation) => b.started_at!.localeCompare(a.started_at!));
-                hours += grant.remainingHours();
-                days += grant.remainingDays(user);
-            });
-            this.totalVacationHours.set(hours);
-            this.totalVacationDays.set(days);
-        });
-    }
+    readonly #grants = modelListResource(
+        () => this.global.user?.id,
+        (userId) => this.#vacationService.indexGrants(userId),
+    );
+    readonly #settled = computed(() => this.#grants.status() === 'resolved');
+    readonly totalVacationHours = computed(() => (this.#settled() ? this.#grants.value().reduce((sum, _) => sum + _.remainingHours(), 0) : undefined));
+    readonly totalVacationDays = computed(() => (this.#settled() ? this.#grants.value().reduce((sum, _) => sum + _.remainingDays(this.global.user!), 0) : undefined));
 
     getWorkingHoursPerDay = () => this.global.user?.getHpwArray().map((_, k) => [dayjs().day((k + 1) % 7).format('dd'), _]);
 }

@@ -6,14 +6,6 @@ use App\Models\Project;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
-/**
- * Phase-2 history features: company / PM / product track record, computed
- * with strict temporal-leakage discipline — only from projects that had
- * already FINISHED before the target project's `decision_at` (the quote-time
- * cutoff; more accurate than `started_at` for "quote-time" leakage since
- * work can start after the quote is decided, and it has better coverage:
- * 877/885 vs 766/885 on the Phase-0 eligible set).
- */
 class ProjectHistory {
     /**
      * @param Collection<int, Project> $pool eligible finished projects to search for prior matches

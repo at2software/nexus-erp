@@ -10,7 +10,7 @@
 
     <ul-compact revealList [badge]="badgeCount(_data) > 0 ? '' + badgeCount(_data) : undefined">
         @for (_ of _data; track _.id; let i = $index) {
-            <li class="list-group-item d-flex text-nowrap" [nx]="_" [tables]="_data" [compact]="indexExceedsSettings(i) && !_.badge()">
+            <li class="list-group-item d-flex text-nowrap" [nx]="_" [tables]="_data" [compact]="indexExceedsSettings(i) && !_.getBadge()">
                 <div>
                     <avatar [object]="_"></avatar>
                 </div>

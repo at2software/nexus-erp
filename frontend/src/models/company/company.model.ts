@@ -1,39 +1,43 @@
+import type { NxAction } from '@models/_core/nx.actions';
 import { Dictionary } from '@constants/constants';
 import { CompanyService } from '@models/company/company.service';
 import { CompanyContact } from './company-contact.model';
 import { Project } from '../project/project.model';
-import { Serializable } from '../serializable';
-import { VcardClass } from '../vcard/VcardClass';
+import { Serializable } from '@models/_core/serializable';
+import { VcardClass } from '../vcard/vcard-class.model';
 import { Invoice } from '../invoice/invoice.model';
-import { NxGlobal } from '@app/nx/nx.global';
+import { nx } from '@models/_core/nx-bridge';
 import { InvoiceItem } from '../invoice/invoice-item.model';
 import { HasInvoiceItems } from '@interfaces/hasInvoiceItems.interface';
 import { File } from '../file/file.model';
-import { IHasFiles } from '../file/has_files.interface';
+import { IHasFiles } from '../file/has-files.interface';
 import { Assignee } from '../assignee/assignee.model';
 import { Focus } from '../focus/focus.model';
-import { environment } from 'src/environments/environment';
-import { IHasFoci } from '@models/focus/hasFoci.interface';
+import { environment } from '@environments/environment';
+import { IHasFoci } from '@models/focus/has-foci.interface';
 import { User } from '@models/user/user.model';
-import { LeadSource } from '@models/project/lead_source.model';
-import { Transform, Type } from 'class-transformer';
-import { dayjs, Dayjs } from '@constants/dates';
+import { LeadSource } from '@models/project/lead-source.model';
+import { Transform, Type } from '@models/_core/hydrate';
+import { dayjs, Dayjs } from '@constants/date/dates';
 import { IHasAssignees } from '@interfaces/hasAssignees.interface';
 import { ConnectionProjects } from './connection-projects.model';
 import { getCompanyActions } from './company.actions';
 import { IHasMarker } from '@enums/marker';
-import { Model } from '@constants/type-discriminators';
+import { Model } from '@constants/model/type-discriminators';
 import { computed } from '@angular/core';
-import type { BillingConsideration, ProjectTimelineEntry } from '@models/api-response';
-
-const RemarketingIntervals = { 1: 1, 4: 7, 5: 14, 2: 30, 6: 60, 7: 90, 8: 180, 3: 360 } as Record<number, number>;
+import { recurrenceOf, RecurrenceOption } from '@enums/recurrence.type';
+import type { BillingConsiderationDto, ProjectTimelineEntryDto } from '@models/_core/api-response';
 
 @Model('Company')
 export class Company extends VcardClass implements HasInvoiceItems, IHasFiles, IHasFoci, IHasAssignees, IHasMarker {
     static override API_PATH = (): string => 'companies';
-    override SERVICE = CompanyService;
-    protected override readonly computedIcon = computed(() => environment.envApi + `companies/${this.id}/icon`);
-    override readonly ngLink = computed(() => `/customers/${this.id}`);
+
+    static readonly FLAG_DRAFT = 0x01;
+    static readonly ML_CHURN_HIGH = 0.5;
+
+    override readonly getAvatar = computed(() => { this.snapshot(); return environment.envApi + `companies/${this.id}/icon`; });
+
+    isDraft = (): boolean => this.hasFlag(Company.FLAG_DRAFT);
 
     default_product_id: string = '';
     customer_number: string = '';
@@ -61,9 +65,9 @@ export class Company extends VcardClass implements HasInvoiceItems, IHasFiles, I
     accepts_support: boolean = false;
     needs_vat_handling?: boolean = true;
     foci_unbilled_sum_duration?: number;
+    cashflow_value?: number;
     invoices_last12m_sum_net?: number;
     total_time?: number;
-    // Read-only projections attached by stats endpoints (remarketing, customer-stats). Not DB columns, so payloadFor() never sends them back.
     revenue_12?: number;
     revenue_last_1_year: number = 0;
     revenue_total: number = 0;
@@ -71,47 +75,39 @@ export class Company extends VcardClass implements HasInvoiceItems, IHasFiles, I
     remarketing_interval?: number;
     remarketing_due_at?: string;
     desicion_duration?: number;
-    billing_considerations?: BillingConsideration[];
+    billing_considerations?: BillingConsiderationDto[];
     quote_acceptance_rate?: number | null;
     avg_payment_days?: number | null;
     debrief_problem_count?: number;
     debrief_positive_count?: number;
-    timeline_chart?: ProjectTimelineEntry[] = [];
-    // Read-only projections attached by the churn-risk widget endpoint (companies/churn-risk).
-    // Not DB columns, so payloadFor() never sends them back. Precomputed on the backend
-    // (Company::getMlChurnProbability12mAttribute() & co.) rather than derived from `params`,
-    // since the params dict isn't loaded on this lightweight listing.
+    timeline_chart?: ProjectTimelineEntryDto[] = [];
     ml_churn_probability_12m?: number;
-    // Date-only string (Y-m-d) — see Company::getMlPredictedNextPurchaseDateAttribute() on the
-    // backend. Deliberately not the same key as the Carbon-typed accessor, to avoid the
-    // toArray()/UTC date-shift pitfall (see frontend/CLAUDE.md's date-range note).
     ml_predicted_next_purchase_date?: string;
     ml_overdue_for_contact?: boolean;
-    // Read-only projection appended by GET_CASHFLOW_CUSTOMER_SUPPORT (widget-customer-support) —
-    // same "not a DB column, precomputed accessor, params dict not loaded" reasoning as
-    // ml_churn_probability_12m above. Use the mlPredictedSupportHours() computed on the
-    // single-company detail view instead, where `params` IS loaded.
     ml_predicted_support_hours?: number;
     marker: number | null = null;
-    @Transform(({ value }) => Company.toSource(value), { toClassOnly: true }) source?: CompanyContact | User | LeadSource;
+    @Transform(({ value }) => Company.toSource(value as Dictionary | undefined)) source?: CompanyContact | User | LeadSource;
 
     hasTimeBudget!: () => boolean;
     frontendUrl = (): string => `/customers/${this.id}`;
     companyId = (): string => this.id;
     lastUpdateDuration = () => dayjs().diff(dayjs(this.updated_at), 'days');
     isVatExcempt = computed(() => (this.snapshot().vat_id?.length ?? 0) > 0);
-    vatRate = computed(() => this.isVatExcempt() || !this.isEuropeanCountry() ? 0 : NxGlobal.global.user!.getFloatParam('VAT_RATE', 19)!);
-    remarketingDays = computed(() => RemarketingIntervals[this.snapshot().remarketing_interval] ?? 0);    
-    assignedUsers = computed((): Assignee[] => this.assignees.filter((_) => _.assignee instanceof User));
-    
+    vatRate = computed(() => this.isVatExcempt() || !this.isEuropeanCountry() ? 0 : nx().global.user!.getFloatParam('VAT_RATE', 19)!);
+    remarketingOption = computed((): RecurrenceOption => recurrenceOf(this.snapshotAsThis().remarketing_interval));
+    remarketingDays = computed((): number => this.remarketingOption().days);
+    assignedUsers = computed((): Assignee[] => { this.snapshot(); return this.assignees.filter((_) => _.assignee instanceof User) });
+
     acceptedChildren = computed((): (typeof Serializable)[] => [Project, InvoiceItem, Invoice, Focus]);
     getLocale = computed((): string => {
+        this.snapshot();
         const card = this.card();
         const lang = card?.first('X-LANG')?.vals[0] || 'de';
         const formality = card?.first('X-FORMALITY')?.vals[0] || 'formal';
         return `${lang}-${formality}`;
     });
     averagePaymentDelay = computed((): number => {
+        this.snapshot();
         const paid = this.invoices.filter((i) => i.paid_at);
         if (paid.length === 0) return 0;
         return paid.reduce((sum, i) => sum + i.time_paid().diff(i.time_due(), 'days'), 0) / paid.length;
@@ -121,33 +117,34 @@ export class Company extends VcardClass implements HasInvoiceItems, IHasFiles, I
         return days === 0 ? 0 : this.lastUpdateDuration() / days;
     });
 
-    // ML predictions (Rubix ML) — stored as per-company FloatParams by
-    // cron:refresh-customer-predictions, read the same way as STATS_LINREG_FORECAST_12M.
-    // Additive to the existing linreg forecast; never replaces it.
-    mlPredictedRevenue12m = computed((): number | undefined => this.getFloatParam('ML_PREDICTED_REVENUE_12M'));
-    mlPredictedIntervalDays = computed((): number | undefined => this.getFloatParam('ML_PREDICTED_INTERVAL_DAYS'));
-    mlChurnProbability12m = computed((): number | undefined => this.getFloatParam('ML_CHURN_PROBABILITY_12M'));
-    /** Predicted support hours over the next quarter (support-load forecast). */
-    mlPredictedSupportHours = computed((): number | undefined => this.getFloatParam('ML_PREDICTED_SUPPORT_HOURS'));
+    revenue12m = computed((): number => { this.snapshot(); return +(this.getParam('INVOICE_REVENUE_12M') ?? 0) });
+    forecast12m = computed((): number => { this.snapshot(); return +(this.getParam('STATS_LINREG_FORECAST_12M') ?? 0) });
+    forecastUp = computed((): boolean => this.forecast12m() >= this.revenue12m());
+    forecastChange = computed((): number => { const current = this.revenue12m(); return current > 0 ? (this.forecast12m() - current) / current : 0 });
 
-    /** Predicted next-purchase date = latest invoice date + predicted interval (Model B). */
+    mlPredictedRevenue12m = computed((): number | undefined => { this.snapshot(); return this.getFloatParam('ML_PREDICTED_REVENUE_12M') });
+    mlPredictedIntervalDays = computed((): number | undefined => { this.snapshot(); return this.getFloatParam('ML_PREDICTED_INTERVAL_DAYS') });
+    mlChurnProbability12m = computed((): number | undefined => { this.snapshot(); return this.getFloatParam('ML_CHURN_PROBABILITY_12M') ?? this.ml_churn_probability_12m });
+    mlPredictedSupportHours = computed((): number | undefined => { this.snapshot(); return this.getFloatParam('ML_PREDICTED_SUPPORT_HOURS') ?? this.ml_predicted_support_hours });
+
     mlPredictedNextPurchaseAt = computed((): Dayjs | undefined => {
         const interval = this.mlPredictedIntervalDays();
-        if (interval === undefined) return undefined;
-        const last = this.invoices
-            .map((i) => dayjs(i.created_at))
-            .sort((a, b) => b.valueOf() - a.valueOf())[0];
-        return last ? last.add(Math.round(interval), 'day') : undefined;
+        if (interval !== undefined) {
+            const last = this.invoices.map((i) => dayjs(i.created_at)).sort((a, b) => b.valueOf() - a.valueOf())[0];
+            if (last) return last.add(Math.round(interval), 'day');
+        }
+        return this.ml_predicted_next_purchase_date ? dayjs(this.ml_predicted_next_purchase_date) : undefined;
     });
 
-    /** True once the predicted next-purchase date is in the past — "contact now". */
     mlOverdueForContact = computed((): boolean => {
         const next = this.mlPredictedNextPurchaseAt();
-        return next !== undefined && next.isBefore(dayjs());
+        return next !== undefined ? next.isBefore(dayjs()) : (this.ml_overdue_for_contact ?? false);
     });
 
-    doubleClickAction: number = 0;
-    actions = getCompanyActions(this);
+    mlChurnHigh = computed((): boolean => (this.mlChurnProbability12m() ?? 0) >= Company.ML_CHURN_HIGH);
+    mlNeedsAttention = computed((): boolean => this.mlOverdueForContact() || this.mlChurnHigh());
+
+    protected override buildActions(): NxAction[] { return getCompanyActions(this) }
 
     @Type(()=>Assignee) pivot!: Assignee;
     @Type(()=>Project) projects_unfinished!: Project[];
@@ -175,7 +172,7 @@ export class Company extends VcardClass implements HasInvoiceItems, IHasFiles, I
         if (source) this.source = source;
     }
 
-    importImprint = () => NxGlobal.getService<CompanyService>(CompanyService).importImprint(this);
+    importImprint = () => nx().getService<CompanyService>(CompanyService).importImprint(this);
 
     static iconForId = (id: string) => environment.envApi + `companies/${id}/icon`;
 }

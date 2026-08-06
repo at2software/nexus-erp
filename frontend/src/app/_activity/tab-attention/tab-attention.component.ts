@@ -10,12 +10,14 @@ import { PermissionsDirective } from '@directives/permissions.directive';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { ActivityTabComponent } from '@activity/activity-tab.component';
 import { REFLECTION } from '@constants/constants';
+import { whenIdle } from '@constants/idle';
 import { GlobalService } from '@models/global.service';
 import { WidgetService } from '@models/widget.service';
 import { MoneyShortPipe } from '@pipes/mshort.pipe';
 import { SafePipe } from '@pipes/safe.pipe';
-import { WebSocketService } from 'src/services/websocket.service';
-import type { Serializable } from '@models/serializable';
+import { WebSocketService } from '@services/websocket.service';
+import { modelListResource } from '@models/http/model-resource';
+import type { Serializable } from '@models/_core/serializable';
 import { Comment } from '@models/comment/comment.model';
 import { Invoice } from '@models/invoice/invoice.model';
 import { Company } from '@models/company/company.model';
@@ -36,7 +38,6 @@ export class TabAttentionComponent {
     #initialized = false;
     #untilDestroyed = takeUntilDestroyed();
 
-    // frontend `class` names of the models surfaced in this feed
     #watchedClasses = new Set(['Comment', 'Invoice', 'Company', 'Project']);
 
     readonly componentType = TabAttentionComponent;
@@ -48,7 +49,9 @@ export class TabAttentionComponent {
     protected readonly Company = Company;
     protected readonly Project = Project;
 
-    newItems = signal<Serializable[]>([]);
+    #ready = signal<true | undefined>(undefined);
+    #newItems = modelListResource(this.#ready, () => this.#widgetService.indexNewItems());
+    newItems = computed<Serializable[]>(() => this.#newItems.value().map((_) => REFLECTION(_)));
     groupedItems = computed(() => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -91,10 +94,8 @@ export class TabAttentionComponent {
             });
         });
         this.#globalInit.subscribe(() => {
-            this.reload();
-            // refresh only when a watched type is created or deleted - 'updated' now also
-            // fires on every $touches cascade (e.g. an invoice item save touching its project)
-            // and would reload this feed far too often for no visible change.
+            if (this.#ready()) this.reload();
+            else whenIdle(() => this.#ready.set(true));
             this.#ws.dataChanged$
                 .pipe(
                     filter((payload) => this.#watchedClasses.has(payload.class) && (payload.event === 'created' || payload.event === 'deleted')),
@@ -103,21 +104,18 @@ export class TabAttentionComponent {
                 )
                 .subscribe(() => this.reload());
         });
+
+        effect(() => {
+            if (!this.#newItems.hasValue()) return;
+            const count = this.newItems().length;
+            if (!this.#initialized) {
+                this.#initialized = true;
+                this.#knownItemCount = count;
+            } else if (count > this.#knownItemCount) {
+                this.tabComponent().badge.set('!');
+            }
+        });
     }
 
-    reload() {
-        this.#widgetService
-            .indexNewItems()
-            .subscribe((r) => {
-                if (!r) return;
-                this.newItems.set(r.map((_) => REFLECTION(_)));
-                const count = this.newItems().length;
-                if (!this.#initialized) {
-                    this.#initialized = true;
-                    this.#knownItemCount = count;
-                } else if (count > this.#knownItemCount) {
-                    this.tabComponent().badge.set('!');
-                }
-            });
-    }
+    reload = () => this.#newItems.reload();
 }

@@ -1,7 +1,7 @@
 ﻿import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { MattermostPlugin } from '@models/http/plugin.mattermost';
+import { MattermostPlugin } from '@models/http/plugins/plugin.mattermost';
 import { User } from '@models/user/user.model';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 

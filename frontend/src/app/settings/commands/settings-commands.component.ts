@@ -3,6 +3,7 @@ import { DatePipe } from '@angular/common';
 import { SearchService } from '@models/search.service';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { Dictionary } from '@constants/constants';
+import { modelResource } from '@models/http/model-resource';
 
 interface Command {
     name: string;
@@ -38,20 +39,14 @@ const CATEGORY_ICONS: Dictionary<string> = {
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SettingsCommandsComponent {
-    loading = signal(true);
-    commands = signal<Dictionary<Command[]>>({});
-    categories = computed(() => Object.keys(this.commands()).sort());
-
     #searchService = inject(SearchService);
     #executing = signal<Set<string>>(new Set());
     #executionResults = signal<Dictionary<CommandExecution>>({});
 
-    constructor() {
-        this.#searchService.getCommands().subscribe((data) => {
-            this.commands.set(data);
-            this.loading.set(false);
-        });
-    }
+    readonly #commands = modelResource<Dictionary<Command[]>>(() => this.#searchService.getCommands());
+    readonly commands = computed(() => this.#commands.value() ?? {});
+    readonly loading = this.#commands.isLoading;
+    readonly categories = computed(() => Object.keys(this.commands()).sort());
 
     executeCommand(command: Command) {
         this.#executing.update((s) => new Set(s).add(command.name));

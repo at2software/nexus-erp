@@ -1,23 +1,21 @@
-import { NxGlobal } from '@app/nx/nx.global';
-import { ProductService } from './product.service';
+import type { NxAction } from '@models/_core/nx.actions';
+import { nx } from '@models/_core/nx-bridge';
 import { InvoiceItem } from '../invoice/invoice-item.model';
-import { Serializable } from '../serializable';
+import { Serializable } from '@models/_core/serializable';
 import { getProductActions } from './product.actions';
 import { ProductGroup } from './product-group.model';
 import { Recurrence } from '@enums/recurrence.type';
 import { Observable, map } from 'rxjs';
 import { HasInvoiceItems } from '@interfaces/hasInvoiceItems.interface';
-import { Type } from 'class-transformer';
-import { Model } from '@constants/type-discriminators';
+import { Type } from '@models/_core/hydrate';
+import { Model } from '@constants/model/type-discriminators';
 import { Dictionary } from '@constants/constants';
 
 @Model('Product')
 export class Product extends Serializable implements HasInvoiceItems {
     static API_PATH = (): string => 'products';
-    SERVICE = ProductService;
 
-    doubleClickAction: number = 0;
-    actions = getProductActions(this);
+    protected override buildActions(): NxAction[] { return getProductActions(this) }
 
     name: string = '';
     item_number: string = '';
@@ -45,11 +43,9 @@ export class Product extends Serializable implements HasInvoiceItems {
     frontendUrl = (): string => `/products/${this.id}`;
     companyId = () => undefined;
     getInvoiceItem = () => (this.invoice_items.length ? this.invoice_items[0] : null);
-    // patch() (not raw Object.assign) bumps Serializable#state so signal-based template
-    // consumers (e.g. tracked(group) in product-tree-list, which renders p.is_active) re-render under zoneless CD.
-    put = (path: string) => NxGlobal.service.put(`products/${this.id}/${path}`, {}).subscribe((_) => this.patch(_ as Dictionary));
+    put = (path: string) => nx().service.put(`products/${this.id}/${path}`, {}).subscribe((_) => this.patch(_ as Dictionary));
 
     static createWithParentId = (name: string = 'New product', parentId: string): Observable<Product> => {
-        return NxGlobal.service.post('products', { name: name, product_group_id: parentId }).pipe(map((x) => Product.fromJson(x)));
+        return nx().service.post('products', { name: name, product_group_id: parentId }).pipe(map((x) => Product.fromJson(x)));
     };
 }

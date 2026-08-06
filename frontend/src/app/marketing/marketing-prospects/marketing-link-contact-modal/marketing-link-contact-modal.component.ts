@@ -2,14 +2,14 @@
 import { FormsModule } from '@angular/forms';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { SearchService } from '@models/search.service';
-import { MarketingProspect } from '@models/marketing/marketing.prospect.model';
+import { MarketingProspect } from '@models/marketing/marketing-prospect.model';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { AvatarComponent } from '@app/_shards/avatar/avatar.component';
 import { CompanyContact } from '@models/company/company-contact.model';
 import { Contact } from '@models/company/contact.model';
 import { Dictionary, REFLECTION } from '@constants/constants';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -30,7 +30,6 @@ export class MarketingLinkContactModalComponent extends ModalBaseComponent<{ com
 
     init(args: { prospect: MarketingProspect }): void {
         this.prospect = args.prospect;
-        // Pre-fill search with prospect name
         if (this.prospect.getName()) {
             this.searchQuery.set(this.prospect.getName());
             this.#searchContacts();
@@ -54,12 +53,10 @@ export class MarketingLinkContactModalComponent extends ModalBaseComponent<{ com
                 const reflected = Object.values(results).map((x) => REFLECTION<Serializable>(x));
                 const contacts: CompanyContact[] = [];
 
-                // Process results - could be Contact or CompanyContact objects
                 for (const item of reflected) {
                     if (item instanceof CompanyContact) {
                         contacts.push(item);
                     } else if (item instanceof Contact && item.company_contacts?.length) {
-                        // Add all company_contacts from this Contact
                         contacts.push(...item.company_contacts);
                     }
                 }

@@ -1,6 +1,5 @@
-import { DestroyRef, EventEmitter, Injectable, inject } from '@angular/core';
+import { DestroyRef, EventEmitter, inject, Service } from '@angular/core';
 import { Observable, Subscription } from 'rxjs';
-// import { AuthenticationService } from '@app/services/authentication.service';
 
 export class BaseObject {
     #subscriptions: Subscription[] = [];
@@ -15,7 +14,7 @@ export class BaseObject {
     }
 
     protected setSubscriptions(): void {
-        // this.subscribe(AuthenticationService.instance?.onOutletChange, this.resubscribe.bind(this))
+        /* overridden by subclasses */
     }
 
     protected clearSubscriptions(): void {
@@ -30,7 +29,7 @@ export class BaseObject {
     }
 }
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export abstract class BaseComponent extends BaseObject {
     readonly #destroyRef = inject(DestroyRef);
 

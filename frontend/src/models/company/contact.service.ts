@@ -1,10 +1,8 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 import { Contact } from '@models/company/contact.model';
 import { NexusHttpService } from '../http/http.nexus';
 
-@Injectable({
-    providedIn: 'root',
-})
+@Service()
 export class ContactService extends NexusHttpService<Contact> {
     apiPath = 'contacts';
     override readonly model = Contact;

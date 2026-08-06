@@ -60,7 +60,6 @@ class FocusStatisticsService {
         $startDate = now()->subYears(2);
         $users     = User::whereHas('activeEmployments')->get();
 
-        // Single query for all users - avoids N+1 (was: 1 aggregated + N per-month queries per user)
         $allFoci = Focus::query()
             ->whereIn('foci.user_id', $users->pluck('id'))
             ->where('foci.started_at', '>=', $startDate)
@@ -104,7 +103,6 @@ class FocusStatisticsService {
     public static function getCompanyPredictionAccuracy(): array {
         $startDate = now()->subMonths(24);
 
-        // Get companies with finished successful projects in the last 24 months
         $companies = Company::whereHas('projects', function ($query) use ($startDate) {
             $query->whereHas('lastFinishedSuccessfulState', function ($stateQuery) use ($startDate) {
                 $stateQuery->where('project_project_state.created_at', '>=', $startDate);
@@ -218,10 +216,6 @@ class FocusStatisticsService {
         return $result;
     }
 
-    /**
-     * Calculate bias factor for a single invoice item
-     * Returns null if item should be skipped, otherwise returns array with bias data
-     */
     public static function calculateItemBiasFactor($item): ?array {
         if ($item->predictions->isEmpty() || $item->assumedWorkload() <= 0) {
             return null;
@@ -250,9 +244,6 @@ class FocusStatisticsService {
         ];
     }
 
-    /**
-     * Calculate bias statistics from an array of bias factors
-     */
     private static function calculateBiasStatistics(array $biasFactors, float $weightedSum, float $totalWeight): array {
         if (empty($biasFactors)) {
             return [

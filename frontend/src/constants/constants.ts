@@ -1,5 +1,4 @@
-import { ModalInputComponent } from '@app/_modals/modal-input/modal-input.component';
-import { dayjs, Dayjs } from '@constants/dates';
+import { dayjs, Dayjs } from '@constants/date/dates';
 
 export enum RequestType {
     GET,
@@ -8,8 +7,6 @@ export enum RequestType {
     DELETE,
     OPTIONS,
 }
-
-export const nxInput = (title:string) => ({ service: ModalInputComponent, args: { title: title } });
 
 export type Dictionary<T = unknown> = Record<string, T>;
 
@@ -51,7 +48,6 @@ export const indexed = <T extends Dictionary>(a: T[], key: keyof T & string): Di
         return acc;
     }, {});
 /**
- * Converts an array of ISO objects to be used in typeahead param of <input-group> (unique keys only)
  * @param a The array to be converted
  * @param keyColumn name of the param to be used as key
  * @param nameColumn name of the param to be used as name
@@ -62,5 +58,4 @@ export const typeahead = <T extends Dictionary>(a: T[], keyColumn: keyof T & str
         .map((x) => ({ key: String(x[keyColumn] ?? ''), name: String(x[nameColumn] ?? '') }))
         .filter((v, index, self) => index === self.findIndex((y) => y.key === v.key));
 
-// Re-export REFLECTION for backward compatibility
-export { REFLECTION } from './reflection';
+export { REFLECTION } from './model/reflection';

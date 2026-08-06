@@ -17,11 +17,9 @@ return new class extends Migration {
                 ->comment('0=regular, 1=support, 2=downpayment');
         });
 
-        // Migrate PreparedSupport (41) → Default (0) with stage=1
         DB::table('invoice_items')->where('type', 41)->update(['type' => 0, 'stage' => 1]);
     }
     public function down(): void {
-        // Revert migrated items back to PreparedSupport
         DB::table('invoice_items')->where('type', 0)->where('stage', 1)->update(['type' => 41, 'stage' => 0]);
 
         Schema::table('invoice_items', function (Blueprint $table) {

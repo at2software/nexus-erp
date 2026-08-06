@@ -41,7 +41,6 @@ class ParamController extends Controller {
             $param = $paramResolver($singleKey);
             if ($param) {
                 $historyResponse = $param->historyResponse();
-                // If it's a JsonResponse, get the original data
                 if ($historyResponse instanceof JsonResponse) {
                     $result[] = $historyResponse->getData(true);
                 } elseif ($historyResponse instanceof Response) {

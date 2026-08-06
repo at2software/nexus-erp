@@ -3,7 +3,7 @@
 @let _openRequests = openRequests();
 @let _dayList = dayList();
 <div class="row">
-    <div class="col-3">
+    <div class="col-12 col-md-6 col-xl-3">
         <div class="card mb-3">
             <div class="card-header" i18n="@@i18n.common.leaveAllowances">leave allowances</div>
             <ul class="list-group">
@@ -18,14 +18,18 @@
             </ul>
         </div>
 
-        @if (holidays()) {
+        @if (holidays().length) {
             <div class="alert alert-dark" role="alert" i18n="@@i18n.profile.holidaysLoaded">holidays loaded</div>
         }
     </div>
-    <div class="col-6">
+    <div class="col-12 col-md-6">
         @if (!_currentGrant) {
             <div class="card">
-                <empty-state [card]="false" title="Please select a leave allowance pool on the left" class="calendar" i18n-title="@@i18n.profile.infoSelectLeaveAllowance"></empty-state>
+                @if (_grants.length) {
+                    <empty-state [card]="false" title="Please select a leave allowance pool on the left" class="calendar" i18n-title="@@i18n.profile.infoSelectLeaveAllowance"></empty-state>
+                } @else {
+                    <empty-state [card]="false" title="No active leave allowance — yours has expired or has not been granted yet. Please contact HR." class="shrug" i18n-title="@@i18n.profile.noActiveLeaveAllowance"></empty-state>
+                }
             </div>
         }
         @if (_openRequests.length) {
@@ -55,7 +59,7 @@
                     <ul class="list-group">
                         <li class="list-group-item">
                             <div class="input-group">
-                                <div class="input-group-prepend col-3">
+                                <div class="input-group-prepend col-12 col-md-6 col-xl-3">
                                     <span class="input-group-text" i18n="@@i18n.common.name">name</span>
                                 </div>
                                 <input type="text" disabled class="form-control" [value]="global!.user!.getName()" />
@@ -63,7 +67,7 @@
                         </li>
                         <li class="list-group-item">
                             <div class="input-group">
-                                <div class="input-group-prepend col-3">
+                                <div class="input-group-prepend col-12 col-md-6 col-xl-3">
                                     <span class="input-group-text" i18n="@@i18n.profile.holidayPeriod">holiday period</span>
                                 </div>
                                 <input type="text" class="form-control" ngxDaterangepickerMd [(ngModel)]="holidayPeriod" [alwaysShowCalendars]="true" (datesUpdated)="onDatesUpdated()" [locale]="{ applyLabel: 'ok', format: 'DD.MM.YYYY' }" />
@@ -71,7 +75,7 @@
                         </li>
                         <li class="list-group-item">
                             <div class="input-group">
-                                <div class="input-group-prepend col-3">
+                                <div class="input-group-prepend col-12 col-md-6 col-xl-3">
                                     <span class="input-group-text" i18n="@@i18n.common.comment">comment</span>
                                 </div>
                                 <input type="text" class="form-control" [(ngModel)]="comment" />
@@ -117,7 +121,7 @@
             </div>
         }
     </div>
-    <div class="col-3">
+    <div class="col-12 col-md-6 col-xl-3">
         @if (_currentGrant) {
             <div class="card">
                 <div class="card-header hstack gap-2">

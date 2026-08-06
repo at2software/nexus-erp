@@ -6,10 +6,10 @@
             <span class="visually-hidden" i18n="@@i18n.invoices.toggleDropdown">toggle dropdown</span>
         </button>
         <div class="dropdown-menu dropdown-menu-end" ngbDropdownMenu>
-            <button type="button" class="dropdown-item" (click)="onCreate(32)">
+            <button type="button" class="dropdown-item" (click)="onCreate(InvoiceItemType.Monthly)">
                 <span i18n="@@i18n.common.monthly">monthly</span>
             </button>
-            <button type="button" class="dropdown-item" (click)="onCreate(43)">
+            <button type="button" class="dropdown-item" (click)="onCreate(InvoiceItemType.Yearly)">
                 <span i18n="@@i18n.common.yearly">yearly</span>
             </button>
         </div>

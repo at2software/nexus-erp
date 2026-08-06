@@ -72,11 +72,9 @@ trait HasAssignmentsTrait {
         return $a;
     }
     public function setMainContactByAssignment(Assignment $assignment) {
-        // Clear main contact flag from all assignments for this parent
         Assignment::where($this->toPoly())
             ->update(['flags' => DB::raw('flags & ~'.Assignment::FLAG_MAIN_CONTACT)]);
 
-        // Set main contact flag on specified assignment
         Assignment::where('id', $assignment->id)
             ->update(['flags' => DB::raw('flags | '.Assignment::FLAG_MAIN_CONTACT)]);
         return $assignment;

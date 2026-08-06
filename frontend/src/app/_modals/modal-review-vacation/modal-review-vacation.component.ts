@@ -8,14 +8,14 @@ import { HotkeyDirective } from '@directives/hotkey.directive';
 import { Vacation } from '@models/vacation/vacation.model';
 import { VacationGrant } from '@models/vacation/vacation-grant.model';
 import { VacationGrantService } from '@models/vacation/vacation-grant.service';
-
-export type ReviewDecision = { type: 'approve' } | { type: 'decline'; reason: string } | { type: 'withdraw' };
+import { ReviewDecision } from '@models/_core/modal-results';
+import { AvatarComponent } from '@shards/avatar/avatar.component';
 
 @Component({
     selector: 'modal-review-vacation',
     templateUrl: './modal-review-vacation.component.html',
     styleUrls: ['./modal-review-vacation.component.scss'],
-    imports: [FormsModule, DatePipe, DecimalPipe, NgbTooltipModule, HotkeyDirective],
+    imports: [AvatarComponent, FormsModule, DatePipe, DecimalPipe, NgbTooltipModule, HotkeyDirective],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ModalReviewVacationComponent extends ModalBaseComponent<ReviewDecision> {
@@ -34,7 +34,6 @@ export class ModalReviewVacationComponent extends ModalBaseComponent<ReviewDecis
         this.vacation = vacation;
         this.isOwner.set(vacation.isOwnedByCurrentUser());
         this.isHR.set(vacation.hasVacationPermissions());
-        // Double-click triggers the action without evaluating its `on` guard, so re-check access here.
         if (!this.isOwner() && !this.isHR()) {
             this.decline();
             return;
@@ -49,10 +48,8 @@ export class ModalReviewVacationComponent extends ModalBaseComponent<ReviewDecis
 
     isOpen = () => this.vacation.state === Vacation.STATE_REQUESTED;
     canWithdraw = () => this.isOpen() && this.isOwner();
-    // HR can approve/reject any open request, including their own (they keep withdraw too).
     canDecide = () => this.isOpen() && this.isHR();
 
-    // Vacation amounts are stored as negative deductions; display them as positive durations.
     absHours = () => Math.abs(this.vacation.amount);
     absDays = () => this.absHours() / (this.vacation.user?.getAverageHpd() ?? 0);
     remainingAfterApproval = () => (this.grant()?.remainingHours() ?? 0) + this.vacation.amount;

@@ -31,6 +31,9 @@ class CashflowBuilder {
         if (! empty($this->appends)) {
             $collection->each->append($this->appends);
         }
+        if (isset($this->closures['sum'])) {
+            $collection->each(fn ($model) => $model->cashflow_value = (float)($this->closures['sum'])($model));
+        }
         return $collection;
     }
     public function __get(string $name) {

@@ -1,5 +1,5 @@
 <div class="row">
-    <div class="col-3">
+    <div class="col-12 col-md-6 col-xl-3">
         <div class="card mb-3">
             <div class="card-header" i18n="@@i18n.common.baseSettings">base settings</div>
             <div class="card-body">
@@ -15,19 +15,19 @@
                 </div>
 
                 <div class="row g-2">
-                    <div class="col-4">
+                    <div class="col-12 col-md-6 col-xl-4">
                         <div class="form-floating">
                             <input type="number" class="form-control" id="inputKlein" [value]="pauschSmall" readonly />
                             <label for="inputKlein" i18n="@@i18n.profile.kleinePauschale">kleine pauschale</label>
                         </div>
                     </div>
-                    <div class="col-4">
+                    <div class="col-12 col-md-6 col-xl-4">
                         <div class="form-floating">
                             <input type="number" class="form-control" id="inputGross" [value]="pauschLarge" readonly />
                             <label for="inputGross" i18n="@@i18n.profile.großePauschale">große pauschale</label>
                         </div>
                     </div>
-                    <div class="col-4">
+                    <div class="col-12 col-md-6 col-xl-4">
                         <div class="form-floating">
                             <input type="number" class="form-control" id="inputUP" [value]="pauschSleep" readonly />
                             <label for="inputUP" i18n="@@i18n.common.overnightStay">overnight stay</label>
@@ -40,7 +40,7 @@
         </div>
     </div>
 
-    <div class="col-6" #expenseForm>
+    <div class="col-12 col-md-6" #expenseForm>
         <div class="card mb-3">
             <div class="card-header">
                 <span i18n="@@i18n.profile.travelExpenses">travel expenses</span>
@@ -175,7 +175,7 @@
                                     <input type="text" [(ngModel)]="e.name" suffix="" />
                                 </div>
                             }
-                            <div class="col-4">
+                            <div class="col-12 col-md-6 col-xl-4">
                                 <input type="number" [suffix]="e.suffix" [(ngModel)]="e.value" />
                             </div>
                             <div class="me-2 col-2 text-end">
@@ -198,7 +198,7 @@
             </div>
         </div>
     </div>
-    <div class="col-3">
+    <div class="col-12 col-md-6 col-xl-3">
         <div class="card mb-3" dnd="uploads" [collect]="true" [dndAllowed]="['application/pdf']">
             <div class="card-header" i18n="@@i18n.common.attachments">attachments</div>
             @let _dragDrop = dragDrop();

@@ -22,7 +22,7 @@
 
 @if (!_loading && !_error && _workloadData) {
     <div class="row" cdkDropListGroup>
-        <div class="col-3">
+        <div class="col-12 col-md-3">
             <planner-backlog
                 [unconfiguredMilestones]="_workloadData.unconfigured_milestones"
                 [undatedMilestones]="undatedMilestones()"
@@ -32,7 +32,7 @@
                 (addMilestone)="onAddMilestone($event)"
             ></planner-backlog>
         </div>
-        <div class="col-9">
+        <div class="col-12 col-md-9">
             <div class="card">
                 <div class="card-body">
                     <capacity-calendar

@@ -1,7 +1,7 @@
 @let _invoice = object();
 <app-header>
     @if (_invoice.company) {
-        <div class="logo" [style.background-image]="'url(' + _invoice.company.icon + ')'" [smartLink]="`/customers/${_invoice.company_id}`"></div>
+        <div class="logo" [style.background-image]="'url(' + _invoice.company.getAvatar() + ')'" [smartLink]="`/customers/${_invoice.company_id}`"></div>
     }
     <div class="h1 d-flex align-items-center">
         <div class="me-3">

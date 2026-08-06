@@ -1,7 +1,7 @@
-import { ElementRef, Injectable } from '@angular/core';
+import { ElementRef, Service } from '@angular/core';
 import { HeaderComponent } from '../header/header.component';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ToolbarService {
     deferred: ElementRef[] = [];
     component: HeaderComponent | undefined = undefined;

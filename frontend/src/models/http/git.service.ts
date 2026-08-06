@@ -1,5 +1,5 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { GlobalService } from '../global.service';
 import { Project } from '@models/project/project.model';
 import { firstValueFrom } from 'rxjs';
@@ -10,7 +10,7 @@ interface IUser {
     name: string;
 }
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class GitService {
     #instances: GitServiceInstance[] = [];
     #initialized = false;
@@ -50,7 +50,6 @@ export class GitService {
     serviceFor = (project: Project): GitService | undefined => (this.instanceAndPath(project)[0] ? this : undefined);
     getRepositories = () => this.#global.getEnc('git');
 
-    /** Builds an API v4 URL for the given instance, optionally with query params. */
     #urlFor = (instance: GitServiceInstance, path: string, params?: Dictionary<string>, rawUrl = false) => {
         const base = rawUrl ? '' : instance.url + 'api/v4/';
         const query = params && Object.keys(params).length ? '?' + new URLSearchParams(params).toString() : '';

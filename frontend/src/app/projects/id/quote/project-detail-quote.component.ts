@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
-import { VcardClass } from '@models/vcard/VcardClass';
+import { VcardClass } from '@models/vcard/vcard-class.model';
 import { Assignee } from '@models/assignee/assignee.model';
 import { InvoicePrepare } from '@app/invoices/_shards/invoice-prepare/invoice-prepare';
 import { PdfCreationType } from '@enums/PdfCreationType';
@@ -15,12 +15,13 @@ import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { TextParamEditorComponent } from '@shards/text-param-editor/text-param-editor.component';
 import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { SafePipe } from '@pipes/safe.pipe';
+import { AvatarComponent } from '@shards/avatar/avatar.component';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'project-detail-quote',
     templateUrl: './project-detail-quote.component.html',
-    imports: [ToolbarComponent, ScrollbarComponent, TextParamEditorComponent, InvoicePrepare, NgbDropdownModule, SafePipe],
+    imports: [AvatarComponent, ToolbarComponent, ScrollbarComponent, TextParamEditorComponent, InvoicePrepare, NgbDropdownModule, SafePipe],
 })
 export class ProjectDetailQuoteComponent {
     personalized!: VcardClass;
@@ -80,7 +81,7 @@ export class ProjectDetailQuoteComponent {
             });
         }
     }
-    onQuote = () => this.#projectService.makePdf(this.parent.object(), PdfCreationType.Create);
+    onQuote = () => this.#projectService.makePdf(this.parent.object(), PdfCreationType.Create, () => this.parent.reload());
 
     warningMissingContact = () => !this.parent.object()?.personalized?.firstName;
     adresseeName = () => {

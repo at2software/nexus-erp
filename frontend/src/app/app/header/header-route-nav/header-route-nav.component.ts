@@ -55,7 +55,6 @@ export class HeaderRouteNavComponent {
                 .filter((route) => route.data?.['nav'])
                 .filter((route) => {
                     const navData = route.data!['nav'] as NavRouteData;
-                    // Check role permission
                     if (navData.roles) {
                         const requiredRoles = navData.roles.split('|');
                         if (!this.#global.user?.hasAnyRole(requiredRoles)) {
@@ -89,7 +88,6 @@ export class HeaderRouteNavComponent {
             .filter((child) => child.data?.['nav'])
             .filter((child) => {
                 const navData = child.data!['nav'] as NavRouteData;
-                // Check role permission
                 if (navData.roles) {
                     const requiredRoles = navData.roles.split('|');
                     if (!this.#global.user?.hasAnyRole(requiredRoles)) {

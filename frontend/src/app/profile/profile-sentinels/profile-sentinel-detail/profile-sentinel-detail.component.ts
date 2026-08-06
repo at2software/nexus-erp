@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal } from '@angular/core';
 import { tracked } from '@constants/tracked';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Sentinel } from '@models/sentinels/sentinel.model';
-import { SentinelService } from '@models/sentinels/sentinel.service';
+import { modelListResource, modelResource } from '@models/http/model-resource';
+import { Sentinel } from '@models/sentinel/sentinel.model';
+import { SentinelService } from '@models/sentinel/sentinel.service';
 import { GlobalService } from '@models/global.service';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
 import { ProfileSentinelTriggerModalComponent } from '../profile-sentinel-node/profile-sentinel-trigger-modal/profile-sentinel-trigger-modal.component';
@@ -15,6 +17,10 @@ import { SENTINEL_CONDITIONS, SentinelConditionInstance } from '../sentinel-cond
 import { SENTINEL_COMMANDS, SentinelCommandInstance } from '../sentinel-command.model';
 import { PermissionsDirective } from '@directives/permissions.directive';
 import { AutosaveDirective } from '@directives/autosave.directive';
+
+const parseJson = <T>(json: string | undefined): T => {
+    try { return JSON.parse(json || '[]'); } catch { return [] as T; }
+};
 
 @Component({
     selector: 'profile-sentinel-detail',
@@ -29,54 +35,35 @@ export class ProfileSentinelDetailComponent {
     #sentinelService = inject(SentinelService);
     #global = inject(GlobalService);
 
-    protected readonly _sentinel = signal<Sentinel | undefined>(undefined);
+    readonly #routeId = toSignal(this.#route.params.pipe(map((params) => params['id'] as string | undefined)));
 
-    readonly sentinel = tracked(this._sentinel);
-    conditions = signal<SentinelConditionInstance[][]>([]);
-    commands = signal<SentinelCommandInstance[]>([]);
-    circularWarning = signal<string | null>(null);
+    readonly #allSentinels = modelListResource(() => this.#sentinelService.index());
+    readonly #detail = modelResource(this.#routeId, (id) => this.#sentinelService.show(id));
 
-    #allSentinels: Sentinel[] = [];
+    readonly #sentinel = linkedSignal(() => this.#detail.value());
+    readonly sentinel = tracked(this.#sentinel);
 
-    constructor() {
-        this.#sentinelService.index().subscribe((sentinels) => {
-            this.#allSentinels = sentinels.map((s) => Sentinel.fromJson(s));
-        });
+    readonly conditions = linkedSignal<SentinelConditionInstance[][]>(() => parseJson(this.#sentinel()?.condition));
+    readonly commands = linkedSignal<SentinelCommandInstance[]>(() => parseJson(this.#sentinel()?.result));
 
-        this.#route.params.pipe(takeUntilDestroyed()).subscribe((params) => {
-            if (params['id']) {
-                this.#sentinelService.show(params['id']).subscribe((_) => {
-                    this._sentinel.set(Sentinel.fromJson(_));
-                    this.#parseConditions();
-                    this.#parseCommands();
-                    this.checkCircularReferences();
-                });
-            }
-        });
-    }
-
-    checkCircularReferences() {
-        const s = this.sentinel();
-        if (!s) return;
-        this.circularWarning.set(null);
+    readonly circularWarning = computed(() => {
+        const s = this.#sentinel();
+        if (!s) return null;
 
         const myTriggerTable = s.table_name;
         const myTargetTables = this.#getActionTargetTables(this.commands());
 
-        for (const other of this.#allSentinels) {
+        for (const other of this.#allSentinels.value()) {
             if (other.id === s.id) continue;
-            const otherTargetTables = this.#getActionTargetTables(this.#parseCommandsFromJson(other.result));
-
-            if (otherTargetTables.includes(myTriggerTable)) {
-                this.circularWarning.set(`"${other.name}" creates "${myTriggerTable}" which triggers this sentinel.`);
-                return;
+            if (this.#getActionTargetTables(parseJson<SentinelCommandInstance[]>(other.result)).includes(myTriggerTable)) {
+                return `"${other.name}" creates "${myTriggerTable}" which triggers this sentinel.`;
             }
             if (myTargetTables.includes(other.table_name)) {
-                this.circularWarning.set(`This sentinel creates "${other.table_name}" which triggers "${other.name}".`);
-                return;
+                return `This sentinel creates "${other.table_name}" which triggers "${other.name}".`;
             }
         }
-    }
+        return null;
+    });
 
     #getActionTargetTables(commands: SentinelCommandInstance[]): string[] {
         const tables: string[] = [];
@@ -89,20 +76,6 @@ export class ProfileSentinelDetailComponent {
             }
         }
         return tables;
-    }
-
-    #parseCommandsFromJson(json: string): SentinelCommandInstance[] {
-        try { return JSON.parse(json || '[]'); } catch { return []; }
-    }
-
-    #parseConditions() {
-        try { this.conditions.set(JSON.parse(this.sentinel()?.condition || '[]')); }
-        catch { this.conditions.set([]); }
-    }
-
-    #parseCommands() {
-        try { this.commands.set(JSON.parse(this.sentinel()?.result || '[]')); }
-        catch { this.commands.set([]); }
     }
 
     getTriggerLabel = () => ObserverTrigger[this.sentinel()?.trigger ?? 0] || 'Unknown';
@@ -330,29 +303,14 @@ export class ProfileSentinelDetailComponent {
     #updateConditions() {
         const s = this.sentinel()!;
         s.condition = JSON.stringify(this.conditions());
-        s.update({ condition: s.condition }).subscribe((_) => {
-            this._sentinel.set(Sentinel.fromJson(_));
-            this.#parseConditions();
-        });
+        s.update({ condition: s.condition }).subscribe((_) => this.#sentinel.set(Sentinel.fromJson(_)));
     }
 
     #updateCommands() {
         const s = this.sentinel()!;
         s.result = JSON.stringify(this.commands());
-        s.update({ result: s.result }).subscribe((_) => {
-            this._sentinel.set(Sentinel.fromJson(_));
-            this.#parseCommands();
-        });
+        s.update({ result: s.result }).subscribe((_) => this.#sentinel.set(Sentinel.fromJson(_)));
     }
 
-    #reload() {
-        const s = this.sentinel();
-        if (!s) return;
-        this.#sentinelService.show(String(s.id)).subscribe((_) => {
-            this._sentinel.set(Sentinel.fromJson(_));
-            this.#parseConditions();
-            this.#parseCommands();
-            this.checkCircularReferences();
-        });
-    }
+    #reload = () => this.#detail.reload();
 }

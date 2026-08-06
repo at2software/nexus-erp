@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, ElementRef, effect, input, viewChild } from '@angular/core';
 import { Dictionary } from '@constants/constants';
 
-import { CategoryBreakdown } from '@models/api-response';
+import { CategoryBreakdownDto } from '@models/_core/api-response';
 
 @Component({
     selector: 'debrief-radar-chart',
@@ -17,7 +17,7 @@ import { CategoryBreakdown } from '@models/api-response';
     ],
 })
 export class DebriefRadarChartComponent {
-    categories = input<CategoryBreakdown[]>([]);
+    categories = input<CategoryBreakdownDto[]>([]);
     hideLegend = input<boolean>(false);
     height = input<string>('200px');
 

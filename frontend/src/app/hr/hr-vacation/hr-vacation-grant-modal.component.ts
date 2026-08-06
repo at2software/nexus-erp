@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgbDateAdapter, NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap';
-import { dayjs } from '@constants/dates';
+import { dayjs } from '@constants/date/dates';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { NgbDateCarbonAdapter } from '@directives/ngb-date.adapter';
 import { User } from '@models/user/user.model';

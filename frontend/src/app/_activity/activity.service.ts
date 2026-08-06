@@ -1,8 +1,8 @@
-import { Injectable, Type, signal } from '@angular/core';
+import { Type, signal, Service } from '@angular/core';
 import { ActivityTabComponent } from './activity-tab.component';
 import { ActivityComponent } from './activity.component';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ActivityService {
     setContainer!: (value: ActivityComponent | PromiseLike<ActivityComponent>) => void;
 

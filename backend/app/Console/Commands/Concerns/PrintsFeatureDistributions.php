@@ -4,7 +4,6 @@ namespace App\Console\Commands\Concerns;
 
 use Illuminate\Support\Collection;
 
-/** Shared "n / missing / min / max / mean / median / stddev" console table row, used by the ml:* dry-run commands. */
 trait PrintsFeatureDistributions {
     private function printDistribution(string $label, Collection $values): void {
         $numeric = $values->filter(fn ($v) => is_numeric($v))->map(fn ($v) => (float)$v)->values();

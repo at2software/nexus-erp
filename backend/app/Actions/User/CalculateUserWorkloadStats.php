@@ -18,9 +18,6 @@ class CalculateUserWorkloadStats {
         $sickDays     = $this->expandVacationDays($vacations->where('state', VacationState::Sick));
 
         $data     = $workData['data'] ?? collect();
-        // Average runs from the earliest tracked day up to (and including) yesterday only:
-        // today is deliberately excluded so the value does not drift as hours are booked
-        // during the day, and today's required hours never count toward the ratio.
         $startDay = strtotime($data->min('key') ?? now()->subDays(28)->format('Y-m-d'));
         $endDay   = strtotime('yesterday midnight');
 
@@ -89,11 +86,6 @@ class CalculateUserWorkloadStats {
         ];
     }
 
-    /**
-     * Expand a collection of vacations into a unique list of local Y-m-d day strings.
-     * Reads the Carbon attributes directly (app timezone) instead of serialized UTC
-     * strings, which would otherwise shift each day one day earlier.
-     */
     private function expandVacationDays(Collection $vacations): array {
         $days = [];
         foreach ($vacations as $vacation) {

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { NgbModalOptions } from '@ng-bootstrap/ng-bootstrap';
-import { Milestone } from '@models/milestones/milestone.model';
+import { Milestone } from '@models/milestone/milestone.model';
 import { Project } from '@models/project/project.model';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { MilestonePopupComponent } from '@app/projects/_shards/custom-gantt/milestone-popup/milestone-popup.component';

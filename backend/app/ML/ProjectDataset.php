@@ -14,7 +14,6 @@ use Illuminate\Support\Collection;
  * (ProjectHoursModel::predict()).
  */
 class ProjectDataset {
-    /** Feature names, in extraction order. */
     public const FEATURES = [
         'work_estimated',
         'net',
@@ -32,11 +31,6 @@ class ProjectDataset {
 
     public const LABEL = 'hours_invested';
 
-    /**
-     * Finished, budget-based projects with a real quote. `hours_invested`
-     * is computed (foci sum), so it's filtered in PHP after loading rather
-     * than in SQL.
-     */
     public static function eligibleQuery(): Builder {
         return Project::onlyFinished()
             ->whereBudgetBased()
@@ -59,9 +53,6 @@ class ProjectDataset {
      * @return array<string, mixed> feature values keyed by ProjectDataset::FEATURES, plus the label
      */
     public static function extractRow(Project $project, array $history = []): array {
-        // assignees() includes customer/company contacts (assignee_type=CompanyContact),
-        // not just the internal team actually doing the work — team_size/hours_planned_sum
-        // must be restricted to User assignees or "team size" is inflated by client contacts.
         $workers  = $project->assignees->filter(fn ($assignment) => $assignment->assignee_type === User::class);
         $teamSize = $workers->count();
 
@@ -88,9 +79,6 @@ class ProjectDataset {
     }
 
     /**
-     * extractRow() for a whole collection, with leak-safe Phase-2 history
-     * features computed once across the set (see ProjectHistory).
-     *
      * @param Collection<int, Project> $projects
      * @return Collection<int, array<string, mixed>>
      */
@@ -100,12 +88,10 @@ class ProjectDataset {
         return $projects->map(fn (Project $project) => self::extractRow($project, $history[$project->id] ?? []));
     }
 
-    /** Right-skewed hours → log-transform for the regression target. */
     public static function logLabel(float $hoursInvested): float {
         return log($hoursInvested + 1);
     }
 
-    /** Hours-per-day config used to convert day-denominated quote units to hours. */
     private static function hoursPerDay(): float {
         return (float)(Param::get('INVOICE_HPD')->value ?? 8);
     }

@@ -1,28 +1,25 @@
-import 'reflect-metadata';
 import { ApplicationConfig, EnvironmentProviders, ErrorHandler, inject, LOCALE_ID, Provider, provideAppInitializer, provideZonelessChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { AppComponent } from '@app/app/app.component';
 import { APP_BASE_HREF, PlatformLocation, registerLocaleData } from '@angular/common';
-import { HttpFeature, HttpFeatureKind, provideHttpClient, withInterceptors } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
-import { ConfirmationService } from './app/_modals/modal-confirm/confirmation.service';
+import { HttpFeature, HttpFeatureKind, provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
+import { provideRouter, withNavigationErrorHandler, withPreloading, PreloadAllModules } from '@angular/router';
 import { nexusHttpInterceptor } from '@app/http.interceptor';
-import { NxService } from '@app/nx/nx.service';
 import { RouteChangeListenerService } from '@app/routeChangeListener.service';
 import { GlobalService } from '@models/global.service';
 import { AuthenticationService } from '@models/auth.service';
-import { ModalBaseService } from '@app/_modals/modal-base-service';
-import { PermissionsGuard } from '@guards/permissions.guard';
 import { routes } from './app/app.routes';
 import { LocaleService, LOCALE_CONFIG } from 'ngx-daterangepicker-material';
-import { ChunkErrorHandler } from '@constants/ChunkErrorHandler';
+import { ChunkErrorHandler, handleChunkError, isChunkError, registerChunkErrorListeners } from '@constants/ChunkErrorHandler';
 import { provideEchartsCore } from 'ngx-echarts';
 import localeDe from '@angular/common/locales/de';
 import './app/custom-interfaces';
-import { MODEL_REGISTRY } from '@constants/model-registry';
-import { MODEL_REGISTRY_TOKEN } from '@constants/model-registry.token';
+import '@app/_modals/modal-registrations';
+import { MODEL_REGISTRY } from '@constants/model/model-registry';
+import { MODEL_REGISTRY_TOKEN } from '@constants/model/model-registry.token';
 
 registerLocaleData(localeDe);
+registerChunkErrorListeners();
 
 AuthenticationService.loadSysInfo().then(async (sysinfo) => {
     if (sysinfo) {
@@ -38,22 +35,22 @@ AuthenticationService.loadSysInfo().then(async (sysinfo) => {
             providers: [
                 provideZonelessChangeDetection(),
                 { provide: MODEL_REGISTRY_TOKEN, useFactory: () => MODEL_REGISTRY },
-                NxService,
-                GlobalService,
-                ConfirmationService,
-                AuthenticationService,
-                ModalBaseService,
-                PermissionsGuard,
                 LocaleService,
 
-                provideHttpClient(...keycloakHttpOptions, withInterceptors([nexusHttpInterceptor])),
+                provideHttpClient(withXhr(), ...keycloakHttpOptions, withInterceptors([nexusHttpInterceptor])),
                 { provide: LOCALE_CONFIG, useValue: { format: 'DD.MM.YYYY' } },
                 { provide: ErrorHandler, useClass: ChunkErrorHandler },
                 { provide: APP_BASE_HREF, useFactory: (s: PlatformLocation) => s.getBaseHrefFromDOM(), deps: [PlatformLocation] },
                 { provide: LOCALE_ID, deps: [GlobalService], useFactory: (g: GlobalService) => g.locale },
                 provideEchartsCore({ echarts: () => import('echarts') }),
 
-                provideRouter(routes()),
+                provideRouter(
+                    routes(),
+                    withPreloading(PreloadAllModules),
+                    withNavigationErrorHandler(({ error }) => {
+                        if (isChunkError(error)) handleChunkError(error);
+                    }),
+                ),
                 provideAppInitializer(() => { inject(RouteChangeListenerService); }),
                 ...keycloakProviders,
             ],

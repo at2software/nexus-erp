@@ -23,8 +23,6 @@ export class ProjectInvoicingGaugeComponent {
         const rate = this.customerRate();
         const net = this.net();
 
-        // dark-grey covers the rejection zone (0 → rejection_rate = 1-acceptance_rate)
-        // green covers the acceptance zone (rejection_rate → 1)
         const rejectionRate = rate != null ? Math.max(0.001, 1 - rate) : null;
         const colorStops: [number, string][] =
             rejectionRate != null
@@ -108,7 +106,6 @@ export class ProjectInvoicingGaugeComponent {
         return { prob, budgetProb, timeMult };
     }
 
-    // Returns the y of the last curve point whose x < threshold (binary search)
     #findYBelowThreshold(curve: ProbabilityCurvePoint[], threshold: number): number | null {
         let lo = 0,
             hi = curve.length - 1,

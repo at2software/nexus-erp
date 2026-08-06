@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, linkedSignal, signal, untracked, viewChild } from '@angular/core';
 import { tracked } from '@constants/tracked';
 import { Router } from '@angular/router';
 import { CompanyService } from '@models/company/company.service';
 import { Connection } from '@models/company/connection.model';
 import { Company } from '@models/company/company.model';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { CustomerDetailGuard } from '@app/customers/customers.details.guard';
 import { NetworkChart } from '@shards/network-chart/network-chart.component';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
@@ -12,6 +12,7 @@ import { NgbPopoverModule } from '@ng-bootstrap/ng-bootstrap';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
 import { Nx } from '@app/nx/nx.directive';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
+import { modelListResource } from '@models/http/model-resource';
 
 @Component({
     selector: 'customer-connections',
@@ -26,26 +27,25 @@ export class CustomerConnections {
     #router = inject(Router);
 
     myCompany = tracked(this.#parent.object);
-    connections = signal<Connection[]>([]);
     selectedCompany = signal<Company | null>(null);
 
     chart = viewChild.required(NetworkChart);
     popSearch = viewChild<SearchInputComponent>('popSearch');
 
-    constructor() {
-        effect(() => {
-            this.myCompany();
-            untracked(() => this.reload());
-        });
-    }
+    #connections = modelListResource(
+        () => this.#parent.object()?.id || undefined,
+        (companyId) => this.#companyService.showConnections(companyId),
+    );
+    connections = linkedSignal<Connection[], Connection[]>({
+        source: this.#connections.value,
+        computation: (rows) => {
+            const myCompany = untracked(this.myCompany);
+            rows.forEach((_) => _.addCompanyAction(_.otherCompany(myCompany)));
+            return rows;
+        },
+    });
 
-    reload() {
-        const myCompany = this.myCompany();
-        this.#companyService.showConnections(myCompany).subscribe((data) => {
-            data.forEach((_) => _.addCompanyAction(_.otherCompany(myCompany)));
-            this.connections.set(data);
-        });
-    }
+    reload = () => this.#connections.reload();
 
     singleActionResolved() {
         this.chart().updateData();

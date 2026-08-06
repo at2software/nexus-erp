@@ -70,6 +70,20 @@
     }
 }
 
+.locale-toggle {
+    width: auto !important;
+    display: inline-flex !important;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0 0.35rem !important;
+
+    .locale-toggle-label {
+        font-size: 0.75rem;
+        line-height: 1;
+        white-space: nowrap;
+    }
+}
+
 ::ng-deep {
     p { margin-bottom: 0; }
 }

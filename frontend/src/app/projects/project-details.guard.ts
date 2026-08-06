@@ -1,10 +1,10 @@
-import { Injectable, inject } from '@angular/core';
-import { IHasFociGuard } from '@models/focus/hasFoci.interface';
+import { inject, Service } from '@angular/core';
+import { IHasFociGuard } from '@models/focus/has-foci.interface';
 import { DetailGuard } from '@guards/detail.guard';
 import { Project } from '@models/project/project.model';
 import { ProjectService } from '@models/project/project.service';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ProjectDetailGuard extends DetailGuard<Project> implements IHasFociGuard {
     parent?: Project;
     service = inject(ProjectService);

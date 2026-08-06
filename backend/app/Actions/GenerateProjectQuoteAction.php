@@ -16,22 +16,28 @@ class GenerateProjectQuoteAction {
             'project_id'       => $project->id,
             'project_state_id' => 6,
         ]);
-        $template                                  = Document::getPdfTemplate();
         [$items, $footer, $all, $discounts, $lang] = Invoice::enhancedItemsForPdf(
             $project->indexedItems()->whereStage(0)->get(),
             $project->company
         );
 
-        $content       = $this->buildContent($project, $items, $footer, $discounts, $lang);
-        $template      = str_replace('[content]', $content, $template);
-        $projectHeader = '<table style="width:100%;border-collapse:collapse;margin:0;padding:0;"><tr>'
-            .'<td style="font-weight:bold;white-space:nowrap;vertical-align:top;padding:0 4px 0 0;">'.__('pdf.project', [], $lang).': </td>'
-            .'<td style="vertical-align:top;padding:0;">'.$project->name.'</td>'
-            .'</tr></table>';
-        $template      = Document::personalized($template, $project->addressee, [$projectHeader], project: $project);
+        $title       = __('pdf.quote', [], $lang);
+        $quoteNumber = Project::getCurrentQuoteNumber();
+        $validUntil  = date('d.m.Y', strtotime('+'.Document::getQuoteValidity($project).' days'));
 
-        $data     = Document::renderPdf($template);
-        $filename = $this->makeFileName($project, $lang);
+        $template = Document::getPdfTemplate($title, footerContext: trim($title.' '.$quoteNumber));
+        $content  = $this->buildContent($project, $items, $footer, $discounts, $lang);
+        $template = str_replace('[content]', $content, $template);
+        $headers  = [
+            Document::pdfBlockRow(__('pdf.project', [], $lang), $project->name)
+            .Document::pdfBlockRow(__('pdf.quote_number', [], $lang), $quoteNumber)
+            .Document::pdfBlockRow(__('pdf.valid_until', [], $lang), $validUntil),
+        ];
+        $template = Document::personalized($template, $project->addressee, $headers, project: $project);
+
+        $data = Document::renderPdf($template);
+        Project::incrementQuoteNumber();
+        $filename = $this->makeFileName($project, $lang, $quoteNumber);
 
         File::saveTo('quotes/'.$filename, $data, $project, 'invoices.values');
         return File::streamPdf($data, utf8_decode($filename));
@@ -52,9 +58,23 @@ class GenerateProjectQuoteAction {
         }
         $content .= '<br>';
 
-        $content .= $project->param('PROJECT_SUFFIX', true)->localizedValue($lang, $formality);
+        $content .= $project->param('PROJECT_SUFFIX', true)->localizedValue($lang, $formality) ?? '';
+        $content .= $this->renderAcceptanceHtml($lang);
+
+        $legal = $project->param('PROJECT_LEGAL', true)->localizedValue($lang, $formality) ?? '';
+        $content .= trim(strip_tags($legal)) === '' ? '' : '<div class="legal">'.$legal.'</div>';
+
         $content = str_replace('[payment-plan]', $this->renderPaymentPlanHtml($project, $lang), $content);
         return $content;
+    }
+    private function renderAcceptanceHtml(string $lang): string {
+        return '<div class="acceptance">'
+            .'<div class="acceptance-title">'.__('pdf.acceptance_title', [], $lang).'</div>'
+            .'<div>'.__('pdf.acceptance_hint', [], $lang).'</div>'
+            .'<table style="width:100%;border-collapse:collapse;margin-top:14mm;"><tr>'
+            .'<td style="width:50%;"><div class="signature-line">'.__('pdf.place_date', [], $lang).'</div></td>'
+            .'<td style="width:50%;"><div class="signature-line">'.__('pdf.signature', [], $lang).'</div></td>'
+            .'</tr></table></div>';
     }
     private function renderPaymentPlanHtml(Project $project, string $lang): string {
         $steps = $project->getEffectivePaymentPlan();
@@ -98,7 +118,8 @@ class GenerateProjectQuoteAction {
              .$rows
              .'</table>';
     }
-    private function makeFileName(Project $project, string $lang): string {
-        return date('Y-m-d').' '.__('pdf.quote', [], $lang).' '.File::filename_safe($project->name).'.pdf';
+    private function makeFileName(Project $project, string $lang, string $quoteNumber): string {
+        $parts = array_filter([date('Y-m-d'), __('pdf.quote', [], $lang), $quoteNumber, File::filename_safe($project->name)]);
+        return implode(' ', $parts).'.pdf';
     }
 }

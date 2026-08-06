@@ -30,8 +30,6 @@
     $tooltip-color             : var.$tooltip-color,
     $primary                   : colors.$primary,
     $secondary                 : colors.$secondary,
-    // Brand state colors (from the palette map) so .btn-*/.alert-*/.badge
-    // match the .text-*/.bg-* utilities instead of Bootstrap's defaults.
     $success                   : map.get(colors.$custom-colors, 'success'),
     $danger                    : map.get(colors.$custom-colors, 'danger'),
     $warning                   : map.get(colors.$custom-colors, 'warning'),

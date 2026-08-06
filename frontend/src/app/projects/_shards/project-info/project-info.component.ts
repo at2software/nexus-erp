@@ -6,15 +6,21 @@ import { PermissionsDirective } from '@directives/permissions.directive';
 import { GlobalService } from '@models/global.service';
 import { Project } from '@models/project/project.model';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 import { MoneyPipe } from '@pipes/money.pipe';
-import { MILESTONE_STATES } from '@models/milestones/milestone-state.enum';
+import { MILESTONE_STATES } from '@models/milestone/milestone-state.enum';
 import { EchartsComponent } from '@charts/echarts-wrapper/echarts-wrapper.component';
 import { Color } from '@constants/Color';
 import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS, ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
 import { ProjectState } from '@models/project/project-state.model';
 import { NComponent } from '@shards/n/n.component';
 import { MlReliabilityDirective } from '@directives/ml-reliability.directive';
+
+interface WorkShare {
+    val: number;
+    name: string;
+    color: string;
+}
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,7 +48,6 @@ export class ProjectInfoComponent {
         const dangerColor = Color.fromVar('danger').toHexString();
         const workShares = p.var.workshares || [];
 
-        type WorkShare = { val: number; name: string; color: string };
         const baseData = (workShares as WorkShare[]).map((u) => ({
             value: u.val,
             name: u.name,
@@ -104,6 +109,16 @@ export class ProjectInfoComponent {
         const countMap: Record<number, number> = { 0: counts.todo, 1: counts.in_progress, 2: counts.done };
         return `${MILESTONE_STATES[stateId]?.name || ''}: ${countMap[stateId] ?? 0}`;
     }
+
+    renameProject = () => {
+        const p = this.project();
+        this.inputModalService.open($localize`:@@i18n.common.rename:rename`, false, undefined, p.name).then((result) => {
+            const name = result?.text?.trim();
+            if (!name || name === p.name) return;
+            p.name = name;
+            p.update().subscribe();
+        });
+    };
 
     updateLeadProbability = () => {
         this.inputModalService.open($localize`:@@i18n.project.leadProbability:lead probability`).then((result) => {

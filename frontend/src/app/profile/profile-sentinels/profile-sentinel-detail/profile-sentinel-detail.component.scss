@@ -1,4 +1,3 @@
-// VS Code-like Sentinel Editor Styles
 
 .sentinel-editor {
   background: var(--bs-card-bg);
@@ -216,7 +215,6 @@ code {
   color: #ce9178;
 }
 
-// For Each block styles
 .for-each-block {
   border-left: 3px solid var(--bs-purple);
   margin: 0.5rem 0;
@@ -266,7 +264,6 @@ code {
   }
 }
 
-// Variable highlighting in strings (VS Code style)
 ::ng-deep .var-highlight {
   color: #9cdcfe; // VS Code variable blue
   font-weight: 500;

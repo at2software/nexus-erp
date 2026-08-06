@@ -5,12 +5,12 @@ import { CompanyContact } from '@models/company/company-contact.model';
 import { CompanyContactService } from '@models/company/company-contact.service';
 import { VcardComponent } from '../vcard/vcard.component';
 import { Company } from '@models/company/company.model';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { CustomerDetailGuard } from '@app/customers/customers.details.guard';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
 import { Nx } from '@app/nx/nx.directive';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
-import { CompanyContactStoreResponse } from '@models/api-response';
+import { CompanyContactStoreDto } from '@models/_core/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,6 +27,8 @@ export class EditVcardTsComponent {
 
     #router = inject(ActivatedRoute);
     #parent = inject(CustomerDetailGuard);
+
+    company = this.#parent.object;
     #companyContactService = inject(CompanyContactService);
     #destroyRef = inject(DestroyRef);
 
@@ -57,7 +59,7 @@ export class EditVcardTsComponent {
         if (this.card().company_id !== company.id) {
             this.searchQuery = '';
             this.#companyContactService
-                .store<CompanyContactStoreResponse>({
+                .link<CompanyContactStoreDto>({
                     company_id: company.id,
                     contact_id: this.card().contact_id,
                     vcard: 'TEL:\nEMAIL:\nTEL;type=cell:\nTITLE:',

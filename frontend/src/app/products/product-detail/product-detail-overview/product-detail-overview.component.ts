@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { tracked } from '@constants/tracked';
-import { rxResource } from '@angular/core/rxjs-interop';
-import { of } from 'rxjs';
+import { modelResource } from '@models/http/model-resource';
 import { MoneyShortPipe } from '@pipes/mshort.pipe';
 import { LoadingPipe } from '@pipes/loading.pipe';
 import { MoneyPipe } from '@pipes/money.pipe';
@@ -31,10 +30,10 @@ export class ProductDetailOverviewComponent {
     readonly global = inject(GlobalService);
 
     readonly #productService = inject(ProductService);
-    readonly #customersData = rxResource({
-        params: () => this.parent.object(),
-        stream: ({ params: product }) => product ? this.#productService.indexCustomers(product) : of(null),
-    });
+    readonly #customersData = modelResource(
+        () => this.parent.object()?.id || undefined,
+        (id) => this.#productService.indexCustomers(id),
+    );
 
     readonly item = signal<InvoiceItem | undefined>(undefined);
     readonly customers = computed<Company[]>(() => this.#customersData.value()?.customers ?? []);

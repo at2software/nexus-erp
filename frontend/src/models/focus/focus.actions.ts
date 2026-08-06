@@ -1,22 +1,21 @@
-import { NxAction } from '@app/nx/nx.actions';
+import { NxAction } from '@models/_core/nx.actions';
 import { Focus } from './focus.model';
-import { ModalBaseService } from '@app/_modals/modal-base-service';
-import { ModalEditFocusComponent } from '@app/_modals/modal-edit-focus/modal-edit-focus.component';
-import { ModalLinkExtIssueComponent, ExtIssueLinkResult } from '@app/_modals/modal-link-ext-issue/modal-link-ext-issue.component';
-import { NxGlobal } from '@app/nx/nx.global';
+import { MODAL } from '@models/_core/modal-registry';
+import { ExtIssueLinkResult } from '@models/_core/modal-results';
+import { nx } from '@models/_core/nx-bridge';
 
 export function getFocusActions(self: Focus): NxAction[] {
     return [
         {
             title: $localize`:@@i18n.common.edit:edit`,
-            action: () => ModalBaseService.open(ModalEditFocusComponent, self),
+            doubleClick: true,
+            action: () => nx().openModal(MODAL.editFocus, self),
         },
-        ...NxGlobal.clipboardActions(self),
+        ...nx().clipboardActions(self),
         {
-            // Opens the picker once; the chosen issue is applied to every selected focus.
             title: $localize`:@@i18n.issues.linkExternalIssue:link external issue`,
             group: true,
-            interrupt: { service: ModalLinkExtIssueComponent, args: self },
+            interrupt: { service: MODAL.linkExtIssue, args: self },
             action: (_resolve, _ctx, result: ExtIssueLinkResult | undefined) =>
                 result ? self.update({ ext_issue_plugin_link_id: result.ext_issue_plugin_link_id, ext_issue_id: result.ext_issue_id }) : undefined,
         },
@@ -57,9 +56,9 @@ export function getFocusActions(self: Focus): NxAction[] {
         {
             title: 'Assign',
             group: true,
-            on: () => !!(NxGlobal.global.userFor(self.user_id)?.latest_foci?.length),
+            on: () => !!(nx().global.userFor(self.user_id)?.latest_foci?.length),
             children: () => {
-                const user = NxGlobal.global.userFor(self.user_id);
+                const user = nx().global.userFor(self.user_id);
                 return (user?.latest_foci ?? []).map((_: any) => ({
                     title: _.parent_name,
                     group: true,
@@ -67,6 +66,6 @@ export function getFocusActions(self: Focus): NxAction[] {
                 }));
             },
         },
-        NxGlobal.deleteAction(self, $localize`:@@i18n.common.reallyDeleteThisFocus:really delete this focus?`, { roles: 'admin' }),
+        nx().deleteAction(self, $localize`:@@i18n.common.reallyDeleteThisFocus:really delete this focus?`, { roles: 'admin' }),
     ];
 }

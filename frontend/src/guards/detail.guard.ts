@@ -1,25 +1,22 @@
-import { inject, Injectable, Signal, signal } from '@angular/core';
+import { inject, Signal, signal, Service } from '@angular/core';
 import { ActivatedRouteSnapshot, Router, UrlTree } from '@angular/router';
 import { firstValueFrom, Observable, tap } from 'rxjs';
 import { GlobalService } from '@models/global.service';
-import { NexusHttpService } from '@models/http/http.nexus';
-import { Serializable } from '@models/serializable';
-import { LiveModelRegistry } from '@models/live-model-registry';
-import { WebSocketService } from 'src/services/websocket.service';
+import { Serializable } from '@models/_core/serializable';
+import { LiveModelRegistry } from '@models/live/live-model-registry';
+import { WebSocketService } from '@services/websocket.service';
+import { Toast } from '@shards/toast/toast';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export abstract class DetailGuard<T extends Serializable> {
 
     #global = inject(GlobalService);
     #router = inject(Router);
     #ws = inject(WebSocketService);
 
-    abstract service: NexusHttpService<any>;
     abstract observable: (id: string) => Observable<T>;
     protected onBeforeLoad() { /** overridden by children */ }
     protected async onLoaded(_: T) { /** overridden by children */ }
-
-    static lastTitle: string;
 
     #objectSignal = signal<T>(null as unknown as T, { equal: () => false });
     readonly object: Signal<T> = this.#objectSignal.asReadonly();
@@ -27,13 +24,9 @@ export abstract class DetailGuard<T extends Serializable> {
     touch = () => this.#objectSignal.set(this.object());
 
     constructor() {
-        // LiveSyncService applies refetched attributes in place onto the same instance -
-        // re-signal so guard-held pages (and their relations, e.g. project.invoice_items) re-render.
         LiveModelRegistry.updated$.subscribe((instance) => {
             if (instance === this.object()) this.touch();
         });
-        // A dropped socket may have missed events entirely - only the guard-held root object is
-        // worth refetching on reconnect; refetching every live instance would storm the API.
         this.#ws.reconnected$.subscribe(() => this.reload());
     }
 
@@ -41,6 +34,7 @@ export abstract class DetailGuard<T extends Serializable> {
         this.onBeforeLoad();
         return this.observable(id).pipe(
             tap((_: T) => {
+                _.liveSyncEnabled = true;
                 this.#objectSignal.set(_);
                 this.onLoaded(_);
             }),
@@ -50,6 +44,7 @@ export abstract class DetailGuard<T extends Serializable> {
     reload = () =>
         this.object()?.refresh().subscribe((_) => {
             const result = _ as T;
+            result.liveSyncEnabled = true;
             this.#objectSignal.set(result);
             this.onLoaded(result);
         });
@@ -59,12 +54,16 @@ export abstract class DetailGuard<T extends Serializable> {
         if (!id) return false;
         try {
             const result = await firstValueFrom(this.show(id));
-            if (typeof result.getName === 'function') {
-                DetailGuard.lastTitle = result.getName();
-            }
             this.#global.registerSelectedObject(result);
             return true;
-        } catch {
+        } catch (error) {
+            const status = (error as { status?: number })?.status;
+            Toast.error(
+                status === 429
+                    ? $localize`:@@i18n.common.tooManyRequests:too many requests - please wait a moment and try again`
+                    : $localize`:@@i18n.common.loadFailed:could not load the requested entry`,
+            );
+            console.error(`${this.constructor.name}: failed to load id ${id}`, error);
             return false;
         }
     }
@@ -102,10 +101,11 @@ export abstract class DetailGuard<T extends Serializable> {
     }
 
     static routeActivators() {
+        const self = this;
         return {
             canActivate: [this],
             canActivateChild: [this],
-            title: (): string => DetailGuard.lastTitle,
+            title: (): string => inject(self).object()?.getName() ?? '',
         };
     }
 }

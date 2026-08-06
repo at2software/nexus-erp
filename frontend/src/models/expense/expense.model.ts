@@ -1,9 +1,8 @@
-import { Serializable } from './../serializable';
+import { Serializable } from '@models/_core/serializable';
 import { getInvoiceItemTypeRepeatColor, InvoiceItemType, InvoiceItemTypeRepeating } from '@enums/invoice-item.type';
-import { NxAction, NxActionType } from '@app/nx/nx.actions';
-import { ExpenseService } from './expense.service';
+import { NxAction, NxActionType } from '@models/_core/nx.actions';
 import { getExpenseActions } from './expense.actions';
-import { Model } from '@constants/type-discriminators';
+import { Model } from '@constants/model/type-discriminators';
 import { tap } from 'rxjs';
 import { Dictionary } from '@constants/constants';
 
@@ -11,7 +10,6 @@ export const REPEATING_MULT = { 30: 365, 31: 52, 32: 12, 33: 4, 34: 1 };
 @Model('Expense')
 export class Expense extends Serializable {
     static API_PATH = (): string => 'expenses';
-    SERVICE = ExpenseService;
 
     invoice_item_id: string = '';
     category_id: string = '';
@@ -25,8 +23,7 @@ export class Expense extends Serializable {
 
     repeat: InvoiceItemTypeRepeating = InvoiceItemType.Monthly;
 
-    doubleClickAction: number = 0;
-    actions: NxAction[] = getExpenseActions(this);
+    protected override buildActions(): NxAction[] { return getExpenseActions(this) }
     
     get yearlyPrice(): number {
         return this.repeat in REPEATING_MULT ? REPEATING_MULT[this.repeat] * this.price : 0;

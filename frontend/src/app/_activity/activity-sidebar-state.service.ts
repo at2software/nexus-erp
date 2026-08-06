@@ -1,12 +1,18 @@
-import { Injectable } from '@angular/core';
+import { signal, Service } from '@angular/core';
 import { storageGet, storageSet } from '@constants/storage';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ActivitySidebarStateService {
     readonly #STORAGE_KEY = 'activity-sidebar-collapsed';
 
+    readonly #collapsedSignal = signal(false);
+    readonly collapsed = this.#collapsedSignal.asReadonly();
+
     constructor() {
         this.#restoreSidebarState();
+        new MutationObserver(() => this.#collapsedSignal.set(this.isCollapsed()))
+            .observe(document.body, { attributes: true, attributeFilter: ['class'] });
+        this.#collapsedSignal.set(this.isCollapsed());
     }
 
     toggleSidebar(): void {

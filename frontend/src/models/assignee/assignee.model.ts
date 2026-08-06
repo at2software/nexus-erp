@@ -1,10 +1,10 @@
-import { AssignmentService } from '@models/assignee/assignment.service';
+import type { NxAction } from '@models/_core/nx.actions';
 import { CompanyContact } from '../company/company-contact.model';
-import { Serializable } from '../serializable';
+import { Serializable } from '@models/_core/serializable';
 import { User } from '../user/user.model';
-import { PluginInstance } from '../http/plugin.instance';
+import { PluginInstance } from '../http/plugins/plugin.instance';
 import { getAssigneeActions } from './assignee.actions';
-import { TypeFromClass, Model } from '@constants/type-discriminators';
+import { TypeFromClass, Model } from '@constants/model/type-discriminators';
 import { computed, Type } from '@angular/core';
 
 export const I18N_REMOVE_FROM_TEAM = $localize`:@@i18n.project.removeFromTeam:remove from team`;
@@ -12,10 +12,10 @@ export const I18N_REMOVE_FROM_TEAM = $localize`:@@i18n.project.removeFromTeam:re
 @Model('Assignee')
 export class Assignee extends Serializable {
     static API_PATH = (): string => 'assignments';
-    SERVICE = AssignmentService;
 
-    doubleClickAction: number = 0;
-    actions = getAssigneeActions(this);
+    override readonly getName = computed(() => { this.snapshot(); return this.assignee?.getName() || ''; });
+
+    protected override buildActions(): NxAction[] { return getAssigneeActions(this) }
 
     role_id: number = 0;
     duration: string = '';
@@ -37,8 +37,6 @@ export class Assignee extends Serializable {
         this.update();
     };
 
-    getName = computed(() => this.assignee?.getName() || '');
-
     isUser = () => this.assignee?.class === 'User';
     role = () => ({ 1: 'Developer', 2: 'Project Manager', 3: 'Designer', 4: 'Customer' }[this.role_id] ?? '');
     route() {
@@ -46,7 +44,6 @@ export class Assignee extends Serializable {
         return '/' + this.apiPath() + '/' + this.id;
     }
 
-    // Generic plugin integration - delegates to assignee
     canLinkTo = <T extends PluginInstance>(pluginType: Type<T>): boolean => {
         return this.assignee?.canLinkToInstance(pluginType) ?? false;
     };

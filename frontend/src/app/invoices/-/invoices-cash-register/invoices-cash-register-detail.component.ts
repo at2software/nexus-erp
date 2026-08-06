@@ -1,19 +1,31 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, TemplateRef, computed, effect, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { Nx } from '@app/nx/nx.directive';
 import { NgbDateAdapter, NgbDatepickerModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { SaldoChartComponent } from '@shards/saldo-chart/saldo-chart.component';
-import { dayjs } from '@constants/dates';
+import { dayjs } from '@constants/date/dates';
 import { NgbDateCarbonAdapter } from '@directives/ngb-date.adapter';
 import { Cash } from '@models/cash/cash.model';
-import { CashService } from '@models/cash/cash.servcie';
+import { CashService } from '@models/cash/cash.service';
+import { modelListResource } from '@models/http/model-resource';
 import { GlobalService } from '@models/global.service';
 import { MoneyPipe } from '@pipes/money.pipe';
 import { HotkeyDirective } from '@directives/hotkey.directive';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
+
+const withRunningBalance = (entries: Cash[]): Cash[] => {
+    let balance = 0;
+    entries.reverse().forEach((_) => {
+        _.var.current = balance;
+        balance += _.value;
+    });
+    return entries.reverse();
+};
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,7 +33,7 @@ import { HotkeyDirective } from '@directives/hotkey.directive';
     templateUrl: './invoices-cash-register-detail.component.html',
     styleUrls: ['./invoices-cash-register-detail.component.scss'],
     providers: [{ provide: NgbDateAdapter, useClass: NgbDateCarbonAdapter }],
-    imports: [ToolbarComponent, Nx, SaldoChartComponent, NgbDatepickerModule, FormsModule, MoneyPipe, DatePipe, HotkeyDirective],
+    imports: [StackedTableDirective, ToolbarComponent, Nx, SaldoChartComponent, NgbDatepickerModule, FormsModule, MoneyPipe, DatePipe, HotkeyDirective],
 })
 export class InvoicesCashRegisterDetailComponent {
 
@@ -31,8 +43,13 @@ export class InvoicesCashRegisterDetailComponent {
     #modalService = inject(NgbModal);
 
     id = signal('');
-    entries = signal<Cash[]>([]);
-    
+
+    readonly #entries = modelListResource(
+        () => this.id() || undefined,
+        (id) => this.#cashService.indexEntries(id).pipe(map(withRunningBalance)),
+    );
+    entries = this.#entries.value;
+
     min = computed(() => this.entries().reduce((m, e) => Math.min(m, e.var.current + e.value), 0));
     max = computed(() => this.entries().reduce((m, e) => Math.max(m, e.var.current + e.value), 0));
     currencySymbol = computed(() => this.#global.currencySymbol() ?? '€');
@@ -55,20 +72,10 @@ export class InvoicesCashRegisterDetailComponent {
                 approver: this.#global.user?.getName() ?? '',
                 value: 0,
             });
-            this.reload();
         });
     }
 
-    reload() {
-        this.#cashService.indexEntries(this.id()).subscribe((data) => {
-            let v = 0;
-            data.reverse().forEach(_ => {
-                _.var.current = v;
-                v += _.value;
-            });
-            this.entries.set(data.reverse());
-        });
-    }
+    reload = () => this.#entries.reload();
 
     addExpense(content: TemplateRef<unknown>) {
         this.#modalService

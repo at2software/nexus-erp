@@ -46,7 +46,6 @@ class TrainProjectQuoteModel extends Command {
         $evaluation = ProjectQuoteModel::evaluate($rowsArray);
         $this->printEvaluation($evaluation);
 
-        // Headline metric = accepted-class F1.
         $bestName   = collect($evaluation['estimators'])->sortByDesc(fn ($m) => $m['f1'])->keys()->first();
         $bestF1     = $evaluation['estimators'][$bestName]['f1'];
         $baselineF1 = $evaluation['baseline']['f1'];

@@ -10,9 +10,7 @@
         <ul class="list-group">
             @for (_ of _vacationRequests; track _.id) {
                 <li class="list-group-item d-flex" [ngbTooltip]="_.comment" [nx]="_" [tables]="_vacationRequests" (actionsResolved)="actionsResolved($event)">
-                    <div class="avatar float-end mt-1 d-flex me-3">
-                        <img class="avatar-img" src="{{ _.user.icon }}" alt="User avatar" />
-                    </div>
+                    <avatar [object]="_.user" class="float-end mt-1 me-3"></avatar>
                     <div class="flex-fill">{{ _.started_at | date }} - {{ _.ended_at | date }}</div>
                     <span class="badge bg-dark">{{ _.amount }}h</span>
                 </li>
@@ -30,9 +28,7 @@
         <ul class="list-group">
             @for (_ of _sickNotes; track _.id) {
                 <li class="list-group-item d-flex" [ngbTooltip]="_.comment" [nx]="_" [tables]="_sickNotes" (actionsResolved)="actionsResolved($event)">
-                    <div class="avatar float-end mt-1 d-flex me-3">
-                        <img class="avatar-img" src="{{ _.user.icon }}" alt="User avatar" />
-                    </div>
+                    <avatar [object]="_.user" class="float-end mt-1 me-3"></avatar>
                     <div class="flex-fill">{{ _.started_at | date }} - {{ _.ended_at | date }}</div>
                     <i class="ms-2 text-primary pointer" (click)="getPrepopulatedSickNoteMail(_)" (keyup.enter)="getPrepopulatedSickNoteMail(_)" tabindex="0">email</i>
                     <i class="ms-2" [class]="_.getTypeClass()">{{ _.getTypeIcon() }}</i>

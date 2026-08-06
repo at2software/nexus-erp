@@ -1,4 +1,4 @@
-@let _company = parent.object();
+@let _company = company();
 @let _cust = customer();
 @let _connections = connections();
 @let _notes = notes();
@@ -7,7 +7,7 @@
     <button type="button mb-3" class="btn btn-primary ms-3 capitalize" (click)="saveComments()" tabindex="0" (keydown.enter)="saveComments()" ngbTooltip="CTRL+ALT+S" hotkey="CTRL+ALT+S"><i>save</i><span i18n="@@i18n.common.save">save</span></button>
 </toolbar>
 <div class="row">
-    <div class="col-3">
+    <div class="col-12 col-md-6 col-xl-3">
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div i18n="@@i18n.common.contacts">contacts</div>
@@ -15,10 +15,17 @@
                     <i>add</i>
                 </button>
             </div>
-            <ul class="list-group" #company>
+            <ul class="list-group" #employeesList>
+                @if (_cust) {
+                    <li class="list-group-item hstack gap-2 p-2" [class.active]="isSelected(_cust)" [nx]="_cust" (click)="selectItem(_cust, $event)" (keyup.enter)="selectItem(_cust, $event)" tabindex="0">
+                        <avatar [object]="_cust"></avatar>
+                        <div class="flex-fill text-truncate fw-bold">{{ _cust.getName() }}</div>
+                        <i class="text-muted" ngbTooltip="edit company details" i18n-ngbTooltip="@@i18n.knownseq.edit_company">business</i>
+                    </li>
+                }
                 @for (c of _cust?.employees; track c.id) {
                     @if (!c.is_retired) {
-                        <list-group-item-contact [nx]="c" [tables]="_cust?.employees" [contact]="c" [showQuickContact]="true" [subject]="_cust?.getName() ?? ''" (click)="selectItem(c, $event)" tabindex="0" (keydown.enter)="selectItem(c, $event)" (actionsResolved)="onAssignmentActions($event)">
+                        <list-group-item-contact [class.active]="isSelected(c)" [nx]="c" [tables]="_cust?.employees" [contact]="c" [showQuickContact]="true" [subject]="_cust?.getName() ?? ''" (click)="selectItem(c, $event)" tabindex="0" (keydown.enter)="selectItem(c, $event)" (actionsResolved)="onAssignmentActions($event)">
                             <div class="hstack gap-1">
                                 @if (birthdayMissing(c)) {
                                     <div>
@@ -63,7 +70,7 @@
             @if (_company) {
                 <ul-compact class="list-group">
                     @for (con of _connections; track con.id) {
-                        <li class="list-group-item d-flex text-nowrap p-0" [compact]="true" [nx]="con" [tables]="_connections">
+                        <li class="list-group-item d-flex text-nowrap p-0" [class.active]="isSelected(con.otherCompany(_company))" [compact]="true" [nx]="con" [tables]="_connections">
                             <div class="hstack gap-2 p-2 w-100" (click)="selectItem(con, $event)" (keyup.enter)="selectItem(con, $event)" tabindex="0">
                                 <div>
                                     <avatar [object]="con.otherCompany(_company)"></avatar>
@@ -77,34 +84,38 @@
         </div>
     </div>
 
-    <div class="col-6">
-        <div class="row">
-            <div class="col-6">
-                <div class="card info-card mb-3">
-                    <div class="card-header">
-                        <span i18n="@@i18n.common.revenue">revenue</span>
-                        <span class="badge bg-lighter ms-2 py-1 px-1" ngbTooltip="accumulated revenue of the last 12 months" i18n="@@i18n.common.12m" i18n-ngbTooltip="@@i18n.invoice.revenue12m">12m</span>
-                        <div class="chart-title ms-auto">{{ (revenueChart.value || 0) | money }}</div>
+    <div class="col-12 col-md-6">
+        @if (_company.isDraft()) {
+            <knownseq-caller-cards [number]="callerNumber()"></knownseq-caller-cards>
+        } @else {
+            <div class="row">
+                <div class="col-12 col-md-6">
+                    <div class="card info-card mb-3">
+                        <div class="card-header">
+                            <span i18n="@@i18n.common.revenue">revenue</span>
+                            <span class="badge bg-lighter ms-2 py-1 px-1" ngbTooltip="accumulated revenue of the last 12 months" i18n="@@i18n.common.12m" i18n-ngbTooltip="@@i18n.invoice.revenue12m">12m</span>
+                            <div class="chart-title ms-auto">{{ (revenueChart.value() || 0) | money }}</div>
+                        </div>
+                        <echarts-range-card #revenueChart keyPath="{{ _company.getParamPath('INVOICE_REVENUE_12M,INVOICE_DEG_12M') }}" [color]="['white', 'primary']"></echarts-range-card>
                     </div>
-                    <echarts-range-card #revenueChart keyPath="{{ _company.getParamPath('INVOICE_REVENUE_12M,INVOICE_DEG_12M') }}" [color]="['white', 'primary']"></echarts-range-card>
                 </div>
-            </div>
 
-            <div class="col-6">
-                <div class="card mb-3 info-card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <div i18n="@@i18n.common.contact">contact</div>
-                        <a [href]="_cust?.apiPathWithId()" target="_blank" class="pointer text-primary"><i>chevron_right</i></a>
-                    </div>
-                    <div class="card-body">
-                        <div [innerHTML]="_cust?.address | safe: 'html'"></div>
+                <div class="col-12 col-md-6">
+                    <div class="card mb-3 info-card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div i18n="@@i18n.common.contact">contact</div>
+                            <a [href]="_cust?.apiPathWithId()" target="_blank" class="pointer text-primary"><i>chevron_right</i></a>
+                        </div>
+                        <div class="card-body">
+                            <div [innerHTML]="_cust?.address | safe: 'html'"></div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        }
 
         <div id="notesContainer">
-            @for (note of _notes; track note.id) {
+            @for (note of _notes; track noteKey(note)) {
                 @if (note.var.active && getItem(note); as item) {
                     @if (item.assert(Project); as project) {
                         <div class="card mb-3">
@@ -127,10 +138,12 @@
             }
         </div>
     </div>
-    <div class="col-3">
-        <div class="card mb-3 info-card">
-            <customer-quickstats [company]="_company"></customer-quickstats>
-        </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        @if (!_company.isDraft()) {
+            <div class="card mb-3 info-card">
+                <customer-quickstats [company]="_company"></customer-quickstats>
+            </div>
+        }
 
         <div class="card mb-3">
             <div class="card-header">
@@ -157,7 +170,7 @@
             <ul-compact class="list-group">
                 @for (item of items; track item.id) {
                     <li class="list-group-item p-0" [compact]="asProject(item).state.progress === 2">
-                        <div class="hstack gap-2 p-2" [nx]="item" (click)="selectItem(item, $event)" (keyup.enter)="selectItem(item, $event)" tabindex="0">
+                        <div class="hstack gap-2 p-2" [class.active]="isSelected(item)" [nx]="item" (click)="selectItem(item, $event)" (keyup.enter)="selectItem(item, $event)" tabindex="0">
                             <div>
                                 <project [project]="item"></project>
                             </div>

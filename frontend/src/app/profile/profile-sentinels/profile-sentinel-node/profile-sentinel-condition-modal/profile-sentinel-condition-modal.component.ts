@@ -1,7 +1,7 @@
 ﻿import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { NgbActiveModal, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
-import { Sentinel } from '@models/sentinels/sentinel.model';
+import { Sentinel } from '@models/sentinel/sentinel.model';
 import { SENTINEL_CONDITIONS, SentinelCondition, SentinelConditionInstance } from '../../sentinel-condition.model';
 import { SentinelOptionInstance } from '../../sentinel-condition-option-field.model';
 import { FormsModule } from '@angular/forms';

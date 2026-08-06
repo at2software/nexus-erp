@@ -1,11 +1,9 @@
-import { Serializable } from '@models/serializable';
-import { DebriefService } from './debrief.service';
-import { Model } from '@constants/type-discriminators';
+import { Serializable } from '@models/_core/serializable';
+import { Model } from '@constants/model/type-discriminators';
 
 @Model('DebriefProblemCategory')
 export class DebriefProblemCategory extends Serializable {
     static override API_PATH = (): string => 'debrief_problem_categories';
-    override SERVICE = DebriefService;
 
     name: string = '';
     color: string = '#6c757d';

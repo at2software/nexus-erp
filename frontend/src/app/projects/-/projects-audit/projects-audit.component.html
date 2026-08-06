@@ -12,7 +12,7 @@
     <spinner class="mt-5"></spinner>
 } @else {
     <div class="row">
-        <div class="col-3">
+        <div class="col-12 col-md-3">
             <div class="card">
                 <div class="card-header">settings</div>
                 <div class="card-body">
@@ -31,7 +31,7 @@
             </div>
         </div>
 
-        <div class="col-9">
+        <div class="col-12 col-md-9">
             @if (!_projects.length) {
                 <empty-state icon="schedule" label="no audit pipelines configured"></empty-state>
             } @else {

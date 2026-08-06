@@ -35,7 +35,6 @@ class SentinelTriggerService {
         }
     }
     protected static function executeAction(Sentinel $sentinel, ?Model $model = null, array $originalValues = []): void {
-        // Refresh model to ensure relations are accessible
         $model?->refresh();
 
         try {

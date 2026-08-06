@@ -1,11 +1,11 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 import { Dictionary } from '@constants/constants';
 import { HttpInjectWrapper } from './http.wrapper';
-import { NexusHttpInterceptor } from '@app/http.interceptor';
+import { NexusHttpInterceptor } from '@models/http/http-headers';
 import { HttpHeaders } from '@angular/common/http';
-import { VcardRow } from '@models/vcard/VcardRow';
+import { VcardRow } from '@models/vcard/vcard-row';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class NominatimHttpWrapper extends HttpInjectWrapper {
     override baseUrl = () => 'https://nominatim.openstreetmap.org/';
 

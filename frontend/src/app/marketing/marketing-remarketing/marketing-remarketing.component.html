@@ -40,14 +40,9 @@
             <small class="text-muted text-nowrap remarketing-date text-end" ngbTooltip="last contact" i18n-ngbTooltip="@@i18n.marketing.last_contact">{{ item.updated_at | date }}</small>
             <div class="d-flex align-items-center gap-1">
                 <select class="form-select form-select-sm remarketing-select" [autosave]="item" [(ngModel)]="item.remarketing_interval">
-                    <option value="1" i18n="@@i18n.common.daily">daily</option>
-                    <option value="4" i18n="@@i18n.common.weekly">weekly</option>
-                    <option value="5" i18n="@@i18n.marketing.everyTwoWeeks">every two weeks</option>
-                    <option value="2" i18n="@@i18n.common.monthly">monthly</option>
-                    <option value="6" i18n="@@i18n.marketing.everyTwoMonths">every two months</option>
-                    <option value="7" i18n="@@i18n.marketing.everyThreeMonths">every three months</option>
-                    <option value="8" i18n="@@i18n.marketing.everySixMonths">every six months</option>
-                    <option value="3" i18n="@@i18n.common.yearly">yearly</option>
+                    @for (_ of recurrences; track _.value) {
+                        <option [value]="_.value">{{ _.label }}</option>
+                    }
                 </select>
                 @if (item.remarketing_interval) {
                     <button type="button" class="btn btn-sm btn-plain text-primary px-1" ngbTooltip="clear" i18n-ngbTooltip="@@i18n.common.clear" (click)="clearRemarketingInterval(item)" (keyup.enter)="clearRemarketingInterval(item)">

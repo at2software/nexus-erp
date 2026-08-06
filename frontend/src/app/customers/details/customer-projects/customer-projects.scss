@@ -25,7 +25,6 @@
     flex-shrink: 0;
 }
 
-// All list-group-items have no padding — project-row owns the spacing
 .project-list-item {
     padding: 0 !important;
 }
@@ -44,7 +43,6 @@
     }
 }
 
-// Level hierarchy indicators (dark-grey dots, one per level)
 .level-indicators {
     display: flex;
     align-items: center;
@@ -60,13 +58,11 @@
     flex-shrink: 0;
 }
 
-// Nested subproject container with subtle tree line
 .subprojects-container {
     margin-left: 1.5rem;
     border-left: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-// Drop target highlight during drag
 .drop-target-active > .drop-zone-wrapper {
     background-color: rgba(var(--bs-success-rgb), 0.08);
 
@@ -89,14 +85,12 @@
     position: relative;
 }
 
-// Hover highlight during drag (body class approach for non-hovered items)
 body.project-dragging {
     .project-row {
         background-color: transparent;
     }
 }
 
-// Drag preview — matches the dragged row size (matchSize)
 .cdk-drag-preview {
     opacity: 0.95;
     border-radius: 4px;

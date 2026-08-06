@@ -25,11 +25,6 @@ class DebriefController extends Controller {
         protected DebriefStatisticsService $statisticsService
     ) {}
 
-    /**
-     * Problem/positive attach, detach and pivot updates (severity, etc.) don't touch the
-     * DebriefProjectDebrief model itself, so no Eloquent event fires - touch() it explicitly,
-     * which saves it and fires the generic BaseModel live-sync broadcast as 'updated'.
-     */
     private function notifyDebrief(DebriefProjectDebrief $debrief): void {
         $debrief->touch();
     }

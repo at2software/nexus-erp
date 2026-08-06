@@ -1,29 +1,17 @@
-import { Injectable } from '@angular/core';
-import { NxGlobal } from '@app/nx/nx.global';
+import { computed, inject, signal, Service } from '@angular/core';
+import { GlobalService } from '@models/global.service';
 import { User } from '@models/user/user.model';
-import { ReplaySubject } from 'rxjs';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class HrTeamService {
-    #lastUser?: User;
-    onUserChange = new ReplaySubject<User>(1);
+    readonly #global = inject(GlobalService);
 
-    getUserId() {
-        if (!this.#lastUser) {
-            this.#lastUser = NxGlobal.global.user!;
-        }
-        return this.#lastUser!.id;
-    }
+    readonly #selected = signal<User | undefined>(undefined);
 
-    getUser(): User | undefined {
-        if (!this.#lastUser) {
-            this.#lastUser = NxGlobal.global.user!;
-        }
-        return this.#lastUser;
-    }
+    readonly user = computed(() => this.#selected() ?? this.#global.user ?? undefined);
+    readonly userId = computed(() => this.user()?.id);
 
-    setUser(_: User) {
-        this.#lastUser = _;
-        this.onUserChange.next(_);
-    }
+    getUser = (): User | undefined => this.user();
+    getUserId = () => this.userId()!;
+    setUser = (_: User) => this.#selected.set(_);
 }

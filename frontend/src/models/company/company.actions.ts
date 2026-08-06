@@ -1,13 +1,13 @@
-import { NxAction, NxActionType } from '@app/nx/nx.actions';
+import { NxAction, NxActionType } from '@models/_core/nx.actions';
 import { Company } from './company.model';
-import { NxGlobal } from '@app/nx/nx.global';
+import { nx } from '@models/_core/nx-bridge';
 
 export function getCompanyActions(self: Company): NxAction[] {
     return [
-        { title: $localize`:@@i18n.common.open:open`, action: () => self.navigateTo(self.frontendUrl()) },
-        ...NxGlobal.clipboardActions(self),
+        { title: $localize`:@@i18n.common.open:open`, doubleClick: true, action: () => self.navigateTo(self.frontendUrl()) },
+        ...nx().clipboardActions(self),
         { title: $localize`:@@i18n.common.edit:edit`, action: () => self.navigateTo(`/customers/${self.id}/staff`) },
-        NxGlobal.deleteAction(self, 'Really delete this company?', { roles: 'admin' }),
+        nx().deleteAction(self, 'Really delete this company?', { roles: 'admin' }),
         {
             title: $localize`:@@i18n.common.setDeprecated:set deprecated`,
             on: () => !self.is_deprecated,

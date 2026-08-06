@@ -142,8 +142,6 @@ class PluginFintsController extends Controller {
         return FinTsDriverFactory::create($this->credentials ?? []);
     }
     private function buildOptions(): FinTsOptions {
-        // On Windows (Laragon etc.) the php.ini curl.cainfo may point to a missing file.
-        // Fall back to the CA bundle that ships with Composer so SSL verification still works.
         $caFile = ini_get('curl.cainfo');
         if (! $caFile || ! file_exists($caFile)) {
             $bundle = base_path('vendor/composer/ca-bundle/res/cacert.pem');

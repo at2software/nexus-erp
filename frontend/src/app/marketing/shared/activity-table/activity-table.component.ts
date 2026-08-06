@@ -5,10 +5,11 @@ import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { IActivityBase } from '@models/marketing/activity-base.interface';
 import { MarketingPerformanceMetric } from '@models/marketing/marketing-performance-metrics.model';
 import { Dictionary } from '@constants/constants';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 @Component({
     selector: 'activity-table',
-    imports: [NgbTooltipModule, RouterLink, RouterLinkActive],
+    imports: [StackedTableDirective, NgbTooltipModule, RouterLink, RouterLinkActive],
     templateUrl: './activity-table.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })

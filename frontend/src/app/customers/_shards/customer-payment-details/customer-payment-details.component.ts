@@ -1,6 +1,6 @@
 ﻿import { ChangeDetectionStrategy, Component, computed, inject, input, TemplateRef } from '@angular/core';
 import { CustomerDetailGuard } from '../../customers.details.guard';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 import { forkJoin } from 'rxjs';
 import { Company } from '@models/company/company.model';
 

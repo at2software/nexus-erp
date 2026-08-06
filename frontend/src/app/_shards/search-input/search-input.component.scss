@@ -42,7 +42,6 @@
             color: var(--bs-white);
         }
         
-        // Ensure all child elements are non-interactive
         * {
             pointer-events: none;
         }

@@ -46,8 +46,6 @@ function highlightHtml(code: string): string {
     return out + esc(code.slice(last));
 }
 
-/** Lightweight syntax-highlighted code editor: a colored <pre> behind a transparent <textarea>.
- *  No external dependency. Scroll positions are kept in sync so the layers stay aligned. */
 @Component({
     selector: 'app-code-editor',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -74,7 +72,6 @@ export class CodeEditorComponent {
     readonly highlighted = computed(() => {
         const code = this.value();
         const html = this.language() === 'css' ? highlightCss(code) : highlightHtml(code);
-        // trailing newline keeps the last line's height in the <pre> aligned with the textarea
         return html + (code.endsWith('\n') ? ' ' : '');
     });
 

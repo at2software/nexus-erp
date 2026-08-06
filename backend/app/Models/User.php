@@ -138,30 +138,19 @@ class User extends BaseAuthenticatable {
         return $this->getRoleNames();
     }
 
-    /**
-     * Check if user has specific role(s)
-     * Admin always returns true
-     */
     public function hasRole($roles, ?string $guard = null): bool {
         return $this->hasAnyRole($roles, $guard);
     }
 
-    /**
-     * Check if user has any of the specified roles
-     * Admin always returns true
-     */
     public function hasAnyRole($roles, ?string $guard = null): bool {
-        // Normalize input to array
         if (is_string($roles)) {
             $roles = explode('|', $roles);
         }
 
-        // Admin has all roles
         if ($this->roles()->where('name', 'admin')->exists()) {
             return true;
         }
 
-        // Check if user has any of the specified roles
         return $this->roles()->whereIn('name', $roles)->exists();
     }
 

@@ -352,8 +352,6 @@ class ModelRelationship {
         ],
     ];
 
-    // Accessors provide computed/virtual attributes on models
-    // These come from traits or are defined directly on models
     public const ACCESSORS = [
         'companies' => [
             'name'                  => 'string',        // VcardTrait - shortcut to vcard.name

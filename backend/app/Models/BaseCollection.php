@@ -13,7 +13,6 @@ class BaseCollection extends Collection {
         if (! count($appends)) {
             return $this;
         }
-        // If first model defines an allowlist, enforce it
         $first = $this->first();
         if ($first) {
             $allowed = $first->allowedAppends ?? [];

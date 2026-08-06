@@ -1,11 +1,7 @@
-// Maps GitHub/Mattermost emoji shortcodes to Unicode codepoints
-// Images served from GitHub CDN: https://github.githubassets.com/images/icons/emoji/unicode/CODEPOINT.png
 
 import { Dictionary } from "./constants";
 
-// Reference: https://gist.github.com/rxaviers/7360908
 const EMOJI_MAP: Dictionary<string> = {
-    // Smileys
     grinning: '1f600',
     smiley: '1f603',
     smile: '1f604',
@@ -83,7 +79,6 @@ const EMOJI_MAP: Dictionary<string> = {
     roll_eyes: '1f644',
     hugs: '1f917',
     yawning_face: '1f971',
-    // Gestures & Hands
     '+1': '1f44d',
     thumbsup: '1f44d',
     '-1': '1f44e',
@@ -110,7 +105,6 @@ const EMOJI_MAP: Dictionary<string> = {
     vulcan_salute: '1f596',
     writing_hand: '270d',
     nail_care: '1f485',
-    // Hearts & Love
     heart: '2764',
     orange_heart: '1f9e1',
     yellow_heart: '1f49b',
@@ -128,7 +122,6 @@ const EMOJI_MAP: Dictionary<string> = {
     gift_heart: '1f491',
     heart_decoration: '1f49f',
     heart_exclamation: '2763',
-    // Symbols & Signs
     star: '2b50',
     star2: '1f31f',
     sparkles: '2728',
@@ -167,7 +160,6 @@ const EMOJI_MAP: Dictionary<string> = {
     speech_balloon: '1f4ac',
     thought_balloon: '1f4ad',
     zzz: '1f4a4',
-    // Objects & Tech
     bulb: '1f4a1',
     flashlight: '1f526',
     mag: '1f50d',
@@ -224,7 +216,6 @@ const EMOJI_MAP: Dictionary<string> = {
     notes: '1f3b6',
     movie_camera: '1f3ac',
     clapper: '1f3ac',
-    // Travel & Places
     car: '1f697',
     taxi: '1f695',
     bus: '1f68c',
@@ -242,7 +233,6 @@ const EMOJI_MAP: Dictionary<string> = {
     earth_asia: '1f30f',
     globe_with_meridians: '1f310',
     world_map: '1f5fa',
-    // Nature & Weather
     sunny: '2600',
     cloud: '2601',
     umbrella: '2602',
@@ -254,7 +244,6 @@ const EMOJI_MAP: Dictionary<string> = {
     snowman: '26c4',
     partly_sunny: '26c5',
     thunder_cloud_and_rain: '26c8',
-    // Animals
     dog: '1f436',
     cat: '1f431',
     mouse: '1f42d',
@@ -285,7 +274,6 @@ const EMOJI_MAP: Dictionary<string> = {
     wolf: '1f43a',
     fox_face: '1f98a',
     unicorn: '1f984',
-    // Food & Drink
     pizza: '1f355',
     hamburger: '1f354',
     hotdog: '1f32d',
@@ -316,7 +304,6 @@ const EMOJI_MAP: Dictionary<string> = {
     cherries: '1f352',
     pineapple: '1f34d',
     lemon: '1f34b',
-    // Flags
     gb: '1f1ec-1f1e7',
     us: '1f1fa-1f1f8',
     de: '1f1e9-1f1ea',

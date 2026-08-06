@@ -219,7 +219,6 @@ export const SENTINEL_CONDITIONS: SentinelCondition[] = [
             },
         ],
     },
-    // Old value comparison operators (for OnUpdated trigger)
     {
         label: 'Was Equal',
         key: 'was_equal',

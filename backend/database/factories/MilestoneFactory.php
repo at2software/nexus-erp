@@ -12,8 +12,6 @@ class MilestoneFactory extends Factory {
     protected $model = Milestone::class;
 
     /**
-     * Define the model's default state.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array {

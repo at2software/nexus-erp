@@ -1,7 +1,7 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { AuthGuardData, createAuthGuard } from 'keycloak-angular';
-import { environment } from 'src/environments/environment';
+import { environment } from '@environments/environment';
 import { GlobalService } from './global.service';
 import { deleteCookie, getCookie } from '@constants/cookies';
 import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot, UrlTree } from '@angular/router';
@@ -15,7 +15,7 @@ interface TSysinfo {
     reverb_key?: string;
 }
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class AuthenticationService {
     apiToken: string | undefined = undefined;
 
@@ -74,7 +74,6 @@ export class AuthenticationService {
         const { authenticated } = authData;
         if (authenticated) {
             AuthenticationService.keycloak = authData.keycloak;
-            // Initialize global environment now that Keycloak is authenticated
             await global.startKeycloakInit();
             await firstValueFrom(global.init);
             return true;

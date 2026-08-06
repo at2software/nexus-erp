@@ -12,7 +12,7 @@
                     </div>
                 </div>
                 @for (_ of _company.employees; track _.id) {
-                <list-group-item-contact [contact]="_" [nx]="_" [role]="_.role()" [showQuickContact]="true" routerLink="./{{_.id}}"> </list-group-item-contact>
+                <list-group-item-contact [contact]="_" [nx]="_" [role]="_.role()" [showQuickContact]="true" routerLink="./{{_.id}}" routerLinkActive #rla="routerLinkActive" [routerLinkActiveOptions]="{ exact: true }" [active]="rla.isActive"> </list-group-item-contact>
                 }
             </div>
         </div>

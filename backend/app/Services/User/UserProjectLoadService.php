@@ -13,12 +13,10 @@ class UserProjectLoadService {
         $meId      = Param::get('ME_ID')->value;
         $meCompany = Company::find($meId);
 
-        // auto-assign own company as service company (so orga is shown in timetracker)
         if ($meCompany && ! $user->assigned_companies()->where('companies.id', $meId)->exists()) {
             $meCompany->addAssignee($user);
         }
 
-        // computation
         $ae = $user->activeEmployment;
         if (! $ae) {
             return response('user has no active employment', 404);
@@ -26,7 +24,6 @@ class UserProjectLoadService {
 
         $activeSubscriptions = collect([...$user->activeProjects()->with('company')->get(), ...$user->assigned_companies()->get()])->unique();
 
-        // Load avg_hpd accessor for each subscription's assignment
         $activeSubscriptions->each(function ($subscription) {
             if ($subscription->pivot && $subscription->pivot->id) {
                 $assignment = Assignment::find($subscription->pivot->id);
@@ -41,7 +38,6 @@ class UserProjectLoadService {
         $weeklyHpw            = $weeklySubscriptions->reduce(fn ($a, $b) => $a + $b->pivot->hours_weekly, 0);
         $remainingHpw         = $ae->hpw - $weeklyHpw;
 
-        // Generate leaves independently of subscriptions
         $timelineService = new UserTimelineService;
         $timelineLeaves  = $timelineService->generate($user, null, 40, true);
 

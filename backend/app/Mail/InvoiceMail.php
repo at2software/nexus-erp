@@ -24,9 +24,6 @@ class InvoiceMail extends Mailable {
         $this->_formality = $invoice->company->getFormality();
     }
 
-    /**
-     * Get the message envelope.
-     */
     public function envelope(): Envelope {
         $subject = Param::get('INVOICE_EMAIL_SUBJECT')->localizedValue($this->_lang, $this->_formality);
         return new Envelope(

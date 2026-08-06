@@ -1,8 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-/**
- * Progress bar that allows percentages over 100%
- */
 @Component({
     selector: 'progress-bar',
     templateUrl: './progress-bar.component.html',

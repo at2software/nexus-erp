@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { tracked } from '@constants/tracked';
-import { rxResource } from '@angular/core/rxjs-interop';
-import { of } from 'rxjs';
+import { modelResource } from '@models/http/model-resource';
 import { MoneyShortPipe } from '@pipes/mshort.pipe';
 import { LoadingPipe } from '@pipes/loading.pipe';
 import { ProductGroupService } from '@models/product/product-group.service';
@@ -26,10 +25,10 @@ export class ProductGroupOverviewComponent {
  readonly object = tracked(this.parent.object);
 
     readonly #productGroupService = inject(ProductGroupService);
-    readonly #data = rxResource({
-        params: () => this.parent.object(),
-        stream: ({ params: group }) => group ? this.#productGroupService.indexCustomers(group) : of(null),
-    });
+    readonly #data = modelResource(
+        () => this.parent.object()?.id || undefined,
+        (id) => this.#productGroupService.indexCustomers(id),
+    );
 
     readonly customers = computed<Company[]>(() => this.#data.value()?.customers ?? []);
     readonly totalRevenue = computed<number | null>(() => this.#data.value()?.total_revenue ?? null);

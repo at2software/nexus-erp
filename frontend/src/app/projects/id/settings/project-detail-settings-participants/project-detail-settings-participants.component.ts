@@ -1,22 +1,24 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, viewChild } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { ProjectDetailGuard } from '@app/projects/project-details.guard';
 import { ProjectService } from '@models/project/project.service';
+import { modelListResource } from '@models/http/model-resource';
 import { ConnectionsListComponent } from '@shards/connections-list/connections-list.component';
 import { Connection } from '@models/company/connection.model';
-import { Company } from '@models/company/company.model';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
-import { ParticipatingCompany } from '@models/api-response';
+import { ParticipatingCompanyDto } from '@models/_core/api-response';
+import { Nx } from '@app/nx/nx.directive';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'project-detail-settings-participants',
     templateUrl: './project-detail-settings-participants.component.html',
     styleUrls: ['./project-detail-settings-participants.component.scss'],
-    imports: [RouterModule, ConnectionsListComponent, AvatarComponent, NgbTooltipModule, EmptyStateComponent, SpinnerComponent],
+    imports: [StackedTableDirective, RouterModule, ConnectionsListComponent, AvatarComponent, NgbTooltipModule, EmptyStateComponent, SpinnerComponent, Nx],
 })
 export class ProjectDetailSettingsParticipantsComponent {
     private readonly connectionsList = viewChild(ConnectionsListComponent);
@@ -24,51 +26,27 @@ export class ProjectDetailSettingsParticipantsComponent {
     parent = inject(ProjectDetailGuard);
     #projectService = inject(ProjectService);
 
-    participants = signal<ParticipatingCompany[]>([]);
-    loading = signal(false);
-
-    constructor() {
-        effect(() => {
-            this.parent.object();
-            untracked(() => {
-                this.loadParticipants();
-            });
-        });
-    }
-
-    loadParticipants() {
-        const object = this.parent.object();
-        this.loading.set(true);
-        this.#projectService.indexConnectionProjects(object).subscribe({
-            next: (data) => {
-                this.participants.set(data.map((p) => ({
-                    ...p,
-                    other_company: Company.fromJson(p.other_company),
-                })));
-                this.loading.set(false);
-            },
-            error: () => {
-                this.loading.set(false);
-            },
-        });
-    }
+    readonly #participants = modelListResource(
+        () => this.parent.object()?.id || undefined,
+        (projectId) => this.#projectService.indexConnectionProjects(projectId),
+    );
+    readonly participants = this.#participants.value;
+    readonly loading = this.#participants.isLoading;
 
     addConnection(connection: Connection) {
         const object = this.parent.object();
         this.#projectService.storeConnectionProject(object, Number(connection.id)).subscribe({
             next: () => {
-                this.loadParticipants();
+                this.#participants.reload();
                 this.connectionsList()?.reload();
             },
         });
     }
 
-    removeParticipant(participant: ParticipatingCompany) {
+    removeParticipant(participant: ParticipatingCompanyDto) {
         const object = this.parent.object();
         this.#projectService.destroyConnectionProject(object, participant.id).subscribe({
-            next: () => {
-                this.loadParticipants();
-            },
+            next: () => this.#participants.reload(),
         });
     }
 }

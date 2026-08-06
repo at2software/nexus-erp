@@ -1,5 +1,5 @@
-<img class="avatar avatar-{{ size() }} cursor-pointer" [ngbTooltip]="tooltip" [smartLink]="routerLink" [src]="src" alt="" />
-@let badge = object()?.badge();
+<img class="avatar avatar-{{ size() }} cursor-pointer" [ngbTooltip]="tooltip()" [smartLink]="routerLink()" [src]="src()" alt="" />
+@let badge = object()?.getBadge();
 @if (badge) {
-    <div class="warning-badge {{ badge[0] }}" [ngbTooltip]="badgeTooltip" tooltipClass="badge-tooltip-multiline"></div>
+    <div class="warning-badge {{ badge[0] }}" [ngbTooltip]="badgeTooltip()" tooltipClass="badge-tooltip-multiline"></div>
 }

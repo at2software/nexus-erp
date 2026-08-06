@@ -85,7 +85,6 @@ class LiquidityService {
             $anchor       = $startsAt ? Carbon::parse($startsAt)->startOfDay() : $start->copy();
             $effectiveEnd = $endsAt ? Carbon::parse($endsAt)->min($end) : $end->copy();
 
-            // Fast-forward the anchor to the first occurrence on or after $start
             $firstOccurrence = self::fastForwardToDate($anchor, $start, $expense->repeat);
             if ($firstOccurrence === null || $firstOccurrence->gt($effectiveEnd)) {
                 continue;
@@ -224,7 +223,6 @@ class LiquidityService {
             ->with('company')
             ->get();
 
-        // Aggregate unbilled revenue per company
         $byCompany = [];
         foreach ($projects as $project) {
             $amount = (float)($project->foci_unbilled_sum_duration ?? 0) * $project->getWage($baseWage);

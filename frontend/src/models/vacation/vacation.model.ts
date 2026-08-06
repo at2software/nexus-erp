@@ -1,13 +1,13 @@
+import type { NxAction } from '@models/_core/nx.actions';
 import { VacationState } from '@enums/vacation.state';
-import { Serializable } from '../serializable';
+import { Serializable } from '@models/_core/serializable';
 import { VacationGrant } from './vacation-grant.model';
-import { VacationService } from './vacation.service';
 import { getVacatisingleActionResolveds } from './vacation.actions';
-import { dayjs, Dayjs } from '@constants/dates';
-import { NxGlobal } from '@app/nx/nx.global';
+import { dayjs, Dayjs } from '@constants/date/dates';
+import { nx } from '@models/_core/nx-bridge';
 import { User } from '../user/user.model';
-import { Type } from 'class-transformer';
-import { Model } from '@constants/type-discriminators';
+import { Type } from '@models/_core/hydrate';
+import { Model } from '@constants/model/type-discriminators';
 
 @Model('Vacation')
 export class Vacation extends Serializable {
@@ -23,7 +23,6 @@ export class Vacation extends Serializable {
     static VACATION_CLASS = 'text-cyan';
 
     static override API_PATH = (): string => 'vacations';
-    override SERVICE = VacationService;
 
     comment: string = '';
     log: string = '';
@@ -34,21 +33,20 @@ export class Vacation extends Serializable {
     ended_at?: string;
     approved_at?: string;
     approved_by_id?: string;
-    doubleClickAction: number = 0;
-    actions = getVacatisingleActionResolveds(this);
+    protected override buildActions(): NxAction[] { return getVacatisingleActionResolveds(this) }
 
     @Type(() => VacationGrant) grant!: VacationGrant;
     @Type(() => User) user!: User;
     @Type(() => User) approved_by!: User;
 
     frontendUrl = (): string | undefined => (this.state < Vacation.STATE_SICK ? `/vacation/${this.id}` : undefined);
-    hasVacationPermissions = () => NxGlobal.global.user!.hasRole('hr');
-    approve = () => NxGlobal.service.put(`vacations/${this.id}/approve`, { state: Vacation.STATE_APPROVED });
-    acknowledge = () => NxGlobal.service.put(`vacations/${this.id}/acknowledge`, {});
-    deny = (reason?: string) => NxGlobal.service.put(`vacations/${this.id}/approve`, { state: Vacation.STATE_DENIED, reason: reason });
-    cancel = () => NxGlobal.service.put(`vacations/${this.id}/approve`, { state: Vacation.STATE_CANCELLED });
-    revoke = () => NxGlobal.service.put(`vacations/${this.id}/revoke`);
-    isOwnedByCurrentUser = () => this.grant?.user_id === NxGlobal.global.user?.id;
+    hasVacationPermissions = () => nx().global.user!.hasRole('hr');
+    approve = () => nx().service.put(`vacations/${this.id}/approve`, { state: Vacation.STATE_APPROVED });
+    acknowledge = () => nx().service.put(`vacations/${this.id}/acknowledge`, {});
+    deny = (reason?: string) => nx().service.put(`vacations/${this.id}/approve`, { state: Vacation.STATE_DENIED, reason: reason });
+    cancel = () => nx().service.put(`vacations/${this.id}/approve`, { state: Vacation.STATE_CANCELLED });
+    revoke = () => nx().service.put(`vacations/${this.id}/revoke`);
+    isOwnedByCurrentUser = () => this.grant?.user_id === nx().global.user?.id;
 
     time_started = (): Dayjs => dayjs(this.started_at);
     time_ended = (): Dayjs => dayjs(this.ended_at);
@@ -106,7 +104,6 @@ export class Vacation extends Serializable {
         }
     };
 
-    // Type icon — represents the kind of absence (sick vs vacation), independent of approval state
     isSick = () => this.state === Vacation.STATE_SICK;
     isVacation = () => this.state !== Vacation.STATE_SICK;
 

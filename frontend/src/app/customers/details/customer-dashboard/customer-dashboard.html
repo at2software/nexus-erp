@@ -3,17 +3,17 @@
 @let _invoices = invoices();
 @let _quickContacts = quickContacts();
 @let _hasInvoicingRole = globalUserHasInvoicingRole;
-@let _forecastRevenue = forecastRevenue();
-@let _currentRevenue = currentRevenue();
-@let _forecastUp = forecastUp();
-@let _forecastChange = forecastChange();
-@let _mlRevenue = mlRevenue();
-@let _mlNextPurchaseAt = mlNextPurchaseAt();
-@let _mlChurnProbability = mlChurnProbability();
-@let _mlOverdueForContact = mlOverdueForContact();
-@let _mlSupportHours = mlSupportHours();
-@let _mlChurnHigh = mlChurnHigh();
-@let _mlNeedsAttention = mlNeedsAttention();
+@let _forecastRevenue = _company.forecast12m();
+@let _currentRevenue = _company.revenue12m();
+@let _forecastUp = _company.forecastUp();
+@let _forecastChange = _company.forecastChange();
+@let _mlRevenue = _company.mlPredictedRevenue12m();
+@let _mlNextPurchaseAt = _company.mlPredictedNextPurchaseAt();
+@let _mlChurnProbability = _company.mlChurnProbability12m();
+@let _mlOverdueForContact = _company.mlOverdueForContact();
+@let _mlSupportHours = _company.mlPredictedSupportHours();
+@let _mlChurnHigh = _company.mlChurnHigh();
+@let _mlNeedsAttention = _company.mlNeedsAttention();
 <toolbar>
     <button type="button" class="btn btn-primary" roles="project_manager|marketing" (click)="onAddProject()" ngbTooltip="CTRL+ALT+N" placement="bottom" hotkey="CTRL+ALT+N">
         <i>add</i>
@@ -91,13 +91,14 @@
                             </button>
                         </ng-container>
                         <div ngbDropdown class="flex-fill">
-                            <button type="button" class="btn btn-sm w-100 d-flex align-items-center justify-content-center gap-1 dropdown-toggle-simple" [class.btn-primary]="_company.remarketing_interval" [class.text-muted]="!_company.remarketing_interval" ngbDropdownToggle [ngbTooltip]="'Remarketing interval: ' + getIntervalText(_company.remarketing_interval)" placement="bottom">
+                            @let _remarketing = _company.remarketingOption();
+                            <button type="button" class="btn btn-sm w-100 d-flex align-items-center justify-content-center gap-1 dropdown-toggle-simple" [class.btn-primary]="_company.remarketing_interval" [class.text-muted]="!_company.remarketing_interval" ngbDropdownToggle [ngbTooltip]="'Remarketing interval: ' + _remarketing.label" placement="bottom">
                                 <n>marketing</n>
-                                <span class="small">{{getIntervalIcon(_company.remarketing_interval)}}</span>
+                                <span class="small">{{_remarketing.short}}</span>
                             </button>
                             <div ngbDropdownMenu>
-                                @for (key of intervalKeys; track key) {
-                                <button type="button" ngbDropdownItem (click)="_company.update({remarketing_interval: key}).subscribe()">{{getIntervalText(key)}}</button>
+                                @for (_ of recurrences; track _.value) {
+                                <button type="button" ngbDropdownItem (click)="_company.update({remarketing_interval: _.value}).subscribe()">{{_.label}}</button>
                                 } @if (_company.remarketing_interval) {
                                 <div class="dropdown-divider"></div>
                                 <button type="button" ngbDropdownItem (click)="_company.update({remarketing_interval: null}).subscribe()">
@@ -113,7 +114,7 @@
 
         <div class="col-md-9">
             <div class="row">
-                <div class="col-8">
+                <div class="col-12 col-xl-8">
                     <workload-timeline-chart [timeline]="_company.timeline_chart"></workload-timeline-chart>
                     <media-preview [parent]="_company"></media-preview>
                     @if (_company.base_projects && _company.base_projects.length > 0) {
@@ -129,7 +130,7 @@
                     }
                     <customer-initiatives [company]="_company"></customer-initiatives>
                 </div>
-                <div class="col-4">
+                <div class="col-12 col-xl-4">
                     
                     @if (_hasInvoicingRole) {
                     <div class="card chart-card mb-3">

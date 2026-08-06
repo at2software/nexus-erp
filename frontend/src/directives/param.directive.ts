@@ -1,8 +1,8 @@
-import { DestroyRef, Directive, ElementRef, NgZone, inject, input, OnInit } from '@angular/core';
+import { DestroyRef, Directive, ElementRef, inject, input, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { fromEvent } from 'rxjs';
-import { Param } from '@models/param.model';
-import { ParamService } from '@models/param.service';
+import { Param } from '@models/param/param.model';
+import { ParamService } from '@models/param/param.service';
 
 @Directive({
     selector: '[paramPath]',
@@ -19,15 +19,13 @@ export class ParamDirective implements OnInit {
 
     constructor() {
         const destroyRef = inject(DestroyRef);
-        inject(NgZone).runOutsideAngular(() => {
-            fromEvent(this.#el.nativeElement, 'blur')
-                .pipe(takeUntilDestroyed(destroyRef))
-                .subscribe(() => {
-                    const val = this.#el.nativeElement.value;
-                    this.#setValue(val);
-                    this.#paramService.update(this.paramPath(), { value: val }).subscribe();
-                });
-        });
+        fromEvent(this.#el.nativeElement, 'blur')
+            .pipe(takeUntilDestroyed(destroyRef))
+            .subscribe(() => {
+                const val = this.#el.nativeElement.value;
+                this.#setValue(val);
+                Param.write(this.paramPath(), val).subscribe();
+            });
     }
 
     ngOnInit() {

@@ -1,26 +1,33 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 import { Dictionary } from '@constants/constants';
-import { map } from 'rxjs';
+import { mapVar, serialize } from '@constants/rxjs/rxjs-operators';
+import { Observable } from 'rxjs';
 import { Product } from './product.model';
 import { NexusHttpService } from '../http/http.nexus';
 import { Company } from '../company/company.model';
 import { ProductGroup } from './product-group.model';
-import { ProductSplitItem } from '@models/api-response';
+import { ProductCustomersDto, ProductSplitItemDto, ProductStatisticsDto } from '@models/_core/api-response';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ProductService extends NexusHttpService<Product> {
     public apiPath = 'products';
     override readonly model = Product;
-    show = (id: string) => this.get(`products/${id}`, { with: 'invoice_items' });
-    indexCustomers = (p: Product) =>
-        this.get(`products/${p.id}/customers`, {}, Object).pipe(
-            map((d: { customers: Dictionary[]; total_revenue: number; total_customers: number }) => ({
-                customers: d.customers.map((c) => Company.fromJson(c)),
-                total_revenue: d.total_revenue,
-                total_customers: d.total_customers,
-            })),
+
+    show = (id: string | number) => this.get(`products/${id}`, { with: 'invoice_items' });
+
+    indexCustomers = (id: string | number): Observable<ProductCustomersDto> =>
+        this.get(`products/${id}/customers`, {}, Object).pipe(serialize('customers', Company));
+
+    showStatistics = (filters?: Dictionary): Observable<ProductStatisticsDto> =>
+        this.get('products/statistics', filters ?? {}, Object).pipe(
+            mapVar(['total_revenue'], 'top_products'),
+            mapVar(['average_sales_speed'], 'fastest_sellers'),
+            mapVar(['average_repurchase_frequency'], 'most_repurchased'),
+            serialize('top_products', Product),
+            serialize('fastest_sellers', Product),
+            serialize('most_repurchased', Product),
         );
-    showStatistics = (filters?: Dictionary) => this.get('products/statistics', filters || {}, Object);
+
     getRootGroups = () => this.aget('products/root-groups', {}, ProductGroup);
-    getSplit = (id: number) => this.aget<ProductSplitItem>(`products/${id}/split`);
+    getSplit = (id: string | number) => this.aget<ProductSplitItemDto>(`products/${id}/split`);
 }

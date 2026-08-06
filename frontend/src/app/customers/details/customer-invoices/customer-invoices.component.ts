@@ -18,5 +18,5 @@ export class CustomerInvoicesComponent {
     #invoiceService = inject(InvoiceService);
 
     #company = tracked(this.#parent.object);
-    observer = computed(() => this.#invoiceService.index({ company_id: this.#company().id }));
+    observer = computed(() => this.#invoiceService.indexPaginated({ company_id: this.#company().id }));
 }

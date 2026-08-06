@@ -67,11 +67,11 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Project;
 use App\Models\User;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
-// Static sysinfo route - no dependencies loaded
 Route::get('sysinfo', function () {
     return response()->json([
         'version'    => 0.8,
@@ -81,11 +81,13 @@ Route::get('sysinfo', function () {
 });
 
 Route::post('login', [UserController::class, 'login']);
-Route::get('companies/{_}/icon', fn (Company $_) => $_->image());
-Route::get('projects/{_}/icon', fn (Project $_) => $_->company->image());
-Route::get('users/{_}/icon', fn (User $_) => $_->image());
-Route::get('users/{_}/mailicon', fn (string $_) => User::findOrFail('email', $_)->image());    // for timetracker
-Route::get('neuron/icon', [NexusController::class, 'icon']);
+Route::middleware('throttle:icons')->withoutMiddleware(ThrottleRequests::class.':api')->group(function () {
+    Route::get('companies/{_}/icon', fn (Company $_) => $_->image());
+    Route::get('projects/{_}/icon', fn (Project $_) => $_->company->image());
+    Route::get('users/{_}/icon', fn (User $_) => $_->image());
+    Route::get('users/{_}/mailicon', fn (string $_) => User::findOrFail('email', $_)->image());    // for timetracker
+    Route::get('neuron/icon', [NexusController::class, 'icon']);
+});
 Route::get('qr', [WidgetController::class, 'getQrCode']);
 Route::middleware('apikey:X-Auth-Token,'.config('app.team_monitor_api_key'))->get('/team-monitor', [StatsController::class, 'apiTeamMonitor']);
 Route::post('at2-connect/init-support-thread', [At2ConnectController::class, 'initSupportThread']);
@@ -127,6 +129,7 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
         Route::get('{_}/projects', [ProjectController::class, 'indexForCompany']);
         Route::get('{_}/co-participated-projects', [ProjectController::class, 'indexCoParticipatedProjects']);
         Route::get('by-phone', [CompanyController::class, 'showByPhone']);
+        Route::post('draft', [CompanyController::class, 'storeDraft'])->middleware('role:project_manager|marketing');
 
         Route::get('stats', [InvoiceController::class, 'getCustomerStats'])->middleware('role:financial');
         Route::get('overdue-for-contact', [CompanyController::class, 'indexOverdueForContact'])->middleware('role:financial|project_manager|marketing');
@@ -144,11 +147,12 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
             Route::get('import_imprint', 'importImprint');
             Route::get('invoice', 'makeInvoice');
             Route::get('prediction-accuracy', 'showPredictionAccuracy');
-            // Managing a company's data is reserved for project_manager/marketing.
             Route::middleware('role:project_manager|marketing')->group(function () {
                 Route::post('assignees', 'storeAssignee');
                 Route::post('employees', 'storeEmployee');
                 Route::put('activate-repeating-items', 'updateActivateRepeatingItems');
+                Route::put('keep', 'keep');
+                Route::delete('draft', 'discardDraft');
             });
             Route::middleware('role:invoicing')->group(function () {
                 Route::get('invoice-items', 'indexInvoiceItems');
@@ -202,7 +206,6 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
         Route::get('active', 'getActiveSharings');
     });
 
-    // Cash-flow / liquidity / bank import are financial reporting concerns, not invoicing.
     Route::prefix('invoices')->middleware('role:financial')->group(function () {
         Route::get('/cashflow', [InvoiceController::class, 'showCashFlow']);
         Route::get('/liquidity', [InvoiceController::class, 'showLiquidity']);
@@ -354,6 +357,7 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
         Route::get('', 'index');
         Route::post('', 'store');
         Route::put('{id}/tags', 'updateTags');
+        Route::put('{id}/category', 'updateCategory');
         Route::delete('{id}', 'destroy');
     });
 
@@ -629,7 +633,6 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
         Route::get('index-time-based-employees', [WidgetController::class, 'indexTimeBasedEmployees'])->middleware('role:hr');
     });
 
-    // Role management (admin only)
     Route::prefix('roles')->middleware('role:admin')->group(function () {
         Route::get('', [RoleController::class, 'index']);
         Route::post('{role}/users/{user}', [RoleController::class, 'assign']);
@@ -638,8 +641,6 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
 
     Route::resource('calendar_entries', CalendarController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('assignments', AssignmentController::class)->only(['update']);
-    // Assignee (a User, via the polymorphic assignee_id) may remove their own
-    // assignment; project managers may remove anyone's.
     Route::resource('assignments', AssignmentController::class)->only(['destroy'])->middleware('owner:assignee_id,project_manager');
 
     Route::resource('comments', CommentController::class)->only(['store']);
@@ -653,13 +654,9 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
     Route::resource('company_contacts', CompanyContactController::class)->only(['store', 'update'])->middleware('role:project_manager|marketing');
     Route::resource('company_contacts', CompanyContactController::class)->only(['destroy'])->middleware('role:admin');
 
-    // index/show not implemented — contacts are accessed via their company
     Route::resource('contacts', ContactController::class)->only(['store', 'update'])->middleware('role:project_manager|marketing');
     Route::resource('contacts', ContactController::class)->only(['destroy'])->middleware('role:admin');
 
-    // Everyone has full CRUD over their own encryptions; acting on another
-    // user's encryption is reserved for admins. (Creation is the separate
-    // users/{}/encrypt route, which always owns the new record.)
     Route::resource('encryptions', EncryptionController::class)->only(['update', 'destroy'])->middleware('owner:user_id');
 
     Route::resource('expenses', ExpenseController::class)->only(['index', 'show', 'store', 'update', 'destroy'])->middleware('role:financial');
@@ -668,17 +665,13 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
     Route::resource('files', FileController::class)->only(['show', 'store', 'update']);
     Route::resource('files', FileController::class)->only(['destroy'])->middleware('role:admin');
 
-    // A user may only create/edit a focus for themselves; hr/project_manager/financial
-    // (e.g. correcting a teammate's time entry, toggling invoicing flags) or admin may act on anyone's.
     Route::resource('foci', FocusController::class)->only(['store', 'update'])->middleware('owner:user_id,hr|project_manager|financial');
     Route::resource('foci', FocusController::class)->only(['destroy'])->middleware('role:admin');
 
     Route::resource('invoices', InvoiceController::class)->only(['index', 'show', 'store', 'update', 'destroy'])->middleware('role:invoicing');
 
     Route::resource('invoice_items', InvoiceItemController::class)->only(['show'])->middleware('role:invoicing|project_manager');
-    // update: permission middleware handles my_prediction (any user) vs full updates (invoicing|project_manager).
     Route::resource('invoice_items', InvoiceItemController::class)->only(['update'])->middleware('permission_invoiceItem');
-    // store/destroy: project_manager is additionally limited to "Prepared" projects (see middleware).
     Route::resource('invoice_items', InvoiceItemController::class)->only(['store', 'destroy'])->middleware(['role:invoicing|project_manager', 'permission_invoiceItem']);
 
     Route::resource('lead_sources', LeadSourceController::class);
@@ -698,6 +691,8 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
 
     Route::resource('sentinels', SentinelController::class)->only(['index', 'show', 'store', 'update', 'destroy'])->middleware('role:admin');
     Route::resource('tasks', TaskController::class);
+    Route::post('tasks/{task}/co-assignees', [TaskController::class, 'addCoAssignee']);
+    Route::delete('tasks/{task}/co-assignees/{assignment}', [TaskController::class, 'removeCoAssignee']);
     Route::resource('users', UserController::class)->only(['show'])->middleware('owner:id,project_manager|hr');
     Route::resource('users', UserController::class)->only(['update'])->middleware('owner:id,hr');
     Route::delete('users/{user}', [UserController::class, 'destroy'])->middleware('role:admin');
@@ -716,7 +711,6 @@ Route::middleware('auth', 'release.session', 'cache.headers:no_cache;must_revali
         Route::delete('{gitlabAuditProject}', 'destroy');
     });
 
-    // Any authenticated user may request a deletion; only admins see/approve/reject them.
     Route::post('deletion_requests', [DeletionRequestController::class, 'store']);
     Route::prefix('deletion_requests')->controller(DeletionRequestController::class)->middleware('role:admin')->group(function () {
         Route::get('', 'index');

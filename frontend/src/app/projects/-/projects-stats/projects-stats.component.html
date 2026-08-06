@@ -3,13 +3,13 @@
     <div class="hstack gap-3">
         <div class="input-group">
             <span class="input-group-text" i18n="@@i18n.common.period">period</span>
-            <input type="text" class="form-control" ngxDaterangepickerMd [ngModel]="mixPeriod()" (ngModelChange)="mixPeriod.set($event)" [alwaysShowCalendars]="true" (datesUpdated)="reloadAll()" [showCustomRangeLabel]="true" [ranges]="mixRanges" [showClearButton]="false" [locale]="{ applyLabel: 'ok', format: 'YYYY-MM-DD' }" placeholder="select date range" i18n-placeholder="@@i18n.common.selectDateRange" />
+            <input type="text" class="form-control" ngxDaterangepickerMd [ngModel]="mixPeriod()" (ngModelChange)="mixPeriod.set($event)" [alwaysShowCalendars]="true" [showCustomRangeLabel]="true" [ranges]="mixRanges" [showClearButton]="false" [locale]="{ applyLabel: 'ok', format: 'YYYY-MM-DD' }" placeholder="select date range" i18n-placeholder="@@i18n.common.selectDateRange" />
         </div>
     </div>
 </toolbar>
 
 <div class="row">
-    <div class="col-3">
+    <div class="col-12 col-md-6 col-xl-3">
         <div class="card mb-3">
             <div class="card-header" i18n="@@i18n.projects.finishedProjectsByGroup">finished projects by product group</div>
             <div class="card-body">
@@ -21,7 +21,7 @@
             </div>
         </div>
     </div>
-    <div class="col-3">
+    <div class="col-12 col-md-6 col-xl-3">
         <div class="card mb-3">
             <div class="card-header" i18n="@@i18n.projects.revenueByGroup">revenue by product group</div>
             <div class="card-body">
@@ -33,7 +33,7 @@
             </div>
         </div>
     </div>
-    <div class="col-3">
+    <div class="col-12 col-md-6 col-xl-3">
         <div class="card mb-3">
             <div class="card-header" i18n="@@i18n.projects.successRate">success rate</div>
             <div class="card-body">
@@ -45,7 +45,7 @@
             </div>
         </div>
     </div>
-    <div class="col-3">
+    <div class="col-12 col-md-6 col-xl-3">
         <div class="card mb-3">
             <div class="card-header hstack gap-2">
                 <div class="flex-fill text-truncate" i18n="@@i18n.projects.finishedProjectsOverTime">finished projects over time</div>
@@ -73,7 +73,7 @@
 }
 @if (!isLoaded() || hasData()) {
     <div class="row">
-        <div class="col-4">
+        <div class="col-12 col-xl-4">
             @if (statsData.svb) {
                 <div class="card mb-3">
                     <div class="card-header">
@@ -110,7 +110,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-8">
+        <div class="col-12 col-xl-8">
             <div class="card mb-3">
                 <div class="card-header" i18n="@@i18n.projects.infoRealWorkingTimeVsQuoteEstimation">real working time vs. quote estimation (only finished projects)</div>
                 <div class="card-body">

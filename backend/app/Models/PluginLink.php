@@ -53,23 +53,19 @@ class PluginLink extends BaseModel {
 
 class PluginLinkCollection extends Collection {
     public function siblingsOfType($type) {
-        // Controller class-based matching
         if (class_exists($type) && is_subclass_of($type, PluginController::class)) {
-            // Get all instantiated controllers directly
             $controllers = PluginController::getPluginControllers($type);
 
             $result = [];
 
             foreach ($this as $link) {
                 if ($link->parent) {
-                    // Find controllers that match the plugin link types for this parent
                     $linkTypes = $link->parent->pluginLinks()->pluck('type', 'url')->toArray();
 
                     foreach ($controllers as $controller) {
                         $controllerKey = $controller->getKey();
                         foreach ($linkTypes as $url => $linkType) {
                             if ($linkType === $controllerKey) {
-                                // Extract channel ID from URL for this specific link
                                 $channelId = $this->extractChannelId($url, $controller);
                                 if ($channelId) {
                                     $result[] = [
@@ -86,9 +82,7 @@ class PluginLinkCollection extends Collection {
             return collect($result);
         }
 
-        // Handle both string types (legacy) and controller classes
         if (is_string($type)) {
-            // Legacy string-based type matching
             $links = [];
             foreach ($this as $link) {
                 if ($link->parent) {
@@ -102,7 +96,6 @@ class PluginLinkCollection extends Collection {
         return collect([]);
     }
     private function extractChannelId(string $url, $controller): ?string {
-        // Extract channel ID from URL based on controller type
         $parts = explode('/', $url);
         return array_pop($parts); // Last part should be channel ID
     }

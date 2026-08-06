@@ -43,6 +43,18 @@ class Project extends BaseModel {
         }
         return new ProjectCollection($all->values()->all());
     }
+    public static function getCurrentQuoteNumber(): string {
+        $prefix  = Param::get('QUOTE_NO_PREFIX')->value ?? '';
+        $suffix  = Param::get('QUOTE_NO_SUFFIX')->value ?? '';
+        $digits  = (int)(Param::get('QUOTE_NO_DIGITS')->value ?? 0);
+        $current = (string)(Param::get('QUOTE_NO_CURRENT')->value ?? 0);
+        return $prefix.str_pad($current, $digits, '0', STR_PAD_LEFT).$suffix;
+    }
+    public static function incrementQuoteNumber(): void {
+        $param        = Param::get('QUOTE_NO_CURRENT');
+        $param->value = $param->value + 1;
+        $param->save();
+    }
 
     use CanMakeInvoiceTrait;
     use HasAssignmentsTrait;
@@ -104,11 +116,6 @@ class Project extends BaseModel {
     public function precomputeNetAttribute(): float {
         return $this->invoiceItems()->whereIn('type', InvoiceItemType::ProjectTotal)->where('stage', 0)->sum('net');
     }
-    /**
-     * True net value, bypassing the `financial`-role masking applied by the `net` cast.
-     * Use for authoritative documents (quote PDFs) and payment-plan tiering, which must be
-     * correct regardless of whether the triggering user holds the `financial` role.
-     */
     public function netUnmasked(): float {
         $raw = $this->getRawOriginal('net');
         if ($raw !== null) {
@@ -253,6 +260,9 @@ class Project extends BaseModel {
     public function predictions() {
         return $this->hasManyThrough(InvoiceItemPrediction::class, InvoiceItem::class);
     }
+    public function orderedFeatures() {
+        return $this->invoiceItems()->whereType(InvoiceItemType::Default)->oldest('position');
+    }
     public function preparedInvoiceItems() {
         return $this->invoiceItems()->whereStage(0)->whereIn('type', [...Invoice::ITEMS_ADDING_TO_INVOICE, InvoiceItemType::Header])->whereInvoiceId(null)->oldest('position');
     }
@@ -346,36 +356,36 @@ class Project extends BaseModel {
         return app(DuplicateProjectAction::class)->execute($this, $name);
     }
     public function setParent(?int $parentId): void {
-        if ($this->pluginLinks) {
-            $this->pluginLinks->each(fn ($_) => $_->delete());
+        if (!$parentId) {
+            $this->project_id = null;
+            return;
         }
-        $this->assignees()->delete();
 
-        if ($parentId) {
-            $parent = Project::findOrFail($parentId);
-            foreach ($parent->assignees()->get() as $assignee) {
-                Assignment::firstOrCreate([
+        $parent = Project::findOrFail($parentId);
+        foreach ($parent->assignees()->get() as $assignee) {
+            $exists = $this->assignees()
+                ->where('assignee_type', $assignee->assignee_type)
+                ->where('assignee_id', $assignee->assignee_id)
+                ->exists();
+            if (!$exists) {
+                Assignment::create([
                     ...$this->toPoly(),
                     ...$assignee->assignee->toPoly('assignee'),
                     'role_id' => $assignee->role_id,
                 ]);
             }
-            foreach ($parent->pluginLinks()->get() as $link) {
-                PluginLink::firstOrCreate([
-                    'name' => $link->name,
-                    'type' => $link->type,
-                    'url'  => $link->url,
-                    ...$this->toPoly(),
-                ]);
-            }
-            $this->project_id          = $parent->id;
-            $this->project_manager_id  = $parent->project_manager_id;
-            $this->product_id          = $parent->product_id;
-        } else {
-            $this->project_id          = null;
-            $this->project_manager_id  = null;
-            $this->product_id          = null;
         }
+        foreach ($parent->pluginLinks()->get() as $link) {
+            PluginLink::firstOrCreate([
+                'name' => $link->name,
+                'type' => $link->type,
+                'url'  => $link->url,
+                ...$this->toPoly(),
+            ]);
+        }
+        $this->project_id         = $parent->id;
+        $this->project_manager_id = $this->project_manager_id ?? $parent->project_manager_id;
+        $this->product_id         = $this->product_id ?? $parent->product_id;
     }
     public function moveItemsToCustomer($itemsQuery, array $itemUpdates = []): void {
         app(MoveProjectItemsToCustomerAction::class)->execute($this, $itemsQuery, $itemUpdates);

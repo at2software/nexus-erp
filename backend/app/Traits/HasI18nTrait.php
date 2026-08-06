@@ -80,18 +80,12 @@ trait HasI18nTrait {
         return $this->vcard?->getFirstValue('X-FORMALITY') ?? 'formal';
     }
 
-    /**
-     * Resolve an i18n value (array or string) to a single string.
-     * If the value is an array of i18n variants, returns the text for the given language/formality.
-     * If the value is already a string, returns it as-is.
-     */
     public static function resolveI18nValue(mixed $value, string $language = 'de', string $formality = 'formal'): ?string {
         if (is_string($value)) {
             return $value;
         }
 
         if (is_array($value)) {
-            // Find exact match first
             foreach ($value as $variant) {
                 if (isset($variant['language'], $variant['formality'], $variant['text'])
                     && $variant['language'] === $language
@@ -100,14 +94,12 @@ trait HasI18nTrait {
                 }
             }
 
-            // Fallback: match language only
             foreach ($value as $variant) {
                 if (isset($variant['language'], $variant['text']) && $variant['language'] === $language) {
                     return $variant['text'];
                 }
             }
 
-            // Fallback: return first available text
             foreach ($value as $variant) {
                 if (isset($variant['text']) && ! empty($variant['text'])) {
                     return $variant['text'];

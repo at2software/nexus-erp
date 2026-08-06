@@ -57,7 +57,6 @@ class ExternalFinTsDriver implements FinTsDriverInterface {
         $getStatement = GetStatementOfAccount::create($account, $since, new \DateTime);
         $fints->execute($getStatement);
 
-        // nemiah uses 'credit'/'debit'; we normalise to our 'C'/'D' constants
         return collect($getStatement->getStatement()->getStatements())
             ->flatMap(fn ($s) => $s->getTransactions())
             ->map(fn (NemiahTransaction $t) => new FinTsTransaction(

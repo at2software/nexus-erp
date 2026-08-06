@@ -4,12 +4,12 @@ import { EchartsParamCardComponent } from './echarts-param-card.component';
 
 import { Color } from '@constants/Color';
 import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS, EChartsRangeAreaOptions, EChartsDualShadowAreaStyle } from '../echarts-presets';
-import { dayjs } from '@constants/dates';
+import { dayjs } from '@constants/date/dates';
 import { CASHFLOW_I18N } from '@dashboard/widgets/widget-cashflow/widget-cashflow.options';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import type { LineSeriesOption } from 'echarts';
 import type { TopLevelFormatterParams } from 'echarts/types/dist/shared';
-import { ParamChartSeries, ParamChartPoint } from '@models/api-response';
+import { ParamChartSeriesDto, ParamChartPointDto } from '@models/_core/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,17 +35,16 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent {
         series: [],
     });
 
-    updateSeries(result: ParamChartSeries[]): void {
+    updateSeries(result: ParamChartSeriesDto[]): void {
         if (!result || result.length === 0) return;
 
-        const findNode = (d: string, a: ParamChartPoint[]) => a?.find((_) => _.x == d);
+        const findNode = (d: string, a: ParamChartPointDto[]) => a?.find((_) => _.x == d);
 
         this.value.set(result.length && result[0].current != null ? result[0].current : 0);
 
-        // Fill missing date gaps
         result.forEach((_) => {
-            const blanko: ParamChartPoint[] = [];
-            let last: ParamChartPoint | undefined = undefined;
+            const blanko: ParamChartPointDto[] = [];
+            let last: ParamChartPointDto | undefined = undefined;
             for (let i = this.startOfStats(); i.isBefore(dayjs()); i = i.add(1, 'month')) {
                 const date = i.format('YYYY-MM-01');
                 const node = findNode(date, _['data']);
@@ -55,7 +54,6 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent {
             _['data'] = blanko;
         });
 
-        // Calculate max value for y-axis
         const useSharedStack = result.length > 1;
         let maxVal = 0;
 
@@ -80,7 +78,6 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent {
 
         const padding = maxVal * 0.2;
 
-        // Convert to ECharts series format
         const echartsData: (LineSeriesOption & { showInLegend?: boolean })[] = [];
         const sharedStackName = 'combined';
 
@@ -111,7 +108,6 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent {
                 const baseColor = Color.fromVar(this.getColor(i));
                 const areaColor = baseColor.toHexString();
 
-                // Bottom area (from 0 to min)
                 echartsData.push({
                     name: `${CASHFLOW_I18N(_.name)} Base`,
                     type: 'line',
@@ -124,7 +120,6 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent {
                     showInLegend: false,
                 });
 
-                // Top area (range area between min and max)
                 echartsData.push({
                     name: `${CASHFLOW_I18N(_.name)} Range`,
                     type: 'line',
@@ -142,7 +137,6 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent {
             });
         }
 
-        // Add line series (average lines above the range areas) - only for single series
         if (!useSharedStack) {
             result.forEach((serie, seriesIndex: number) => {
                 const lineColor = Color.fromVar(this.getColor(seriesIndex)).toHexString();
@@ -166,7 +160,6 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent {
             });
         }
 
-        // Calculate trend if needed (when comparing multiple series)
         if (result.length >= 2 && echartsData.length >= 2) {
             const lastPoint1 = result[1]?.data?.at(-1);
             const lastPoint3 = result[3]?.data?.at(-1);
@@ -177,7 +170,6 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent {
             }
         }
 
-        // Add trend lines if computeTrend is enabled and not stacked
         if (this.computeTrend() && !useSharedStack) {
             echartsData.forEach((series) => {
                 if (series.type === 'line' && (series.data?.length ?? 0) > 10 && series.lineStyle?.color && typeof series.name !== 'number' && !series.name?.includes('Base') && !series.name?.includes('Range')) {
@@ -224,7 +216,6 @@ export class EchartsRangeCardComponent extends EchartsParamCardComponent {
                     const xValue = arr[0].axisValue;
                     const headerColor = Color.fromVar(this.getColor(0)).toHexString();
 
-                    // Group by original series (skip trend lines, range areas, and base areas)
                     const originalSeries = arr.filter((p) => !p.seriesName?.includes('Trend') && !p.seriesName?.includes('Range') && !p.seriesName?.includes('Base'));
 
                     let html = `<div class="text-center d-flex justify-content-between align-items-center" style="color: ${headerColor}; padding: 4px;">`;

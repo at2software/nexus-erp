@@ -2,7 +2,7 @@ import { Dictionary } from '@constants/constants';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { NgbActiveModal, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
-import { Sentinel } from '@models/sentinels/sentinel.model';
+import { Sentinel } from '@models/sentinel/sentinel.model';
 import { GlobalService } from '@models/global.service';
 import { SENTINEL_COMMANDS, SentinelCommand, SentinelCommandInstance } from '../../sentinel-command.model';
 import { SentinelConditionInstance } from '../../sentinel-condition.model';
@@ -55,13 +55,11 @@ export class ProfileSentinelCommandModalComponent extends ModalBaseComponent<boo
         this.tables = this.#global.tables;
         this.relations = this.#global.relations;
 
-        // Check if this is nested mode
         if (typeof index === 'object' && index.nested) {
             this.nested = true;
             this.onSave = index.onSave;
             this.loopVariable = index.loopVariable;
             this.loopTable = index.loopTable;
-            // For nested mode, exclude for_each from available commands (no nested for_each)
             this.allCommands = SENTINEL_COMMANDS.filter((c) => c.allowedTriggerTypes.includes(this.sentinel.trigger) && c.key !== 'for_each');
             if (index.nestedData) {
                 this.selectedCommand = this.parseCommand(index.nestedData);
@@ -76,7 +74,6 @@ export class ProfileSentinelCommandModalComponent extends ModalBaseComponent<boo
             if (commands[this.commandIndex]) {
                 const data = commands[this.commandIndex];
                 this.selectedCommand = this.parseCommand(data);
-                // Preserve nested data for for_each
                 this.existingConditions = data.conditions || [];
                 this.existingActions = data.actions || [];
             }
@@ -91,14 +88,12 @@ export class ProfileSentinelCommandModalComponent extends ModalBaseComponent<boo
             options: this.selectedCommand.options?.map((o) => ({ key: o.key, value: o.value !== undefined ? String(o.value) : undefined })) || [],
         };
 
-        // Handle nested mode
         if (this.nested && this.onSave) {
             this.onSave(command);
             this.#activeModal.close(true);
             return;
         }
 
-        // Preserve nested conditions/actions for for_each
         if (this.selectedCommand.key === 'for_each') {
             command.conditions = this.existingConditions;
             command.actions = this.existingActions;

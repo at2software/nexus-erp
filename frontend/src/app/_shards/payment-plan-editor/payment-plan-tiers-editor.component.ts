@@ -1,9 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, linkedSignal } from '@angular/core';
+import { modelResource } from '@models/http/model-resource';
 
 import { FormsModule } from '@angular/forms';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
-import { ParamService } from '@models/param.service';
+import { ParamService } from '@models/param/param.service';
+import { Param } from '@models/param/param.model';
 import { PaymentPlanStep, sortSteps } from './payment-plan-editor.component';
 
 export interface PaymentPlanTier {
@@ -21,27 +23,20 @@ export interface PaymentPlanTier {
     host: { style: 'display:contents' },
 })
 export class PaymentPlanTiersEditorComponent {
-    tiers = signal<PaymentPlanTier[]>([]);
-
     #paramService = inject(ParamService);
 
-    constructor() {
-        this.load();
-    }
-
-    load() {
-        this.#paramService.show('params/PROJECT_PAYMENT_PLAN_TIERS').subscribe((data) => {
-            const tiers = this.#parseTiers(data?.value);
-            for (const tier of tiers) tier.steps = sortSteps(tier.steps);
-            this.tiers.set(tiers);
-        });
-    }
+    readonly #tiers = modelResource(() => this.#paramService.show('params/PROJECT_PAYMENT_PLAN_TIERS'));
+    tiers = linkedSignal<PaymentPlanTier[]>(() => {
+        const tiers = this.#parseTiers(this.#tiers.hasValue() ? this.#tiers.value().value : undefined);
+        for (const tier of tiers) tier.steps = sortSteps(tier.steps);
+        return tiers;
+    });
 
     save() {
         const tiers = this.tiers();
         for (const tier of tiers) tier.steps = sortSteps(tier.steps);
         const json = JSON.stringify(tiers);
-        this.#paramService.update('params/PROJECT_PAYMENT_PLAN_TIERS', { value: json }).subscribe();
+        Param.write('params/PROJECT_PAYMENT_PLAN_TIERS', json).subscribe();
         this.#touch();
     }
 

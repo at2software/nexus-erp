@@ -1,34 +1,38 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute } from '@angular/router';
 import { ProductService } from '@models/product/product.service';
 import { Product } from '@models/product/product.model';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
-import { IAIPlugin } from '@models/http/ai.plugin.interface';
-import { PluginInstance } from '@models/http/plugin.instance';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
+import { IAIPlugin } from '@models/http/plugins/ai.plugin.interface';
+import { PluginInstance } from '@models/http/plugins/plugin.instance';
 import { SafePipe } from '@pipes/safe.pipe';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
-import { filter, map, switchMap } from 'rxjs/operators';
-import { AISuggestion, ProductSplitItem } from '@models/api-response';
+import { AISuggestionDto, ProductSplitItemDto } from '@models/_core/api-response';
+import { ProductDetailGuard } from '../product-details.guard';
+import { modelListResource } from '@models/http/model-resource';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 @Component({
     selector: 'app-product-refactor',
     templateUrl: './product-split.component.html',
     styleUrls: ['./product-split.component.scss'],
-    imports: [SearchInputComponent, SafePipe, SpinnerComponent],
+    imports: [StackedTableDirective, SearchInputComponent, SafePipe, SpinnerComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProductRefactorComponent {
-    readonly #route = inject(ActivatedRoute);
+    readonly #parent = inject(ProductDetailGuard);
     readonly #productService = inject(ProductService);
     readonly #pluginFactory = inject(PluginInstanceFactory);
 
-    readonly #productId$ = this.#route.parent!.params.pipe(map(p => Number(p['id'])), filter(id => id > 0));
+    readonly currentProduct = this.#parent.object;
 
-    readonly splitItems = toSignal<ProductSplitItem[]>(this.#productId$.pipe(switchMap(id => this.#productService.getSplit(id))));
-    readonly currentProduct = toSignal(this.#productId$.pipe(switchMap(id => this.#productService.show(id.toString()))));
+    readonly #split = modelListResource(
+        () => this.currentProduct()?.id || undefined,
+        (id) => this.#productService.getSplit(id),
+    );
+    readonly splitItems = this.#split.value;
+    readonly isLoading = this.#split.isLoading;
 
     readonly productSuggestions = signal<string[]>([]);
     readonly isLoadingSuggestions = signal(false);
@@ -49,8 +53,7 @@ export class ProductRefactorComponent {
 
         this.isLoadingSuggestions.set(true);
 
-        const items = this.splitItems() ?? [];
-        const itemsWithIds = items.map(item => `ID:${item.id} - "${item.text}" (${item.project_name})`).join('\n');
+        const itemsWithIds = this.splitItems().map(item => `ID:${item.id} - "${item.text}" (${item.project_name})`).join('\n');
         const prompt = `IMPORTANT: Respond with ONLY valid JSON array. NO text, explanations, or formatting. Raw JSON only.\n\nAnalyze these invoice items and group them into 5-7 product categories:\n${itemsWithIds}\n\nRequired output format (EXACT):\n[{"name":"Category Name","itemIds":[1,2,3]},{"name":"Another Category","itemIds":[4,5,6]}]\n\nSTRICT: Start response with [ and end with ]. Nothing else.`;
         const selectedModel = pluginConfig.value?.model || aiPlugin.getDefaultModel()?.id || 'gpt-4o';
 
@@ -71,7 +74,7 @@ export class ProductRefactorComponent {
                         if (Array.isArray(suggestions)) {
                             this.productSuggestions.set(
                                 suggestions.length > 0 && typeof suggestions[0] === 'object' && suggestions[0].name
-                                    ? (suggestions as AISuggestion[]).map((item) => `${item.name} (${item.itemIds?.length || 0} items)`)
+                                    ? (suggestions as AISuggestionDto[]).map((item) => `${item.name} (${item.itemIds?.length || 0} items)`)
                                     : suggestions,
                             );
                         }
@@ -94,9 +97,9 @@ export class ProductRefactorComponent {
         });
     };
 
-    readonly getSelectedProductName = (item: ProductSplitItem) => item.selectedProduct?.name || '';
+    readonly getSelectedProductName = (item: ProductSplitItemDto) => item.selectedProduct?.name || '';
 
-    readonly onProductSelected = (item: ProductSplitItem, selected: Serializable) => {
+    readonly onProductSelected = (item: ProductSplitItemDto, selected: Serializable) => {
         const selectedProduct = selected.assert(Product);
         if (selectedProduct?.id) {
             item.selectedProduct = selectedProduct;
@@ -143,8 +146,8 @@ export class ProductRefactorComponent {
 
     #setSuggestions(suggestions: unknown[]): void {
         this.productSuggestions.set(
-            suggestions.length > 0 && typeof suggestions[0] === 'object' && (suggestions[0] as AISuggestion)?.name
-                ? (suggestions as AISuggestion[]).map((item) => `${item.name} (${item.itemIds?.length || 0} items)`)
+            suggestions.length > 0 && typeof suggestions[0] === 'object' && (suggestions[0] as AISuggestionDto)?.name
+                ? (suggestions as AISuggestionDto[]).map((item) => `${item.name} (${item.itemIds?.length || 0} items)`)
                 : (suggestions as string[]),
         );
     }

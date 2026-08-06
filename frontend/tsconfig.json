@@ -2,7 +2,6 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "baseUrl": "./",
     "outDir": "./dist/out-tsc",
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
@@ -13,50 +12,59 @@
     "noFallthroughCasesInSwitch": true,
     "sourceMap": true,
     "declaration": false,
-    "experimentalDecorators": true,
     "moduleResolution": "bundler",
     "importHelpers": true,
     "target": "ES2022",
+    "lib": ["ES2022", "DOM", "ESNext.Decorators"],
     "module": "es2020",
     "paths": {
       "@charts/*": [
-        "src/app/_charts/*"
+        "./src/app/_charts/*"
       ],
       "@dashboard/*": [
-        "src/app/dashboard/*"
+        "./src/app/dashboard/*"
       ],
       "@models/*": [
-        "src/models/*"
+        "./src/models/*"
       ],
       "@constants/*": [
-        "src/constants/*"
+        "./src/constants/*"
+      ],
+      "@environments/*": [
+        "./src/environments/*"
+      ],
+      "@services/*": [
+        "./src/services/*"
+      ],
+      "@testing/*": [
+        "./src/testing/*"
       ],
       "@directives/*": [
-        "src/directives/*"
+        "./src/directives/*"
       ],
       "@guards/*": [
-        "src/guards/*"
+        "./src/guards/*"
       ],
       "@shards/*": [
-        "src/app/_shards/*"
+        "./src/app/_shards/*"
       ],
       "@activity/*": [
-        "src/app/_activity/*"
+        "./src/app/_activity/*"
       ],
       "@app/*": [
-        "src/app/*"
+        "./src/app/*"
       ],
       "@pipes/*": [
-        "src/pipes/*"
+        "./src/pipes/*"
       ],
       "@enums/*": [
-        "src/enums/*"
+        "./src/enums/*"
       ],
       "@interfaces/*": [
-        "src/interfaces/*"
+        "./src/interfaces/*"
       ],
       "quill": [
-        "node_modules/quill/quill.d.ts"
+        "./node_modules/quill/quill.d.ts"
       ]
     }
   },

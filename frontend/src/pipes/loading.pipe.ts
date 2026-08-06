@@ -1,13 +1,10 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
-// potential loading ascii characters
-// ░▒▓ █▄▀■
-
 @Pipe({
     name: 'loading',
 })
 export class LoadingPipe implements PipeTransform {
-    transform(value: any, length?: number, suffix?: string, ascii: string = '■'): any {
+    transform(value: number | null | undefined, length?: number, suffix?: string, ascii: string = '■'): string {
         suffix = suffix || '';
         if (!value) {
             return ascii.repeat(length ? length : 3);

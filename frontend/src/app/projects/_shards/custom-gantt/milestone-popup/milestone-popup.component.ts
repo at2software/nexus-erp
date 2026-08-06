@@ -4,19 +4,18 @@ import { DecimalPipe } from '@angular/common';
 import { ReactiveFormsModule, FormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { NgbDropdownModule, NgbProgressbarModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { DaterangepickerDirective, NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
-import { Milestone } from '@models/milestones/milestone.model';
+import { Milestone } from '@models/milestone/milestone.model';
 import { Project } from '@models/project/project.model';
 import { User } from '@models/user/user.model';
-import { Task } from '@models/tasks/task.model';
-import { MilestoneState, MILESTONE_STATES } from '@models/milestones/milestone-state.enum';
-import { MilestoneService } from '@models/milestones/milestone.service';
+import { Task } from '@models/task/task.model';
+import { MilestoneState, MILESTONE_STATES } from '@models/milestone/milestone-state.enum';
 import { ProjectService } from '@models/project/project.service';
 import { Toast } from '@shards/toast/toast';
-import { dayjs, Dayjs } from '@constants/dates';
+import { dayjs, Dayjs } from '@constants/date/dates';
 import { AffixInputDirective } from '@directives/affix-input.directive';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 import { Nx } from '@app/nx/nx.directive';
-import { TaskService } from '@models/tasks/task.service';
+import { TaskService } from '@models/task/task.service';
 import { tracked } from '@constants/tracked';
 
 type TimePeriod = NonNullable<DaterangepickerDirective['value']>;
@@ -34,7 +33,6 @@ export class MilestonePopupComponent {
     readonly trackedMilestone = tracked(this.milestone);
     readonly project = input<Project | undefined>(undefined);
     readonly trackedProject = tracked(this.project);
-    /** Selectable projects for the project field; falls back to the single `project` input when empty. */
     readonly projects = input<Project[]>([]);
 
     closed = output<void>();
@@ -46,11 +44,9 @@ export class MilestonePopupComponent {
 
     projectUsers = signal<User[]>([]);
     dateRangeModel = signal<TimePeriod | null>(null);
-    /** Kept outside the reactive form, mirroring dateRangeModel — it drives projectUsers and isn't validated like the other fields. */
     selectedProjectId = signal<string | null>(null);
     milestoneForm!: FormGroup;
 
-    /** projects() when supplied by the caller; otherwise just the single current project, so the selector always has at least one option. */
     readonly selectableProjects = computed<Project[]>(() => {
         const list = this.projects();
         if (list.length) return list;
@@ -76,7 +72,6 @@ export class MilestonePopupComponent {
     });
 
     #formBuilder = inject(FormBuilder);
-    #milestoneService = inject(MilestoneService);
     #projectService = inject(ProjectService);
     #inputModalService = inject(InputModalService);
     #taskService = inject(TaskService);
@@ -125,7 +120,6 @@ export class MilestonePopupComponent {
 
     /** Mirrors Milestone::getComputedWorkloadPercentAttribute() so the modal can preview the effect of an in-progress edit before saving. */
     dailyWorkloadPercent(): number | null {
-        // A manually entered value always takes priority; invoice items are only a fallback estimate, same as the backend.
         const hours = this.milestoneForm?.get('workload_hours')?.value || this.totalInvoiceItemDuration();
         const range = this.dateRangeModel();
         if (!hours || hours <= 0 || !range) return null;
@@ -136,7 +130,6 @@ export class MilestonePopupComponent {
         return Math.round((dailyHours / avgDailyHours) * 1000) / 10;
     }
 
-    /** Inclusive Mon–Fri day count between two dates, same rule as the backend's countWorkingDaysBetween(). */
     #countWorkingDays(start: Dayjs, end: Dayjs): number {
         let count = 0;
         for (let cursor = start.startOf('day'); !cursor.isAfter(end, 'day'); cursor = cursor.add(1, 'day')) {
@@ -148,8 +141,6 @@ export class MilestonePopupComponent {
     getSelectedUser(): User | null {
         const userId = this.milestoneForm?.get('user_id')?.value;
         if (!userId) return null;
-        // The assignee may not be a member of the project's current assignee list (e.g. removed since); fall back
-        // to the milestone's own user relation so an already-assigned milestone never shows as "unassigned".
         const milestoneUser = this.trackedMilestone()?.user;
         return this.projectUsers().find((u) => u.id === userId) ?? (milestoneUser && milestoneUser.id === userId ? milestoneUser : null);
     }
@@ -180,7 +171,7 @@ export class MilestonePopupComponent {
         const newProject = this.selectedProject();
         if (newProject && String(newProject.id) !== String(milestone.project_id)) updateData['project_id'] = newProject.id;
 
-        this.#milestoneService.update(Number(milestone.id), updateData).subscribe({
+        milestone.update(updateData, true).subscribe({
             next: () => {
                 Toast.success($localize`:@@i18n.milestone.updated:Milestone updated successfully`);
                 Object.assign(milestone, updateData);

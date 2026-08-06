@@ -1,12 +1,11 @@
-import { NxAction } from '@app/nx/nx.actions';
+import { NxAction } from '@models/_core/nx.actions';
 import { Expense } from './expense.model';
-import { ModalBaseService } from '@app/_modals/modal-base-service';
-import { ModalEditExpenseComponent } from '@app/_modals/modal-edit-expense/modal-edit-expense.component';
-import { NxGlobal } from '@app/nx/nx.global';
+import { MODAL } from '@models/_core/modal-registry';
+import { nx } from '@models/_core/nx-bridge';
 
 export function getExpenseActions(self: Expense): NxAction[] {
     return [
-        { title: $localize`:@@i18n.common.edit:edit`, action: () => ModalBaseService.open(ModalEditExpenseComponent, self) },
+        { title: $localize`:@@i18n.common.edit:edit`, doubleClick: true, action: () => nx().openModal(MODAL.editExpense, self) },
         {
             title: 'change matching string',
             action: () => {
@@ -24,6 +23,6 @@ export function getExpenseActions(self: Expense): NxAction[] {
                 self.update().subscribe();
             },
         },
-        NxGlobal.deleteAction(self, $localize`:@@i18n.common.reallyDeleteThisExpense:really delete this expense?`, { roles: 'admin' }),
+        nx().deleteAction(self, $localize`:@@i18n.common.reallyDeleteThisExpense:really delete this expense?`, { roles: 'admin' }),
     ];
 }

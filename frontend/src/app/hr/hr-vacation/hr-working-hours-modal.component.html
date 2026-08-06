@@ -6,7 +6,6 @@
 <div class="modal-body">
     @if (user && user.active_employment) {
         <div>
-            <!-- Current Working Hours (Read-Only) -->
             <h6 class="mb-2" i18n="@@i18n.hr.currentWorkingHours">current working hours</h6>
             <div class="d-flex w-100 mb-3">
                 <div class="flex-fill text-center">
@@ -31,7 +30,6 @@
                 </div>
             </div>
 
-            <!-- New Working Hours (Editable) -->
             <h6 class="mb-2" i18n="@@i18n.hr.newWorkingHours">new working hours</h6>
             <div class="d-flex mb-3">
                 <div class="form-floating me-2">
@@ -56,7 +54,6 @@
                 </div>
             </div>
 
-            <!-- Change Effective Date -->
             <div class="mb-3">
                 <div class="form-label" i18n="@@i18n.hr.changeEffectiveDate">change effective date</div>
                 <div class="input-group">
@@ -67,13 +64,11 @@
                 </div>
             </div>
 
-            <!-- Vacation Days Per Year -->
             <div class="mb-3">
                 <div class="form-label" i18n="@@i18n.hr.vacationDaysPerYear">vacation days per year</div>
                 <input type="number" class="form-control" [(ngModel)]="vacationDaysPerYear" (ngModelChange)="calculateVacationAdjustment()" placeholder="30" />
             </div>
 
-            <!-- Vacation Calculation Info -->
             @if (vacationCalculation) {
                 <div class="card mb-3">
                     <div class="card-body">

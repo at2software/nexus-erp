@@ -1,7 +1,8 @@
-﻿import { ChangeDetectionStrategy, Component, afterNextRender, inject, signal, viewChild } from '@angular/core';
+﻿import { Page } from '@models/http/http.nexus';
+import { ChangeDetectionStrategy, Component, afterNextRender, inject, signal, viewChild } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Dictionary, filtered, span, StartEnd } from '@constants/constants';
-import { DATESPAN_RANGE } from '@constants/dateSpanRange';
+import { DATESPAN_RANGE } from '@constants/date/dateSpanRange';
 import { Project } from '@models/project/project.model';
 import { GlobalService } from '@models/global.service';
 import { ProjectService } from '@models/project/project.service';
@@ -29,7 +30,7 @@ const COOKIE_ID = 'project/dashboard';
 export class ProjectsDashboardComponent {
     private readonly stateFilter = viewChild.required(ProjectStateFilterComponent);
 
-    observer!: Observable<Project[]>;
+    observer!: Observable<Page<Project>>;
     projects: Project[] = [];
     hasLoaded = signal(false);
 
@@ -120,7 +121,7 @@ export class ProjectsDashboardComponent {
         const filters = this.filters();
         this.projects = [];
         this.hasLoaded.set(false);
-        this.observer = this.#projectService.index(filters);
+        this.observer = this.#projectService.indexPaginated(filters);
     }
     updateCookie() {
         const cookieData = this.#cookieData();

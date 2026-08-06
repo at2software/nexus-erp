@@ -9,7 +9,6 @@ import { ProjectState } from '@models/project/project-state.model';
 import { ProjectComponent } from '@shards/project/project.component';
 import { ActivityTabComponent } from '@activity/activity-tab.component';
 import { TabCommentsComponent } from '@activity/tab-comments/tab-comments.component';
-import { ActivityProjectsComponent } from '@app/projects/_shards/activity-projects/activity-projects.component';
 import { HeaderComponent } from '@app/app/header/header.component';
 import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { SmartLinkDirective } from '@directives/smart-link.directive';
@@ -19,7 +18,7 @@ import { HeaderRouteNavComponent } from '@app/app/header/header-route-nav/header
     selector: 'project-detail',
     templateUrl: './project-detail.component.html',
     styleUrls: ['./project-detail.component.scss'],
-    imports: [HeaderComponent, ProjectComponent, HeaderRouteNavComponent, RouterModule, ActivityTabComponent, TabCommentsComponent, ActivityProjectsComponent, ProjectComponent, NgbDropdownModule, SmartLinkDirective],
+    imports: [HeaderComponent, ProjectComponent, HeaderRouteNavComponent, RouterModule, ActivityTabComponent, TabCommentsComponent, ProjectComponent, NgbDropdownModule, SmartLinkDirective],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectDetailComponent {

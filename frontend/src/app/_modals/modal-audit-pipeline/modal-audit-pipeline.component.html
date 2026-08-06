@@ -64,7 +64,7 @@
                 <ul class="list-group">
                     @for (stage of _stages; track stage) {
                         <li class="list-group-item">
-                            <label class="d-flex align-items-center gap-2 mb-0" style="cursor: pointer">
+                            <label class="d-flex align-items-center gap-2 mb-0 cursor-pointer">
                                 <input type="checkbox" class="form-check-input" [ngModel]="selectedStages()[stage]" (ngModelChange)="setStage(stage, $event)" />
                                 <span>{{ stage }}</span>
                             </label>

@@ -22,7 +22,6 @@ export const ECHARTS_DONUT_ITEM_STYLE = {
     borderColor: '#000',
 };
 
-// ECharts simple configuration for widget charts
 export const EChartsSimpleOptions = {
     backgroundColor: 'transparent',
     grid: {
@@ -53,7 +52,6 @@ export const EChartsSimpleOptions = {
     animation: false,
 } satisfies EChartsOption;
 
-// ECharts stacked bar chart configuration for widgets
 export const EChartsStackedBarOptions = {
     ...EChartsSimpleOptions,
     xAxis: {
@@ -72,12 +70,10 @@ export const EChartsStackedBarOptions = {
     },
 } satisfies EChartsOption;
 
-// ECharts dual shadow configuration for area styles
 export const EChartsDualShadowAreaStyle = {
     filter: 'drop-shadow(0 -1px 2px #09f)',
 };
 
-// ECharts range area chart configuration for forecast widgets
 export const EChartsRangeAreaOptions = {
     ...EChartsSimpleOptions,
     xAxis: {
@@ -101,7 +97,6 @@ export const EChartsRangeAreaOptions = {
     },
 } satisfies EChartsOption;
 
-// ECharts y-axis mark line annotation helper
 export const eAnnotateY = (v: number, pipe: ShortPipe) => ({
     yAxis: v,
     name: pipe.transform(v),
@@ -109,7 +104,6 @@ export const eAnnotateY = (v: number, pipe: ShortPipe) => ({
     label: { show: true, formatter: pipe.transform(v), position: 'insideEndTop' as const, color: '#ffffff44', fontSize: 10 },
 });
 
-// ECharts x-axis mark line annotation helper
 export const eAnnotateX = (x: number, label: string) => ({
     xAxis: x,
     name: label,

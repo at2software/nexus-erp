@@ -1,8 +1,8 @@
 import { ObserverTrigger } from '@enums/observer-trigger';
-import { SentinelNode } from '@models/sentinels/sentinel-node.model';
+import { SentinelNode } from '@models/sentinel/sentinel-node.model';
 import { SentinelNodeType } from '@enums/sentinel-node.type';
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { Sentinel } from '@models/sentinels/sentinel.model';
+import { Sentinel } from '@models/sentinel/sentinel.model';
 import { SENTINEL_CONDITIONS } from '../sentinel-condition.model';
 import { SENTINEL_COMMANDS } from '../sentinel-command.model';
 import { SentinelOptionFieldType } from '../sentinel-option-field-type.model';

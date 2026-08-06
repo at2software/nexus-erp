@@ -10,13 +10,9 @@ use Illuminate\Support\Facades\Artisan;
 class LinearRegressionForecastSeeder extends Seeder {
     use WithoutModelEvents;
 
-    /**
-     * Run the database seeds.
-     */
     public function run(): void {
         $this->command->info('Seeding Linear Regression Forecast data for the last 36 months...');
 
-        // Simulate analysis for each of the last 36 months
         $endMonth   = Carbon::now();
         $startMonth = $endMonth->copy()->subMonths(35); // Go back 36 months total
 
@@ -28,7 +24,6 @@ class LinearRegressionForecastSeeder extends Seeder {
             $this->command->info("Processing month {$monthCount}/36: ".$currentMonth->format('Y-m'));
 
             try {
-                // Call the linear regression command with the specific date and store=true
                 $exitCode = Artisan::call('cron:linear-regression-forecast', [
                     '--date'  => $currentMonth->format('Y-m-d'),
                     '--store' => 'true',

@@ -1,22 +1,16 @@
-import { Injectable } from '@angular/core';
-import { map } from 'rxjs';
+import { Service } from '@angular/core';
+import { serialize } from '@constants/rxjs/rxjs-operators';
+import { Observable } from 'rxjs';
 import { ProductGroup } from './product-group.model';
 import { NexusHttpService } from '../http/http.nexus';
 import { Company } from '../company/company.model';
+import { ProductCustomersDto } from '@models/_core/api-response';
 
-@Injectable({
-    providedIn: 'root',
-})
+@Service()
 export class ProductGroupService extends NexusHttpService<ProductGroup> {
     public apiPath = 'product_groups';
     override readonly model = ProductGroup;
 
-    indexCustomers = (p: ProductGroup) =>
-        this.get(`product_groups/${p.id}/customers`).pipe(
-            map((data: any) => ({
-                customers: (data.customers as any[]).map((c) => Company.fromJson(c)),
-                total_revenue: data.total_revenue as number,
-                total_customers: data.total_customers as number,
-            })),
-        );
+    indexCustomers = (id: string | number): Observable<ProductCustomersDto> =>
+        this.get(`product_groups/${id}/customers`, {}, Object).pipe(serialize('customers', Company));
 }

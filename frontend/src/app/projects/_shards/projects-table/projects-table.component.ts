@@ -13,9 +13,10 @@ import { SortMode } from '@app/app/table-controls/sort-mode';
 import { GlobalService } from '@models/global.service';
 import { Project } from '@models/project/project.model';
 import { MoneyPipe } from '@pipes/money.pipe';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 @Component({
-    imports: [DatePipe, Nx, ProjectComponent, CdkTableModule, EnableTableExportDirective, NgbTooltipModule, NgbDatepickerModule, FormsModule, MoneyPipe, AvatarComponent],
+    imports: [StackedTableDirective, DatePipe, Nx, ProjectComponent, CdkTableModule, EnableTableExportDirective, NgbTooltipModule, NgbDatepickerModule, FormsModule, MoneyPipe, AvatarComponent],
     selector: 'projects-table',
     templateUrl: './projects-table.component.html',
     styleUrls: ['./projects-table.component.scss'],

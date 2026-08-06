@@ -87,7 +87,6 @@ class DebriefStatisticsService {
                 )
                 ->get();
 
-            // Severity counts from all occurrences (not deduplicated)
             $severityCounts = ['low' => 0, 'medium' => 0, 'high' => 0, 'critical' => 0];
             $totalWeight    = 0;
             foreach ($rows as $row) {
@@ -95,11 +94,9 @@ class DebriefStatisticsService {
                 $totalWeight += $severityWeights[$row->severity];
             }
 
-            // Load projects for this category's problem occurrences
             $allProjectIds = $rows->pluck('project_id')->filter()->unique();
             $projects      = Project::whereIn('id', $allProjectIds)->get()->keyBy('id');
 
-            // Deduplicate problems, collecting their distinct projects
             $problems = [];
             foreach ($rows->groupBy('id') as $problemId => $problemRows) {
                 $first           = $problemRows->first();

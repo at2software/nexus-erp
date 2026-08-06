@@ -196,9 +196,7 @@
                             <li>
                                 <a class="dropdown-item pointer d-flex hstack gap-2 cursor-pointer"
                                     (click)="addCompanyContact(x)" tabindex="0" (keydown.enter)="addCompanyContact(x)">
-                                    <div class="avatar me-3 avatar-sm">
-                                        <img class="avatar-img" src="{{ group.company.icon }}" alt="" />
-                                    </div>
+                                    <avatar [object]="group.company" size="sm" class="me-3"></avatar>
                                     <span>{{ x.getName() }}</span>
                                 </a>
                             </li>
@@ -216,7 +214,7 @@
             <ul class="list-group" #company>
                 @for (c of contacts(); track c.id) {
                 <list-group-item-contact [nx]="c" [tables]="contacts()" [contact]="c.assignee" [showQuickContact]="true"
-                    [subject]="_project.name" (actionsResolved)="onAssignmentActions()" [imageUrl]="c.assignee.icon"> </list-group-item-contact>
+                    [subject]="_project.name" (actionsResolved)="onAssignmentActions()" [imageUrl]="c.assignee.getAvatar()"> </list-group-item-contact>
                 }
             </ul>
         </div>

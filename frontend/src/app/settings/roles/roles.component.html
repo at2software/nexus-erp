@@ -9,7 +9,7 @@
     @let _selectedRole = selectedRole();
     @let _resetPasswordUserId = resetPasswordUserId();
     <div class="row g-3 p-3">
-        <div class="col-9">
+        <div class="col-12 col-md-9">
             <div class="card">
                 <div class="card-header" i18n="@@i18n.common.users">users</div>
 
@@ -17,7 +17,7 @@
                     <spinner class="p-4"></spinner>
                 } @else {
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle">
+                        <table stackedTable class="table table-hover mb-0 align-middle">
                             <thead>
                                 <tr>
                                     <th class="ps-3" style="min-width: 180px"></th>
@@ -37,7 +37,7 @@
                                     <tr [nx]="user" [class.opacity-50]="user.is_retired">
                                         <td class="ps-3">
                                             <div class="d-flex align-items-center gap-2">
-                                                <img class="rounded-circle" width="28" height="28" [src]="user.icon" [alt]="user.getName()" />
+                                                <img class="rounded-circle" width="28" height="28" [src]="user.getAvatar()" [alt]="user.getName()" />
                                                 <span>{{ user.getName() }}</span>
                                                 @if (needsWarning(user)) {
                                                     <i class="text-warning" style="font-size: 1rem" title="Has specialized roles but no base 'user' role">warning</i>
@@ -98,7 +98,7 @@
             </div>
         </div>
 
-        <div class="col-3">
+        <div class="col-12 col-md-3">
             <div class="card sticky-side">
                 <div class="card-header" i18n="@@i18n.common.roles">roles</div>
                 <ul class="list-group">

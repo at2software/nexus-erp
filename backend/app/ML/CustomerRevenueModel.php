@@ -166,7 +166,6 @@ class CustomerRevenueModel {
         return $result;
     }
 
-    /** Train the given estimator on the full dataset and persist it to disk. */
     public static function train(array $rows, Learner $estimator): PersistentModel {
         $samples = array_map(fn ($row) => self::toSample($row), $rows);
         $labels  = array_map(fn ($row) => CustomerRevenueDataset::logLabel($row[CustomerRevenueDataset::LABEL]), $rows);
@@ -191,12 +190,6 @@ class CustomerRevenueModel {
         return PersistentModel::load(new Filesystem($path));
     }
 
-    /**
-     * Predict a company's next-12-month revenue from features known today
-     * (today acting as the cutoff). Returns null if no trained model is
-     * persisted yet, or if the company doesn't have enough invoice history
-     * to compute features at all.
-     */
     public static function predict(Company $company): ?float {
         $model = self::load();
         if (! $model) {

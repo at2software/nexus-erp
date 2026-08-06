@@ -67,7 +67,6 @@ class Sentinel extends BaseModel {
                 $column  = $options->firstWhere('key', 'column')->value ?? null;
                 $input   = $options->firstWhere('key', 'input')->value ?? null;
 
-                // Strip trigger variable prefix from column path
                 $column = $this->stripVariablePrefix($column, $triggerVar);
 
                 if (preg_match('/^\{(.+)\}$/', $input, $matches)) {
@@ -115,7 +114,6 @@ class Sentinel extends BaseModel {
                     case 'ends_with':
                         $result = substr($value, -strlen($input)) === $input;
                         break;
-                        // New operators for old value comparison
                     case 'was_equal':
                         $result = $oldValue == $input;
                         break;
@@ -216,9 +214,6 @@ class Sentinel extends BaseModel {
         return true;
     }
 
-    /**
-     * Execute a single action with optional nested context
-     */
     private function executeAction(object $command, ?Model $model, array $originalValues, ?Model $item = null, string $variable = 'item'): void {
         $action = $command->key;
         if (! isset($command->options)) {
@@ -323,19 +318,16 @@ class Sentinel extends BaseModel {
         return preg_replace_callback('/\{\{([^}]+)\}\}/', function ($matches) use ($model, $originalValues, $triggerVar) {
             $path = trim($matches[1]);
 
-            // Handle old.field syntax for original values
             if (str_starts_with($path, 'old.')) {
                 $field = substr($path, 4);
                 return (string)data_get($originalValues, $field, '');
             }
 
-            // Handle trigger variable prefix (e.g., pps.project.name)
             if (str_starts_with($path, $triggerVar.'.')) {
                 $field = substr($path, strlen($triggerVar) + 1);
                 return (string)(data_get($model, $field) ?? '');
             }
 
-            // No match - return empty
             return '';
         }, $template);
     }
@@ -367,16 +359,11 @@ class Sentinel extends BaseModel {
         }, $template);
     }
 
-    /**
-     * Resolve a relation or method call on a model (supports dot notation like project.assignees)
-     */
     private function resolveRelation(Model $model, string $relation): ?iterable {
-        // Handle dot notation for nested relations (e.g., project.assignees)
         if (str_contains($relation, '.')) {
             $parts   = explode('.', $relation);
             $current = $model;
 
-            // Traverse intermediate relations (all but the last)
             for ($i = 0; $i < count($parts) - 1; $i++) {
                 $part    = $parts[$i];
                 $current = data_get($current, $part);
@@ -385,12 +372,10 @@ class Sentinel extends BaseModel {
                 }
             }
 
-            // Resolve the final relation (should be iterable)
             $lastPart = $parts[count($parts) - 1];
             return $this->resolveRelation($current, $lastPart);
         }
 
-        // Handle method calls with ()
         if (str_ends_with($relation, '()')) {
             $method = substr($relation, 0, -2);
             if (method_exists($model, $method)) {
@@ -405,7 +390,6 @@ class Sentinel extends BaseModel {
             return null;
         }
 
-        // Handle relation property
         if (method_exists($model, $relation)) {
             $result = $model->$relation;
             if ($result instanceof Collection || is_array($result)) {
@@ -415,18 +399,13 @@ class Sentinel extends BaseModel {
         return null;
     }
 
-    /**
-     * Check if item passes nested conditions (for for_each loops)
-     */
     private function matchesNestedConditions(array $conditionGroups, Model $item, Model $model, array $originalValues, string $variable): bool {
         if (empty($conditionGroups)) {
             return true;
         }
 
-        // OR logic between groups
         foreach ($conditionGroups as $group) {
             $groupMatches = true;
-            // AND logic within group
             foreach ($group as $condition) {
                 if (! $this->matchesNestedCondition($condition, $item, $model, $originalValues, $variable)) {
                     $groupMatches = false;
@@ -477,16 +456,13 @@ class Sentinel extends BaseModel {
     private function resolveNestedValue(string $path, Model $item, Model $model, string $variable): mixed {
         $triggerVar = $this->trigger_variable ?? 'model';
 
-        // If path starts with variable name (e.g., "item.assignee_type" or "assignee.assignee_type")
         if (str_starts_with($path, $variable.'.')) {
             return data_get($item, substr($path, strlen($variable) + 1));
         }
-        // If path starts with trigger variable, use the trigger model
         if (str_starts_with($path, $triggerVar.'.')) {
             return data_get($model, substr($path, strlen($triggerVar) + 1));
         }
 
-        // No match - return null
         return null;
     }
     private function interpolateNested(string $template, Model $model, Model $item, string $variable, array $originalValues): string {
@@ -504,7 +480,6 @@ class Sentinel extends BaseModel {
                 return (string)data_get($model, substr($path, strlen($triggerVar) + 1), '');
             }
 
-            // No match - return empty
             return '';
         }, $template);
     }

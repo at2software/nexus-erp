@@ -1,14 +1,12 @@
 import { Observable } from 'rxjs';
 import { Project } from '@models/project/project.model';
-import { Injectable } from '@angular/core';
-import { Serializable } from '../serializable';
+import { Service } from '@angular/core';
+import { Serializable } from '@models/_core/serializable';
 import { Company } from '@models/company/company.model';
 import { Assignee } from './assignee.model';
 import { NexusHttpService } from '../http/http.nexus';
 
-@Injectable({
-    providedIn: 'root',
-})
+@Service()
 export class AssignmentService extends NexusHttpService<Assignee> {
     override apiPath = 'assignees';
     override readonly model = Assignee;

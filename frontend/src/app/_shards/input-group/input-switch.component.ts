@@ -1,5 +1,5 @@
 ﻿import { ChangeDetectionStrategy, Component, effect, input, model } from '@angular/core';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { FormsModule } from '@angular/forms';
 
 @Component({

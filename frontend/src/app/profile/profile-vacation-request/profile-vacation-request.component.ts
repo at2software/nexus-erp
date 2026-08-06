@@ -1,18 +1,17 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
+import { modelListResource } from '@models/http/model-resource';
 import { FormsModule } from '@angular/forms';
 import { AffixInputDirective } from '@directives/affix-input.directive';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
-import { dayjs } from '@constants/dates';
+import { dayjs } from '@constants/date/dates';
 import { DaterangepickerDirective, NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
 import { Nx } from '@app/nx/nx.directive';
 import { GlobalService } from '@models/global.service';
-import { User } from '@models/user/user.model';
 import { VacationGrant } from '@models/vacation/vacation-grant.model';
 import { Vacation } from '@models/vacation/vacation.model';
 import { VacationService } from '@models/vacation/vacation.service';
-import { Holiday } from '@models/api-response';
 
 type TimePeriod = NonNullable<DaterangepickerDirective['value']>;
 
@@ -39,38 +38,33 @@ export class ProfileVacationRequestComponent {
     global = inject(GlobalService);
     #vacationService = inject(VacationService);
 
-    grants = signal<VacationGrant[]>([]);
-    currentGrant = signal<VacationGrant | undefined>(undefined);
+    readonly #userId = computed(() => this.global.user?.id);
+
+    readonly #grants = modelListResource(this.#userId, (userId) => this.#vacationService.indexGrants(userId));
+    readonly #requests = modelListResource(this.#userId, (userId) => this.#vacationService.indexRequests(userId));
+    readonly #holidays = modelListResource(() => this.#vacationService.indexHolidays());
+
+    readonly grants = computed(() => {
+        const grants = this.#grants.value();
+        grants.forEach((grant) => (grant.var.total = grant.remainingHours()));
+        return grants;
+    });
+    readonly openRequests = this.#requests.value;
+    readonly holidays = this.#holidays.value;
+
+    readonly currentGrant = linkedSignal<VacationGrant[], VacationGrant | undefined>({ source: this.grants, computation: (grants) => grants.first() });
+
     dayList = signal<TDay[]>([]);
-    holidays = signal<Holiday[] | undefined>(undefined);
     totalDeduction = signal(0);
-    openRequests = signal<any[]>([]);
 
     holidayPeriod: TimePeriod | null = null;
     comment: string = '';
 
-    constructor() {
-        this.#vacationService.indexHolidays().subscribe((holidays) => {
-            holidays.forEach((_) => (_.date = dayjs(_.datum)));
-            this.holidays.set(holidays);
-        });
-        this.#reload(this.global.user!);
-    }
-
-    #reload(_: User) {
-        this.#vacationService.indexGrants(_).subscribe((_grants) => {
-            _grants.forEach((grant) => {
-                grant.vacations.sort((a: Vacation, b: Vacation) => b.started_at!.localeCompare(a.started_at!));
-                grant.var.total = grant.remainingHours();
-            });
-            if (_grants.length) this.currentGrant.set(_grants[0]);
-            this.grants.set(_grants);
-        });
-        this.#vacationService.indexRequests(_).subscribe((data: Vacation[]) => this.openRequests.set(data));
-    }
-
     onGrantSelect = (_: VacationGrant) => this.currentGrant.set(_);
-    reload = () => this.#reload(this.global.user!);
+    reload = () => {
+        this.#grants.reload();
+        this.#requests.reload();
+    };
 
     onDatesUpdated = () => {
         if (!this.holidayPeriod?.startDate || !this.holidayPeriod?.endDate) return;
@@ -88,11 +82,8 @@ export class ProfileVacationRequestComponent {
             if (weekDay !== 6 && weekDay !== 0) {
                 const hpd = this.global.user!.active_employment.hpwArray()[weekDay - 1] ?? 0;
                 const day: TDay = { day: start.format('DD.MM.YYYY'), duration: hpd, originalDuration: hpd, mult: 1, specialDescription: '', specialName: STR_REGULAR_WORKDAY };
-                const holidays = this.holidays();
-                if (holidays) {
-                    for (const _ of holidays) {
-                        if (_.date.isSame(start.toDate(), 'day')) assignSpecialHoliday(day, 0, _.name, _.hinweis);
-                    }
+                for (const _ of this.holidays()) {
+                    if (_.date.isSame(start.toDate(), 'day')) assignSpecialHoliday(day, 0, _.name, _.hinweis);
                 }
                 result.push(day);
             } else {
@@ -132,7 +123,7 @@ export class ProfileVacationRequestComponent {
     };
 
     isDurationExceeded = (day: TDay): boolean => day.duration > day.originalDuration && day.originalDuration > 0;
-    isFormValid = (): boolean => !this.dayList().some((day) => this.isDurationExceeded(day));
+    isFormValid = (): boolean => this.totalDeduction() > 0 && !this.dayList().some((day) => this.isDurationExceeded(day));
 
     onGrantRequested() {
         let total = 0;
@@ -152,7 +143,7 @@ export class ProfileVacationRequestComponent {
         });
         payload.store().subscribe(() => {
             this.dayList.set([]);
-            this.#reload(this.global.user!);
+            this.reload();
         });
     }
 }

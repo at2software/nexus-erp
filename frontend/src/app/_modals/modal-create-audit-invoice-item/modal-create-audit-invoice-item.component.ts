@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ModalBaseComponent } from '../modal-base.component';
-import { InvoiceItemService } from '@models/invoice/invoice-item.service';
 import { InvoiceItemType, REPEATING_TYPES } from '@enums/invoice-item.type';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { Company } from '@models/company/company.model';
 import { Product } from '@models/product/product.model';
+import { InvoiceItem } from '@models/invoice/invoice-item.model';
 
 const TYPE_LABELS: Record<number, string> = {
     [InvoiceItemType.Daily]: 'daily',
@@ -21,8 +21,9 @@ const TYPE_LABELS: Record<number, string> = {
     imports: [FormsModule, SpinnerComponent],
     templateUrl: './modal-create-audit-invoice-item.component.html',
 })
-export class ModalCreateAuditInvoiceItemComponent extends ModalBaseComponent<null> {
+export class ModalCreateAuditInvoiceItemComponent extends ModalBaseComponent<InvoiceItem | null> {
     company?: Company;
+    #created: InvoiceItem | null = null;
     saving = signal(false);
 
     name = signal('');
@@ -32,8 +33,6 @@ export class ModalCreateAuditInvoiceItemComponent extends ModalBaseComponent<nul
     next_recurrence_at = signal(new Date().toISOString().slice(0, 10));
 
     readonly typeOptions = REPEATING_TYPES.map((t) => ({ value: t, label: TYPE_LABELS[t] }));
-
-    #service = inject(InvoiceItemService);
 
     init(company: Company, product?: Product) {
         this.company = company;
@@ -50,8 +49,8 @@ export class ModalCreateAuditInvoiceItemComponent extends ModalBaseComponent<nul
         }
     }
 
-    onSuccess() {
-        return null;
+    onSuccess(): InvoiceItem | null {
+        return this.#created;
     }
 
     readonly canSave = computed(() => !!this.name().trim() && this.price() > 0 && !!this.next_recurrence_at());
@@ -59,7 +58,7 @@ export class ModalCreateAuditInvoiceItemComponent extends ModalBaseComponent<nul
     save() {
         if (!this.canSave()) return;
         this.saving.set(true);
-        this.#service
+        InvoiceItem.fromJson({})
             .store({
                 name: this.name(),
                 price: this.price(),
@@ -69,7 +68,8 @@ export class ModalCreateAuditInvoiceItemComponent extends ModalBaseComponent<nul
                 company_id: this.company?.id,
             })
             .subscribe({
-                next: () => {
+                next: (item) => {
+                    this.#created = item;
                     this.saving.set(false);
                     this.accept();
                 },

@@ -33,7 +33,6 @@ class MarketingInitiativeActivity extends BaseModel {
         ];
     }
 
-    // Relationships
     public function marketingInitiative(): BelongsTo {
         return $this->belongsTo(MarketingInitiative::class, 'marketing_initiative_id');
     }
@@ -63,7 +62,6 @@ class MarketingInitiativeActivity extends BaseModel {
             ->withTimestamps();
     }
 
-    // Scopes
     public function scopeRequired($query) {
         return $query->where('is_required', true);
     }
@@ -74,7 +72,6 @@ class MarketingInitiativeActivity extends BaseModel {
         return $query->orderBy('day_offset');
     }
 
-    // Helper methods
     public function getCompletionRate(): float {
         $total = $this->marketingProspectActivities()->count();
 

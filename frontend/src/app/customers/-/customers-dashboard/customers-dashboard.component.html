@@ -99,7 +99,7 @@
         }
         @if (!_hasLoaded || sortedItems.length > 0) {
             <div class="card">
-                <table enableTableExport [filenamePrefix]="'customers'" cdk-table [dataSource]="sortedItems" class="table mb-0">
+                <table stackedTable enableTableExport [filenamePrefix]="'customers'" cdk-table [dataSource]="sortedItems" class="table mb-0">
                     <ng-container cdkColumnDef="created_at">
                         <th cdk-header-cell *cdkHeaderCellDef class="text-end d-none d-md-table-cell sortable" (click)="sortByColumn('created_at')">since {{ getSortIcon('created_at') }}</th>
                         <td cdk-cell *cdkCellDef="let x" class="text-end small text-muted text-nowrap d-none d-md-table-cell">{{ x.created_at | date }}</td>

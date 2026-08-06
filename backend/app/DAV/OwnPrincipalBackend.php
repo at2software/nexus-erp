@@ -22,9 +22,6 @@ class OwnPrincipalBackend extends PDO {
      */
     protected $pdo;
 
-    /**
-     * Creates the backend object.
-     */
     public function __construct(\PDO $pdo) {
         $this->pdo = $pdo;
     }

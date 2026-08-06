@@ -1,4 +1,4 @@
-import { DataLabelFormatterContext } from '@models/api-response';
+import { DataLabelFormatterContextDto } from '@models/_core/api-response';
 
 export const InvoiceDetailChartOptions = {
     series: [] as { name: string; data: number[][]; color: string }[],
@@ -9,7 +9,7 @@ export const InvoiceDetailChartOptions = {
     },
     dataLabels: {
         enabled: true,
-        formatter: (_val: number, { seriesIndex, w }: DataLabelFormatterContext) => w.config.series[seriesIndex].name,
+        formatter: (_val: number, { seriesIndex, w }: DataLabelFormatterContextDto) => w.config.series[seriesIndex].name,
     },
     tooltip: {
         shared: false,

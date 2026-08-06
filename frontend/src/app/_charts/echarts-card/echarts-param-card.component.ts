@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input } from '@angular/core';
 import { EchartsCardComponent } from './echarts-card.component';
-import { ParamService } from '@models/param.service';
-import { dayjs } from '@constants/dates';
-import { ParamChartSeries } from '@models/api-response';
+import { ParamService } from '@models/param/param.service';
+import { dayjs } from '@constants/date/dates';
+import { ParamChartSeriesDto } from '@models/_core/api-response';
 
 
 @Component({
@@ -10,10 +10,10 @@ import { ParamChartSeries } from '@models/api-response';
     template: '',
 })
 export abstract class EchartsParamCardComponent extends EchartsCardComponent {
-    abstract updateSeries(result: ParamChartSeries[]): void;
+    abstract updateSeries(result: ParamChartSeriesDto[]): void;
 
     keyPath = input<string | undefined>(undefined);
-    chartData = input<ParamChartSeries[] | undefined>(undefined);
+    chartData = input<ParamChartSeriesDto[] | undefined>(undefined);
     type = input<string>('bar');
     cluster = input<string>('month');
     offset = input<'none' | 'month' | 'year'>('none');
@@ -33,19 +33,16 @@ export abstract class EchartsParamCardComponent extends EchartsCardComponent {
     seriesLength = () => this.keyPath()?.split(',').length ?? 0;
 
     reload() {
-        // Check roles field
         if (this.roles()) {
             const requiredRoles = this.roles()!.split('|');
             if (!this.global.user?.hasAnyRole(requiredRoles)) {
                 return;
             }
         }
-        // If chartData is provided, use it directly instead of fetching
         if (this.chartData()) {
             const dataArray = this.chartData() ?? [];
             return this.updateSeries(dataArray);
         }
-        // Otherwise, fetch data using keyPath (legacy behavior)
         if (this.keyPath()) {
             this.chartOptions.update((o) => ({ ...o, series: [] }));
             this.echartsInstance()?.clear();

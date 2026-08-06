@@ -1,7 +1,7 @@
-import { NxAction } from '@app/nx/nx.actions';
+import { NxAction } from '@models/_core/nx.actions';
 import { Cash } from './cash.model';
-import { NxGlobal } from '@app/nx/nx.global';
+import { nx } from '@models/_core/nx-bridge';
 
 export function getCashActions(self: Cash): NxAction[] {
-    return [NxGlobal.deleteAction(self, $localize`:@@i18n.cash.reallyDeleteThisEntry:really delete this entry?`, { roles: 'financial' })];
+    return [nx().deleteAction(self, $localize`:@@i18n.cash.reallyDeleteThisEntry:really delete this entry?`, { roles: 'financial' })];
 }

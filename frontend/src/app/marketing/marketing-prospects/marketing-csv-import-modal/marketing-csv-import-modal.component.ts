@@ -1,8 +1,9 @@
-﻿import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { MarketingInitiative } from '@models/marketing/marketing-initiative.model';
-import { CsvColumnMapping, CsvImportResult } from '@models/api-response';
+import { CsvColumnMappingDto, CsvImportResultDto } from '@models/_core/api-response';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 const TARGET_FIELDS = [
     { key: 'skip',        label: '— skip —' },
@@ -17,20 +18,26 @@ const TARGET_FIELDS = [
     { key: 'role',        label: 'Role / Position' },
     { key: 'notes',       label: 'Notes' },
 ];
-type InitArgs = { headers: string[]; rows: string[][]; initiatives: MarketingInitiative[]; currentInitiativeId?: string; existingNames?: string[] };
+interface InitArgs {
+    headers: string[];
+    rows: string[][];
+    initiatives: MarketingInitiative[];
+    currentInitiativeId?: string;
+    existingNames?: string[];
+}
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'marketing-csv-import-modal',
     templateUrl: './marketing-csv-import-modal.component.html',
-    imports: [FormsModule],
+    imports: [StackedTableDirective, FormsModule],
 })
-export class MarketingCsvImportModalComponent extends ModalBaseComponent<CsvImportResult> {
+export class MarketingCsvImportModalComponent extends ModalBaseComponent<CsvImportResultDto> {
     allRows: string[][] = [];
     initiatives: MarketingInitiative[] = [];
     existingNames: string[] = [];
 
-    mappings             = signal<CsvColumnMapping[]>([]);
+    mappings             = signal<CsvColumnMappingDto[]>([]);
     selectedInitiativeId = signal('');
     selectedLeadSourceId = signal(0);
 
@@ -86,7 +93,7 @@ export class MarketingCsvImportModalComponent extends ModalBaseComponent<CsvImpo
         this.mappings.update(m => m.map((item, i) => i === index ? { ...item, field } : item));
     }
 
-    onSuccess(): CsvImportResult {
+    onSuccess(): CsvImportResultDto {
         return {
             mappings:      this.mappings(),
             rows:          this.allRows,

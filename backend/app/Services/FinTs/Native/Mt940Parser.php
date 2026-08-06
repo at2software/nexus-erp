@@ -18,11 +18,8 @@ class Mt940Parser {
     public static function parse(string $mt940): array {
         $transactions = [];
 
-        // Normalise line endings
         $mt940 = str_replace(["\r\n", "\r"], "\n", $mt940);
 
-        // Split into fields at each :NN: tag on its own conceptual line
-        // Fields may span multiple lines (continuation lines don't start with :)
         $fields = self::splitFields($mt940);
 
         $i = 0;
@@ -64,7 +61,6 @@ class Mt940Parser {
 
         $value = trim($value);
 
-        // Value date: first 6 digits
         $pos = 0;
         if (! preg_match('/^\d{6}/', $value, $m)) {
             return null;
@@ -72,14 +68,12 @@ class Mt940Parser {
         $valueDateStr = $m[0];
         $pos          = 6;
 
-        // Optional book date: 4 digits MMDD
         $bookDateStr = null;
         if (isset($value[$pos]) && ctype_digit($value[$pos])) {
             $bookDateStr = substr($value, $pos, 4);
             $pos += 4;
         }
 
-        // Credit/debit indicator: C, D, RC, RD
         $storno      = false;
         $creditDebit = FinTsTransaction::CD_CREDIT;
         if (substr($value, $pos, 2) === 'RC') {
@@ -100,7 +94,6 @@ class Mt940Parser {
             return null;
         }
 
-        // Optional 3-letter currency code
         if (isset($value[$pos]) && ctype_alpha($value[$pos])) {
             $pos += 3;
         }
@@ -112,7 +105,6 @@ class Mt940Parser {
         $amount = (float)str_replace(',', '.', $amtMatch[1]);
         $pos += strlen($amtMatch[1]);
 
-        // Parse booking date
         $bookingDate = self::parseDate($bookDateStr ?? $valueDateStr, $bookDateStr === null);
         if ($bookingDate === null) {
             $bookingDate = self::parseDate($valueDateStr, true);
@@ -145,8 +137,6 @@ class Mt940Parser {
         }
         $purpose = trim($purpose);
 
-        // SEPA-structured purposes embed sub-tags like EREF+...MREF+...SVWZ+<text>.
-        // Extract only the SVWZ (Verwendungszweck) value as the human-readable purpose.
         $sepa = self::parseSepaSubfields($purpose);
         if (isset($sepa['SVWZ'])) {
             $purpose = trim($sepa['SVWZ']);
@@ -159,9 +149,6 @@ class Mt940Parser {
     }
 
     /**
-     * Parses SEPA structured sub-fields (SVWZ, EREF, MREF, CRED, …) embedded in
-     * a MT940 purpose string. Tags are exactly 4 uppercase letters followed by '+'.
-     *
      * @return array<string, string>
      */
     private static function parseSepaSubfields(string $purpose): array {
@@ -186,7 +173,6 @@ class Mt940Parser {
     /** @return array<int, array{tag: string, value: string}> */
     private static function splitFields(string $mt940): array {
         $fields = [];
-        // Match :NNx: tags at the start of a line
         $pattern = '/^:(\w{1,5}):(.*?)(?=^:\w{1,5}:|\z)/ms';
         preg_match_all($pattern, $mt940, $matches, PREG_SET_ORDER);
         foreach ($matches as $m) {
@@ -195,10 +181,6 @@ class Mt940Parser {
         return $fields;
     }
 
-    /**
-     * Parses YYMMDD (6 chars) or MMDD (4 chars) date strings.
-     * $isYymmdd = true means the string is 6 chars YYMMDD.
-     */
     private static function parseDate(string $dateStr, bool $isYymmdd): ?\DateTime {
         try {
             if ($isYymmdd && strlen($dateStr) === 6) {

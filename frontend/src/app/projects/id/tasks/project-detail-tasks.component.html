@@ -56,5 +56,10 @@
         <div class="text-complement me-2" [ngbTooltip]="item.var.user?.name">
             <img src="{{ item.var.user?.avatar() }}" alt="avatar icon" [style.backgroundColor]="colorFor(item)" style="border: 1px #999 solid" [ngbTooltip]="item.user_name" (error)="hideIcon($event)" class="avatar avatar-xs" />
         </div>
+        @for (u of coAssigneeUsers(item); track u.id) {
+            <div class="text-complement me-2" [ngbTooltip]="u.getName()">
+                <img src="{{ u.avatar() }}" alt="avatar icon" style="border: 1px #999 solid" (error)="hideIcon($event)" class="avatar avatar-xs" />
+            </div>
+        }
     </li>
 </ng-template>

@@ -13,7 +13,6 @@ export interface ConvertIssueResult {
     pluginLinkId?: string;
 }
 
-/** Completes the missing data (project, name, estimate, dates) before a dropped external issue becomes a Milestone. */
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'modal-convert-issue',
@@ -34,7 +33,6 @@ export class ModalConvertIssueComponent extends ModalBaseComponent<ConvertIssueR
 
     init(issue: ExtIssueBacklogItem, dropDate: string): void {
         this.issue = issue;
-        // Every candidate already maps to this issue's exact repo — auto-pick the first.
         this.projectId.set(String(issue.resolved[0]?.project.id ?? ''));
         this.name.set(issue.task.name);
         this.startedAt.set(dropDate);

@@ -8,10 +8,8 @@ class VcardRow {
     private array $values;
 
     public function __construct(string $line) {
-        // Split into left (name+params) and right (values) parts
         [$left, $right] = array_pad(explode(':', $line, 2), 2, '');
 
-        // Parse name and parameters
         $parts            = explode(';', $left);
         $this->name       = strtoupper(array_shift($parts));
         $this->parameters = [];

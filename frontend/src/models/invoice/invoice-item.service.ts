@@ -1,12 +1,12 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { NexusHttpService } from '@models/http/http.nexus';
 import { Company } from '@models/company/company.model';
 import { Project } from '@models/project/project.model';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { Dictionary } from '@constants/constants';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class InvoiceItemService extends NexusHttpService<InvoiceItem> {
     public apiPath = 'invoice_items';
     override readonly model = InvoiceItem;
@@ -15,9 +15,11 @@ export class InvoiceItemService extends NexusHttpService<InvoiceItem> {
     getSupportItems = (parent: Serializable, data?: Dictionary) => this.aget(parent.apiPathWithId() + '/invoice-items', { support_only: true, ...data });
 
     indexEstimationItems = (project: Project) => this.aget(`projects/${project.id}/invoice-items/estimation`, null, InvoiceItem);
-    indexStandingOrders = (company?: Company) => this.aget('invoice_items/standing-orders', company ? { company_id: company.id } : {});
+    indexStandingOrders = (company?: Company | string) => {
+        const companyId = company instanceof Company ? company.id : company;
+        return this.aget('invoice_items/standing-orders', companyId ? { company_id: companyId } : {});
+    };
 
-    store = (data: Dictionary | InvoiceItem) => this.post(this.apiPath, data);
     prepareInvoice = (project: Project) => this.post(`projects/${project.id}/prepare_invoice`);
 
     reorder = (_: string[]) => this.put('invoice_items/reorder', { order: _ });

@@ -4,18 +4,6 @@ namespace App\Traits;
 
 use App\Models\Param;
 
-/**
- * Global payment plan tiers are stored in PROJECT_PAYMENT_PLAN_TIERS as JSON:
- * [
- *   { "label": "small",  "threshold": 10000, "steps": [...] },
- *   { "label": "medium", "threshold": 50000, "steps": [...] },
- *   { "label": "large",  "threshold": null,  "steps": [...] }  // null = no upper limit
- * ]
- * Tiers must be ordered ascending by threshold; the last tier should have threshold: null.
- *
- * Project-specific plan is stored in PROJECT_PAYMENT_PLAN as a JSON array of steps:
- * [ { "percentage": 30, "trigger": "project_start" }, ... ]
- */
 trait HasPaymentPlanTrait {
     public function getEffectivePaymentPlan(): array {
         $projectSpecific = $this->param('PROJECT_PAYMENT_PLAN', false)->value;

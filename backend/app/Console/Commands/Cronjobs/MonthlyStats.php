@@ -28,7 +28,6 @@ class MonthlyStats extends Command {
                 continue;
             }
 
-            // Calculate overall weighted average unfocused bias factor
             $totalWeight = 0;
             $weightedSum = 0;
 
@@ -40,7 +39,6 @@ class MonthlyStats extends Command {
 
             $overallBiasFactor = $totalWeight > 0 ? $weightedSum / $totalWeight : 1.0;
 
-            // Store prediction bias in parameter with user as parent
             $param = $user->param('STATS_PREDICTION_BIAS');
             $this->info($param);
             $param->value = round($overallBiasFactor, 4);
@@ -48,7 +46,6 @@ class MonthlyStats extends Command {
 
             $this->info("Stored bias factor {$overallBiasFactor} for user {$user->name}");
 
-            // Calculate focus accuracy (percentage of foci with item_focus_id)
             $focusData = $user->getFocusAccuracyData($startDate);
 
             if (! empty($focusData['monthly_focus_accuracy'])) {
@@ -63,7 +60,6 @@ class MonthlyStats extends Command {
 
                 $overallFocusAccuracy = $totalWeightDuration > 0 ? $weightedDurationSum / $totalWeightDuration : 0;
 
-                // Store focus accuracy in parameter with user as parent
                 $focusParam        = $user->param('STATS_INVOICEITEM_FOCUS');
                 $focusParam->value = round($overallFocusAccuracy, 2);
                 $focusParam->save();
@@ -74,7 +70,6 @@ class MonthlyStats extends Command {
             }
         }
 
-        // Calculate company bias factors
         $this->info('Starting company bias factor calculation...');
 
         $companyData = FocusStatisticsService::getCompanyPredictionAccuracy();

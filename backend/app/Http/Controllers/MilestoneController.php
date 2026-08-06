@@ -17,7 +17,6 @@ class MilestoneController extends Controller {
         return $milestone->load('project');
     }
     public function indexOverview(Request $request) {
-        // 1. Unassigned milestones (user_id is null) from running projects
         $unassigned = Milestone::whereNull('user_id')
             ->where('state', '!=', MilestoneState::DONE)
             ->whereHas('project', fn ($q) => $q->whereRunning())
@@ -25,7 +24,6 @@ class MilestoneController extends Controller {
             ->orderBy('due_at')
             ->get();
 
-        // 2. Overdue milestones (started_at in the past but state is 0 = not started)
         $overdue = Milestone::where('state', MilestoneState::TODO)
             ->where('started_at', '<', now()->startOfDay())
             ->whereHas('project', fn ($q) => $q->whereRunning())
@@ -33,7 +31,6 @@ class MilestoneController extends Controller {
             ->orderBy('started_at')
             ->get();
 
-        // 3. Milestones without workload (no invoice items AND no manual workload_hours)
         $noWorkload = Milestone::where('state', '!=', MilestoneState::DONE)
             ->where(function ($q) {
                 $q->whereNull('workload_hours')->orWhere('workload_hours', 0);
@@ -44,7 +41,6 @@ class MilestoneController extends Controller {
             ->orderBy('due_at')
             ->get();
 
-        // 4. Projects with workload deviation analysis (exclude time-based and internal projects)
         $projects = Project::whereRunning()
             ->where('is_time_based', false)
             ->where('company_id', '!=', Param::get('ME_ID')->value)
@@ -54,10 +50,8 @@ class MilestoneController extends Controller {
             ])
             ->get()
             ->map(function ($project) {
-                // Project estimated time (from invoice items)
                 $estimatedHours = $project->work_estimated ?? 0;
 
-                // Milestone workload hours (sum of workload_hours or computed from invoice items)
                 $milestoneHours = $project->milestones->sum(function ($milestone) {
                     if ($milestone->workload_hours !== null && $milestone->workload_hours > 0) {
                         return $milestone->workload_hours;
@@ -84,7 +78,6 @@ class MilestoneController extends Controller {
             ->sortByDesc(fn ($p) => abs($p['deviation']))
             ->values();
 
-        // 5. Invoice items in running projects that are not linked to any milestone yet
         $invoiceItemsWithoutMilestone = InvoiceItem::where('type', InvoiceItemType::Default)
             ->whereNotNull('project_id')
             ->whereHas('project', fn ($q) => $q->whereRunning()->where('is_time_based', false))
@@ -110,7 +103,6 @@ class MilestoneController extends Controller {
         return $response;
     }
     public function linkInvoiceItem(Request $request, Milestone $milestone, InvoiceItem $invoiceItem) {
-        // Check if the invoice item is already linked to another milestone
         if ($invoiceItem->milestones()->exists()) {
             return response()->json([
                 'error'   => 'Invoice item is already tracked by another milestone',
@@ -118,17 +110,13 @@ class MilestoneController extends Controller {
             ], 422);
         }
 
-        // Calculate duration and due date
         $estimatedHours = $invoiceItem->assumedWorkload();
         $hoursPerDay    = Param::get('INVOICE_HPD')->value;
 
-        // Duration = raw estimated hours (without param factor)
         $duration = $estimatedHours;
 
-        // Calculate estimated days
         $estimatedDays = ceil($estimatedHours / $hoursPerDay);
 
-        // Calculate due_at if milestone doesn't have one: start date + estimated days
         $updateData = [];
         if (! $milestone->duration || $milestone->duration < $duration) {
             $updateData['duration'] = $duration;
@@ -143,7 +131,6 @@ class MilestoneController extends Controller {
             $milestone->update($updateData);
         }
 
-        // Attach the invoice item to the milestone
         $milestone->invoiceItems()->attach($invoiceItem->id);
         return response()->json([
             'message'            => 'Invoice item linked to milestone successfully',
@@ -156,7 +143,6 @@ class MilestoneController extends Controller {
         ]);
     }
     public function unlinkInvoiceItem(Request $request, Milestone $milestone, InvoiceItem $invoiceItem) {
-        // Detach the invoice item from the milestone
         $milestone->invoiceItems()->detach($invoiceItem->id);
         return response()->json([
             'message'         => 'Invoice item unlinked from milestone successfully',
@@ -167,13 +153,10 @@ class MilestoneController extends Controller {
     public function update(MilestoneRequest $request, Milestone $milestone) {
         $data = $request->validated();
 
-        // Handle depends_on separately
         if ($request->has('depends_on')) {
             if ($request->depends_on === null) {
-                // Remove all dependencies
                 $milestone->dependees()->detach();
             } else {
-                // Sync to single dependency
                 $milestone->dependees()->sync([$request->depends_on]);
             }
             unset($data['depends_on']);
@@ -239,7 +222,6 @@ class MilestoneController extends Controller {
 
         $dependsOnMilestone = Milestone::findOrFail($data['depends_on']);
 
-        // Add dependency: this milestone depends on another milestone
         $milestone->dependees()->attach($dependsOnMilestone->id);
         return response()->json([
             'message'    => 'Dependency added successfully',
@@ -252,7 +234,6 @@ class MilestoneController extends Controller {
             'depends_on' => 'required|integer|exists:milestones,id',
         ]);
 
-        // Remove dependency
         $milestone->dependees()->detach($data['depends_on']);
         return response()->json([
             'message'   => 'Dependency removed successfully',
@@ -265,7 +246,6 @@ class MilestoneController extends Controller {
             'depends_on_ids.*' => 'integer|exists:milestones,id',
         ]);
 
-        // Remove all dependencies
         $milestone->dependees()->detach($data['depends_on_ids']);
         return response()->json([
             'message'       => 'Dependencies removed successfully',
@@ -274,14 +254,11 @@ class MilestoneController extends Controller {
         ]);
     }
     public function destroy(Milestone $milestone) {
-        // Remove all dependencies before deleting
         $milestone->dependees()->detach();
         $milestone->dependants()->detach();
 
-        // Detach all linked invoice items
         $milestone->invoiceItems()->detach();
 
-        // Delete the milestone
         $milestone->delete();
         return response()->json([
             'message'    => 'Milestone deleted successfully',
@@ -291,7 +268,6 @@ class MilestoneController extends Controller {
     public function destroyAllForProject(Request $request, $projectId) {
         $project = Project::findOrFail($projectId);
 
-        // Get all milestones for this project
         $milestones     = $project->milestones;
         $milestoneCount = $milestones->count();
 
@@ -302,17 +278,13 @@ class MilestoneController extends Controller {
             ]);
         }
 
-        // Clean up dependencies and relationships for all milestones
         foreach ($milestones as $milestone) {
-            // Remove all dependencies
             $milestone->dependees()->detach();
             $milestone->dependants()->detach();
 
-            // Detach all linked invoice items
             $milestone->invoiceItems()->detach();
         }
 
-        // Delete all milestones for this project
         $project->milestones()->delete();
         return response()->json([
             'message'       => 'All milestones deleted successfully',

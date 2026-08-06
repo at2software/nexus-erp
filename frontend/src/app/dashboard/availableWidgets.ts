@@ -9,7 +9,7 @@ import { WidgetCashflowComponent } from './widgets/widget-cashflow/widget-cashfl
 import { WidgetRevenue12Component } from './widgets/widget-revenue-12/widget-revenue-12.component';
 import { WidgetProjectSuccessComponent } from './widgets/widget-project-success/widget-project-success.component';
 import { WidgetExtComponent } from './widgets/widget-ext/widget-ext.component';
-import { NxGlobal } from '@app/nx/nx.global';
+import { NxStatic } from '@app/nx/nx.static';
 import { WidgetJubileesComponent } from './widgets/widget-jubilees/widget-jubilees.component';
 import { WidgetTimeBasedEmploymentComponent } from './widgets/widget-time-based-employment/widget-time-based-employment.component';
 import { WidgetCustomerSupportComponent } from './widgets/widget-customer-support/widget-customer-support.component';
@@ -27,21 +27,20 @@ import { WidgetCustomerChurnComponent } from './widgets/widget-customer-churn/wi
 import { WidgetOverrunRiskComponent } from './widgets/widget-overrun-risk/widget-overrun-risk.component';
 
 export interface TWidget {
-    widget: Type<any>;
+    widget: Type<unknown>;
     i18n: string;
     on?: () => boolean;
     key?: string;
 }
 export interface TAWidget {
-    widget: Type<any>;
+    widget: Type<unknown>;
     i18n: string;
     on?: () => boolean;
     key: string;
 }
 
-// Helper function for widget visibility based on roles
 const hasRole = (roles: string): boolean => {
-    return NxGlobal.global.user?.hasAnyRole(roles.split('|')) ?? false;
+    return NxStatic.global.user?.hasAnyRole(roles.split('|')) ?? false;
 };
 
 const ALL_WIDGETS: Dictionary<TWidget> = {
@@ -82,7 +81,7 @@ export class WidgetFactory {
         });
     };
 
-    static componentFor = (_: string): Type<any> | null => (_ in ALL_WIDGETS ? ALL_WIDGETS[_].widget : null);
+    static componentFor = (_: string): Type<unknown> | null => (_ in ALL_WIDGETS ? ALL_WIDGETS[_].widget : null);
 
     static hasWidgetAccess = (_: string): boolean => {
         const widget = ALL_WIDGETS[_];

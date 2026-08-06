@@ -7,7 +7,8 @@ import { ProductTreeListComponent } from './product-tree-list.component';
 import { Router } from '@angular/router';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
+import { modelListResource } from '@models/http/model-resource';
 
 @Component({
     selector: 'product-tree',
@@ -18,17 +19,18 @@ import { InputModalService } from '@app/_modals/modal-input/modal-input.componen
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProductTreeComponent {
-    readonly groups = signal<ProductGroup[]>([]);
-    readonly isLoading = signal(false);
     readonly showDeprecated = signal(false);
 
     readonly #productGroupService = inject(ProductGroupService);
     readonly #inputModalService = inject(InputModalService);
     readonly #router = inject(Router);
 
+    readonly #groups = modelListResource(() => this.#productGroupService.index());
+    readonly groups = this.#groups.value;
+    readonly isLoading = this.#groups.isLoading;
+
     constructor() {
-        this.#update();
-        NotificationCenter.subscribe(['put', 'post', 'delete'], [/^products/, /^product_groups/], () => this.#update());
+        NotificationCenter.subscribe(['put', 'post', 'delete'], [/^products/, /^product_groups/], () => this.#groups.reload());
     }
 
     readonly toggleDeprecated = () => this.showDeprecated.update(v => !v);
@@ -38,14 +40,6 @@ export class ProductTreeComponent {
             ProductGroup.createWithParentId(text).subscribe(x => {
                 this.#router.navigate(['/products/group/' + x.id]);
             });
-        });
-    };
-
-    readonly #update = () => {
-        this.isLoading.set(true);
-        this.#productGroupService.index().subscribe(groups => {
-            this.groups.set(groups);
-            this.isLoading.set(false);
         });
     };
 }

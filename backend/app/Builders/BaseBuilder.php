@@ -74,13 +74,9 @@ class BaseBuilder extends Builder {
         })->toArray());
     }
 
-    /**
-     * automatically tries to apply matching colum values from request as select clause
-     */
     public function whereRequest() {
         $allowedFilters = $this->getModel()->allowedFilters ?? [];
 
-        // Secure by default: skip filtering entirely when no allowlist is declared
         if (! count($allowedFilters)) {
             return $this;
         }
@@ -152,8 +148,6 @@ class BaseBuilder extends Builder {
     }
 
     /**
-     * Pick the latest entry from a pivot table based on a column (default: id)
-     *
      * @param string|null $pivotTable The pivot table name (auto-detected if null)
      * @param string $groupByColumn The column to group by in the pivot table
      * @param string $orderColumn The column to order by (default: 'id')
@@ -174,8 +168,6 @@ class BaseBuilder extends Builder {
     }
 
     /**
-     * Pick the latest entry with polymorphic conditions using correlated subquery
-     *
      * @param string $groupByColumn Column to group by (e.g., 'param_id')
      * @param string|null $polyClass The polymorphic class to filter by (e.g., 'App\Models\User')
      * @param string $orderColumn Column to order by for MAX selection (default: 'id')
@@ -200,8 +192,6 @@ class BaseBuilder extends Builder {
     }
 
     /**
-     * Pick the oldest entry from a pivot table based on a column (default: id)
-     *
      * @param string|null $pivotTable The pivot table name (auto-detected if null)
      * @param string $groupByColumn The column to group by in the pivot table
      * @param string $orderColumn The column to order by (default: 'id')
@@ -221,25 +211,17 @@ class BaseBuilder extends Builder {
         )");
     }
 
-    /**
-     * Resolve pivot table parameters automatically if not provided
-     */
     private function resolvePivotParams(?string $pivotTable, ?string $groupByColumn): array {
         if ($pivotTable && $groupByColumn) {
             return [$pivotTable, $groupByColumn];
         }
 
-        // Try to auto-detect from model relationship or table name
         $modelTable = $this->getModel()->getTable();
 
         if (! $pivotTable) {
-            // For models like ProjectState, try to detect pivot table name
             $modelName = class_basename($this->getModel()::class);
-
-            // Convert ProjectState -> project_state, then try common patterns
             $tableName = strtolower(preg_replace('/([a-z])([A-Z])/', '$1_$2', $modelName));
 
-            // Try to find related table pattern (like project_project_state)
             if (str_contains($tableName, '_')) {
                 $parts = explode('_', $tableName);
                 if (count($parts) >= 2) {
@@ -249,12 +231,10 @@ class BaseBuilder extends Builder {
         }
 
         if (! $groupByColumn && $pivotTable) {
-            // Extract the first part before underscore + _id
             $firstPart     = explode('_', $pivotTable)[0];
             $groupByColumn = $firstPart.'_id';
         }
 
-        // Fallback: use model table name if we still don't have values
         if (! $pivotTable) {
             $pivotTable = $modelTable;
         }
@@ -265,16 +245,12 @@ class BaseBuilder extends Builder {
         return [$pivotTable, $groupByColumn];
     }
 
-    /**
-     * Generate a short alias for the table name
-     */
     private function generateAlias(string $tableName): string {
         $parts = explode('_', $tableName);
         return implode('', array_map(fn ($part) => substr($part, 0, 1), $parts));
     }
 
     private function wrapColumnOrExpression(string $column): string {
-        // If the value contains spaces or parentheses it is a SQL expression — pass through as-is
         if (preg_match('/[\s\(\)]/', $column)) {
             return $column;
         }

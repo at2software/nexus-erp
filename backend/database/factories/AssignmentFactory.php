@@ -13,8 +13,6 @@ class AssignmentFactory extends Factory {
     protected $model = Assignment::class;
 
     /**
-     * Define the model's default state.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array {

@@ -6,7 +6,7 @@
 
 @if (_product) {
     <div class="row">
-        <div class="col-8">
+        <div class="col-12 col-xl-8">
             <div class="card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span class="capitalize-first" i18n="@@i18n.common.information">information</span>
@@ -23,13 +23,13 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-2 hstack gap-2">
-                        <span class="col-3 text-truncate" id="name" i18n="@@i18n.common.name">name</span>
+                        <span class="col-12 col-md-6 col-xl-3 text-truncate" id="name" i18n="@@i18n.common.name">name</span>
                         <input type="text" class="form-control" [autosave]="_product" [(ngModel)]="_product.name" />
                     </div>
                     @if (_item && _product.time_based === 0) {
                         <div>
                             <div class="mb-2 hstack gap-2">
-                                <span class="text-truncate col-3" i18n="@@i18n.common.recurrence">recurrence</span>
+                                <span class="text-truncate col-12 col-md-6 col-xl-3" i18n="@@i18n.common.recurrence">recurrence</span>
                                 <div ngbDropdown>
                                     <span class="dropdown-toggle cursor-pointer" [class]="_item.getRepeatColor()" ngbDropdownToggle>
                                         {{ _item.type === 0 ? 'none' : _item.getRepeatString() }}
@@ -46,7 +46,7 @@
                             </div>
 
                             <div class="mb-2 hstack gap-2">
-                                <span i18n="@@i18n.common.price" class="text-truncate col-3">price</span>
+                                <span i18n="@@i18n.common.price" class="text-truncate col-12 col-md-6 col-xl-3">price</span>
                                 <div class="input-group">
                                     <input type="text" class="form-control text-end" [(ngModel)]="_item.price" [autosave]="_item" />
                                     <span class="input-group-text text-muted">{{ global.currencySymbol() }}</span>
@@ -64,7 +64,7 @@
                             </div>
 
                             <div class="mb-2 hstack gap-2">
-                                <span class="text-truncate col-3">
+                                <span class="text-truncate col-12 col-md-6 col-xl-3">
                                     <span i18n="@@i18n.common.vat">VAT</span>
                                 </span>
                                 <div class="input-group">
@@ -79,7 +79,7 @@
                         </div>
                     } @else if (_product.time_based !== 0) {
                         <div class="mb-2 hstack gap-2">
-                            <span class="text-truncate col-3" i18n="@@i18n.product.basePrice">base price</span>
+                            <span class="text-truncate col-12 col-md-6 col-xl-3" i18n="@@i18n.product.basePrice">base price</span>
                             <div class="input-group">
                                 <input type="text" class="form-control text-end" [value]="basePrice() | money" disabled />
                                 <span class="input-group-text text-muted">{{ global.currencySymbol() }}</span>
@@ -91,7 +91,7 @@
                             </div>
                         </div>
                         <div class="mb-2 hstack gap-2">
-                            <span class="text-truncate col-3" i18n="@@i18n.product.priceMultiplier">price multiplier</span>
+                            <span class="text-truncate col-12 col-md-6 col-xl-3" i18n="@@i18n.product.priceMultiplier">price multiplier</span>
                             <div class="input-group">
                                 <input type="text" class="form-control text-end" [autosave]="_product" [(ngModel)]="_product.price_multiplier" />
                                 <span class="input-group-text text-muted">x</span>
@@ -101,15 +101,15 @@
                 </div>
                 <ul-compact>
                     <li class="list-group-item hstack gap-2" [compact]="true">
-                        <span class="col-3 text-truncate" i18n="@@i18n.product.minItems">minimum item amount</span>
+                        <span class="col-12 col-md-6 col-xl-3 text-truncate" i18n="@@i18n.product.minItems">minimum item amount</span>
                         <input type="text" class="form-control" [autosave]="_product" [(ngModel)]="_product.minimum_amount" />
                     </li>
                     <li class="list-group-item hstack gap-2" [compact]="true">
-                        <span class="col-3 text-truncate" i18n="@@i18n.product.packageMultiplier">package multiplier</span>
+                        <span class="col-12 col-md-6 col-xl-3 text-truncate" i18n="@@i18n.product.packageMultiplier">package multiplier</span>
                         <input type="text" class="form-control" [autosave]="_product" [(ngModel)]="_product.package_amount" />
                     </li>
                     <li class="list-group-item hstack gap-2" [compact]="true">
-                        <span class="col-3 text-truncate" i18n="@@i18n.common.weightG">weight (g)</span>
+                        <span class="col-12 col-md-6 col-xl-3 text-truncate" i18n="@@i18n.common.weightG">weight (g)</span>
                         <input type="text" class="form-control" [autosave]="_product" [(ngModel)]="_product.weight" />
                     </li>
                 </ul-compact>
@@ -121,7 +121,7 @@
             </div>
         </div>
 
-        <div class="col-4">
+        <div class="col-12 col-xl-4">
             <div class="card sticky-side">
                 <div class="card-header capitalize-first d-flex justify-content-between align-items-center">
                     <span i18n="@@i18n.common.customers">customers</span>

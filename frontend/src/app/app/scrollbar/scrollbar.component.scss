@@ -1,7 +1,6 @@
 :host {
     overflow-y: auto;
 
-    // macOS style thin scrollbar
     &::-webkit-scrollbar {
         width: 2px;
     }
@@ -16,7 +15,6 @@
         }
     }
 
-    // Firefox
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }

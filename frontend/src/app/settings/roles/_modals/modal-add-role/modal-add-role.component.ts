@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, Injectable, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, Service } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 
@@ -20,7 +20,7 @@ export class ModalAddRoleComponent {
     dismiss = () => this.#activeModal.dismiss();
 }
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ModalAddRoleService {
     #modalService = inject(NgbModal);
 

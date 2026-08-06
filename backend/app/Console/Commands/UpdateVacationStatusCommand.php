@@ -13,29 +13,21 @@ use Illuminate\Console\Command;
 
 class UpdateVacationStatusCommand extends Command {
     /**
-     * The name and signature of the console command.
-     *
      * @var string
      */
     protected $signature = 'vacation:update-status';
 
     /**
-     * The console command description.
-     *
      * @var string
      */
     protected $description = 'Update user status in chat systems based on vacation start/end dates';
 
-    /**
-     * Execute the console command.
-     */
     public function handle() {
         $this->info('Starting vacation status update...');
 
         $today         = Carbon::today();
         $affectedUsers = collect();
 
-        // Find vacations starting today
         $startingVacations = Vacation::whereDate('started_at', $today)
             ->whereIn('state', [VacationState::Approved, VacationState::Sick])
             ->with('user')
@@ -48,7 +40,6 @@ class UpdateVacationStatusCommand extends Command {
             }
         }
 
-        // Find vacations ending today
         $endingVacations = Vacation::whereDate('ended_at', $today)
             ->whereIn('state', [VacationState::Approved, VacationState::Sick])
             ->with('user')

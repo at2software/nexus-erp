@@ -1,13 +1,12 @@
 ﻿import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { CompanyService } from '@models/company/company.service';
-import { Connection } from '@models/company/connection.model';
 import { Company } from '@models/company/company.model';
 import { NetworkChart } from '@shards/network-chart/network-chart.component';
-import { NxGlobal } from '@app/nx/nx.global';
+import { GlobalService } from '@models/global.service';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
-import { Page } from '@models/http/http.nexus';
+import { modelListResource } from '@models/http/model-resource';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -17,33 +16,18 @@ import { Page } from '@models/http/http.nexus';
     imports: [NetworkChart, EmptyStateComponent, SpinnerComponent],
 })
 export class CustomersNetworkComponent {
-    connections = signal<Connection[]>([]);
-    selectedCompany = signal<Company | null>(null);
-    focusCompanyId = signal<string | null>(null);
-    loading = signal(false);
-
+    #global = inject(GlobalService);
     #companyService = inject(CompanyService);
     #router = inject(Router);
 
-    constructor() {
-        this.focusCompanyId.set(NxGlobal.ME_ID ? String(NxGlobal.ME_ID) : null);
-        this.reload();
-    }
+    selectedCompany = signal<Company | null>(null);
+    focusCompanyId = signal<string | null>(this.#global.me_id ? String(this.#global.me_id) : null);
 
-    reload() {
-        this.loading.set(true);
-        this.#companyService.indexAllConnections().subscribe({
-            // `aget` is declared to return Connection[], but the framework's deserializer keeps
-            // Laravel-paginator envelopes ({ data: [...] }) intact rather than flattening them
-            next: (data: Connection[] | Page<Connection>) => {
-                this.connections.set(Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : []);
-                this.loading.set(false);
-            },
-            error: () => {
-                this.loading.set(false);
-            },
-        });
-    }
+    #connections = modelListResource(() => this.#companyService.indexAllConnections());
+    connections = this.#connections.value;
+    loading = this.#connections.isLoading;
+
+    reload = () => this.#connections.reload();
 
     onNodeSelected(companyId: string | null) {
         if (!companyId) {
@@ -51,7 +35,6 @@ export class CustomersNetworkComponent {
             return;
         }
 
-        // Find company from connections - normalize IDs to strings for comparison
         for (const conn of this.connections()) {
             if (String(conn.company1?.id) === companyId) {
                 this.selectedCompany.set(conn.company1);

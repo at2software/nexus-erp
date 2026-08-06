@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { sanitizeHtml } from '@constants/html/sanitize-html';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { modelListResource } from '@models/http/model-resource';
 import { DecimalPipe, NgTemplateOutlet, PercentPipe } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
@@ -8,7 +10,7 @@ import { Project } from '@models/project/project.model';
 import { ProjectService } from '@models/project/project.service';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { InvoiceItemType } from '@enums/invoice-item.type';
-import { MilestoneState } from '@models/milestones/milestone-state.enum';
+import { MilestoneState } from '@models/milestone/milestone-state.enum';
 import { User } from '@models/user/user.model';
 import { Nx } from '@app/nx/nx.directive';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
@@ -35,23 +37,18 @@ interface FeatureItemMeta {
 })
 export class ProjectFeaturesListComponent {
     project = input.required<Project>();
-    /** Also includes already-invoiced items (fetched separately) so finished/invoiced projects still show their full feature list, e.g. in debriefs. */
-    compact = input(false);
+    includeInvoiced = input(false);
 
     #global = inject(GlobalService);
     #sanitizer = inject(DomSanitizer);
     #projectService = inject(ProjectService);
 
-    #allItems = signal<InvoiceItem[] | null>(null);
+    #needsSeparateFetch = computed(() => this.includeInvoiced() || (this.project()?.state?.isFinishedAny() ?? false));
 
-    constructor() {
-        effect(() => {
-            const compact = this.compact();
-            const project = this.project();
-            if (!compact || !project?.id) return;
-            untracked(() => this.#projectService.indexFeatures(project).subscribe((items) => this.#allItems.set(items)));
-        });
-    }
+    #allItems = modelListResource(
+        () => (this.#needsSeparateFetch() ? this.project()?.id || undefined : undefined),
+        (id) => this.#projectService.indexFeatures(id),
+    );
 
     unfocusedProgress = computed(() => {
         const project = this.project();
@@ -60,8 +57,8 @@ export class ProjectFeaturesListComponent {
     focusedProgress = computed(() => 1 - this.unfocusedProgress());
 
     focusItems = computed(() => {
-        if (this.compact()) {
-            return [...(this.#allItems() ?? [])].sort(this.#compareFocusItems);
+        if (this.#needsSeparateFetch()) {
+            return [...this.#allItems.value()].sort(this.#compareFocusItems);
         }
         const items = this.project()?.invoice_items;
         if (!Array.isArray(items)) return [];
@@ -75,7 +72,7 @@ export class ProjectFeaturesListComponent {
             const done = milestones.length > 0 && milestones.every((m) => m.state === MilestoneState.DONE);
             meta.set(item.id, {
                 contributions: this.#computeUserContributions(item),
-                safeText: this.#sanitizer.bypassSecurityTrustHtml(item.text ?? ''),
+                safeText: this.#sanitizer.bypassSecurityTrustHtml(sanitizeHtml(item.text ?? '')),
                 done,
                 textColor: !milestones.length ? '' : done ? 'text-white' : milestones.some((m) => m.state === MilestoneState.TODO) ? 'text-muted' : '',
                 progressColor: !item.progress ? 'text-muted' : item.progress < 1 ? 'text-white' : item.progress < 1.5 ? 'text-warning' : 'text-danger',

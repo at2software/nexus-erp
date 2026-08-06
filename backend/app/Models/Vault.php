@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
-// secure storage for external credentials without ever exposing them again to the frontend
 class Vault extends Model {
     public $incrementing  = false;
     protected $primaryKey = 'key';

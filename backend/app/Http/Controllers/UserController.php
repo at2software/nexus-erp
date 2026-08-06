@@ -29,6 +29,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -107,7 +108,6 @@ class UserController extends Controller {
     public function indexPmMilestones(Request $request, User $_) {
         $result = $this->indexMilestones($request, $_, true);
 
-        // Also include projects without milestone coverage (PM-specific)
         $meId = Param::get('ME_ID')->value;
 
         $projectsNoCoverage = Project::whereRunning()
@@ -177,7 +177,6 @@ class UserController extends Controller {
         $projectIds   = $milestonesGrouped->keys();
         $milestoneIds = $milestonesGrouped->flatten(1)->pluck('id');
 
-        // Optimize task queries with joins instead of whereExists
         $projectTasksGrouped = Task::where('parent_type', 'App\\Models\\Project')
             ->whereIn('parent_id', $projectIds)
             ->with('assignee.assignee')
@@ -194,8 +193,6 @@ class UserController extends Controller {
             $project->makeHidden(['params']);
             $projectTasks = $projectTasksGrouped->get($projectId, collect());
 
-            // Attach the (assignee-loaded) tasks as a relation so each milestone serializes
-            // as a plain Milestone the frontend can deserialize directly — no wrapper.
             $milestones->each(fn ($milestone) => $milestone
                 ->setRelation('tasks', $milestoneTasksGrouped->get($milestone->id, collect()))
                 ->makeHidden('project'));
@@ -294,18 +291,15 @@ class UserController extends Controller {
                 }
                 $user->append('role_names');
 
-                // Add bias factor to user data
                 $biasFactor = $user->param('STATS_PREDICTION_BIAS')->value ?? null;
                 $user->setAttribute('bias_factor', $biasFactor);
                 return $user;
             });
 
-        // Batch load remaining data efficiently
         $leadSources   = LeadSource::all();
         $projectStates = ProjectState::all();
         $plugins       = Vault::indexVaults()->filter(fn ($_) => $_['active']);
 
-        // Get roles if user has permission
         $roles = [];
         if ($user->hasRole('admin')) {
             $roleController = new RoleController;
@@ -336,7 +330,7 @@ class UserController extends Controller {
         return (new DatabaseSchemaService)->getTables();
     }
     private function getCachedTables() {
-        return $this->getTables();
+        return Cache::remember(DatabaseSchemaService::CACHE_KEY, now()->addDay(), fn () => $this->getTables());
     }
     private function getCachedEuCountries() {
         return collect(config('eu.countries'));

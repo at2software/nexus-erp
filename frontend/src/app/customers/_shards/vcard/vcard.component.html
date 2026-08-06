@@ -144,29 +144,29 @@
                             <li class="d-flex" [nx]="row" (singleActionResolved)="singleActionResolved($event)" [class]="liClass" [class.accent-danger]="needsWarning(row)" [attr.title]="needsWarning(row) || null">
                                 <div class="flex-fill me-3">
                                     <div class="form-floating mb-2">
-                                        <input (blur)="updateVcard()" type="text" class="form-control" id="adr-{{ i }}-1" placeholder="{{ obj.descAdr(1) }}" [(ngModel)]="card.rows[i].vals[1]" />
+                                        <input (blur)="updateVcard()" autocomplete="off" type="text" class="form-control" id="adr-{{ i }}-1" placeholder="{{ obj.descAdr(1) }}" [(ngModel)]="card.rows[i].vals[1]" />
                                         <label for="adr-{{ i }}-1">{{ obj.descAdr(1) }}</label>
                                     </div>
                                     <div class="form-floating mb-2">
-                                        <input (blur)="updateVcard()" type="text" class="form-control" id="adr-{{ i }}-2" placeholder="{{ obj.descAdr(2) }}" [(ngModel)]="card.rows[i].vals[2]" />
+                                        <input (blur)="updateVcard()" autocomplete="off" type="text" class="form-control" id="adr-{{ i }}-2" placeholder="{{ obj.descAdr(2) }}" [(ngModel)]="card.rows[i].vals[2]" />
                                         <label for="adr-{{ i }}-2">{{ obj.descAdr(2) }}</label>
                                     </div>
                                     <div class="row g-2 mb-2">
                                         <div class="col-auto" style="width: 150px">
                                             <div class="form-floating">
-                                                <input (blur)="updateVcard()" type="text" class="form-control" id="adr-{{ i }}-5" placeholder="{{ obj.descAdr(5) }}" [(ngModel)]="card.rows[i].vals[5]" (keyup)="onPlzUpdate(row)" />
+                                                <input (blur)="updateVcard()" autocomplete="off" type="text" class="form-control" id="adr-{{ i }}-5" placeholder="{{ obj.descAdr(5) }}" [(ngModel)]="card.rows[i].vals[5]" (keyup)="onPlzUpdate(row)" />
                                                 <label for="adr-{{ i }}-5">{{ obj.descAdr(5) }}</label>
                                             </div>
                                         </div>
                                         <div class="col">
                                             <div class="form-floating">
-                                                <input (blur)="updateVcard()" type="text" class="form-control" id="adr-{{ i }}-3" placeholder="{{ obj.descAdr(3) }}" [(ngModel)]="card.rows[i].vals[3]" />
+                                                <input (blur)="updateVcard()" autocomplete="off" type="text" class="form-control" id="adr-{{ i }}-3" placeholder="{{ obj.descAdr(3) }}" [(ngModel)]="card.rows[i].vals[3]" />
                                                 <label for="adr-{{ i }}-3">{{ obj.descAdr(3) }}</label>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="form-floating mb-2">
-                                        <input (blur)="updateVcard()" type="text" class="form-control" id="adr-{{ i }}-4" placeholder="{{ obj.descAdr(4) }}" [(ngModel)]="card.rows[i].vals[4]" />
+                                        <input (blur)="updateVcard()" autocomplete="off" type="text" class="form-control" id="adr-{{ i }}-4" placeholder="{{ obj.descAdr(4) }}" [(ngModel)]="card.rows[i].vals[4]" />
                                         <label for="adr-{{ i }}-4">{{ obj.descAdr(4) }}</label>
                                     </div>
                                     <div class="form-floating">

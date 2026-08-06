@@ -1,13 +1,14 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
-import { StatsService } from '@models/stats-service';
+import { modelListResource } from '@models/http/model-resource';
+import { StatsService } from '@models/stats.service';
 import { GlobalService } from '@models/global.service';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { Color } from '@constants/Color';
 import { EChartsSimpleOptions, ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import type { EChartsOption } from 'echarts';
-import { ChartAxisTooltipParam } from '@models/api-response';
+import { ChartAxisTooltipParamDto } from '@models/_core/api-response';
 
 interface FocusAccuracyData {
     id: number;
@@ -34,30 +35,12 @@ export class HrStatsInvoiceFocusComponent {
     #statsService = inject(StatsService);
     #global = inject(GlobalService);
 
-    users = signal<FocusAccuracyData[]>([]);
-    chartOptions = signal<Record<number, EChartsOption>>({});
-    donutChartOptions = signal<Record<number, EChartsOption>>({});
-
-    constructor() {
-        this.#statsService.showFocusAccuracy().subscribe((response: FocusAccuracyData[]) => {
-            const sorted = response.sort((a, b) => {
-                const teamA = this.#global.team.findIndex((t) => t.id === a.id.toString());
-                const teamB = this.#global.team.findIndex((t) => t.id === b.id.toString());
-                return teamA - teamB;
-            });
-
-            const charts: Record<number, EChartsOption> = {};
-            const donuts: Record<number, EChartsOption> = {};
-            sorted.forEach((user) => {
-                charts[user.id] = this.#createChartOptions(user);
-                donuts[user.id] = this.#createDonutChartOptions(user);
-            });
-
-            this.users.set(sorted);
-            this.chartOptions.set(charts);
-            this.donutChartOptions.set(donuts);
-        });
-    }
+    readonly #focusAccuracy = modelListResource<FocusAccuracyData>(() => this.#statsService.showFocusAccuracy());
+    readonly users = computed(() =>
+        [...this.#focusAccuracy.value()].sort((a, b) => this.#global.team.findIndex((t) => t.id === a.id.toString()) - this.#global.team.findIndex((t) => t.id === b.id.toString())),
+    );
+    readonly chartOptions = computed(() => Object.fromEntries(this.users().map((user) => [user.id, this.#createChartOptions(user)])));
+    readonly donutChartOptions = computed(() => Object.fromEntries(this.users().map((user) => [user.id, this.#createDonutChartOptions(user)])));
 
     #createChartOptions(user: FocusAccuracyData): EChartsOption {
         const months = user.monthly_focus_accuracy.map((item) => item.month).sort();
@@ -88,7 +71,7 @@ export class HrStatsInvoiceFocusComponent {
                 backgroundColor: 'transparent',
                 borderWidth: 0,
                 formatter: (params: unknown) => {
-                    const items = params as ChartAxisTooltipParam[];
+                    const items = params as ChartAxisTooltipParamDto[];
                     const month = items[0].axisValue;
                     const monthData = user.monthly_focus_accuracy.find((item) => item.month === month);
 

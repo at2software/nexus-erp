@@ -4,16 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { Product } from '@models/product/product.model';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { MoneyPipe } from '@pipes/money.pipe';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
-
-export interface AssignProductResult {
-    product?: Product;
-    qtyFactor?: number;
-    roundTo?: number;
-}
+import { AssignProductResult } from '@models/_core/modal-results';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,

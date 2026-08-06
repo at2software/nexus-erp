@@ -1,11 +1,11 @@
 import { afterNextRender, ChangeDetectionStrategy, Component, inject, Injector, TemplateRef, viewChild, computed, effect, input, signal, untracked } from '@angular/core';
 import { QuillEditorComponent, QuillModules } from 'ngx-quill';
 import type Quill from 'quill';
-import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { Param } from '@models/param.model';
-import { ParamService } from '@models/param.service';
+import { NgbActiveModal, NgbDropdownModule, NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { Param } from '@models/param/param.model';
+import { ParamService } from '@models/param/param.service';
 import { personalized } from '@constants/personalized';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { MarketingService } from '@models/marketing/marketing.service';
 import { File } from '@models/file/file.model';
 import { FormsModule } from '@angular/forms';
@@ -13,6 +13,8 @@ import { SafePipe } from '@pipes/safe.pipe';
 import { PaymentPlanEditorComponent } from '@shards/payment-plan-editor/payment-plan-editor.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { Dictionary } from '@constants/constants';
+import { modelResource } from '@models/http/model-resource';
+import { insertCurrentDate } from '@constants/quill';
 
 type ContentSegment = { type: 'html'; content: string } | { type: 'payment-plan' };
 interface I18nVariant {
@@ -26,7 +28,7 @@ interface I18nVariant {
     selector: 'text-param-editor',
     templateUrl: './text-param-editor.component.html',
     styleUrls: ['./text-param-editor.component.scss'],
-    imports: [QuillEditorComponent, FormsModule, SafePipe, PaymentPlanEditorComponent, SpinnerComponent],
+    imports: [QuillEditorComponent, FormsModule, SafePipe, PaymentPlanEditorComponent, SpinnerComponent, NgbDropdownModule],
 })
 export class TextParamEditorComponent {
 
@@ -61,10 +63,6 @@ export class TextParamEditorComponent {
     i18nVariants = signal<I18nVariant[]>([]);
     editorValue = signal('');
 
-    // Quill registers its own (high-frequency) keystroke/selection listeners during construction.
-    // Deferring its creation into afterNextRender() — which Angular always runs outside the zone —
-    // keeps those listeners out of zone.js, so typing doesn't trigger a full-app change detection
-    // tick on every keystroke.
     readonly editorReady = signal(false);
 
     readonly availableLocales = computed(() =>
@@ -75,6 +73,7 @@ export class TextParamEditorComponent {
         })),
     );
     readonly selectedLocaleKey = computed(() => `${this.currentLanguage()}-${this.currentFormality()}`);
+    readonly selectedLocaleLabel = computed(() => `${this.currentLanguage().toUpperCase()} - ${this.currentFormality()}`);
     readonly showLocalizationControls = computed(() => !this.object() && !this.previewLocale());
     readonly showModalLocalizationControls = computed(() => !this.object());
     readonly contentSegments = computed((): ContentSegment[] => {
@@ -93,12 +92,21 @@ export class TextParamEditorComponent {
         });
     });
 
+    readonly #inlineParamJson = computed(() => {
+        const key = this.key();
+        const object = this.object();
+        if (!key || !object?.params || !(key in object.params) || !object.params[key]) return undefined;
+        return { key, value: object.params[key], parent_path: object.apiPathWithId(), fallback: false };
+    });
+    readonly #loadedParam = modelResource(
+        () => (this.key() && !this.#inlineParamJson() ? { key: this.key(), path: this.object()?.apiPathWithId(), fallback: this.fallback() } : undefined),
+        ({ key, fallback }) => this.object()?.showParam(key, { fallback }) ?? this.#paramService.show(key, { fallback }),
+    );
+
     constructor() {
         effect(() => {
-            const key = this.key();
-            const object = this.object();
-            const fallback = this.fallback();
-            untracked(() => this.#loadParam(key, object, fallback));
+            const json = this.#inlineParamJson() ?? this.#loadedParam.value();
+            if (json) untracked(() => this.#assignJson(json));
         });
 
         effect(() => {
@@ -108,19 +116,6 @@ export class TextParamEditorComponent {
                 if (this.param()) this.#applyLocale();
             });
         });
-    }
-
-    #loadParam(key: string, object: Serializable | undefined, fallback: boolean) {
-        if (!key) return;
-        if (object?.params && key in object.params && object.params[key]) {
-            this.#assignJson({ key, value: object.params[key], parent_path: object.apiPathWithId(), fallback: false });
-            return;
-        }
-        if (object) {
-            object.showParam(key, { fallback }).subscribe((data) => this.#assignJson(data));
-        } else {
-            this.#paramService.show(key, { fallback }).subscribe((data) => this.#assignJson(data));
-        }
     }
 
     #applyLocale() {
@@ -253,6 +248,10 @@ export class TextParamEditorComponent {
 
     onEditorCreated(quill: Quill) {
         this.#quill = quill;
+    }
+
+    insertCurrentDate() {
+        if (this.#quill) insertCurrentDate(this.#quill);
     }
 
     openImageSelection() {

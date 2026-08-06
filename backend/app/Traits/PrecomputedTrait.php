@@ -36,16 +36,10 @@ trait PrecomputedTrait {
         }
     }
 
-    /**
-     * returns all model casts that use Precomputed casting
-     */
     public function getPrecomputedAttributes() {
         return array_filter(array_keys($this->casts), fn ($key) => is_a($this->casts[$key], Precomputed::class, true));
     }
 
-    /**
-     * reset all precomputed attributes to be recalculated.
-     */
     public function resetPrecomputedAttributes() {
         if ($this->isPropagating || ! PropagationState::$isPropagating) {
             return;

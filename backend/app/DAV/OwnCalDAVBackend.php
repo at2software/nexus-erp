@@ -94,16 +94,6 @@ class OwnCalDAVBackend extends AbstractBackend {
         return null;
     }
 
-    /**
-     * Builds a valid, stable ETag.
-     *
-     * The ETag must be a quoted-string (RFC 7232) and must not change between
-     * requests unless the underlying record actually changed. The previous
-     * implementation returned an unquoted value containing a space
-     * (e.g. "12026-06-19 12:34:56"), which clients like Thunderbird could not
-     * match against their cache, causing recurring (birthday) events to be
-     * re-created on every sync.
-     */
     private function makeEtag($id, $updatedAt): string {
         $stamp = $updatedAt ? $updatedAt->getTimestamp() : 0;
         return '"'.$id.'-'.$stamp.'"';
@@ -114,9 +104,6 @@ class OwnCalDAVBackend extends AbstractBackend {
         if ($birthday === null) {
             return null;
         }
-        // DTSTAMP must be deterministic for a given record so the event body
-        // stays byte-identical across syncs; deriving it from the live clock
-        // makes every fetch look like a modification.
         $dtstamp = $updatedAt ? gmdate('Ymd\THis\Z', $updatedAt->getTimestamp()) : gmdate('Ymd\THis\Z');
         return "BEGIN:VCALENDAR\r\n".
                "VERSION:2.0\r\n".

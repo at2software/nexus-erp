@@ -45,7 +45,7 @@ NEXUS combines CRM, project management, invoicing, time tracking, HR, marketing 
 
 | Layer | Technology |
 |---|---|
-| Frontend | Angular 21+, TypeScript, Bootstrap 5, RxJS |
+| Frontend | Angular 22+, TypeScript, Bootstrap 5, RxJS |
 | Backend | Laravel 13, PHP 8.3+, Eloquent ORM |
 | Database | MySQL / MariaDB |
 | Real-Time | Laravel Reverb (WebSockets) |

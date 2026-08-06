@@ -1,19 +1,17 @@
-import { NxGlobal } from '@app/nx/nx.global';
-import { ProductGroupService } from '@models/product/product-group.service';
+import type { NxAction } from '@models/_core/nx.actions';
+import { nx } from '@models/_core/nx-bridge';
 import { Product } from './product.model';
-import { Serializable } from './../serializable';
+import { Serializable } from '@models/_core/serializable';
 import { getProductGroupActions } from './product-group.actions';
 import { Observable, map } from 'rxjs';
-import { Type } from 'class-transformer';
-import { Model } from '@constants/type-discriminators';
+import { Type } from '@models/_core/hydrate';
+import { Model } from '@constants/model/type-discriminators';
 import { Dictionary } from '@constants/constants';
 
 @Model('ProductGroup')
 export class ProductGroup extends Serializable {
-    SERVICE = ProductGroupService;
 
-    doubleClickAction: number = 0;
-    actions = getProductGroupActions(this);
+    protected override buildActions(): NxAction[] { return getProductGroupActions(this) }
 
     name: string = '';
     symbol: string = '';
@@ -32,9 +30,7 @@ export class ProductGroup extends Serializable {
 
     static API_PATH = (): string => 'product_groups';
     frontendUrl = (): string => `/products/group/${this.id}`;
-    // patch() (not raw Object.assign) bumps Serializable#state so signal-based template
-    // consumers (e.g. tracked(group) in product-tree-list) re-render under zoneless CD.
-    put = (path: string) => NxGlobal.service.put(`product_groups/${this.id}/${path}`, {}).subscribe((_) => this.patch(_ as Dictionary));
+    put = (path: string) => nx().service.put(`product_groups/${this.id}/${path}`, {}).subscribe((_) => this.patch(_ as Dictionary));
 
-    static createWithParentId = (name: string = 'New product group', parentId: string | undefined = undefined): Observable<ProductGroup> => NxGlobal.service.post('product_groups', { name: name, product_group_id: parentId }).pipe(map((x) => ProductGroup.fromJson(x)));
+    static createWithParentId = (name: string = 'New product group', parentId: string | undefined = undefined): Observable<ProductGroup> => nx().service.post('product_groups', { name: name, product_group_id: parentId }).pipe(map((x) => ProductGroup.fromJson(x)));
 }

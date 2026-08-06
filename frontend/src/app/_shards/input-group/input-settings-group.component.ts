@@ -1,9 +1,11 @@
 import { GlobalService } from '@models/global.service';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Serializable } from '@models/serializable';
-import { Param } from '@models/param.model';
+import { from, map, of, switchMap } from 'rxjs';
+import { Serializable } from '@models/_core/serializable';
+import { Param } from '@models/param/param.model';
 import { NexusHttp } from '@models/http/http.nexus';
+import { modelResource } from '@models/http/model-resource';
 import { NgbTypeaheadModule } from '@ng-bootstrap/ng-bootstrap';
 import { InputGroupComponent } from './input-group.component';
 
@@ -17,8 +19,22 @@ export class InputSettingsGroupComponent extends InputGroupComponent {
     id = input.required<string>();
     parent = input<Serializable | undefined>();
 
-    #fetchedParam = signal<Serializable | undefined>(undefined);
-    effectiveObject = computed(() => this.object() ?? this.#fetchedParam());
+    #global = inject(GlobalService);
+    #http = inject(NexusHttp);
+
+    readonly #globalParam = modelResource(
+        () => (this.parent() ? undefined : this.id()),
+        (id) =>
+            from(this.#global.settingParam(id)).pipe(switchMap((cached) => (cached ? of(cached) : this.#http.get('params/' + id).pipe(map((_) => Param.fromJson(_)))))),
+    );
+    effectiveObject = computed<Serializable | undefined>(() => {
+        const own = this.object();
+        if (own) return own;
+        const parent = this.parent();
+        if (!parent) return this.#globalParam.value();
+        const value = parent.getParam(this.id());
+        return Param.fromJson({ key: this.id(), value: value !== undefined ? value : '' });
+    });
 
     override get model(): string | undefined {
         return (this.effectiveObject() as unknown as Record<string, string> | undefined)?.['value'];
@@ -29,41 +45,9 @@ export class InputSettingsGroupComponent extends InputGroupComponent {
     }
     taKey = (x: { name: string }) => x.name;
 
-    #global = inject(GlobalService);
-    #http = inject(NexusHttp);
-    #requestId = 0;
-
     constructor() {
         super();
         this.onUpdate.pipe(takeUntilDestroyed()).subscribe(this.#global.reload);
-
-        effect(() => {
-            const id = this.id();
-            const parent = this.parent();
-            if (!parent) {
-                void this.#loadGlobalParam(id);
-                return;
-            }
-            const p = parent.getParam(id);
-            this.#fetchedParam.set(
-                Param.fromJson({ key: id, value: p !== undefined ? p : '' })
-            );
-        });
-    }
-
-    async #loadGlobalParam(id: string) {
-        const requestId = ++this.#requestId;
-        const cached = await this.#global.settingParam(id);
-        if (requestId !== this.#requestId) return;
-        if (cached) {
-            this.#fetchedParam.set(cached);
-            return;
-        }
-        this.#http.get('params/' + id).pipe(takeUntilDestroyed()).subscribe((_) => {
-            if (requestId === this.#requestId) {
-                this.#fetchedParam.set(Param.fromJson(_));
-            }
-        });
     }
 
     onKey = (event: Event) => (this.model = (event.target as HTMLInputElement).value);

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, viewChild, effect, untracked, input } from '@angular/core';
-import { SankeyData } from '@models/api-response';
+import { SankeyDataDto } from '@models/_core/api-response';
 
 import { MoneyPipe } from '@pipes/money.pipe';
 import { drag, select } from 'd3';
@@ -29,7 +29,7 @@ export class SankeyChartComponent {
     sankeyContainer = viewChild<ElementRef<HTMLDivElement>>('sankeyContainer');
     linkTooltip = viewChild<ElementRef<HTMLDivElement>>('linkTooltip');
 
-    data = input<SankeyData | undefined>(undefined);
+    data = input<SankeyDataDto | undefined>(undefined);
     mode = input<'count' | 'money'>('count');
     height = input<number>(200);
     stateColumns = input<Record<number, number> | undefined>(undefined);
@@ -127,7 +127,6 @@ export class SankeyChartComponent {
         const linkGenerator = sankeyLinkHorizontal();
         const tooltipEl = this.linkTooltip()?.nativeElement;
 
-        // Links
         const linkPaths = svg.append('g')
             .attr('fill', 'none')
             .selectAll<SVGPathElement, ComputedLink>('path')
@@ -163,7 +162,6 @@ export class SankeyChartComponent {
                 if (tooltipEl) tooltipEl.style.display = 'none';
             });
 
-        // Node rects
         const nodeRects = svg.append('g')
             .selectAll<SVGRectElement, ComputedNode>('rect')
             .data(graph.nodes)
@@ -179,7 +177,6 @@ export class SankeyChartComponent {
         nodeRects.append('title')
             .text((d) => `${d.name}\n${isCountMode ? (d.value ?? 0) : this.money.transform(d.value ?? 0)}`);
 
-        // Node labels
         const labels = this.showLabels()
             ? svg.append('g')
                 .style('font', '10px sans-serif')
@@ -195,7 +192,6 @@ export class SankeyChartComponent {
                 .text((d) => d.name)
             : null;
 
-        // Y-axis drag on nodes
         const nodeDrag = drag<SVGRectElement, ComputedNode>().on('drag', (event, d) => {
             const nodeHeight = d.y1! - d.y0!;
             const newY0 = Math.max(10, Math.min(h - 10 - nodeHeight, d.y0! + event.dy));

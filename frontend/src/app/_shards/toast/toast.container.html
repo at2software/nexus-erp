@@ -8,7 +8,7 @@
             @if (asTemplate(toast); as tpl) {
             <ng-template [ngTemplateOutlet]="tpl"></ng-template>
             } @else {
-            <div [innerHTML]="toast.textOrTpl | safe:'html'"></div>
+            <div [innerHTML]="asText(toast) | safe:'html'"></div>
             }
             @if (toast.progress !== undefined) {
             <div class="progress mt-1" style="height:3px">

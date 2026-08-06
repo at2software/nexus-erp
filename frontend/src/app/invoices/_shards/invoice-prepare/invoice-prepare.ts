@@ -11,16 +11,19 @@ import { Product } from '@models/product/product.model';
 import { Company } from '@models/company/company.model';
 import { Invoice } from '@models/invoice/invoice.model';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 import { moveInvoiceItems, reindexInvoiceItems } from './invoice-item.reorder.const';
 import { HasInvoiceItems } from '@interfaces/hasInvoiceItems.interface';
 import { Dictionary } from '@constants/constants';
 import { InvoiceItemAnnotationType, InvoiceItemRowComponent } from './invoice-item/invoice-item-row.component';
 import { ModalInvoiceDiscountComponent } from '@app/_modals/modal-invoice-discount/modal-invoice-discount.component';
 import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
-import { forkJoin } from 'rxjs';
+import { debounceTime, filter, forkJoin, map } from 'rxjs';
+import { modelListResource } from '@models/http/model-resource';
+import { LiveSyncService } from '@models/live/live-sync.service';
+import { DataChangedPayload } from '@services/websocket.service';
 import { GlobalService } from '@models/global.service';
-import { NxGlobal } from '@app/nx/nx.global';
+import { NxStatic } from '@app/nx/nx.static';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { Nx } from '@app/nx/nx.directive';
 import { CdkTableModule } from '@angular/cdk/table';
@@ -30,6 +33,9 @@ import { HotkeyDirective } from '@directives/hotkey.directive';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { ExtIssueResolverService, ExtIssueRef } from '@models/ext-issue/ext-issue-resolver.service';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
+
+const LIVE_RELOAD_DEBOUNCE_MS = 400;
 
 type TNewItems = 'item' | 'paydown' | 'group' | 'discount';
 interface VatEntry {
@@ -42,7 +48,7 @@ interface VatEntry {
     changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './invoice-prepare.html',
     styleUrls: ['./invoice-prepare.scss'],
-    imports: [ToolbarComponent, DecimalPipe, Nx, CdkTableModule, InvoiceItemRowComponent, MoneyPipe, NgbDropdownModule, NgbTooltipModule, CdkDrag, CdkDropList, HotkeyDirective, SpinnerComponent],
+    imports: [StackedTableDirective, ToolbarComponent, DecimalPipe, Nx, CdkTableModule, InvoiceItemRowComponent, MoneyPipe, NgbDropdownModule, NgbTooltipModule, CdkDrag, CdkDropList, HotkeyDirective, SpinnerComponent],
 })
 export class InvoicePrepare {
     #invoiceService = inject(InvoiceItemService);
@@ -50,6 +56,7 @@ export class InvoicePrepare {
     #modalService = inject(ModalBaseService);
     #global = inject(GlobalService);
     #extIssueResolver = inject(ExtIssueResolverService);
+    #liveSync = inject(LiveSyncService);
 
     parent = input.required<HasInvoiceItems>();
     items = input<InvoiceItem[] | undefined>(undefined);
@@ -70,9 +77,20 @@ export class InvoicePrepare {
     selection = signal<InvoiceItem[]>([]);
     selectionNet = signal<number>(0);
     selectionQty = signal<number>(0);
-    loading = signal<boolean>(false);
 
-    /** Live-resolved external issue links keyed by invoice-item id. Status is fetched, never stored. */
+    readonly #itemsResource = modelListResource(
+        () => (this.items() === undefined ? this.parent()?.id : undefined),
+        () =>
+            this.#invoiceService.getInvoiceItems(this.parent(), { append: 'my_prediction', with: 'predictions' }).pipe(
+                map((items) => {
+                    const stage = this.stageFilter();
+                    const filtered = stage === undefined ? items : items.filter((item) => item.stage === stage && !item.invoice_id);
+                    return filtered.sort((a, b) => a.position - b.position);
+                }),
+            ),
+    );
+    loading = this.#itemsResource.isLoading;
+
     extIssues = signal<Record<string, ExtIssueRef>>({});
 
     regularItems = computed(() => (this.withInstalments() ? this._items().filter((_) => _.type !== InvoiceItemType.Instalment) : this._items()));
@@ -89,22 +107,12 @@ export class InvoicePrepare {
         registerLocaleData(locale);
 
         effect(() => {
-            const itemsVal = this.items();
-            if (itemsVal !== undefined) {
-                const updated = this.#reindex(itemsVal);
-                this._items.set(updated);
-                this.dataLoaded.emit(updated);
-            }
+            const provided = this.items();
+            const next = provided ?? (this.#itemsResource.hasValue() ? this.#itemsResource.value() : undefined);
+            if (next !== undefined) untracked(() => this.#publish(next));
         });
 
-        effect(() => {
-            this.parent();
-            if (untracked(() => this.items()) === undefined) {
-                this.reload();
-            }
-        });
-
-        NxGlobal.broadcast$.pipe(takeUntilDestroyed()).subscribe((broadcast) => {
+        NxStatic.broadcast$.pipe(takeUntilDestroyed()).subscribe((broadcast) => {
             const currentItems = this._items();
             if (!currentItems.length) return;
 
@@ -119,6 +127,17 @@ export class InvoicePrepare {
             }
         });
 
+        this.#liveSync.externalChanges$
+            .pipe(
+                filter((payload) => this.#affectsItems(payload)),
+                debounceTime(LIVE_RELOAD_DEBOUNCE_MS),
+                takeUntilDestroyed(),
+            )
+            .subscribe(() => {
+                if (this.items() !== undefined) return;
+                this.reload();
+            });
+
         this.#global
             .onSelectionIn(() => this._items(), 'net', 'pt')
             .pipe(takeUntilDestroyed())
@@ -131,24 +150,20 @@ export class InvoicePrepare {
         effect(() => this.#extIssueResolver.resolveRows(this.project(), this._items(), this.extIssues));
     }
 
+    #affectsItems(payload: DataChangedPayload): boolean {
+        const parent = this.parent();
+        if (parent?.class === payload.class && String(parent.id) === String(payload.id)) return true;
+        return this._items().some((item) => item.class === payload.class && String(item.id) === String(payload.id));
+    }
+
     clear = () => this._items.set([]);
 
-    reload() {
-        const parent = this.parent();
-        if (!parent) return;
-        this.loading.set(true);
-        this.#invoiceService.getInvoiceItems(parent, { append: 'my_prediction', with: 'predictions' }).subscribe({
-            next: (x) => {
-                const stage = this.stageFilter();
-                if (stage !== undefined) x = x.filter((item) => item.stage === stage && !item.invoice_id);
-                x = x.sort((a, b) => a.position - b.position);
-                const updated = this.#reindex(x);
-                this._items.set(updated);
-                this.dataLoaded.emit(updated);
-                this.loading.set(false);
-            },
-            error: () => this.loading.set(false),
-        });
+    reload = () => this.#itemsResource.reload();
+
+    #publish(items: InvoiceItem[]) {
+        const updated = this.#reindex(items);
+        this._items.set(updated);
+        this.dataLoaded.emit(updated);
     }
 
     #reindex(items: InvoiceItem[]): InvoiceItem[] {
@@ -170,7 +185,6 @@ export class InvoicePrepare {
         const regularItems = [...this.regularItems()];
         const order = moveInvoiceItems(regularItems, e.previousIndex, e.currentIndex);
 
-        // Keep non-regular rows in place and inject reordered regular rows in their new sequence.
         const reorderedRegularQueue = [...regularItems];
         const reordered = this._items().map((item) => {
             if (item.type === InvoiceItemType.Instalment) return item;

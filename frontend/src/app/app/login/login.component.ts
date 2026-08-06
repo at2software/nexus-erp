@@ -5,7 +5,7 @@ import { AuthenticationService } from '@models/auth.service';
 import { deleteCookie, setCookie } from '@constants/cookies';
 import { GlobalService } from '@models/global.service';
 import { NexusHttpInterceptor } from '@app/http.interceptor';
-import { environment } from 'src/environments/environment';
+import { environment } from '@environments/environment';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -25,10 +25,12 @@ export class LoginComponent {
     #global = inject(GlobalService);
 
     isLoading = signal(false);
+    failed = signal(false);
 
     constructor() {
         deleteCookie('api_token');
         delete NexusHttpInterceptor.headers[environment.envApi];
+        this.#global.invalidateInit();
     }
 
     canLogin = () => !this.isLoading() && this.email.length > 0 && this.password.length > 0;
@@ -54,11 +56,15 @@ export class LoginComponent {
             this.#authService.apiToken = undefined;
             if (AuthenticationService.sysinfo!.method === 'token') {
                 this.isLoading.set(true);
-                this.#userService.login(this.email, this.password).subscribe((response) => {
-                    this.isLoading.set(false);
-                    if (!('user' in response)) return;
-                    const data = response.user;
-                    if (data?.id) {
+                this.failed.set(false);
+                this.#userService.login(this.email, this.password).subscribe({
+                    next: (response) => {
+                        this.isLoading.set(false);
+                        const data = 'user' in response ? response.user : undefined;
+                        if (!data?.id) {
+                            this.failed.set(true);
+                            return;
+                        }
                         this.#authService._isLoggedIn = true;
                         if (data.api_token && data.api_token.length) {
                             this.#authService.apiToken = data.api_token;
@@ -67,21 +73,14 @@ export class LoginComponent {
                             this.#global.reload();
                         }
                         this.#router.navigate(['/dashboard']);
-                    }
+                    },
+                    error: () => {
+                        this.isLoading.set(false);
+                        this.failed.set(true);
+                    },
                 });
             } else if (AuthenticationService.sysinfo!.method === 'keycloak') {
-                console.trace('logout login.component');
-                //this.#authService.keycloak.logout()
-                // this.#userService.login(this.email, this.password).subscribe((data: any) => {
-                //     if (data?.user?.id) {
-                //         this.#authService._isLoggedIn = true
-                //         this.#authService.apiToken = data.user.api_token
-                //         setCookie('api_token', data.user.api_token, 7)
-                //         this.#global.setTokenInterceptor(data.user.api_token)
-                //         this.#global.setUserEnvironment(data)
-                //         this.#router.navigate(['/dashboard'])
-                //     }
-                // })
+                AuthenticationService.keycloak?.login();
             }
         }
     }

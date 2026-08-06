@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, linkedSignal } from '@angular/core';
+import { modelResource } from '@models/http/model-resource';
 import { NComponent } from '@shards/n/n.component';
 import { Product } from '@models/product/product.model';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { ProductService } from '@models/product/product.service';
 import { Project } from '@models/project/project.model';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
@@ -16,18 +17,13 @@ import { SearchInputComponent } from '@shards/search-input/search-input.componen
 export class ProjectDefaultProductComponent {
     project = input.required<Project>();
 
-    product = signal<Product | undefined>(undefined);
-
     #productService = inject(ProductService);
 
-    constructor() {
-        effect(() => {
-            const project = this.project();
-            if (project.product_id) {
-                this.#productService.show(project.product_id).subscribe((p: Product) => this.product.set(p));
-            }
-        });
-    }
+    readonly #product = modelResource(
+        () => this.project().product_id || undefined,
+        (productId) => this.#productService.show(productId),
+    );
+    readonly product = linkedSignal(this.#product.value);
 
     onProductSelect(selected: Serializable) {
         const product = selected.assert(Product);

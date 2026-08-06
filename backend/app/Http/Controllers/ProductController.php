@@ -48,7 +48,6 @@ class ProductController extends Controller {
         ];
     }
     public function showSplit(Request $request, int $id) {
-        // Get all invoice items for this product that have valid project references
         $invoiceItems = InvoiceItem::whereNotNull('project_id')
             ->whereNotNull('product_source_id')
             ->where('product_source_id', $id)

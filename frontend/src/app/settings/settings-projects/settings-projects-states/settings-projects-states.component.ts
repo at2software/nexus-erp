@@ -6,12 +6,13 @@ import { GlobalService } from '@models/global.service';
 import { ProjectComponent } from '@shards/project/project.component';
 import { Project } from '@models/project/project.model';
 import { ProjectState } from '@models/project/project-state.model';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 @Component({
     selector: 'settings-projects-states',
     templateUrl: './settings-projects-states.component.html',
     styleUrls: ['./settings-projects-states.component.scss'],
-    imports: [FormsModule, AutosaveDirective, ColorPickerDirective, ProjectComponent],
+    imports: [StackedTableDirective, FormsModule, AutosaveDirective, ColorPickerDirective, ProjectComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SettingsProjectsStatesComponent {

@@ -1,18 +1,18 @@
 import { Dictionary } from '@constants/constants';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import type { ParamChartPoint } from '@models/api-response';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
+import type { ParamChartPointDto } from '@models/_core/api-response';
 import type { EChartsOption } from 'echarts';
 import type { CallbackDataParams, EChartsType, TopLevelFormatterParams } from 'echarts/types/dist/shared';
 import { BaseWidgetComponent } from '../base.widget.component';
 
-import { dayjs } from '@constants/dates';
+import { dayjs } from '@constants/date/dates';
 import { CASHFLOW_CHART_I18N, CASHFLOW_CHART_KEYS, CASHFLOW_I18N, EXPENSE_KEY, CASHFLOW_CHART_CHARTS } from './widget-cashflow.options';
 import { Color } from '@constants/Color';
 import { EChartsSimpleOptions } from '@charts/echarts-presets';
 import { OptionType } from '../widget-options/widget-options.component';
 import { MoneyPipe } from '@pipes/money.pipe';
 import { WIDGET_SHARED } from '../widgets.shared';
-import { ParamService } from '@models/param.service';
+import { ParamService } from '@models/param/param.service';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,15 +26,6 @@ export class WidgetCashflowComponent extends BaseWidgetComponent {
     #paramService = inject(ParamService);
     #echartsInstance: EChartsType | undefined;
 
-    chartOptions = signal<EChartsOption>({
-        ...EChartsSimpleOptions,
-        series: [],
-        tooltip: {
-            ...EChartsSimpleOptions.tooltip,
-            formatter: (params: TopLevelFormatterParams) => this.#formatTooltip(Array.isArray(params) ? params : [params]),
-        },
-    } satisfies EChartsOption);
-
     #filteredKeys = () => CASHFLOW_CHART_KEYS.filter((_) => this.getOptions()[_]?.value ?? true);
 
     defaultOptions = () => {
@@ -43,79 +34,87 @@ export class WidgetCashflowComponent extends BaseWidgetComponent {
         return ret;
     };
 
-    reload() {
-        if (!this.hasInvoicesExpenses()) return;
+    readonly #history = this.optionsResource(
+        () => this.#paramService.history('params/' + this.#filteredKeys().join(','), dayjs().startOf('month').subtract(36, 'month').unix(), 'month'),
+        this.hasInvoicesExpenses,
+    );
 
+    readonly #series = computed(() => {
         const positionOf = (_: string) => CASHFLOW_CHART_KEYS.findIndex((x) => x === _);
-        const keys = 'params/' + this.#filteredKeys().join(',');
-        const startAt = dayjs().startOf('month').subtract(36, 'month').unix();
-        this.#paramService.history(keys, startAt, 'month').subscribe((result) => {
-            const maxVal: Dictionary<number> = {};
-            const seriesResult = [result].flat();
+        const maxVal: Dictionary<number> = {};
 
-            const echartsData = seriesResult
-                .sort((a, b) => positionOf(a.name) - positionOf(b.name))
-                .map((_, index) => {
-                    if (!_ || !('data' in _)) return null;
+        const echartsData = [this.#history.value() ?? []]
+            .flat()
+            .sort((a, b) => positionOf(a.name) - positionOf(b.name))
+            .map((_, index) => {
+                if (!_ || !('data' in _)) return null;
 
-                    const rawData = (_['data'] as ParamChartPoint[]) ?? [];
-                    const processedData: [string, number][] = rawData.map((point) => {
-                        const x = String(point.x);
-                        const y = Number(point.y);
-                        if (!(x in maxVal)) maxVal[x] = 0;
-                        if (_.name !== EXPENSE_KEY) maxVal[x] += y;
-                        return [x, y];
-                    });
+                const rawData = (_['data'] as ParamChartPointDto[]) ?? [];
+                const processedData: [string, number][] = rawData.map((point) => {
+                    const x = String(point.x);
+                    const y = Number(point.y);
+                    if (!(x in maxVal)) maxVal[x] = 0;
+                    if (_.name !== EXPENSE_KEY) maxVal[x] += y;
+                    return [x, y];
+                });
 
-                    for (let i = dayjs().subtract(3, 'year').startOf('month').subtract(1, 'month'); i.isBefore(dayjs().startOf('month')); i = i.add(1, 'month')) {
-                        const monthString = i.format('YYYY-MM-01');
-                        if (!processedData.find((point) => point[0] == monthString)) {
-                            processedData.push([monthString, 0]);
-                        }
+                for (let i = dayjs().subtract(3, 'year').startOf('month').subtract(1, 'month'); i.isBefore(dayjs().startOf('month')); i = i.add(1, 'month')) {
+                    const monthString = i.format('YYYY-MM-01');
+                    if (!processedData.find((point) => point[0] == monthString)) {
+                        processedData.push([monthString, 0]);
                     }
+                }
 
-                    processedData.sort((a, b) => (a[0] && b[0] ? a[0].localeCompare(b[0]) : 0));
+                processedData.sort((a, b) => (a[0] && b[0] ? a[0].localeCompare(b[0]) : 0));
 
-                    const isExpenseLine = _['name'] === EXPENSE_KEY;
-                    const seriesName = CASHFLOW_I18N(_['name'] as string);
+                const isExpenseLine = _['name'] === EXPENSE_KEY;
+                const seriesName = CASHFLOW_I18N(_['name'] as string);
 
-                    if (isExpenseLine) {
-                        return {
-                            name: seriesName,
-                            type: 'line' as const,
-                            symbol: 'none',
-                            lineStyle: { width: 2, type: 'dashed' as const, color: this.#getSeriesColor(seriesName, index) },
-                            itemStyle: { color: this.#getSeriesColor(seriesName, index) },
-                            data: processedData,
-                            smooth: false,
-                        };
-                    } else {
-                        return {
-                            name: seriesName,
-                            type: 'line' as const,
-                            stack: 'cashflow',
-                            symbol: 'none',
-                            areaStyle: { color: this.#getSeriesColor(seriesName, index, 25), opacity: 1 },
-                            lineStyle: { width: 2, color: this.#getSeriesColor(seriesName, index) },
-                            itemStyle: { color: this.#getSeriesColor(seriesName, index) },
-                            data: processedData,
-                            smooth: false,
-                        };
-                    }
-                })
-                .filter((series) => series !== null);
+                if (isExpenseLine) {
+                    return {
+                        name: seriesName,
+                        type: 'line' as const,
+                        symbol: 'none',
+                        lineStyle: { width: 2, type: 'dashed' as const, color: this.#getSeriesColor(seriesName, index) },
+                        itemStyle: { color: this.#getSeriesColor(seriesName, index) },
+                        data: processedData,
+                        smooth: false,
+                    };
+                } else {
+                    return {
+                        name: seriesName,
+                        type: 'line' as const,
+                        stack: 'cashflow',
+                        symbol: 'none',
+                        areaStyle: { color: this.#getSeriesColor(seriesName, index, 25), opacity: 1 },
+                        lineStyle: { width: 2, color: this.#getSeriesColor(seriesName, index) },
+                        itemStyle: { color: this.#getSeriesColor(seriesName, index) },
+                        data: processedData,
+                        smooth: false,
+                    };
+                }
+            })
+            .filter((series) => series !== null);
 
-            const max = Math.max(...Object.values(maxVal));
-            this.value.set(Object.values(maxVal)[Object.values(maxVal).length - 1]);
+        const totals = Object.values(maxVal);
+        return { echartsData, max: Math.max(...totals), latest: totals[totals.length - 1] };
+    });
 
-            this.chartOptions.set({
-                ...this.chartOptions(),
-                series: echartsData,
-                yAxis: { ...this.chartOptions().yAxis, max: Math.ceil(max * 1.2) },
-            });
+    readonly chartOptions = computed<EChartsOption>(() => ({
+        ...EChartsSimpleOptions,
+        series: this.#series().echartsData,
+        yAxis: { ...EChartsSimpleOptions.yAxis, max: Math.ceil(this.#series().max * 1.2) },
+        tooltip: {
+            ...EChartsSimpleOptions.tooltip,
+            formatter: (params: TopLevelFormatterParams) => this.#formatTooltip(Array.isArray(params) ? params : [params]),
+        },
+    }));
 
-            this.#echartsInstance?.setOption(this.chartOptions(), true);
-        });
+    override value = this.headline(this.#history, () => this.#series().latest);
+
+    constructor() {
+        super();
+        effect(() => this.#echartsInstance?.setOption(this.chartOptions(), true));
     }
 
     #getSeriesColor(seriesName: string, index: number, darkenAmount = 0): string {

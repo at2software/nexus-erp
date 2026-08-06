@@ -1,15 +1,15 @@
 @if (showMiniCards()) {
 <div class="row mb-3">
-    <div class="col-4">
+    <div class="col-12 col-md-6 col-xl-4">
         <div class="card h-100">
             <div class="card-header" i18n="@@i18n.common.address">address</div>
             <div class="card-body" [innerHTML]="company().address | safe:'html'"></div>
         </div>
     </div>
-    <div class="col-4">
+    <div class="col-12 col-md-6 col-xl-4">
         <customer-payment-details [company]="company()" [additionalItems]="additionalItems()" [projectPaymentDuration]="projectPaymentDuration()" [onChangeProjectPaymentDuration]="onChangeProjectPaymentDuration()" [onRemoveProjectPaymentDuration]="onRemoveProjectPaymentDuration()"> </customer-payment-details>
     </div>
-    <div class="col-4">
+    <div class="col-12 col-md-6 col-xl-4">
         <div class="card h-100">
             <div class="card-header d-flex align-items-center justify-content-between">
                 <span i18n="@@i18n.invoice.billingConsiderations">billing considerations</span>

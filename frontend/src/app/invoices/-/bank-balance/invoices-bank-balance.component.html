@@ -12,7 +12,7 @@
 </toolbar>
 
 <div class="row g-3">
-    <div class="col-3">
+    <div class="col-12 col-md-3">
         @if (matched().length > 0 || _unmatched.length > 0) {
             <div class="card mb-3">
                 <div class="card-body p-0" style="height: 160px">
@@ -62,7 +62,7 @@
         }
     </div>
 
-    <div class="col-9">
+    <div class="col-12 col-md-9">
 
         @if (allPatternItems().length > 0) {
             <div class="card mb-3">
@@ -88,7 +88,7 @@
                     }
                 </div>
                 <div class="table-responsive">
-                    <table class="table mb-0 align-middle">
+                    <table stackedTable class="table mb-0 align-middle">
                         <colgroup>
                             <col style="width: 32px">
                             <col>
@@ -187,7 +187,7 @@
             @let _filteredUnmatched = filteredUnmatched();
             @if (_filteredUnmatched.length > 0) {
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 align-middle">
+                    <table stackedTable class="table table-hover mb-0 align-middle">
                         <colgroup>
                             <col style="width: 90px">
                             <col style="width: 180px">

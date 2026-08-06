@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 
 export interface ToolbarAction {
     id: string;
@@ -7,9 +7,7 @@ export interface ToolbarAction {
     action: () => void;
 }
 
-@Injectable({
-    providedIn: 'root',
-})
+@Service()
 export class ToolbarService {
     #actions: ToolbarAction[] = [];
 

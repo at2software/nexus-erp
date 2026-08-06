@@ -1,18 +1,19 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, linkedSignal } from '@angular/core';
+import { modelResource } from '@models/http/model-resource';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { DatePipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { MilestoneService } from '@models/milestones/milestone.service';
+import { MilestoneService } from '@models/milestone/milestone.service';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { Nx } from '@app/nx/nx.directive';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { FormsModule } from '@angular/forms';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
-import { MilestoneData } from '@models/milestones/api.milestone-group';
+import { MilestoneData } from '@models/milestone/milestone-group.model';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
-import { NxGlobal, TBroadcast } from '@app/nx/nx.global';
+import { NxStatic, TBroadcast } from '@app/nx/nx.static';
 import { SafePipe } from '@pipes/safe.pipe';
 
 @Component({
@@ -24,13 +25,16 @@ import { SafePipe } from '@pipes/safe.pipe';
 export class ProjectsMilestonesOverviewComponent {
     #service = inject(MilestoneService);
 
-    loading = signal(true);
-    data = signal<MilestoneData | null>(null, { equal: () => false });
+    readonly #data = modelResource(() => this.#service.indexOverview());
+    readonly loading = this.#data.isLoading;
+    readonly data = linkedSignal<MilestoneData | undefined, MilestoneData | undefined>({
+        source: this.#data.value,
+        computation: (value) => value,
+        equal: () => false,
+    });
 
     constructor() {
-        this.loadData();
-
-        NxGlobal.broadcast$.pipe(
+        NxStatic.broadcast$.pipe(
             takeUntilDestroyed(),
             filter((e) => e.type === TBroadcast.Update && e.data instanceof InvoiceItem && !!(e.data as InvoiceItem).milestones?.length),
         ).subscribe((e) => {
@@ -40,17 +44,6 @@ export class ProjectsMilestonesOverviewComponent {
                 current.invoiceItemsWithoutMilestone = current.invoiceItemsWithoutMilestone.filter((_) => _.id !== item.id);
                 return current;
             });
-        });
-    }
-
-    loadData() {
-        this.loading.set(true);
-        this.#service.indexOverview().subscribe({
-            next: (data) => {
-                this.data.set(data as MilestoneData);
-                this.loading.set(false);
-            },
-            error: () => this.loading.set(false),
         });
     }
 

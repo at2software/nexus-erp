@@ -14,8 +14,6 @@ class Milestone extends BaseModel {
     use HasTasksTrait;
     use SoftDeletes;
 
-    // Milestone has no natural $touches target elsewhere, unlike InvoiceItem/Comment/Focus -
-    // this is what makes a milestone save also broadcast the owning project as 'updated'.
     protected $touches = ['project'];
 
     protected $fillable = [
@@ -74,7 +72,6 @@ class Milestone extends BaseModel {
         return $this->belongsToMany(InvoiceItem::class, 'invoice_item_milestone')->withTimestamps();
     }
     public function getComputedWorkloadPercentAttribute(): ?float {
-        // Determine total hours from manual input or invoice items
         $totalHours = null;
 
         if ($this->workload_hours !== null && $this->workload_hours > 0) {
@@ -89,7 +86,6 @@ class Milestone extends BaseModel {
             }
         }
 
-        // If no hours defined, default to 0% workload
         if ($totalHours === null || $totalHours <= 0) {
             return 0;
         }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, linkedSignal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
@@ -7,6 +7,7 @@ import { tracked } from '@constants/tracked';
 import { Company } from '@models/company/company.model';
 import { MarketingProspectActivity } from '@models/marketing/marketing-prospect-activity.model';
 import { MarketingService } from '@models/marketing/marketing.service';
+import { modelListResource } from '@models/http/model-resource';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
 import { Nx } from '@app/nx/nx.directive';
 import { AvatarComponent } from '@app/_shards/avatar/avatar.component';
@@ -22,31 +23,25 @@ export class CustomerInitiativesComponent {
     readonly company = input.required<Company>();
     readonly trackedCompany = tracked(this.company);
 
-    activityRows = signal<MarketingProspectActivity[]>([]);
-
     #marketingService = inject(MarketingService);
     #modalService = inject(ModalBaseService);
 
-    constructor() {
-        effect(() => {
-            if (this.company().id) untracked(() => this.#load());
-        });
-    }
-
-    #load() {
-        this.#marketingService.indexProspects({ company_id: this.company().id }).subscribe((prospects) => {
-            const rows: MarketingProspectActivity[] = [];
-            for (const prospect of prospects) {
-                for (const activity of prospect.activities ?? []) {
-                    if (activity.status === 'pending' || activity.status === 'overdue') {
-                        activity.marketing_prospect = prospect;
-                        rows.push(activity);
-                    }
+    #prospects = modelListResource(
+        () => this.company()?.id || undefined,
+        (companyId) => this.#marketingService.indexProspects({ company_id: companyId }),
+    );
+    activityRows = linkedSignal<MarketingProspectActivity[]>(() => {
+        const rows: MarketingProspectActivity[] = [];
+        for (const prospect of this.#prospects.value()) {
+            for (const activity of prospect.activities ?? []) {
+                if (activity.status === 'pending' || activity.status === 'overdue') {
+                    activity.marketing_prospect = prospect;
+                    rows.push(activity);
                 }
             }
-            this.activityRows.set(rows.sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()));
-        });
-    }
+        }
+        return rows.sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+    });
 
     statusIcon = (status: string) => status === 'overdue' ? 'warning' : 'schedule';
     statusClass = (status: string) => status === 'overdue' ? 'text-danger' : 'text-primary';
@@ -69,7 +64,7 @@ export class CustomerInitiativesComponent {
                         added_via: 'manual',
                     });
                 });
-                forkJoin(calls).subscribe(() => this.#load());
+                forkJoin(calls).subscribe(() => this.#prospects.reload());
             });
     }
 }

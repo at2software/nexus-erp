@@ -28,13 +28,10 @@ class WidgetController extends Controller {
     public function preparedInvoices() {
         $maxUpdatedAt = $this->maxUpdatedFor(Company::class, Project::class);
 
-        // Load companies with optimized eager loading
         $companies = Company::getAllWithSupportItems();
 
-        // Load projects with optimized eager loading
         $projects = Project::getAllWithSupportItems();
 
-        // Load finished projects with unbilled items
         $finishedProjects = Project::whereFinishedSuccessfull()
             ->where('is_ignored_from_prepared', false)
             ->whereHas('unbilledInvoiceItems')
@@ -66,29 +63,22 @@ class WidgetController extends Controller {
         $baseWage        = Param::get('HR_HOURLY_WAGE')->value;
         $cashflowBuilder = $this->$methodName($baseWage);
 
-        // Get the collection with appended attributes
         $objects = $cashflowBuilder->getAndAppend();
 
-        // Hide params attribute to prevent loading param relations
         $objects->each->makeHidden('params');
 
-        // Add badge logic based on age of oldest items
         $this->addAgeBadges($key, $objects);
 
-        // Always prepare response structure
         $responseData = ['objects' => $objects];
 
-        // If withChart parameter is present and user has financial access, include chart history data
         if ($request->boolean('withChart') && $request->user()->hasAnyRole(['admin', 'financial'])) {
             $param = Param::where('key', 'CASHFLOW_'.$key)->first();
             if ($param) {
-                // Merge cluster and since parameters for history query
                 $request->merge([
                     'cluster' => $request->input('cluster', 'month'),
                     'since'   => $request->input('since', now()->subMonths(36)->timestamp),
                 ]);
                 $historyData = $param->historyResponse();
-                // Handle response object
                 if ($historyData instanceof JsonResponse) {
                     $responseData['history'] = [$historyData->getData(true)];
                 } else {
@@ -97,13 +87,9 @@ class WidgetController extends Controller {
             }
         }
 
-        // Use last modified from the builder for caching
         return $responseData;
     }
 
-    /**
-     * Add age-based warning badges to cashflow objects
-     */
     private function addAgeBadges(string $key, $objects) {
         if ($objects->isEmpty()) {
             return;
@@ -123,7 +109,6 @@ class WidgetController extends Controller {
         $parentType = $key === 'PROJECTS_TIMEBASED' ? 'App\\Models\\Project' : 'App\\Models\\Company';
         $label      = $key === 'PROJECTS_TIMEBASED' ? 'time-based' : 'support';
 
-        // Single query to get oldest unbilled focus for all entities
         $oldestFoci = Focus::whereIn('parent_id', $ids)
             ->where('parent_type', $parentType)
             ->whereNull('invoiced_in_item_id')
@@ -131,33 +116,28 @@ class WidgetController extends Controller {
             ->whereNotNull('started_at')
             ->select('parent_id', DB::raw('MIN(started_at) as oldest_started_at'))
             ->groupBy('parent_id');
-        $sql        = $oldestFoci->toSql();
         $oldestFoci = $oldestFoci->get()
             ->keyBy('parent_id');
 
-        $objects->each(function ($object) use ($oldestFoci, $now, $label, $sql) {
+        $objects->each(function ($object) use ($oldestFoci, $now, $label) {
             if ($oldestDate = $oldestFoci->get($object->id)?->oldest_started_at) {
                 $days = (int)Carbon::parse($oldestDate)->diffInDays($now);
                 if ($days > 60) {
-                    $object->badge = ['bg-danger', "{$label}: oldest unbilled {$days}d", $sql];
+                    $object->badge = ['bg-danger', "{$label}: oldest unbilled {$days}d"];
                 }
             }
         });
     }
     private function addInvoiceBadges($objects, $now) {
-        // Since we now eager load the oldest invoice item, we can use it directly
         $objects->each(function ($item) use ($now) {
             $oldestInvoiceItem = null;
 
-            // Check if we have pre-loaded support items
             if ($item->relationLoaded('supportItems') && $item->supportItems->isNotEmpty()) {
                 $oldestInvoiceItem = $item->supportItems->first();
             }
-            // Check if we have pre-loaded unbilled invoice items
             elseif ($item->relationLoaded('unbilledInvoiceItems') && $item->unbilledInvoiceItems->isNotEmpty()) {
                 $oldestInvoiceItem = $item->unbilledInvoiceItems->first();
             }
-            // Fallback to querying if not eager loaded (should rarely happen now)
             elseif (method_exists($item, 'supportItems')) {
                 $oldestInvoiceItem = $item->supportItems()->orderBy('created_at', 'asc')->first();
             } elseif (method_exists($item, 'unbilledInvoiceItems')) {
@@ -175,8 +155,6 @@ class WidgetController extends Controller {
     public function GET_CASHFLOW_CUSTOMER_SUPPORT($baseWage = 0) {
         return new CashflowBuilder(
             builder: Company::whereHasUnbilledFoci()->whereNot('id', Param::get('ME_ID')->value),
-            // ml_predicted_support_hours: support-load forecast (predicted next-quarter support
-            // hours), additive to the unbilled-cashflow sum above — never replaces it.
             appends: ['ml_predicted_support_hours'],
             sum: fn ($company) => $company->foci_unbilled_sum_duration * $company->getWage($baseWage)
         );
@@ -209,23 +187,17 @@ class WidgetController extends Controller {
         );
     }
     public function GET_CASHFLOW_INVOICES_PREPARED() {
-        // Prepared invoices are a mix of Companies and Projects with support items,
-        // plus successful projects with unbilled invoice items
-        // Since this combines different model types, we return a pseudo-CashflowBuilder
         return new class {
             public function getAndAppend() {
-                // Load companies with optimized eager loading
                 $companies = Company::getAllWithSupportItems();
 
-                // Load projects with optimized eager loading
-                $projects = Project::getAllWithSupportItems();
+                $projects = Project::getAllWithSupportItems()->load('company');
 
-                // Load finished projects with unbilled items
                 $finishedProjects = Project::whereFinishedSuccessfull()
                     ->where('is_ignored_from_prepared', false)
                     ->whereHas('unbilledInvoiceItems')
                     ->withSum('unbilledInvoiceItems as net_remaining', 'net')
-                    ->with(['unbilledInvoiceItems' => function ($q) {
+                    ->with(['company', 'unbilledInvoiceItems' => function ($q) {
                         $q->select('id', 'company_id', 'project_id', 'created_at', 'net', 'type')
                             ->orderBy('created_at', 'asc')
                             ->limit(1);
@@ -234,7 +206,8 @@ class WidgetController extends Controller {
                 return collect()
                     ->merge($companies)
                     ->merge($projects)
-                    ->merge($finishedProjects);
+                    ->merge($finishedProjects)
+                    ->each(fn ($model) => $model->cashflow_value = (float)($model->net_remaining ?? 0));
             }
         };
     }

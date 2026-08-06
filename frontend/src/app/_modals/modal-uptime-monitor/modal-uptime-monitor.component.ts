@@ -1,9 +1,8 @@
-﻿import { ChangeDetectionStrategy, Component, inject, signal, Injectable } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, inject, signal, Service } from '@angular/core';
 import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { FormsModule } from '@angular/forms';
 
 import { UptimeMonitor } from '@models/uptime/uptime-monitor.model';
-import { UptimeMonitorService } from '@models/uptime/uptime-monitor.service';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { Dictionary } from '@constants/constants';
 
@@ -21,7 +20,6 @@ export class ModalUptimeMonitorComponent {
     projectIds: string[] = [];
 
     activeModal = inject(NgbActiveModal);
-    #service = inject(UptimeMonitorService);
 
     isValid(): boolean {
         return !!(this.monitor.name?.trim() && this.monitor.url?.trim());
@@ -33,7 +31,6 @@ export class ModalUptimeMonitorComponent {
             return;
         }
 
-        // Extract only the necessary fields for the API
         const payload: Dictionary = {
             name: this.monitor.name,
             url: this.monitor.url,
@@ -47,13 +44,12 @@ export class ModalUptimeMonitorComponent {
             request_body: this.monitor.request_body,
         };
 
-        // Include project IDs if creating from a project context
         if (this.isCreating() && this.projectIds.length > 0) {
             payload.project_ids = this.projectIds;
         }
 
         this.isSaving.set(true);
-        const action = this.isCreating() ? this.#service.store(payload) : this.#service.update(this.monitor.id, payload);
+        const action = this.isCreating() ? this.monitor.store(payload) : this.monitor.update(payload);
         action.subscribe({
             next: (result) => {
                 this.isSaving.set(false);
@@ -75,7 +71,7 @@ export class ModalUptimeMonitorComponent {
     }
 }
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class UptimeMonitorModalService {
     modalService = inject(NgbModal);
 

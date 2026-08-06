@@ -1,11 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, resource } from '@angular/core';
 import { Company } from '@models/company/company.model';
 import { InvoiceService } from '@models/invoice/invoice.service';
-import { StatsService } from '@models/stats-service';
+import { StatsService } from '@models/stats.service';
 import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS, ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
 import { Color } from '@constants/Color';
 import { GlobalService } from '@models/global.service';
-import { dayjs } from '@constants/dates';
+import { dayjs } from '@constants/date/dates';
 import { DecimalPipe, PercentPipe, DatePipe } from '@angular/common';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { EchartsComponent } from '@charts/echarts-wrapper/echarts-wrapper.component';
@@ -14,7 +14,9 @@ import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { CustomerRevenueBubbleChartComponent } from '@app/invoices/-/invoices-stats/customer-revenue-bubble-chart.component';
 import { WidgetCustomerChurnComponent } from '@dashboard/widgets/widget-customer-churn/widget-customer-churn.component';
-import { CustomerRevenueScatterResponse } from '@models/api-response';
+import { Nx } from '@app/nx/nx.directive';
+import { modelResource } from '@models/http/model-resource';
+import { map } from 'rxjs';
 import type { EChartsOption } from 'echarts';
 
 const BREAKPOINT_PERC = 0.025;
@@ -32,133 +34,136 @@ interface ScatterplotOptions {
     selector: 'customers-statistics',
     templateUrl: './customers-statistics.component.html',
     styleUrls: ['./customers-statistics.component.scss'],
-    imports: [DecimalPipe, PercentPipe, DatePipe, AvatarComponent, EchartsComponent, NgbTooltipModule, EmptyStateComponent, SpinnerComponent, CustomerRevenueBubbleChartComponent, WidgetCustomerChurnComponent],
+    imports: [DecimalPipe, PercentPipe, DatePipe, AvatarComponent, EchartsComponent, NgbTooltipModule, EmptyStateComponent, SpinnerComponent, CustomerRevenueBubbleChartComponent, WidgetCustomerChurnComponent, Nx],
 })
 export class CustomersStatisticsComponent {
     invoiceService = inject(InvoiceService);
     global = inject(GlobalService);
     #statsService = inject(StatsService);
-    pieOptions = signal<EChartsOption | undefined>(undefined);
-    bcgOptions = signal<EChartsOption | undefined>(undefined);
-    wageOptions = signal<EChartsOption | undefined>(undefined);
-    premiumCustomers = signal<Company[] | undefined>(undefined);
-    isLoading = signal(true);
-    customerScatterData = signal<CustomerRevenueScatterResponse | undefined>(undefined);
+
+    readonly #scatter = modelResource(() => this.#statsService.getCustomerRevenueScatter());
+    readonly customerScatterData = this.#scatter.value;
+
+    readonly #stats = modelResource(() => this.invoiceService.getCustomerStats().pipe(map((_) => ({ ..._, companies: _.companies?.map(this.convertToCompany) }))));
+    readonly isLoading = this.#stats.isLoading;
+
+    readonly #companies = computed<Company[] | undefined>(() => this.#stats.value()?.companies);
+    readonly #totalLastYear = computed(() => Number(this.#stats.value()?.total_last_year ?? 0));
+
+    readonly premiumCustomers = computed<Company[] | undefined>(() => this.#companies()?.filter((_) => _.revenue_last_1_year >= BREAKPOINT_PERC * this.#totalLastYear()));
+    readonly #restCompanies = computed<Company[]>(() => this.#companies()?.filter((_) => _.revenue_last_1_year < BREAKPOINT_PERC * this.#totalLastYear()) ?? []);
+    readonly #revCompanies = computed<Company[]>(() => this.#companies()?.filter((_) => _.revenue_last_1_year > BREAKPOINT_REV) ?? []);
+
+    readonly #symbolMap = resource({
+        params: () => this.#revCompanies(),
+        loader: ({ params }) => this.#buildSymbolMap(params),
+        defaultValue: new Map<string, string>(),
+    });
+
+    readonly #eur = (val: number) => (val ? `${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ` + this.global.currencySymbol() : '');
+
+    readonly pieOptions = computed<EChartsOption | undefined>(() => {
+        const premium = this.premiumCustomers();
+        if (!premium) return undefined;
+
+        const rest = this.#restCompanies();
+        const reduced: { id: string; name: string; value: number }[] = [
+            ...premium.map((_) => ({ id: _.id, name: _.getName(), value: _.revenue_last_1_year })),
+            ...(rest.length ? [{ id: '0', name: $localize`:@@i18n.common.rest:rest`, value: rest.reduce((a, b) => a + b.revenue_last_1_year, 0) }] : []),
+        ];
+        const total = reduced.reduce((s, c) => s + (c.value ?? 0), 0);
+
+        return {
+            chart: { height: 300 },
+            backgroundColor: 'transparent',
+            animation: false,
+            tooltip: {
+                trigger: 'item',
+                ...ECHARTS_DEFAULT_TOOLTIP_OPTIONS,
+                formatter: (rawParams: unknown) => {
+                    const params = rawParams as { name: string; value: number };
+                    return `${params.name}: ${this.#eur(params.value)}`;
+                },
+            },
+            graphic: [{ type: 'text', left: 'center', top: 'center', style: { text: this.#eur(total), fill: '#fff', fontSize: 12 } }],
+            series: [
+                {
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    data: reduced.map((_) => ({
+                        value: _.value,
+                        name: _.name,
+                        itemStyle: { color: _.id !== '0' ? Color.uniqueColorFromString('' + _.id) : '#333333', ...ECHARTS_DONUT_ITEM_STYLE },
+                    })),
+                    label: { show: true, formatter: (rawP: unknown) => {
+                        const p = rawP as { name: string; percent?: number };
+                        return `${p.name}\n${p.percent?.toFixed(1)}%`;
+                    }, color: '#ffffff', fontSize: 11 },
+                },
+            ],
+        };
+    });
+
+    readonly wageOptions = computed<EChartsOption | undefined>(() => {
+        if (!this.#companies()) return undefined;
+        const hourlyWage = this.global.setting('INVOICE_HOURLY_WAGE');
+        const wageRed = 0.5 * hourlyWage;
+        const wagePadding = ((hourlyWage - wageRed) / 0.7) * 0.15;
+        const yMin = wageRed - wagePadding;
+        const yMax = hourlyWage + wagePadding;
+        return this.getScatterplot(
+            this.#revCompanies(),
+            (_) => _.var.log,
+            (_) => Math.min(yMax, Math.max(yMin, _.revenue_total / (_.total_time ?? 0))),
+            (_) => _.revenue_total,
+            'hourly wage',
+            {
+                yMin,
+                yMax,
+                yMarkLines: [
+                    { yAxis: hourlyWage, color: Color.fromVar('--bs-green', '').darken(5).toHexString() },
+                    { yAxis: 0.833 * hourlyWage, color: Color.fromVar('--bs-yellow', '').darken(5).toHexString() },
+                    { yAxis: 0.666 * hourlyWage, color: Color.fromVar('--bs-orange', '').darken(5).toHexString() },
+                    { yAxis: wageRed, color: Color.fromVar('--bs-red', '').darken(5).toHexString() },
+                ],
+                tooltipFormatter: (rawParams: unknown) => {
+                    const params = rawParams as { seriesName: string; value: [number, number, number] };
+                    return `${params.seriesName}<br/>${this.#eur(params.value[0])}<br/>wage: ${this.#eur(params.value[1])}<br/>total: ${this.#eur(params.value[2])}`;
+                },
+            },
+            262,
+            this.#symbolMap.value(),
+        );
+    });
+
+    readonly bcgOptions = computed<EChartsOption | undefined>(() => {
+        if (!this.#companies()) return undefined;
+        return this.getScatterplot(
+            this.#revCompanies(),
+            (_) => _.var.log,
+            (_) => _.var.trend * 100 + 101,
+            (_) => _.revenue_total,
+            'trend',
+            {
+                yAxisType: 'log',
+                yMarkLines: [{ yAxis: 101, color: '#555555' }],
+                tooltipFormatter: (rawParams: unknown) => {
+                    const params = rawParams as { seriesName: string; value: [number, number, number] };
+                    return `${params.seriesName}<br/>trend: ${(params.value[1] - 101).toFixed(2)}%<br/>revenue: ${this.#eur(params.value[2])}`;
+                },
+            },
+            500,
+            this.#symbolMap.value(),
+        );
+    });
 
     convertToCompany(_: Company) {
         const n = Company.fromJson(_);
-        n.revenue_total = n.revenue_total;
+        n.revenue_total = Number(n.revenue_total) || 0;
         n.var.log = Math.log10(Math.max(n.revenue_last_1_year, 1));
         n.var.customer_since = Math.max(dayjs().diff(n.earliest_invoice?.created_at, 'year'), 1);
         n.var.trend = (n.revenue_last_1_year * n.var.customer_since) / (n.revenue_total || 1) - 1;
         return n;
-    }
-
-    constructor() {
-        this.isLoading.set(true);
-        this.#statsService.getCustomerRevenueScatter().subscribe((data) => this.customerScatterData.set(data));
-        this.invoiceService.getCustomerStats().subscribe(async (data) => {
-            this.isLoading.set(false);
-            const rawCompanies = data?.companies ?? [];
-            const totalLastYear = Number(data?.total_last_year ?? 0);
-
-            const companies: Company[] = rawCompanies.map(this.convertToCompany);
-            const premiumCustomers = companies.filter((_) => _.revenue_last_1_year >= BREAKPOINT_PERC * totalLastYear);
-            this.premiumCustomers.set(premiumCustomers);
-            const restCompanies = companies.filter((_) => _.revenue_last_1_year < BREAKPOINT_PERC * totalLastYear);
-            const revCompanies = companies.filter((_) => _.revenue_last_1_year > BREAKPOINT_REV);
-            const reducedRestRevenue = restCompanies.reduce((a, b) => a + b.revenue_last_1_year, 0);
-            const reduced: { id: string; name: string; value: number }[] = [
-                ...premiumCustomers.map((_) => ({ id: _.id, name: _.getName(), value: _.revenue_last_1_year })),
-                ...(restCompanies.length ? [{ id: '0', name: $localize`:@@i18n.common.rest:rest`, value: reducedRestRevenue }] : []),
-            ];
-
-            const eur = (val: number) => (val ? `${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ` + this.global.currencySymbol() : '');
-            const total = reduced.reduce((s, c) => s + (c.value ?? 0), 0);
-
-            this.pieOptions.set({
-                chart: { height: 300 },
-                backgroundColor: 'transparent',
-                animation: false,
-                tooltip: {
-                    trigger: 'item',
-                    ...ECHARTS_DEFAULT_TOOLTIP_OPTIONS,
-                    formatter: (rawParams: unknown) => {
-                        const params = rawParams as { name: string; value: number };
-                        return `${params.name}: ${eur(params.value)}`;
-                    },
-                },
-                graphic: [{ type: 'text', left: 'center', top: 'center', style: { text: eur(total), fill: '#fff', fontSize: 12 } }],
-                series: [
-                    {
-                        type: 'pie',
-                        radius: ['40%', '70%'],
-                        data: reduced.map((_) => ({
-                            value: _.value,
-                            name: _.name,
-                            itemStyle: { color: _.id !== '0' ? Color.uniqueColorFromString('' + _.id) : '#333333', ...ECHARTS_DONUT_ITEM_STYLE },
-                        })),
-                        label: { show: true, formatter: (rawP: unknown) => {
-                            const p = rawP as { name: string; percent?: number };
-                            return `${p.name}\n${p.percent?.toFixed(1)}%`;
-                        }, color: '#ffffff', fontSize: 11 },
-                    },
-                ],
-            });
-
-            const symbolMap = await this.#buildSymbolMap(revCompanies);
-            const hourlyWage = this.global.setting('INVOICE_HOURLY_WAGE');
-            const wageRed = 0.5 * hourlyWage;
-            const bandRange = hourlyWage - wageRed;
-            const wagePadding = (bandRange / 0.7) * 0.15;
-            const yMin = wageRed - wagePadding;
-            const yMax = hourlyWage + wagePadding;
-            this.wageOptions.set(
-                this.getScatterplot(
-                    revCompanies,
-                    (_) => _.var.log,
-                    (_) => Math.min(yMax, Math.max(yMin, _.revenue_total / (_.total_time ?? 0))),
-                    (_) => _.revenue_total,
-                    'hourly wage',
-                    {
-                        yMin,
-                        yMax,
-                        yMarkLines: [
-                            { yAxis: hourlyWage, color: Color.fromVar('--bs-green', '').darken(5).toHexString() },
-                            { yAxis: 0.833 * hourlyWage, color: Color.fromVar('--bs-yellow', '').darken(5).toHexString() },
-                            { yAxis: 0.666 * hourlyWage, color: Color.fromVar('--bs-orange', '').darken(5).toHexString() },
-                            { yAxis: wageRed, color: Color.fromVar('--bs-red', '').darken(5).toHexString() },
-                        ],
-                        tooltipFormatter: (rawParams: unknown) => {
-                            const params = rawParams as { seriesName: string; value: [number, number, number] };
-                            return `${params.seriesName}<br/>${eur(params.value[0])}<br/>wage: ${eur(params.value[1])}<br/>total: ${eur(params.value[2])}`;
-                        },
-                    },
-                    262,
-                    symbolMap,
-                ),
-            );
-
-            this.bcgOptions.set(
-                this.getScatterplot(
-                    revCompanies,
-                    (_) => _.var.log,
-                    (_) => _.var.trend * 100 + 101,
-                    (_) => _.revenue_total,
-                    'trend',
-                    {
-                        yAxisType: 'log',
-                        yMarkLines: [{ yAxis: 101, color: '#555555' }],
-                        tooltipFormatter: (rawParams: unknown) => {
-                            const params = rawParams as { seriesName: string; value: [number, number, number] };
-                            return `${params.seriesName}<br/>trend: ${(params.value[1] - 101).toFixed(2)}%<br/>revenue: ${eur(params.value[2])}`;
-                        },
-                    },
-                    500,
-                    symbolMap,
-                ),
-            );
-        });
     }
 
     getScatterplot(companies: Company[], fnX: (_: Company) => number, fnY: (_: Company) => number, fnZ: (_: Company) => number, _name: string, options: ScatterplotOptions = {}, height: number = 300, symbolMap = new Map<string, string>()): EChartsOption {
@@ -177,7 +182,7 @@ export class CustomersStatisticsComponent {
             series: companies.map((c) => ({
                 name: c.getName(),
                 type: 'scatter',
-                symbol: symbolMap.get(String(c.id)) ?? (c.icon ? `image://${c.icon}` : 'circle'),
+                symbol: symbolMap.get(String(c.id)) ?? `image://${c.getAvatar()}`,
                 symbolSize: 24,
                 data: [[fnX(c), fnY(c), fnZ(c)]],
                 itemStyle: { color: Color.uniqueColorFromString('' + c.id), borderColor: '#666666', borderWidth: 1 },
@@ -197,8 +202,8 @@ export class CustomersStatisticsComponent {
     async #buildSymbolMap(companies: Company[]): Promise<Map<string, string>> {
         const map = new Map<string, string>();
         await Promise.all(
-            companies.filter((c) => !!c.icon).map(async (c) => {
-                const symbol = await this.#toCircularSymbol(c.icon!);
+            companies.map(async (c) => {
+                const symbol = await this.#toCircularSymbol(c.getAvatar());
                 map.set(String(c.id), symbol);
             }),
         );

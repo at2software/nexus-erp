@@ -4,13 +4,6 @@ namespace App\Services;
 
 use App\Exceptions\SsrfException;
 
-/**
- * Validates outbound URLs to prevent SSRF attacks.
- *
- * Rejects private/loopback/link-local/reserved IP ranges for both the
- * initial URL and any redirect targets. Call validate() before every
- * outbound HTTP request driven by user-supplied URLs.
- */
 class SafeUrlGuard {
     public function validate(string $url): void {
         $parsed = parse_url($url);
@@ -30,12 +23,10 @@ class SafeUrlGuard {
             $host = substr($host, 1, -1);
         }
 
-        // Reject well-known loopback hostnames
         if (in_array(strtolower($host), ['localhost', 'ip6-localhost', 'ip6-loopback'], true)) {
             throw new SsrfException('Requests to localhost are not allowed.');
         }
 
-        // If host is already an IP, check it directly without DNS
         if (filter_var($host, FILTER_VALIDATE_IP)) {
             if ($this->isBlocked($host)) {
                 throw new SsrfException('Requests to private or reserved IP addresses are not allowed.');
@@ -44,7 +35,6 @@ class SafeUrlGuard {
             return;
         }
 
-        // DNS-resolve the hostname and verify every returned IP
         $ips = $this->resolveHost($host);
 
         if (empty($ips)) {

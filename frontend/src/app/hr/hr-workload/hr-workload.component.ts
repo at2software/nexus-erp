@@ -1,13 +1,14 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { modelResource } from '@models/http/model-resource';
 import { Assignee, I18N_REMOVE_FROM_TEAM } from '@models/assignee/assignee.model';
 import { Project } from '@models/project/project.model';
 import { User } from '@models/user/user.model';
 import { UserService } from '@models/user/user.service';
-import { dayjs, Dayjs } from '@constants/dates';
+import { dayjs, Dayjs } from '@constants/date/dates';
 import { ActionEmitterType } from '@app/nx/nx.directive';
 import { Color } from '@constants/Color';
 import { ProjectState } from '@models/project/project-state.model';
-import { NxGlobal } from '@app/nx/nx.global';
+import { GlobalService } from '@models/global.service';
 import { Company } from '@models/company/company.model';
 import { REFLECTION } from '@constants/constants';
 import { NgTemplateOutlet } from '@angular/common';
@@ -17,9 +18,10 @@ import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { ProjectComponent } from '@shards/project/project.component';
 import { FormsModule } from '@angular/forms';
 import { PermissionsDirective } from '@directives/permissions.directive';
-import { IHasFoci } from '@models/focus/hasFoci.interface';
+import { IHasFoci } from '@models/focus/has-foci.interface';
 import { RouterModule } from '@angular/router';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
+import { map, Observable } from 'rxjs';
 
 interface TLABEL {
     label: string;
@@ -45,6 +47,30 @@ interface TData {
 const D_START = dayjs().startOf('day');
 const D_END = D_START.add(60, 'days').endOf('day');
 
+const linkFor = (_: TWeekly) => (_.type === 'Project' ? `/projects/${_.id}` : _.type === 'Company' ? `/customers/${_.id}` : undefined);
+
+const ensureFunction = (obj: object, key: string) => {
+    const record = obj as Record<string, unknown>;
+    if (typeof record[key] !== 'function') {
+        const value = record[key];
+        record[key] = () => value;
+    }
+};
+
+const hydrate = (response: TData | undefined): TData | undefined => {
+    if (!response?.subscriptions) return response;
+    response.user = User.fromJson(response.user);
+    response.subscriptions = response.subscriptions.map((x) => {
+        const r = REFLECTION(x) as IHasFoci;
+        ensureFunction(r, 'getName');
+        ensureFunction(r, 'hasTimeBudget');
+        ensureFunction(r, 'is');
+        return r;
+    });
+    response.timeline_planned.forEach((_) => (_.link = linkFor(_)));
+    return response;
+};
+
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'hr-workload',
@@ -58,15 +84,21 @@ export class HrWorkloadComponent {
     onlyChart = input<boolean>();
     chartHeight = input<number>(100);
 
-    data = signal<TData | null>(null);
-    isError = signal(false);
-    #canSetWeeklyCache = new Map<string, boolean>();
+    #global = inject(GlobalService);
+    #userService = inject(UserService);
 
-    monthLabels: TLABEL[] = [
-        { label: '', percent: 0 },
-        { label: '', percent: 0 },
-        { label: '', percent: 0 },
-    ];
+    readonly #load = modelResource(
+        () => this.user().id,
+        (userId) => this.#userService.showProjectLoad(userId).pipe(map((_) => hydrate(_ as TData | undefined))) as Observable<TData | undefined>,
+    );
+    readonly isError = computed(() => !!this.#load.error());
+    readonly data = computed<TData | null>(() => this.#load.value()?.subscriptions ? (this.#load.value() as TData) : null);
+    readonly #canSetWeeklyCache = computed(() => new Map((this.data()?.subscriptions ?? []).map((sub) => [this.trackBySubscription(0, sub), this.canSetWeekly(sub)])));
+
+    readonly monthLabels: TLABEL[] = [0, 1, 2].map((i) => {
+        const month = D_START.add(i, 'months').startOf('month').add(1, 'month');
+        return { label: month.format('MMM'), percent: month.diff(D_START, 'seconds') / D_END.diff(D_START, 'seconds') };
+    });
 
     filterIcons = {
         prepared: Project.fromJson({ state: ProjectState.stateFor(0) }),
@@ -74,53 +106,7 @@ export class HrWorkloadComponent {
         internal: Project.fromJson({ state: ProjectState.stateFor(1), is_internal: true }),
     };
 
-    #userService = inject(UserService);
-
-    constructor() {
-        effect(() => {
-            if (this.user()) this.reload();
-        });
-    }
-
-    reload() {
-        const user = this.user();
-        if (!user) return;
-        const getLink = (_: TWeekly) => (_.type === 'Project' ? `/projects/${_.id}` : _.type === 'Company' ? `/customers/${_.id}` : undefined);
-        this.isError.set(false);
-        this.#userService.showProjectLoad(user).subscribe({
-            next: (response: TData | undefined) => {
-                if (!response?.subscriptions) return;
-                const data = response;
-                const ensureFunction = (obj: object, key: string) => {
-                    const record = obj as Record<string, unknown>;
-                    if (typeof record[key] !== 'function') {
-                        const value = record[key];
-                        record[key] = () => value;
-                    }
-                };
-                data.user = User.fromJson(data.user);
-                data.subscriptions = data.subscriptions.map((x) => {
-                    const r = REFLECTION(x) as IHasFoci
-                    ensureFunction(r, 'getName');
-                    ensureFunction(r, 'hasTimeBudget');
-                    ensureFunction(r, 'is')
-                    return r;
-                });
-                data.timeline_planned.forEach((_) => (_.link = getLink(_)));
-                this.data.set(data);
-                this.#canSetWeeklyCache.clear();
-                this.#populateCanSetWeeklyCache();
-            },
-            error: () => {
-                this.isError.set(true);
-            },
-        });
-        for (const i in this.monthLabels) {
-            const month = D_START.add(Number(i), 'months').startOf('month').add(1, 'month');
-            this.monthLabels[i].label = month.format('MMM');
-            this.monthLabels[i].percent = this.offsetFor(month);
-        }
-    }
+    reload = () => this.#load.reload();
 
     onContextMenuAction($event: ActionEmitterType, _: IHasFoci) {
         if ($event.action.title === I18N_REMOVE_FROM_TEAM) {
@@ -149,11 +135,11 @@ export class HrWorkloadComponent {
     };
     canSetWeekly = (_: IHasFoci): boolean => {
         if (_ instanceof Project) {
-            if (_.company_id == NxGlobal.ME_ID) return true;
+            if (_.company_id == this.#global.me_id) return true;
             return !!_.is_time_based;
         }
         const ofCompany = _.assert(Company);
-        if (ofCompany) return ofCompany.id == NxGlobal.ME_ID;
+        if (ofCompany) return ofCompany.id == this.#global.me_id;
         return false;
     };
     getWeekly = () => this.data()?.weekly_ids.map((_) => this.getSubscriptionFor(_)) ?? [];
@@ -162,29 +148,18 @@ export class HrWorkloadComponent {
     colorForSub = (sub: IHasFoci) => {
         if (sub instanceof Project) return sub.color();
         if (sub instanceof Company) {
-            if (sub.id == NxGlobal.ME_ID) return Color.fromVar('dark');
+            if (sub.id == this.#global.me_id) return Color.fromVar('dark');
             return Color.uniqueColorFromString(sub.getName());
         }
         return '';
     };
     stripesForSub = (sub: IHasFoci) => {
-        if (sub instanceof Project && sub.company_id == NxGlobal.ME_ID) return true;
-        if (sub instanceof Company && sub.id == NxGlobal.ME_ID) return true;
+        if (sub instanceof Project && sub.company_id == this.#global.me_id) return true;
+        if (sub instanceof Company && sub.id == this.#global.me_id) return true;
         return false;
     };
 
     trackBySubscription = (_index: number, item: IHasFoci) => `${item.class}-${item.id}`;
 
-    #populateCanSetWeeklyCache() {
-        if (!this.data()?.subscriptions) return;
-        for (const sub of this.data()!.subscriptions) {
-            const key = this.trackBySubscription(0, sub);
-            this.#canSetWeeklyCache.set(key, this.canSetWeekly(sub));
-        }
-    }
-
-    canSetWeeklyCached = (item: IHasFoci) => {
-        const key = this.trackBySubscription(0, item);
-        return this.#canSetWeeklyCache.get(key) ?? false;
-    };
+    canSetWeeklyCached = (item: IHasFoci) => this.#canSetWeeklyCache().get(this.trackBySubscription(0, item)) ?? false;
 }

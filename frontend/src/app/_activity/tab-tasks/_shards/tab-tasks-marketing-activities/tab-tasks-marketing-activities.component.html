@@ -1,6 +1,6 @@
 ﻿@let _activities = activities();
 
-@if (_activities.length) {
+@if (count()) {
     <div class="header hstack gap-2">
         <n>marketing</n>
         <span class="flex-fill" i18n="@@i18n.common.marketingActivities">marketing activities</span>
@@ -12,7 +12,7 @@
                 <li class="list-group-item hstack gap-2 pointer" [nx]="a" [tables]="_activities" [routerLink]="['/marketing', 'prospects', a.marketing_prospect_id]">
                     @if (a.marketing_prospect?.company_contact) {
                         @let contact = a.marketing_prospect!.company_contact!;
-                        <img class="avatar avatar-sm" [ngbTooltip]="contact.getName()" [src]="contact.icon || ''" alt="" />
+                        <avatar [object]="contact" size="sm"></avatar>
                     } @else {
                         <div class="avatar avatar-sm d-flex align-items-center justify-content-center">
                             <n>customer</n>

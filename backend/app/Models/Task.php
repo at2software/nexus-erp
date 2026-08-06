@@ -14,11 +14,13 @@ class Task extends BaseModel {
         return ['status' => TaskState::class];
     }
 
-    // Relations
     public function parent() {
         return $this->morphTo();
     }
     public function assignee() {
-        return $this->morphOne(Assignment::class, 'parent')->with('assignee');
+        return $this->morphOne(Assignment::class, 'parent')->with('assignee')->whereRaw('(flags & ?) = 0', [Assignment::FLAG_CO_ASSIGNEE]);
+    }
+    public function coAssignees() {
+        return $this->morphMany(Assignment::class, 'parent')->with('assignee')->whereRaw('(flags & ?) != 0', [Assignment::FLAG_CO_ASSIGNEE]);
     }
 }

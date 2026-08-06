@@ -17,12 +17,10 @@ class DeletionRequestController extends Controller {
             'reason'     => 'nullable|string',
         ]);
 
-        // Only accept real, existing App\Models\* classes as targets.
         $type = $data['model_type'];
         abort_unless(Str::startsWith($type, 'App\\Models\\') && class_exists($type), 422, 'Invalid model type');
         abort_unless($type::find($data['model_id']) !== null, 404, 'Target not found');
 
-        // Collapse duplicate requests for the same target into one.
         return DeletionRequest::firstOrCreate(
             ['model_type' => $type, 'model_id' => $data['model_id']],
             ['user_id' => auth()->id(), 'reason' => $data['reason'] ?? null]

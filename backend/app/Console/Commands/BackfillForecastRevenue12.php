@@ -27,7 +27,6 @@ class BackfillForecastRevenue12 extends Command {
             return 1;
         }
 
-        // Distinct months covered by the forecast history
         $forecastMonths = FloatParam::where('param_id', $forecastParam->id)
             ->whereNull('parent_id')
             ->orderBy('created_at')
@@ -38,7 +37,6 @@ class BackfillForecastRevenue12 extends Command {
 
         $this->info("Forecast months found: {$forecastMonths->count()}");
 
-        // Months covered by the global INVOICE_REVENUE_12M history
         $existingRevenueMonths = FloatParam::where('param_id', $revenueParam->id)
             ->whereNull('parent_id')
             ->get()
@@ -49,8 +47,6 @@ class BackfillForecastRevenue12 extends Command {
 
         $this->info('Existing global INVOICE_REVENUE_12M months: '.count($existingRevenueMonths));
 
-        // For each forecast month F, revenue_12 needs a global INVOICE_REVENUE_12M record at F+1Y.
-        // ForecastStatisticsService subtracts P1Y from the record's created_at to align it with F.
         $missing = [];
         foreach ($forecastMonths as $forecastMonth) {
             $targetMonth = Carbon::parse($forecastMonth)->addYear()->format('Y-m');
@@ -59,7 +55,6 @@ class BackfillForecastRevenue12 extends Command {
                 continue;
             }
 
-            // Only backfill months that are fully in the past
             if (Carbon::parse($targetMonth)->startOfMonth()->isFuture()) {
                 continue;
             }

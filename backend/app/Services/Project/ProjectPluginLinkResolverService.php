@@ -7,8 +7,6 @@ use App\Models\Project;
 
 class ProjectPluginLinkResolverService {
     public function resolve(array $inputUrls): mixed {
-        // Trailing slashes vary by tracker/history (git links have none, mantis links do) - match
-        // both forms instead of TRIM()-ing the column, so the comparison can still use an index.
         $urls = array_values(array_unique(array_filter(array_map(
             fn ($u) => rtrim($u, '/'),
             array_filter($inputUrls, 'is_string')

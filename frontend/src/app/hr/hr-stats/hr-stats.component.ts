@@ -3,12 +3,13 @@ import { Router, RouterModule } from '@angular/router';
 import { GlobalService } from '@models/global.service';
 import { User } from '@models/user/user.model';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
+import { Nx } from '@app/nx/nx.directive';
 import { Color } from '@constants/Color';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
     selector: 'hr-stats',
-    imports: [RouterModule, AvatarComponent],
+    imports: [RouterModule, AvatarComponent, Nx],
     templateUrl: './hr-stats.component.html',
     styleUrl: './hr-stats.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,

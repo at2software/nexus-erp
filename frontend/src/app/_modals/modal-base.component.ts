@@ -1,9 +1,9 @@
 import { inject } from '@angular/core';
 import { NgbActiveModal, NgbModalOptions } from '@ng-bootstrap/ng-bootstrap';
+import { INxModal } from '@models/_core/nx.modal.interface';
 
-export abstract class ModalBaseComponent<T> {
+export abstract class ModalBaseComponent<T> implements INxModal<T> {
     static modalOptions: NgbModalOptions = { size: 'xl' };
-    // Each modal defines its own concrete init() signature; this base only needs the looser shape.
     abstract init(...args: unknown[]): void;
     abstract onSuccess(): T;
 

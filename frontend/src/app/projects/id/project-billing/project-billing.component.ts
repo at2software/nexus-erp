@@ -1,20 +1,22 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, input, effect, computed, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input, computed, linkedSignal, signal, viewChild } from '@angular/core';
+import { map } from 'rxjs';
+import { modelListResource, modelResource } from '@models/http/model-resource';
 import { GlobalService } from '@models/global.service';
 import { Project } from '@models/project/project.model';
 import { Focus } from '@models/focus/focus.model';
 import { FocusService } from '@models/focus/focus.service';
 import { User } from '@models/user/user.model';
 import { Product } from '@models/product/product.model';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { InvoiceItemService } from '@models/invoice/invoice-item.service';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { Company } from '@models/company/company.model';
-import { Dayjs, dayjsMin, dayjsMax } from '@constants/dates';
+import { Dayjs, dayjsMin, dayjsMax } from '@constants/date/dates';
 import { ProductService } from '@models/product/product.service';
-import { DATESPAN_RANGE } from '@constants/dateSpanRange';
+import { DATESPAN_RANGE } from '@constants/date/dateSpanRange';
 import { StartEnd } from '@constants/constants';
 import { NgbDateAdapter, NgbDatepickerModule } from '@ng-bootstrap/ng-bootstrap';
-import { NgbDateUnixAdapter } from '@constants/ngb-date-to-unix-adapter';
+import { NgbDateUnixAdapter } from '@constants/date/ngb-date-to-unix-adapter';
 import { Router, RouterModule } from '@angular/router';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { DatePipe, DecimalPipe } from '@angular/common';
@@ -29,6 +31,7 @@ import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { ProjectComponent } from '@shards/project/project.component';
 import { SafePipe } from '@pipes/safe.pipe';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,7 +39,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
     templateUrl: './project-billing.component.html',
     styleUrls: ['./project-billing.component.scss'],
     providers: [{ provide: NgbDateAdapter, useClass: NgbDateUnixAdapter }],
-    imports: [EmptyStateComponent, DatePipe, DecimalPipe, FormsModule, NgxDaterangepickerMd, CdkTableModule, SearchInputComponent, NgbDatepickerModule, NComponent, RouterModule, MoneyPipe, Nx, NComponent, AvatarComponent, ProjectComponent, SafePipe],
+    imports: [StackedTableDirective, EmptyStateComponent, DatePipe, DecimalPipe, FormsModule, NgxDaterangepickerMd, CdkTableModule, SearchInputComponent, NgbDatepickerModule, NComponent, RouterModule, MoneyPipe, Nx, NComponent, AvatarComponent, ProjectComponent, SafePipe],
 })
 export class ProjectBillingComponent {
     #global             = inject(GlobalService);
@@ -54,13 +57,28 @@ export class ProjectBillingComponent {
     span                 = signal<StartEnd | undefined>(undefined);
     selectionSum         = signal(0);
     selectionDescription = signal('');
-    selectionProduct     = signal<Product | undefined>(undefined);
     selection            = signal<Focus[]>([]);
-    items                = signal<InvoiceItem[]>([]);
-    allFoci              = signal<Focus[]>([]);
 
     isProject = computed(() => this.parent() instanceof Project);
     company = computed((): Company => (this.isProject() ? (this.parent() as Project).company : (this.parent() as Company)));
+
+    readonly #parentId = computed(() => this.parent().id);
+
+    readonly #defaultProduct = modelResource(
+        () => {
+            const parent = this.parent();
+            return (parent instanceof Project ? parent.product_id : parent.default_product_id) || undefined;
+        },
+        (productId) => this.#productService.show(productId),
+    );
+    readonly selectionProduct = linkedSignal(this.#defaultProduct.value);
+
+    readonly #allFoci = modelListResource(this.#parentId, () => this.#focusService.uninvoicedFoci(this.parent()));
+    readonly allFoci = linkedSignal(this.#allFoci.value);
+
+    readonly #items = modelListResource(this.#parentId, () => this.#invoiceItemService.getSupportItems(this.parent()).pipe(map((data) => data.filter((x) => x.type == 0))));
+    readonly items = linkedSignal(this.#items.value);
+
     foci = computed(() => {
         const s = this.span();
         return s?.startDate && s?.endDate
@@ -70,26 +88,6 @@ export class ProjectBillingComponent {
 
     constructor() {
         this.#global.onObjectSelected.pipe(takeUntilDestroyed()).subscribe((_) => this.#onSelection(_));
-        effect(() => {
-            const parent = this.parent();
-            if (parent instanceof Project && parent.product_id) {
-                this.#productService.show(parent.product_id).subscribe((data) => this.selectionProduct.set(data));
-            } else if (parent instanceof Company && parent.default_product_id) {
-                this.#productService.show(parent.default_product_id).subscribe((data) => this.selectionProduct.set(data));
-            }
-            this.#reloadFoci();
-            this.#reloadItems();
-        });
-    }
-
-    #reloadFoci() {
-        this.allFoci.set([]);
-        this.#focusService.uninvoicedFoci(this.parent()).subscribe((data) => this.allFoci.set(data));
-    }
-
-    #reloadItems() {
-        this.items.set([]);
-        this.#invoiceItemService.getSupportItems(this.parent()).subscribe((data) => this.items.set(data.filter((x) => x.type == 0)));
     }
 
     #onSelection(_: unknown) {
@@ -120,7 +118,7 @@ export class ProjectBillingComponent {
     }
 
     dateSelect() {
-        this.#reloadFoci();
+        this.#allFoci.reload();
     }
 
     onCreateNewItem() {

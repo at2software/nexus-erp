@@ -4,7 +4,7 @@
 
 <div class="row" col-slider>
     <!-- Left: Initiatives list -->
-    <div class="col-3">
+    <div class="col-12 col-md-3">
         <div class="card sticky-top" data-tour="initiatives-list">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div i18n="@@i18n.marketing.initiatives">initiatives</div>
@@ -15,19 +15,19 @@
 
             <!-- Filter badges -->
             <div class="d-flex gap-1 p-2 border-bottom" data-tour="initiatives-filter">
-                <span class="badge cursor-pointer py-1 px-2" [class.bg-primary]="statusFilter === ''" [class.bg-dark]="statusFilter !== ''" (click)="filterByStatus('')" tabindex="0" (keydown.enter)="filterByStatus('')" i18n-ngbTooltip="@@i18n.marketing.total_initiatives" ngbTooltip="all">
+                <span class="badge cursor-pointer py-1 px-2" [class.bg-primary]="statusFilter() === ''" [class.bg-dark]="statusFilter() !== ''" (click)="filterByStatus('')" tabindex="0" (keydown.enter)="filterByStatus('')" i18n-ngbTooltip="@@i18n.marketing.total_initiatives" ngbTooltip="all">
                     <i style="font-size: 0.8rem; vertical-align: middle">filter_alt</i>
                     <span class="ms-1 notranslate">{{ _stats.total }}</span>
                 </span>
-                <span class="badge cursor-pointer py-1 px-2" [class.bg-primary]="statusFilter === 'active'" [class.bg-dark]="statusFilter !== 'active'" (click)="filterByStatus('active')" tabindex="0" (keydown.enter)="filterByStatus('active')" i18n-ngbTooltip="@@i18n.common.active" ngbTooltip="active">
+                <span class="badge cursor-pointer py-1 px-2" [class.bg-primary]="statusFilter() === 'active'" [class.bg-dark]="statusFilter() !== 'active'" (click)="filterByStatus('active')" tabindex="0" (keydown.enter)="filterByStatus('active')" i18n-ngbTooltip="@@i18n.common.active" ngbTooltip="active">
                     <i style="font-size: 0.8rem; vertical-align: middle">play_circle</i>
                     <span class="ms-1 notranslate">{{ _stats.active }}</span>
                 </span>
-                <span class="badge cursor-pointer py-1 px-2" [class.bg-warning]="statusFilter === 'paused'" [class.bg-dark]="statusFilter !== 'paused'" (click)="filterByStatus('paused')" tabindex="0" (keydown.enter)="filterByStatus('paused')" i18n-ngbTooltip="@@i18n.marketing.paused" ngbTooltip="paused">
+                <span class="badge cursor-pointer py-1 px-2" [class.bg-warning]="statusFilter() === 'paused'" [class.bg-dark]="statusFilter() !== 'paused'" (click)="filterByStatus('paused')" tabindex="0" (keydown.enter)="filterByStatus('paused')" i18n-ngbTooltip="@@i18n.marketing.paused" ngbTooltip="paused">
                     <i style="font-size: 0.8rem; vertical-align: middle">pause_circle</i>
                     <span class="ms-1 notranslate">{{ _stats.paused }}</span>
                 </span>
-                <span class="badge cursor-pointer py-1 px-2" [class.bg-success]="statusFilter === 'completed'" [class.bg-dark]="statusFilter !== 'completed'" (click)="filterByStatus('completed')" tabindex="0" (keydown.enter)="filterByStatus('completed')" i18n-ngbTooltip="@@i18n.common.completed" ngbTooltip="completed">
+                <span class="badge cursor-pointer py-1 px-2" [class.bg-success]="statusFilter() === 'completed'" [class.bg-dark]="statusFilter() !== 'completed'" (click)="filterByStatus('completed')" tabindex="0" (keydown.enter)="filterByStatus('completed')" i18n-ngbTooltip="@@i18n.common.completed" ngbTooltip="completed">
                     <i style="font-size: 0.8rem; vertical-align: middle">check_circle</i>
                     <span class="ms-1 notranslate">{{ _stats.completed }}</span>
                 </span>
@@ -61,7 +61,7 @@
     </div>
 
     <!-- Right: Initiative detail (with nested activity detail + activities list inside) -->
-    <div class="col-9">
+    <div class="col-12 col-md-9">
         <router-outlet></router-outlet>
     </div>
 </div>

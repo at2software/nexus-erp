@@ -2,7 +2,7 @@
 <router-outlet></router-outlet>
 
 <app-header>
-    <div class="logo" [style.background-image]="'url(' + _company.icon + ')'" [nx]="_company" smartLink="/customers/{{ _company.id }}" [dnd]="_company.apiPathWithId() + '/avatar'" [dndAllowed]="['image/']" (dndUploaded)="onDndUploaded()"></div>
+    <div class="logo" [style.background-image]="'url(' + _company.getAvatar() + ')'" [nx]="_company" smartLink="/customers/{{ _company.id }}" [dnd]="_company.apiPathWithId() + '/avatar'" [dndAllowed]="['image/']" (dndUploaded)="onDndUploaded()"></div>
     <h1>{{ _company.getName() }}</h1>
     <ul class="nav">
         <header-route-nav [context]="_company"></header-route-nav>
@@ -27,7 +27,5 @@
 </app-header>
 
 <activity-tab icon="chat" class="list-group list-group-accent ng-star-inserted">
-    <app-tab-comments [quickLinks]="_company" path="companies/{{ _company.id }}" [projects]="_company.base_projects">
-        <activity-projects [company]="_company"></activity-projects>
-    </app-tab-comments>
+    <app-tab-comments path="companies/{{ _company.id }}" [projects]="_company.base_projects"></app-tab-comments>
 </activity-tab>

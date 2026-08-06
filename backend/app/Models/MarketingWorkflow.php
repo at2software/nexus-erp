@@ -21,7 +21,6 @@ class MarketingWorkflow extends BaseModel {
         ];
     }
 
-    // Relationships
     public function marketingInitiatives(): BelongsToMany {
         return $this->belongsToMany(MarketingInitiative::class, 'marketing_initiative_workflow')
             ->withPivot(['is_active'])
@@ -34,7 +33,6 @@ class MarketingWorkflow extends BaseModel {
         return $this->hasMany(MarketingActivity::class, 'marketing_workflow_id');
     }
 
-    // Prospect activities scheduled via this workflow's initiative activities
     public function prospectActivities(): HasManyThrough {
         return $this->hasManyThrough(
             MarketingProspectActivity::class,
@@ -49,12 +47,10 @@ class MarketingWorkflow extends BaseModel {
         return $this->marketingActivities()->orderBy('day_offset');
     }
 
-    // Scopes
     public function scopeActive($query) {
         return $query->where('is_active', true);
     }
 
-    // Helper methods
     public function getTotalDuration(): int {
         return $this->marketingActivities()->max('day_offset') ?: 0;
     }
@@ -72,20 +68,14 @@ class MarketingWorkflow extends BaseModel {
         $activities = $this->orderedActivities()->get();
         $baseDate   = $prospect->created_at;
 
-        // Sort activities to ensure parents are processed before children
         $sortedActivities = $this->topologicalSort($activities);
 
-        // Create prospect activities in correct order
         $createdActivities = [];
         foreach ($sortedActivities as $activity) {
-            // Calculate scheduled date based on parent or base date
             if ($activity->parent_activity_id && isset($createdActivities[$activity->parent_activity_id])) {
-                // For dependent activities: schedule relative to parent's scheduled date
                 $parentScheduledAt = $createdActivities[$activity->parent_activity_id];
                 $scheduledAt       = $parentScheduledAt->copy()->addDays($activity->day_offset);
             } else {
-                // For independent activities: schedule relative to prospect creation
-                // day_offset = 1 means first day (same as creation day), so subtract 1
                 $scheduledAt = $baseDate->copy()->addDays($activity->day_offset - 1);
             }
 
@@ -96,25 +86,19 @@ class MarketingWorkflow extends BaseModel {
                 'status'                => 'pending',
             ]);
 
-            // Store for potential child activities
             $createdActivities[$activity->id] = $scheduledAt;
         }
     }
 
-    /**
-     * Sort activities to ensure parents are processed before children (topological sort)
-     */
     private function topologicalSort($activities): array {
         $sorted         = [];
         $visited        = [];
         $activitiesById = [];
 
-        // Index activities by ID
         foreach ($activities as $activity) {
             $activitiesById[$activity->id] = $activity;
         }
 
-        // Recursive visit function
         $visit = function ($activity) use (&$visit, &$sorted, &$visited, $activitiesById) {
             if (isset($visited[$activity->id])) {
                 return;
@@ -122,16 +106,13 @@ class MarketingWorkflow extends BaseModel {
 
             $visited[$activity->id] = true;
 
-            // Visit parent first if it exists
             if ($activity->parent_activity_id && isset($activitiesById[$activity->parent_activity_id])) {
                 $visit($activitiesById[$activity->parent_activity_id]);
             }
 
-            // Add current activity to sorted list
             $sorted[] = $activity;
         };
 
-        // Visit all activities
         foreach ($activities as $activity) {
             $visit($activity);
         }
@@ -143,7 +124,6 @@ class MarketingWorkflow extends BaseModel {
         $copy->name = $newName ?: ($this->name.' (Copy)');
         $copy->save();
 
-        // Duplicate activities
         foreach ($this->marketingActivities as $activity) {
             $activityCopy                        = $activity->replicate();
             $activityCopy->marketing_workflow_id = $copy->id;

@@ -10,7 +10,6 @@
                     <input type="text" class="form-control" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event); onSearchInput()" placeholder="search for company" i18n-placeholder="@@i18n.marketing.searchForCompany" />
                 </div>
 
-                <!-- Loading indicator -->
                 @if (isLoading()) {
                     <div class="text-center py-3">
                         <spinner [size]="24"></spinner>
@@ -37,7 +36,7 @@
                             <!-- Existing companies -->
                             @for (company of companyResults(); track company.id) {
                                 <button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-2" [class.active]="selectedCompany()?.id === company.id" (click)="selectCompany(company)">
-                                    <avatar [object]="company" size="32"></avatar>
+                                    <avatar [object]="company" size="md"></avatar>
                                     <div class="flex-fill">
                                         <div>{{ company.getName() }}</div>
                                         @let companyCard = company.card();
@@ -45,7 +44,6 @@
                                         @if (companyCardAddress) {
                                             <small class="text-muted">
                                                 {{ companyCardAddress }}
-                                                <!-- City -->
                                             </small>
                                         }
                                     </div>
@@ -55,7 +53,6 @@
                     </scrollbar>
                 }
 
-                <!-- No results message -->
                 @if (!isLoading() && searchQuery().length >= 2 && companyResults().length === 0 && !createNew()) {
                     <div class="text-center text-muted py-3">
                         <i class="mb-2" style="font-size: 2rem">search_off</i>

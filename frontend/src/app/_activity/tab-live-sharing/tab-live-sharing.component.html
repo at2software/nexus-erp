@@ -22,7 +22,7 @@
                 }
 
                 @for (sharing of _activeSharings; track sharing.userId) {
-                    <li class="list-group-item bg-dark d-flex align-items-center user-item" [class.off-tab]="sharing.visible === false" (click)="navigateToUser(sharing)" (keyup.enter)="navigateToUser(sharing)" tabindex="0">
+                    <li class="list-group-item bg-dark d-flex align-items-center user-item cursor-pointer" [class.off-tab]="sharing.visible === false" (click)="navigateToUser(sharing)" (keyup.enter)="navigateToUser(sharing)" tabindex="0">
                         <img class="avatar avatar-sm me-2" [src]="userIconForSharing(sharing)" alt="User Icon" />
                         <div class="flex-grow-1">
                             <div class="fw-bold">

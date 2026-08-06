@@ -1,6 +1,6 @@
 @let _project = parent.object();
 <div class="row">
-    <div class="col-8">
+    <div class="col-12 col-xl-8">
         <div class="card">
             <div class="card-header">
                 <span i18n="@@i18n.projects.participatingCompanies">participating companies</span>
@@ -18,7 +18,7 @@
                     <p class="text-muted small" i18n="@@i18n.projects.addParticipantsHint">add connections from the list on the right</p>
                 </empty-state>
             } @else {
-                <table class="table table-hover mb-0">
+                <table stackedTable class="table table-hover mb-0">
                     <thead>
                         <tr>
                             <th style="width: 60px"></th>
@@ -28,12 +28,12 @@
                     </thead>
                     <tbody>
                         @for (participant of participants(); track participant.id) {
-                            <tr>
+                            <tr [nx]="participant.other_company">
                                 <td>
                                     <avatar [object]="participant.other_company"></avatar>
                                 </td>
                                 <td class="align-middle">
-                                    <div [routerLink]="'/customers/' + participant.other_company.id">
+                                    <div class="cursor-pointer" [routerLink]="'/customers/' + participant.other_company.id">
                                         {{ participant.other_company.getName() }}
                                     </div>
                                 </td>
@@ -48,7 +48,7 @@
         </div>
     </div>
 
-    <div class="col-4">
+    <div class="col-12 col-xl-4">
         @if (_project) {
             <connections-list [company]="_project.company" [showAddButton]="true" [hideMyCompany]="true" (added)="addConnection($event)"></connections-list>
         }

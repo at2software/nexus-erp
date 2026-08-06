@@ -4,12 +4,6 @@ import { GlobalService } from '@models/global.service';
 import { MoneyPipe } from '@pipes/money.pipe';
 import { Dictionary } from '@constants/constants';
 
-/**
- * Cross-validated reliability summary written by the backend `ml:train-*`
- * commands (`App\ML\MlReliabilitySummary` / `PersistsMlReliability`) as JSON
- * global params (`ML_RELIABILITY_*`, see `backend/config/params.php`). Two
- * shapes, one per model family — see the backend docblocks for details.
- */
 interface MlReliabilityRegression {
     estimator: string;
     primary_metric: 'MAE';
@@ -42,7 +36,6 @@ interface MlReliabilityClassification {
 
 type MlReliability = MlReliabilityRegression | MlReliabilityClassification;
 
-/** Unit shown after the MAE value for each regression model key — purely cosmetic. */
 const REGRESSION_UNITS: Dictionary<string> = {
     customer_revenue: '',
     customer_interval: ' days',
@@ -51,7 +44,6 @@ const REGRESSION_UNITS: Dictionary<string> = {
     support_load: 'h',
 };
 
-/** Maps the short `[mlReliability]` key to its backend global-param key. */
 const PARAM_KEYS: Dictionary<string> = {
     customer_revenue: 'ML_RELIABILITY_CUSTOMER_REVENUE',
     customer_interval: 'ML_RELIABILITY_CUSTOMER_INTERVAL',
@@ -68,20 +60,6 @@ const BUCKET_LABEL: Dictionary<string> = {
     low: $localize`:@@i18n.ml.reliabilityLow:low reliability — use with caution`,
 };
 
-/**
- * Attribute directive — pair with any ML-computed value (see the
- * `.local-ai-icon` convention in `frontend/CLAUDE.md`) to render an honest
- * NgbTooltip summarizing how much to trust it, sourced from the model's
- * cross-validated reliability param.
- *
- * Usage: `<n class="local-ai-icon" [mlReliability]="'customer_churn'">local_ai</n>`
- *
- * Known keys: `customer_revenue`, `customer_interval`, `customer_churn`,
- * `project_hours`, `project_overrun`, `support_load`, `project_quote_acceptance`.
- *
- * Composes `NgbTooltip` via `hostDirectives` rather than requiring
- * `ngbTooltip` on the same element — the reliability text is computed here.
- */
 @Directive({
     selector: '[mlReliability]',
     hostDirectives: [
@@ -92,7 +70,6 @@ const BUCKET_LABEL: Dictionary<string> = {
     ],
 })
 export class MlReliabilityDirective {
-    /** Model key, e.g. `'customer_churn'` — see `PARAM_KEYS` above. */
     readonly mlReliability = input.required<string>();
 
     readonly #global = inject(GlobalService);
@@ -100,9 +77,6 @@ export class MlReliabilityDirective {
     readonly #money = new MoneyPipe();
 
     readonly #summary = computed((): MlReliability | undefined => {
-        // `loaded` is a signal (reactive); `settings` itself is a plain property
-        // populated once the environment response lands — reading `loaded()` here
-        // makes this computed re-evaluate once settings actually become available.
         if (!this.#global.loaded()) return undefined;
         const paramKey = PARAM_KEYS[this.mlReliability()];
         if (!paramKey) return undefined;
@@ -121,8 +95,8 @@ export class MlReliabilityDirective {
 
         const bucketLabel = BUCKET_LABEL[summary.bucket] ?? BUCKET_LABEL['low'];
         const beatsLabel = summary.beats_baseline
-            ? $localize`:@@i18n.ml.beatsBaseline:beats the naive baseline (${summary.baseline_label} ${summary.baseline_value})`
-            : $localize`:@@i18n.ml.doesNotBeatBaseline:does not beat the naive baseline (${summary.baseline_label} ${summary.baseline_value}) — treat as a rough guide only`;
+            ? $localize`:@@i18n.ml.beatsBaseline:beats the naive baseline (${summary.baseline_label} ${summary.baseline_value})`
+            : $localize`:@@i18n.ml.doesNotBeatBaseline:does not beat the naive baseline (${summary.baseline_label} ${summary.baseline_value}) — treat as a rough guide only`;
         const samplesLabel = $localize`:@@i18n.ml.trainedOnSamples:trained on ${summary.n} samples`;
 
         const metricLabel = summary.primary_metric === 'MAE'
@@ -144,8 +118,6 @@ export class MlReliabilityDirective {
     }
 
     #classificationMetricLabel(summary: MlReliabilityClassification): string {
-        // "churned-F1" wording is churn-specific; every other classification model
-        // (e.g. project_quote_acceptance) uses the neutral "F1" label instead.
         if (this.mlReliability() === 'customer_churn') {
             return $localize`:@@i18n.ml.churnedF1:churned-F1 ${summary.value} · recall ${summary.recall}`;
         }

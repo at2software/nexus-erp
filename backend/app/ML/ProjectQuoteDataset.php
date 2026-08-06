@@ -24,7 +24,6 @@ use Illuminate\Support\Collection;
  * project outcome, not quote acceptance.
  */
 class ProjectQuoteDataset {
-    /** Feature names, in extraction order. */
     public const FEATURES = [
         'item_count',
         'net',
@@ -37,11 +36,6 @@ class ProjectQuoteDataset {
 
     public const LABEL = 'accepted';
 
-    /**
-     * Budget-based projects with an observable decision, excluding the
-     * `ignored` state (is_in_stats = false on the FIRST decided state) —
-     * mirrors the is_in_stats discipline used across the other models.
-     */
     public static function eligibleQuery(): Builder {
         return Project::whereBudgetBased()
             ->whereHasDesicion()
@@ -53,7 +47,6 @@ class ProjectQuoteDataset {
         return static::eligibleQuery()->get();
     }
 
-    /** Ever reached a Running-progress state, regardless of later outcome. */
     public static function isAccepted(Project $project): bool {
         return $project->states->contains(fn (ProjectState $state) => $state->progress === ProjectState::Running);
     }
@@ -71,9 +64,6 @@ class ProjectQuoteDataset {
      * @return array<string, mixed> feature values keyed by ProjectQuoteDataset::FEATURES, plus the label
      */
     public static function extractRow(Project $project, array $history = [], ?int $prefixLength = null): array {
-        // Property access (not invoiceItemsRaw()) reuses the eager-loaded
-        // relation when the caller preloaded it (eligibleQuery() does) —
-        // avoids one query per project when extracting a whole pool.
         $items = $project->invoiceItemsRaw->whereIn('type', InvoiceItemType::ProjectTotal);
 
         $defaultItems = $items->filter(fn ($item) => $item->type === InvoiceItemType::Default);
@@ -117,17 +107,10 @@ class ProjectQuoteDataset {
             return 0;
         }
         $cutoff ??= $project->decision_at ?? Carbon::now();
-        // Clamped at 0: a handful of legacy projects have a decision-state pivot
-        // timestamp that predates the project's own created_at (bad historical
-        // data, not a real "decided before it existed" case) — diffInDays would
-        // otherwise go negative, which is meaningless for this feature.
         return max(0, (int)round($project->created_at->diffInDays($cutoff)));
     }
 
     /**
-     * extractRow() for a whole collection, with leak-safe company-history
-     * features computed once across the set (see ProjectQuoteHistory).
-     *
      * @param Collection<int, Project> $projects
      * @return Collection<int, array<string, mixed>>
      */

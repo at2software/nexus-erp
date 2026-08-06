@@ -28,7 +28,7 @@
                         </div>
                     }
 
-                    @if (_splitItems === undefined) {
+                    @if (isLoading()) {
                         <spinner class="py-4"></spinner>
                     } @else {
                         @if (_splitItems.length === 0) {
@@ -37,12 +37,12 @@
                             </div>
                         }
                         @if (_splitItems.length > 0) {
-                            <table class="table table-hover mb-0 w-100">
+                            <table stackedTable class="table table-hover mb-0 w-100">
                                 <thead>
                                     <tr>
-                                        <th class="col-5" i18n="@@i18n.products.itemText">item text</th>
-                                        <th class="col-3" i18n="@@i18n.common.project">project</th>
-                                        <th class="col-4" i18n="@@i18n.products.newProduct">new product</th>
+                                        <th class="col-12 col-md-6 col-xl-5" i18n="@@i18n.products.itemText">item text</th>
+                                        <th class="col-12 col-md-6 col-xl-3" i18n="@@i18n.common.project">project</th>
+                                        <th class="col-12 col-md-6 col-xl-4" i18n="@@i18n.products.newProduct">new product</th>
                                     </tr>
                                 </thead>
                                 <tbody>

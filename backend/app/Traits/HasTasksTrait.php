@@ -21,7 +21,6 @@ trait HasTasksTrait {
 
         $userId = request()->user()?->id;
         if ($userId) {
-            // Union with ALL open tasks assigned to current user (regardless of parent)
             return $baseQuery->union(
                 Task::query()
                     ->whereState(TaskState::Open)

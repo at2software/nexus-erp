@@ -27,17 +27,14 @@ class HasPermissionsForInvoiceItemMiddleware {
             throw UnauthorizedException::forRolesOrPermissions([]);
         }
 
-        // Any authenticated user may set their own prediction.
         if ($request->isMethod('PUT') && $this->isOnlyMyPrediction($request)) {
             return $next($request);
         }
 
-        // invoicing (and admin) manage invoice items regardless of project state.
         if ($user->hasAnyRole(['admin', 'invoicing'])) {
             return $next($request);
         }
 
-        // project_manager: only while the project is still "Prepared".
         if ($user->hasRole('project_manager') && $this->projectIsPrepared($request)) {
             return $next($request);
         }
@@ -52,14 +49,12 @@ class HasPermissionsForInvoiceItemMiddleware {
         return $project?->state?->progress == ProjectState::Prepared;
     }
     private function resolveProject(Request $request): ?Project {
-        // update / destroy: the route carries the invoice item (bound model or raw id).
         if ($invoiceItem = $request->route('invoice_item')) {
             if (! is_a($invoiceItem, InvoiceItem::class)) {
                 $invoiceItem = InvoiceItem::find($invoiceItem);
             }
             return $invoiceItem?->project;
         }
-        // store: no item yet — derive the project from the request body.
         if ($projectId = $request->input('project_id')) {
             return Project::find($projectId);
         }

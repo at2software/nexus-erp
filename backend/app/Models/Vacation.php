@@ -24,7 +24,6 @@ class Vacation extends BaseModel {
 
     protected $fillable = ['amount', 'started_at', 'log', 'ended_at', 'vacation_grant_id', 'comment', 'state', 'approved_at', 'approved_by_id'];
 
-    // Relationships
     public function approved_by() {
         return $this->belongsTo(User::class, 'approved_by_id');
     }
@@ -35,7 +34,6 @@ class Vacation extends BaseModel {
         return $this->hasOneThrough(User::class, VacationGrant::class, 'id', 'id', 'vacation_grant_id', 'user_id');
     }
 
-    // Query Scopes for Performance
     public function scopeWithUserAndGrant($query) {
         return $query
             ->join('vacation_grants', 'vacations.vacation_grant_id', '=', 'vacation_grants.id')

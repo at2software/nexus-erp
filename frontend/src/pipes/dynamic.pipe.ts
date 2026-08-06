@@ -1,4 +1,4 @@
-import { inject, Injector, Pipe, PipeTransform } from '@angular/core';
+import { inject, Injector, Pipe, PipeTransform, ProviderToken } from '@angular/core';
 
 @Pipe({
     name: 'dynamicPipe',
@@ -6,11 +6,11 @@ import { inject, Injector, Pipe, PipeTransform } from '@angular/core';
 export class DynamicPipe implements PipeTransform {
     injector: Injector = inject(Injector);
 
-    transform(value: any, pipeToken: any): any {
+    transform(value: unknown, pipeToken: ProviderToken<PipeTransform> | null | undefined): unknown {
         if (!pipeToken) {
             return value;
         } else {
-            const pipe = this.injector.get(pipeToken) as PipeTransform;
+            const pipe = this.injector.get(pipeToken);
             return pipe.transform(value);
         }
     }

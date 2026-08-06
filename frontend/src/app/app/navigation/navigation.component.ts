@@ -7,7 +7,7 @@ import { fromEvent } from 'rxjs';
 import { NComponent } from '@shards/n/n.component';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { GuidedTourComponent } from '@shards/guided-tour/guided-tour.component';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 
 type SearchResult = Serializable & { company_id?: string };
 

@@ -21,11 +21,6 @@ class HbciMessage {
     // ──────────────────────────────────────────────────────────────
 
     /**
-     * Builds a complete FinTS 3.0 PIN/TAN message with full security wrapper.
-     *
-     * Inner plain segments should be pre-formatted strings (including trailing "'")
-     * and numbered starting at seq 3.
-     *
      * @param string $dialogId '0' for new dialogs
      * @param int $msgno Message counter for this dialog (starts at 1)
      * @param string $systemId System ID from sync ('0' before first sync)
@@ -88,8 +83,6 @@ class HbciMessage {
     // ──────────────────────────────────────────────────────────────
 
     /**
-     * Parses a response and returns all segments (outer + inner from HNVSD merged).
-     *
      * @return array<string, list<array<int, string>>>
      */
     public static function parseAll(string $message): array {
@@ -191,7 +184,6 @@ class HbciMessage {
                     continue;
                 }
             }
-            // Skip escaped characters
             if ($haystack[$pos] === '?') {
                 $pos += 2;
                 continue;

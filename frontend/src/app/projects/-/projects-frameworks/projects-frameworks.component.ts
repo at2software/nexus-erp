@@ -6,39 +6,27 @@ import { FrameworkLatest } from '@models/project/framework-latest.model';
 import { ProjectService } from '@models/project/project.service';
 import { Nx } from '@app/nx/nx.directive';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
-import { Project } from '@models/project/project.model';
+import { modelListResource } from '@models/http/model-resource';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { Color } from '@constants/Color';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'projects-frameworks',
-    imports: [FormsModule, RouterModule, Nx, AvatarComponent, NgbTooltipModule],
+    imports: [StackedTableDirective, FormsModule, RouterModule, Nx, AvatarComponent, NgbTooltipModule],
     templateUrl: './projects-frameworks.component.html',
 })
 export class ProjectsFrameworksComponent {
-    frameworks = signal<Framework[]>([]);
-    latestFrameworks = signal<FrameworkLatest[]>([]);
     selectedFrameworks = signal(new Set<string>());
     expandedFrameworks = new Set<string>();
     versionsBehindFilter = signal(0);
     #projectService = inject(ProjectService);
 
-    constructor() {
-        this.#projectService.indexFrameworks().subscribe((data) => {
-            data.forEach(
-                (d) =>
-                    (d.projects = d.projects.map((_) => {
-                        const p = Project.fromJson(_);
-                        return p;
-                    })),
-            );
-            this.frameworks.set(data);
-        });
-        this.#projectService.indexLatestFrameworks().subscribe((data) => {
-            this.latestFrameworks.set(data);
-        });
-    }
+    readonly #frameworks = modelListResource(() => this.#projectService.indexFrameworks());
+    readonly frameworks = this.#frameworks.value;
+    readonly #latestFrameworks = modelListResource(() => this.#projectService.indexLatestFrameworks());
+    readonly latestFrameworks = this.#latestFrameworks.value;
     majorOnly = (_: string) => parseInt(_?.replace(/.*?(\d+).*/, '$1'));
     latestFor = (_: Framework) => this.latestFrameworks().find((x) => x.name == _.framework);
     differenceFromLatestVersion = (f: Framework) => this.majorOnly(this.latestFor(f)?.latest_version ?? '0') - this.majorOnly(f.framework_version);

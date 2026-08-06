@@ -42,12 +42,12 @@
                         <div class="mt-3">
                             <div class="mb-2 text-truncate"><strong>{{ issue.name }}</strong></div>
                             <div class="mb-2">
-                                <label class="form-label" i18n="@@i18n.common.duration">duration</label>
-                                <input type="number" step="0.1" min="0" class="form-control" [ngModel]="newFocusDuration()" (ngModelChange)="newFocusDuration.set($event)" />
+                                <label class="form-label" for="newFocusDuration" i18n="@@i18n.common.duration">duration</label>
+                                <input id="newFocusDuration" type="number" step="0.1" min="0" class="form-control" [ngModel]="newFocusDuration()" (ngModelChange)="newFocusDuration.set($event)" />
                             </div>
                             <div class="mb-2">
-                                <label class="form-label" i18n="@@i18n.common.comment">comment</label>
-                                <input type="text" class="form-control" [ngModel]="newFocusComment()" (ngModelChange)="newFocusComment.set($event)" />
+                                <label class="form-label" for="newFocusComment" i18n="@@i18n.common.comment">comment</label>
+                                <input id="newFocusComment" type="text" class="form-control" [ngModel]="newFocusComment()" (ngModelChange)="newFocusComment.set($event)" />
                             </div>
                             <button type="button" class="btn btn-primary w-100" (click)="onCreateFocus()" [disabled]="!newFocusDuration()" i18n="@@i18n.foci.createEntry">create entry</button>
                         </div>
@@ -64,7 +64,7 @@
         }
         @if (_filteredFoci.length) {
             <div class="card">
-                <table enableTableExport [filenamePrefix]="_foci.getName()" cdk-table [dataSource]="_filteredFoci" class="table mb-0">
+                <table stackedTable enableTableExport [filenamePrefix]="_foci.getName()" cdk-table [dataSource]="_filteredFoci" class="table mb-0">
                     <ng-container cdkColumnDef="started_at">
                         <th cdk-header-cell *cdkHeaderCellDef class="text-end sortable" (click)="onSort('started_at')"><span i18n="@@i18n.common.date">date</span> <span [innerHTML]="getSortIcon('started_at') | safe: 'html'"></span></th>
                         <td cdk-cell *cdkCellDef="let x" class="text-end small text-nowrap">{{ x.started_at | date: 'dd.MM.yyyy' }}</td>

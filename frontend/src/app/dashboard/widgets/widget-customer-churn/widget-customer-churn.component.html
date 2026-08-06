@@ -10,11 +10,11 @@
 
     <ul-compact revealList [badge]="badgeCount(_data) > 0 ? '' + badgeCount(_data) : undefined">
         @for (_ of _data; track _.id; let i = $index) {
-            @let overdue = (_.ml_overdue_for_contact ?? false);
-            @let churn_danger = (_.ml_churn_probability_12m ?? 0) >= 0.5 ? true : false;
-            <li 
-                class="list-group-item d-flex text-nowrap" 
-                [nx]="_" [tables]="_data" 
+            @let overdue = _.mlOverdueForContact();
+            @let churn_danger = _.mlChurnHigh();
+            <li
+                class="list-group-item d-flex text-nowrap"
+                [nx]="_" [tables]="_data"
                 [compact]="!overdue && !churn_danger">
                 <div>
                     <avatar [object]="_"></avatar>
@@ -22,11 +22,11 @@
                 <div class="flex-fill ms-3 text-truncate">
                     <div class="d-flex text-truncate">
                         <div class="flex-fill text-truncate">{{ _.getName() }}</div>
-                        <div class="text-nowrap" [class.text-danger]="(_.ml_churn_probability_12m ?? 0) >= 0.5" [class.text-primary]="(_.ml_churn_probability_12m ?? 0) < 0.5">{{ _.ml_churn_probability_12m | percent: '1.0-0' }}</div>
+                        <div class="text-nowrap" [class.text-danger]="churn_danger" [class.text-primary]="!churn_danger">{{ _.mlChurnProbability12m() | percent: '1.0-0' }}</div>
                     </div>
-                    @if (_.ml_overdue_for_contact) {
+                    @if (overdue) {
                         <div class="text-muted text-truncate small">
-                            <span i18n="@@i18n.customers.mlNextPurchase">predicted next purchase</span>: {{ _.ml_predicted_next_purchase_date }}
+                            <span i18n="@@i18n.customers.mlNextPurchase">predicted next purchase</span>: {{ _.mlPredictedNextPurchaseAt()?.format('YYYY-MM-DD') }}
                             <i class="ms-1 text-danger" ngbTooltip="predicted next purchase date is in the past — contact this customer" i18n-ngbTooltip="@@i18n.customers.contactNowTip">notification_important</i>
                         </div>
                     }

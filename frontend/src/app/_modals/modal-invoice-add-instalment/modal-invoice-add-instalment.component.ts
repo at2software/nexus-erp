@@ -47,13 +47,11 @@ export class ModalInvoiceAddInstalmentComponent extends ModalBaseComponent<Invoi
     }
 
     #calculateStage0Sum(): number {
-        // For Projects: sum only stage=0 items (always fresh from current state)
         if (this.parent instanceof Project) {
             const items = (this.parent.invoice_items ?? []).filter((item) => item.stage === 0 && !item.invoice_id);
             return items.reduce((sum, item) => sum + (item.net ?? 0), 0);
         }
 
-        // For Invoices: use net
         return this.parent.net ?? 0;
     }
 

@@ -1,5 +1,5 @@
 import { ModalConfirmComponent } from './modal-confirm.component';
-import { Injectable, inject } from '@angular/core';
+import { Service, inject } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 
 export interface ConfirmationArguments {
@@ -15,7 +15,7 @@ export interface ConfirmationArguments {
  * on cancel), `confirm()` intentionally **rejects** when the user cancels, so
  * callers can write `confirm(...).then(() => destructiveAction())` without a guard.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ConfirmationService {
     #modalService = inject(NgbModal);
 

@@ -7,7 +7,7 @@ import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { User } from '@models/user/user.model';
 import { Vacation } from '@models/vacation/vacation.model';
 import { VacationService } from '@models/vacation/vacation.service';
-import { Dayjs } from '@constants/dates';
+import { Dayjs } from '@constants/date/dates';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,

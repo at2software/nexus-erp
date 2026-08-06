@@ -10,7 +10,7 @@
     </div>
     <ul class="list-group list-group-flush">
         @for (exp of _filtered; track exp.id) {
-            <li class="list-group-item list-group-item-action" style="cursor:pointer" tabindex="0" (click)="pick(exp)" (keyup.enter)="pick(exp)">
+            <li class="list-group-item list-group-item-action cursor-pointer" tabindex="0" (click)="pick(exp)" (keyup.enter)="pick(exp)">
                 <div class="hstack gap-2">
                     <span>{{ exp.name }}</span>
                     <span class="ms-auto text-muted small">€ {{ exp.price }}</span>

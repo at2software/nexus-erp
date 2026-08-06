@@ -1,4 +1,4 @@
-import { NxAction, NxActionType } from '@app/nx/nx.actions';
+import { NxAction, NxActionType } from '@models/_core/nx.actions';
 import { Framework } from './framework.model';
 
 export function getFrameworkActions(self: Framework): NxAction[] {

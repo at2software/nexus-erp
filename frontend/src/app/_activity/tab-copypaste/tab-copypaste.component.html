@@ -4,22 +4,22 @@
             @for (class of getKeys(); track class) {
                 <div class="header w-100 d-flex">
                     @if (rootAcceptsChildren(class)) {
-                        <div (click)="insertAll(class)" ngbTooltip="insert all" class="me-2" i18n-ngbTooltip="@@i18n.common.insertAll">
+                        <div (click)="insertAll(class)" (keydown.enter)="insertAll(class)" (keydown.space)="insertAll(class)" role="button" tabindex="0" ngbTooltip="insert all" class="me-2" i18n-ngbTooltip="@@i18n.common.insertAll">
                             <i class="text-primary pointer">first_page</i>
                         </div>
                     }
                     <div class="flex-fill">{{ class }}</div>
                     <div>
-                        <i class="text-primary pointer" ngbTooltip="clear all" (click)="removeAll(class)">content_paste_off</i>
+                        <i class="text-primary pointer" ngbTooltip="clear all" role="button" tabindex="0" (click)="removeAll(class)" (keydown.enter)="removeAll(class)" (keydown.space)="removeAll(class)">content_paste_off</i>
                     </div>
                 </div>
                 <ul class="list-group w-100">
                     @for (o of getClips(class); track o.id) {
                         <li class="list-group-item hstack gap-2 align-items-center" context="clipboard">
                             @if (rootAcceptsChildren(class)) {
-                                <i class="text-primary pointer" ngbTooltip="insert" (click)="insert(o)">first_page</i>
+                                <i class="text-primary pointer" ngbTooltip="insert" role="button" tabindex="0" (click)="insert(o)" (keydown.enter)="insert(o)" (keydown.space)="insert(o)">first_page</i>
                             }
-                            <img class="avatar avatar-xs" [src]="o.icon" alt="" />
+                            <avatar [object]="o" size="xs"></avatar>
                             <div class="flex-fill">{{ o.getName() }}</div>
                         </li>
                     }

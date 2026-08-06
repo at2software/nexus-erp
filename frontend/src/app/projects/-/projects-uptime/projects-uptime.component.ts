@@ -1,11 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
+import { modelListResource, modelResource } from '@models/http/model-resource';
 import { DatePipe } from '@angular/common';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { UptimeMonitor } from '@models/uptime/uptime-monitor.model';
 import { UptimeMonitorService } from '@models/uptime/uptime-monitor.service';
-import { UptimeCheckDay } from '@models/api-response';
+import { UptimeCheckDayDto } from '@models/_core/api-response';
 import { GlobalService } from '@models/global.service';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { Nx } from '@app/nx/nx.directive';
@@ -22,41 +23,34 @@ import { SpinnerComponent } from '@shards/spinner/spinner.component';
     styleUrls: ['./projects-uptime.component.scss'],
 })
 export class ProjectsUptimeComponent {
-    monitors = signal<UptimeMonitor[]>([]);
-    loading = signal(true);
-    checksCache = signal(new Map<string, UptimeCheckDay[]>());
-
     global = inject(GlobalService);
     #service = inject(UptimeMonitorService);
     #modalService = inject(UptimeMonitorModalService);
 
+    readonly #monitors = modelListResource(() => this.#service.index());
+    readonly monitors = this.#monitors.value;
+    readonly loading = this.#monitors.isLoading;
+
+    readonly #checks = modelResource(
+        () => this.monitors().map((m) => m.id).join(',') || undefined,
+        () => forkJoin(this.monitors().map((m) => this.#service.indexChecks(m, 30).pipe(map((checks) => ({ id: m.id, checks })), catchError(() => of({ id: m.id, checks: [] as UptimeCheckDayDto[] }))))),
+    );
+    readonly checksCache = computed(() => new Map(this.#checks.value()?.map((r) => [r.id, r.checks])));
+
     constructor() {
-        this.loadMonitors();
+        effect(() =>
+            this.monitors().forEach((monitor) => {
+                monitor.var.onTestRequested = (m: UptimeMonitor) => this.testMonitor(m);
+                monitor.var.onEditRequested = (m: UptimeMonitor) => this.openEditModal(m);
+                monitor.var.onEditSuccess = () => this.loadMonitors();
+                monitor.var.onDeleteSuccess = () => this.loadMonitors();
+                monitor.var.onSubscribeSuccess = () => this.loadMonitors();
+                monitor.var.onUnsubscribeSuccess = () => this.loadMonitors();
+            }),
+        );
     }
 
-    loadMonitors() {
-        this.loading.set(true);
-        this.#service.index().subscribe({
-            next: (monitors) => {
-                this.monitors.set(monitors);
-                this.setupMonitorCallbacks();
-                this.loading.set(false);
-                this.loadAllChecks();
-            },
-            error: () => this.loading.set(false),
-        });
-    }
-
-    setupMonitorCallbacks() {
-        this.monitors().forEach((monitor) => {
-            monitor.var.onTestRequested = (m: UptimeMonitor) => this.testMonitor(m);
-            monitor.var.onEditRequested = (m: UptimeMonitor) => this.openEditModal(m);
-            monitor.var.onEditSuccess = () => this.loadMonitors();
-            monitor.var.onDeleteSuccess = () => this.loadMonitors();
-            monitor.var.onSubscribeSuccess = () => this.loadMonitors();
-            monitor.var.onUnsubscribeSuccess = () => this.loadMonitors();
-        });
-    }
+    loadMonitors = () => this.#monitors.reload();
 
     openEditModal(monitor: UptimeMonitor) {
         this.#modalService
@@ -92,23 +86,7 @@ export class ProjectsUptimeComponent {
         });
     }
 
-    loadAllChecks() {
-        if (!this.monitors().length) return;
-        forkJoin(
-            this.monitors().map((m) =>
-                this.#service.indexChecks(m, 30).pipe(
-                    map((checks) => ({ id: m.id, checks })),
-                    catchError(() => of({ id: m.id, checks: [] as UptimeCheckDay[] })),
-                ),
-            ),
-        ).subscribe((results) => {
-            const next = new Map(this.checksCache());
-            results.forEach((r) => next.set(r.id, r.checks));
-            this.checksCache.set(next);
-        });
-    }
-
-    getChecks(monitor: UptimeMonitor): UptimeCheckDay[] {
+    getChecks(monitor: UptimeMonitor): UptimeCheckDayDto[] {
         return this.checksCache().get(monitor.id) || [];
     }
 

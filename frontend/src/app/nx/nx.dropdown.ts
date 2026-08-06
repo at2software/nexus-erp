@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, input } from '@angular/core';
-import { NxAction } from './nx.actions';
-import { NxService, resolved } from './nx.service';
+import { NxAction } from '@models/_core/nx.actions';
+import { NxService } from './nx.service';
+import { resolved } from '@constants/resolved';
 import { AutopositionDirective } from '@directives/autoposition.directive';
 import { NxSubMenu } from './ns.submenu.directive';
 

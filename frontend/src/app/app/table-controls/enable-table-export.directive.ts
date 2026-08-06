@@ -1,4 +1,3 @@
-// export-table.directive.ts
 import { CdkTable } from '@angular/cdk/table';
 import { Directive, ElementRef, effect, inject, input } from '@angular/core';
 import { TableExportService } from '@models/table-export.service';
@@ -29,8 +28,6 @@ export class EnableTableExportDirective {
             button.title = 'Export to Excel';
             button.onclick = () => this.#tableExportService.exportAnyTableToCSV(table, this.filenamePrefix());
 
-            // Drop the button into the enclosing card's header (right-aligned),
-            // creating a header if the card doesn't have one yet.
             const card = host.closest('.card');
             let header = card?.querySelector(':scope > .card-header') as HTMLElement | null;
             if (card && !header) {
@@ -41,8 +38,6 @@ export class EnableTableExportDirective {
 
             if (header) {
                 header.classList.add('d-flex', 'align-items-center');
-                // Keep any existing label, but let it shrink/truncate so the
-                // button stays pinned to the right edge of the header.
                 if (header.childNodes.length) {
                     const label = document.createElement('span');
                     label.classList.add('flex-fill', 'text-truncate');

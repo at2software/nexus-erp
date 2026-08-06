@@ -1,15 +1,17 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, linkedSignal, signal } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { MarketingService } from '@models/marketing/marketing.service';
+import { modelListResource } from '@models/http/model-resource';
 import { MarketingPerformanceMetric } from '@models/marketing/marketing-performance-metrics.model';
 import { MarketingActivity } from '@models/marketing/marketing-activity.model';
 import { Nx, ActionEmitterType } from '@app/nx/nx.directive';
-import { NxActionType } from '@app/nx/nx.actions';
+import { NxActionType } from '@models/_core/nx.actions';
 import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { GuidedTourComponent } from '@shards/guided-tour/guided-tour.component';
 import { ColorPickerDirective } from 'ngx-color-picker';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 const ActivityStatsColors = MarketingActivity.STATS_COLORS;
 
@@ -18,20 +20,20 @@ const ActivityStatsColors = MarketingActivity.STATS_COLORS;
     selector: 'marketing-metrics',
     templateUrl: './marketing-metrics.component.html',
     styleUrls: ['./marketing-metrics.component.scss'],
-    imports: [FormsModule, Nx, NgbTooltipModule, NgbDropdownModule, EmptyStateComponent, GuidedTourComponent, ColorPickerDirective],
+    imports: [StackedTableDirective, FormsModule, Nx, NgbTooltipModule, NgbDropdownModule, EmptyStateComponent, GuidedTourComponent, ColorPickerDirective],
 })
 export class MarketingMetricsComponent {
     #marketingService = inject(MarketingService);
     #cdr = inject(ChangeDetectorRef);
 
-    metrics = signal<MarketingPerformanceMetric[]>([]);
-    filteredMetrics: MarketingPerformanceMetric[] = [];
+    #loaded = modelListResource(() => this.#marketingService.indexMetrics());
+    metrics = linkedSignal(() => this.#loaded.value());
     selectedMetric: MarketingPerformanceMetric | null = null;
 
     readonly STATS_COLORS = ActivityStatsColors;
 
-    searchTerm = '';
-    typeFilter = '';
+    typeFilter = signal('');
+    filteredMetrics = computed(() => this.metrics().filter((metric) => !this.typeFilter() || metric.metric_type === this.typeFilter()));
 
     showMetricModal = signal(false);
     hoveredRelatedMetricId = signal<string | undefined>(undefined);
@@ -51,10 +53,14 @@ export class MarketingMetricsComponent {
 
     readonly editNxContext = { openEdit: (m: MarketingPerformanceMetric) => this.openEditModal(m) };
 
-    stats = {
-        total: 0,
-        byType: { counter: 0, percentage: 0, conversion: 0, currency: 0, duration: 0 },
-    };
+    stats = computed(() => {
+        const metrics = this.metrics();
+        const countOf = (type: MarketingPerformanceMetric['metric_type']) => metrics.filter((m) => m.metric_type === type).length;
+        return {
+            total: metrics.length,
+            byType: { counter: countOf('counter'), percentage: countOf('percentage'), conversion: countOf('conversion'), currency: countOf('currency'), duration: countOf('duration') },
+        };
+    });
 
     metricTypes = [
         { value: 'counter', label: $localize`:@@i18n.marketing.counter:Counter`, icon: 'tag', description: $localize`:@@i18n.marketing.counterDesc:Simple count (e.g., emails sent)` },
@@ -65,25 +71,15 @@ export class MarketingMetricsComponent {
     ];
 
     readonly MATERIAL_ICONS = [
-        // Analytics
         'analytics', 'bar_chart', 'pie_chart', 'show_chart', 'trending_up', 'trending_down', 'leaderboard', 'insights', 'query_stats', 'monitoring',
-        // Marketing
         'campaign', 'ads_click', 'local_offer', 'sell', 'storefront', 'shopping_cart', 'loyalty', 'redeem', 'volunteer_activism', 'workspace_premium',
-        // Communication
         'email', 'phone', 'message', 'chat', 'forum', 'send', 'notifications', 'inbox', 'mark_email_read', 'contact_mail',
-        // Money
         'attach_money', 'payments', 'account_balance', 'savings', 'euro', 'currency_exchange', 'price_check', 'credit_card', 'receipt', 'request_quote',
-        // Time
         'schedule', 'timer', 'alarm', 'access_time', 'hourglass_empty', 'calendar_today', 'event', 'date_range', 'update', 'history',
-        // People
         'person', 'group', 'people', 'person_add', 'supervisor_account', 'groups', 'account_circle', 'badge', 'handshake', 'record_voice_over',
-        // Goals
         'flag', 'emoji_events', 'star', 'grade', 'verified', 'check_circle', 'task_alt', 'done_all', 'military_tech', 'celebration',
-        // Content
         'article', 'description', 'note', 'assignment', 'list', 'checklist', 'text_snippet', 'edit_note', 'bookmark', 'push_pin',
-        // Metrics
         'tag', 'percent', 'numbers', 'functions', 'calculate', 'speed', 'bolt', 'flash_on', 'moving', 'stacked_line_chart',
-        // Misc
         'favorite', 'thumb_up', 'visibility', 'share', 'link', 'search', 'tune', 'settings', 'build', 'category',
         'label', 'location_on', 'public', 'language', 'translate', 'cloud', 'rocket_launch', 'auto_awesome', 'hub', 'network_check',
     ];
@@ -114,38 +110,8 @@ export class MarketingMetricsComponent {
         return this.metrics().find((m) => m.id === id);
     }
 
-    constructor() {
-        this.loadMetrics();
-    }
-
-    loadMetrics() {
-        this.#marketingService.indexMetrics().subscribe((metrics: MarketingPerformanceMetric[]) => {
-            this.metrics.set(metrics);
-            this.applyFilters();
-            this.calculateStats();
-            this.#cdr.markForCheck();
-        });
-    }
-
-    applyFilters() {
-        this.filteredMetrics = this.metrics().filter((metric) => !this.typeFilter || metric.metric_type === this.typeFilter);
-    }
-
     filterByType(type: string) {
-        this.typeFilter = type;
-        this.applyFilters();
-    }
-
-    calculateStats() {
-        const metrics = this.metrics();
-        this.stats.total = metrics.length;
-        this.stats.byType = {
-            counter: metrics.filter((m) => m.metric_type === 'counter').length,
-            percentage: metrics.filter((m) => m.metric_type === 'percentage').length,
-            conversion: metrics.filter((m) => m.metric_type === 'conversion').length,
-            currency: metrics.filter((m) => m.metric_type === 'currency').length,
-            duration: metrics.filter((m) => m.metric_type === 'duration').length,
-        };
+        this.typeFilter.set(type);
     }
 
     selectMetric(metric: MarketingPerformanceMetric) {
@@ -195,16 +161,12 @@ export class MarketingMetricsComponent {
             this.#marketingService.updateMetric(editingMetric.id!, metricData).subscribe((updated: MarketingPerformanceMetric) => {
                 this.metrics.update((metrics) => metrics.map((m) => (m.id === updated.id ? updated : m)));
                 if (this.selectedMetric?.id === updated.id) this.selectedMetric = updated;
-                this.applyFilters();
-                this.calculateStats();
                 this.resetForm();
                 this.#cdr.markForCheck();
             });
         } else {
             this.#marketingService.storeMetric(metricData).subscribe((metric: MarketingPerformanceMetric) => {
                 this.metrics.update((metrics) => [...metrics, metric]);
-                this.applyFilters();
-                this.calculateStats();
                 this.resetForm();
                 this.#cdr.markForCheck();
             });
@@ -217,8 +179,6 @@ export class MarketingMetricsComponent {
         this.#marketingService.destroyMetric(metric.id!).subscribe(() => {
             this.metrics.update((metrics) => metrics.filter((m) => m.id !== metric.id));
             if (this.selectedMetric?.id === metric.id) this.selectedMetric = null;
-            this.applyFilters();
-            this.calculateStats();
             this.#cdr.markForCheck();
         });
     }
@@ -228,7 +188,6 @@ export class MarketingMetricsComponent {
         if (actionType === NxActionType.Destructive) {
             const deleted = event.object.nx() as MarketingPerformanceMetric;
             this.metrics.update((metrics) => metrics.filter((m) => m.id !== deleted.id));
-            this.calculateStats();
         }
         this.#cdr.markForCheck();
     }

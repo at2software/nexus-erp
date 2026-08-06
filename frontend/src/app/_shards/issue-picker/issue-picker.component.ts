@@ -5,13 +5,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NComponent } from '@shards/n/n.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
-import { PluginInstance } from '@models/http/plugin.instance';
-import { ITaskPlugin } from '@models/tasks/task.plugin.interface';
-import { PluginLink } from '@models/pluginLink/plugin-link.model';
-import { Task } from '@models/tasks/task.model';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
+import { PluginInstance } from '@models/http/plugins/plugin.instance';
+import { ITaskPlugin } from '@models/task/task.plugin.interface';
+import { PluginLink } from '@models/plugin-link/plugin-link.model';
+import { Task } from '@models/task/task.model';
 import { Project } from '@models/project/project.model';
 import { ProjectService } from '@models/project/project.service';
+import { modelResource } from '@models/http/model-resource';
 
 export interface IssuePickerTracker {
     link: PluginLink;
@@ -22,7 +23,6 @@ const CONNECT_TIMEOUT_MS = 15000;
 const PAGE_SIZE = 30;
 const SCROLL_THRESHOLD_PX = 80;
 
-/** Browses a project's task trackers and lets the user pick an open issue. Used by the link-issue modal and by timetracking. */
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'issue-picker',
@@ -51,15 +51,11 @@ export class IssuePickerComponent {
     searchTerm = signal<string>('');
     hideCompleted = signal<boolean>(false);
 
-    /** Server-side search results, bypassing pagination. `undefined` means "not searching". */
     searchResults = signal<Task[] | undefined>(undefined);
     searching = signal<boolean>(false);
     #searchSubject = new Subject<string>();
 
     readonly activeTracker = computed(() => this.trackers().find((_) => String(_.link.id) === this.activeLinkId()));
-    // Merges server-side search results (e.g. Mantis's id-only lookup) with a client-side
-    // filter over the already-loaded pages, so partial text and ids always match something
-    // even on trackers whose API can't free-text search.
     readonly filteredIssues = computed(() => {
         const term = this.searchTerm().toLowerCase().trim();
         const hideCompleted = this.hideCompleted();
@@ -74,11 +70,15 @@ export class IssuePickerComponent {
         return [...searchMatches, ...localMatches.filter((_) => !seen.has(_.id))];
     });
 
+    readonly #project = modelResource(
+        () => this.projectId(),
+        (id) => this.#projectService.show(id),
+    );
+
     constructor() {
         effect(() => {
-            const projectId = this.projectId();
-            if (!projectId) return;
-            untracked(() => this.#projectService.show(projectId).subscribe((project: Project) => this.#initFromProject(project)));
+            const project = this.#project.value();
+            if (project) untracked(() => this.#initFromProject(project));
         });
 
         this.#searchSubject
@@ -126,8 +126,6 @@ export class IssuePickerComponent {
 
     onHideCompletedChange(value: boolean): void {
         this.hideCompleted.set(value);
-        // Re-fetch: trackers that support a server-side state filter (GitLab) only loaded
-        // "open" issues so far, so showing completed ones needs a fresh request.
         this.#reload();
     }
 

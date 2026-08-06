@@ -3,3 +3,21 @@ app-root,
 app-activity {
     display: block;
 }
+
+.route-loading {
+    position: fixed;
+    inset: 0;
+    z-index: 1080;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(1px);
+    cursor: progress;
+    animation: route-loading-in 120ms ease-out;
+}
+
+@keyframes route-loading-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}

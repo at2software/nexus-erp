@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { NgbDateAdapter, NgbDatepickerModule, NgbDate } from '@ng-bootstrap/ng-bootstrap';
@@ -9,11 +9,13 @@ import { Company } from '@models/company/company.model';
 import { GlobalService } from '@models/global.service';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { InvoiceItemService } from '@models/invoice/invoice-item.service';
+import { modelListResource } from '@models/http/model-resource';
 import { MoneyPipe } from '@pipes/money.pipe';
 import { SafePipe } from '@pipes/safe.pipe';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { EchartsComponent } from '@charts/echarts-wrapper/echarts-wrapper.component';
 import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS, ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,14 +23,11 @@ import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS, ECHARTS_DONUT_ITEM_STYLE } from '@char
     templateUrl: './invoices-standing.component.html',
     styleUrls: ['./invoices-standing.component.scss'],
     providers: [{ provide: NgbDateAdapter, useClass: NgbDateCarbonAdapter }],
-    imports: [MoneyPipe, Nx, AvatarComponent, FormsModule, NgbDatepickerModule, SafePipe, EmptyStateComponent, EchartsComponent],
+    imports: [StackedTableDirective, MoneyPipe, Nx, AvatarComponent, FormsModule, NgbDatepickerModule, SafePipe, EmptyStateComponent, EchartsComponent],
 })
 export class InvoicesStandingComponent {
     parent = input<Company | null>(null);
 
-    isLoaded = signal(false);
-    items = signal<InvoiceItem[]>([]);
-    sum = signal(0);
     selection = signal<InvoiceItem[]>([]);
     selectionSum = signal(0);
     selectedCategories = signal<Set<string>>(new Set());
@@ -75,9 +74,15 @@ export class InvoicesStandingComponent {
     #itemService = inject(InvoiceItemService);
     #global = inject(GlobalService);
 
-    constructor() {
-        effect(() => this.reload(this.parent()));
+    readonly #items = modelListResource(
+        () => this.parent()?.id ?? '',
+        (companyId) => this.#itemService.indexStandingOrders(companyId || undefined),
+    );
+    items = this.#items.value;
+    isLoaded = computed(() => this.#items.hasValue());
+    sum = computed(() => this.items().reduce((a, b) => a + b.getYearlyPrice(), 0));
 
+    constructor() {
         this.#global
             .onSelectionIn(() => this.items(), 'yearlyPrice')
             .pipe(takeUntilDestroyed())
@@ -87,13 +92,7 @@ export class InvoicesStandingComponent {
             });
     }
 
-    reload(parent: Company | null = this.parent()) {
-        this.#itemService.indexStandingOrders(parent ?? undefined).subscribe((items) => {
-            this.isLoaded.set(true);
-            this.items.set(items);
-            this.sum.set(items.reduce((a, b) => a + b.getYearlyPrice(), 0));
-        });
-    }
+    reload = () => this.#items.reload();
 
     updateDate(item: InvoiceItem, field: string, date: NgbDate) {
         const dateString = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;

@@ -4,9 +4,7 @@
         <div class="modal-content">
             <div class="modal-header hstack gap-2">
                 @if (vacation.user) {
-                    <div class="avatar d-flex">
-                        <img class="avatar-img avatar-md" src="{{ vacation.user.icon }}" alt="User avatar" />
-                    </div>
+                    <avatar [object]="vacation.user" size="md"></avatar>
                 }
                 <div class="flex-fill">
                     <div class="modal-title" i18n="@@i18n.common.timeOffRequest">time off request</div>
@@ -77,8 +75,8 @@
 
                 @if (canDecide() && showDeclineReason()) {
                     <div class="mt-3">
-                        <label class="form-label" i18n="@@i18n.confirm.pleaseSpecifyAReason">please specify a reason</label>
-                        <textarea class="form-control" rows="2" [(ngModel)]="declineReason"></textarea>
+                        <label class="form-label" for="vacationDeclineReason" i18n="@@i18n.confirm.pleaseSpecifyAReason">please specify a reason</label>
+                        <textarea id="vacationDeclineReason" class="form-control" rows="2" [(ngModel)]="declineReason"></textarea>
                     </div>
                 }
             </div>

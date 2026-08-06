@@ -1,11 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { GlobalService } from '@models/global.service';
-import { PluginInstance } from '@models/http/plugin.instance';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
+import { PluginInstance } from '@models/http/plugins/plugin.instance';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
 import { Project } from '@models/project/project.model';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
-import { PluginLinkService } from '@models/pluginLink/plugin-link.service';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
+import { PluginLinkService } from '@models/plugin-link/plugin-link.service';
 import { ActivityTabComponent } from '@activity/activity-tab.component';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { RsaSettingsEmptyComponent } from '@shards/rsa-settings/rsa-settings-empty.component';
@@ -14,7 +14,7 @@ import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { Nx } from '@app/nx/nx.directive';
 import { NComponent } from '@shards/n/n.component';
 import { Encryption } from '@models/encryption/encryption.model';
-import { PluginLink } from '@models/pluginLink/plugin-link.model';
+import { PluginLink } from '@models/plugin-link/plugin-link.model';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,10 +34,6 @@ export class TabPluginsComponent {
     readonly encryptionsValid = computed(() => this.#global.encryptionsValid());
     readonly pluginEncryptions = computed(() => this.#factory.getPluginEncryptions());
 
-    // Plugin instances are long-lived and cached by PluginInstanceFactory; their display fields
-    // (getName(), getStateCss(), etc.) mutate in place once async connect()/connectSub() resolves.
-    // Nothing else re-renders this component afterwards, so bump this signal off instance.init
-    // to force re-evaluation of the template's getName()/getStateCss() reads under zoneless CD.
     readonly #connectBump = signal(0);
     readonly #subscribedInstances = new Set<PluginInstance>();
 
@@ -45,16 +41,22 @@ export class TabPluginsComponent {
         this.#global.onRootObjectSelected.pipe(takeUntilDestroyed()).subscribe((obj) => {
             this.project.set(obj instanceof Project ? obj : undefined);
         });
+
+        effect(() => {
+            const sources: (Encryption | PluginLink)[] = [...this.pluginEncryptions(), ...(this.project()?.plugin_links ?? [])];
+            untracked(() => sources.forEach((p) => this.#watchInit(this.#factory.instanceFor(p))));
+        });
+    }
+
+    #watchInit(instance: PluginInstance | undefined): void {
+        if (!instance || this.#subscribedInstances.has(instance)) return;
+        this.#subscribedInstances.add(instance);
+        instance.init.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(() => this.#connectBump.update((v) => v + 1));
     }
 
     instanceFor = (p: Encryption | PluginLink): PluginInstance | undefined => {
         this.#connectBump();
-        const instance = this.#factory.instanceFor(p);
-        if (instance && !this.#subscribedInstances.has(instance)) {
-            this.#subscribedInstances.add(instance);
-            instance.init.pipe(takeUntilDestroyed(this.#destroyRef)).subscribe(() => this.#connectBump.update((v) => v + 1));
-        }
-        return instance;
+        return this.#factory.instanceFor(p);
     };
 
     onNewPluginLink(_: PluginInstance) {
@@ -62,7 +64,7 @@ export class TabPluginsComponent {
             .open(_.newPluginText)
             .then((response) => {
                 if (response && 'text' in response) {
-                    this.#pluginLinkService.store(_.toPluginLink(response!.text), this.project()).subscribe((link) => {
+                    _.toPluginLink(response!.text).storeUnder(this.project()!, true).subscribe((link) => {
                         this.project.update((p) => {
                             p?.plugin_links.push(link);
                             return p ? Object.assign(Object.create(Object.getPrototypeOf(p)), p) : p;

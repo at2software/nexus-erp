@@ -1,0 +1,26 @@
+[Unit]
+Description=NEXUS Laravel Reverb websocket server
+Documentation=https://git.at2.me/at2/Projects/at2/nexus/issues/-/issues/610
+After=network.target
+
+[Service]
+Type=simple
+User=nexusadmin
+Group=nexusadmin
+WorkingDirectory=/var/www/html/backend
+
+# Host and port are explicit rather than taken from config/reverb.php, whose defaults
+# (0.0.0.0:8080) do not match what nginx proxies to. See the /app/ location in
+# /etc/nginx/sites-available/default before changing either.
+ExecStart=/usr/bin/php artisan reverb:start --host 127.0.0.1 --port 6001
+
+Restart=always
+RestartSec=3
+# Never stop retrying: a boot-time restart loop must not end with the unit given up on.
+StartLimitIntervalSec=0
+
+StandardOutput=append:/var/www/html/backend/storage/logs/reverb.log
+StandardError=append:/var/www/html/backend/storage/logs/reverb.log
+
+[Install]
+WantedBy=multi-user.target

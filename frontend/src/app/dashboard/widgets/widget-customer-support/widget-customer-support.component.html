@@ -16,7 +16,7 @@
     @if (!getOptions()['chart-only']?.value) {
         <ul-compact revealList [badge]="badgeCount(data()) > 0 ? '' + badgeCount(data()) : undefined">
             @for (_ of data(); track _.id; let i = $index) {
-                <li class="list-group-item d-flex text-nowrap" [nx]="_" [tables]="data()" [compact]="indexExceedsSettings(i) && !_.badge()">
+                <li class="list-group-item d-flex text-nowrap" [nx]="_" [tables]="data()" [compact]="indexExceedsSettings(i) && !_.getBadge()">
                     <div>
                         <avatar [object]="_"></avatar>
                     </div>
@@ -25,12 +25,6 @@
                             <div class="flex-fill text-truncate">{{ _.getName() }}</div>
                             <div class="text-muted">{{ _.foci_unbilled_sum_duration | number: '1.1-1' }}h</div>
                         </div>
-                        <!-- @if (_.ml_predicted_support_hours !== undefined) {
-                        <div class="text-muted small text-end" [mlReliability]="'support_load'">
-                            <n class="local-ai-icon">local_ai</n>
-                            {{ _.ml_predicted_support_hours | number: '1.1-1' }}h <span i18n="@@i18n.customers.mlNextQuarter">next quarter</span>
-                        </div>
-                        } -->
                     </div>
                 </li>
             }

@@ -1,22 +1,20 @@
-import { Serializable } from '../serializable';
-import { Type } from 'class-transformer';
+import { Serializable } from '@models/_core/serializable';
+import { Type } from '@models/_core/hydrate';
 import { User } from '../user/user.model';
 import { Project } from '../project/project.model';
 import { UptimeCheck } from './uptime-check.model';
-import { UptimeMonitorService } from './uptime-monitor.service';
-import { NxAction } from '@app/nx/nx.actions';
+import { NxAction } from '@models/_core/nx.actions';
 import { getUptimeMonitorActions } from './uptime-monitor.actions';
 import { Observable, tap } from 'rxjs';
-import { NxGlobal } from '@app/nx/nx.global';
-import { Model } from '@constants/type-discriminators';
+import { nx } from '@models/_core/nx-bridge';
+import { Model } from '@constants/model/type-discriminators';
 import { Dictionary } from '@constants/constants';
 
 @Model('UptimeMonitor')
 export class UptimeMonitor extends Serializable {
     static API_PATH = (): string => 'uptime_monitors';
 
-    SERVICE = UptimeMonitorService;
-    actions: NxAction[] = getUptimeMonitorActions(this);
+    protected override buildActions(): NxAction[] { return getUptimeMonitorActions(this) }
 
     name!: string;
     url!: string;
@@ -73,19 +71,19 @@ export class UptimeMonitor extends Serializable {
     }
 
     isSubscribed(): boolean {
-        const currentUserId = NxGlobal.global.user?.id;
+        const currentUserId = nx().global.user?.id;
         return this.recipients?.some((u) => u.id === currentUserId) ?? false;
     }
 
     subscribe() {
-        const currentUserId = NxGlobal.global.user?.id;
+        const currentUserId = nx().global.user?.id;
         if (!currentUserId) return;
         const recipientIds = [...(this.recipients?.map((u) => u.id) || []), currentUserId];
         this.httpService.put(this.apiPathWithId(), { recipient_ids: recipientIds }).subscribe(() => this.var.onSubscribeSuccess?.(this));
     }
 
     unsubscribe() {
-        const currentUserId = NxGlobal.global.user?.id;
+        const currentUserId = nx().global.user?.id;
         if (!currentUserId) return;
         const recipientIds = (this.recipients?.map((u) => u.id) || []).filter((id) => id !== currentUserId);
         this.httpService.put(this.apiPathWithId(), { recipient_ids: recipientIds }).subscribe(() => this.var.onUnsubscribeSuccess?.(this));

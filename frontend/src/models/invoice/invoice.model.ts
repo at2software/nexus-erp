@@ -1,25 +1,29 @@
-import { dayjs, Dayjs } from '@constants/dates';
+import type { NxAction } from '@models/_core/nx.actions';
+import { dayjs, Dayjs } from '@constants/date/dates';
 import { Dictionary } from '@constants/constants';
-import { InvoiceService } from '@models/invoice/invoice.service';
 import { Company } from '../company/company.model';
-import { Serializable } from '../serializable';
+import { Badge, Serializable } from '@models/_core/serializable';
 import { InvoiceItem } from './invoice-item.model';
 import { getInvoiceActions } from './invoice.actions';
 import { HasInvoiceItems } from '@interfaces/hasInvoiceItems.interface';
-import { NxGlobal } from '@app/nx/nx.global';
+import { nx } from '@models/_core/nx-bridge';
 import { InvoiceReminder } from './invoice-reminder.model';
 import { map } from 'rxjs';
 import { IHasMarker } from '@enums/marker';
-import { Type } from 'class-transformer';
-import { Model } from '@constants/type-discriminators';
+import { Type } from '@models/_core/hydrate';
+import { Model } from '@constants/model/type-discriminators';
 import { computed } from '@angular/core';
+import { environment } from '@environments/environment';
 
 
 @Model('Invoice')
 export class Invoice extends Serializable implements HasInvoiceItems, IHasMarker {
     static API_PATH = (): string => 'invoices';
     static WEBSOCKET_KEY = (): string => 'Invoice';
-    SERVICE = InvoiceService;
+
+    override readonly getBadge = computed(() => this.is_overdue() ? ['bg-danger', 'overdue'] as Badge : undefined);
+    override readonly getAvatar = computed(() => { this.snapshot(); return this.company?.getAvatar() ?? environment.envApi + 'nexus/icon'; });
+    override readonly getTooltip = computed(() => { this.snapshot(); const c = this.company?.getName(); return c ? `${c} - ${this.name}` : this.name; });
 
     marker: number | null = null;
 
@@ -53,37 +57,33 @@ export class Invoice extends Serializable implements HasInvoiceItems, IHasMarker
     @Type(()=>InvoiceItem) invoice_items!: InvoiceItem[];
     @Type(()=>InvoiceReminder) reminders!: InvoiceReminder[];
 
-    doubleClickAction: number = 0;
-    actions = getInvoiceActions(this);
+    protected override buildActions(): NxAction[] { return getInvoiceActions(this) }
 
-    override readonly badge = computed(() => this.is_overdue() ? ['bg-danger', 'overdue'] as [string, string] : undefined);
-
-    frontendUrl = (): string => `/financial/${this.id}`;
+    override frontendUrl = (): string => `/financial/${this.id}`;
     companyId = () => this.company_id;
     setPaid = () => this.update({ paid: true });
     setUnpaid = () => this.update({ paid: false });
-    getName = () => this.name;
     time_due = (): Dayjs => dayjs(this.due_at);
     time_remind = (): Dayjs => dayjs(this.remind_at);
     time_paid = (): Dayjs => dayjs(this.paid_at);
 
     getOverdueColor(): string {
         const daysOverdue = dayjs().diff(this.time_remind(), 'days');
-        if (daysOverdue < NxGlobal.global.setting('INVOICE_GRACE_PERIOD')) return 'orange';
+        if (daysOverdue < nx().global.setting('INVOICE_GRACE_PERIOD')) return 'orange';
         return 'danger';
     }
 
     static formattedInvoiceNumber = (current?: string): string => {
-        const prefix = NxGlobal.global.setting('INVOICE_NO_PREFIX');
-        const suffix = NxGlobal.global.setting('INVOICE_NO_SUFFIX');
-        const digits = NxGlobal.global.setting('INVOICE_NO_DIGITS');
-        if (!current) current = '' + NxGlobal.global.setting('INVOICE_NO_CURRENT');
+        const prefix = nx().global.setting('INVOICE_NO_PREFIX');
+        const suffix = nx().global.setting('INVOICE_NO_SUFFIX');
+        const digits = nx().global.setting('INVOICE_NO_DIGITS');
+        if (!current) current = '' + nx().global.setting('INVOICE_NO_CURRENT');
         while (current!.length < digits) current = '0' + current;
         return prefix + current + suffix;
     };
 
     isLatestInvoice(): boolean {
-        const current = parseInt(NxGlobal.global.setting('INVOICE_NO_CURRENT')) - 1;
+        const current = parseInt(nx().global.setting('INVOICE_NO_CURRENT')) - 1;
         return this.name === Invoice.formattedInvoiceNumber(`${current}`);
     }
 
@@ -102,14 +102,13 @@ export class Invoice extends Serializable implements HasInvoiceItems, IHasMarker
         return 'unpaid (overdue)';
     };
 
-    cancel = () => NxGlobal.service.post('invoices/' + this.id + '/cancel');
-    undo = () => NxGlobal.service.put(`invoices/${this.id}/undo`);
-    updateValues = () => NxGlobal.service.put(`invoices/${this.id}/update-values`);
-    sendToDatev = () => NxGlobal.service.post(`invoices/${this.id}/datev`).pipe(map((d) => this.fromJson(d as Dictionary)));
-    sendMail = () => NxGlobal.service.post(`invoices/${this.id}/send-mail`).pipe(map((d) => this.fromJson(d as Dictionary)));
-    sendReminder = () => NxGlobal.service.post(`invoices/${this.id}/send-reminder`).pipe(map((d) => this.fromJson(d as Dictionary)));
+    cancel = () => nx().service.post('invoices/' + this.id + '/cancel');
+    undo = () => nx().service.put(`invoices/${this.id}/undo`);
+    updateValues = () => nx().service.put(`invoices/${this.id}/update-values`);
+    sendToDatev = () => nx().service.post(`invoices/${this.id}/datev`).pipe(map((d) => this.fromJson(d as Dictionary)));
+    sendMail = () => nx().service.post(`invoices/${this.id}/send-mail`).pipe(map((d) => this.fromJson(d as Dictionary)));
+    sendReminder = () => nx().service.post(`invoices/${this.id}/send-reminder`).pipe(map((d) => this.fromJson(d as Dictionary)));
 
-    // static helpers
     static aggregate = (_: Invoice[], format: string = 'YYYY'): Dictionary<number> =>
         _.reduce((x: Dictionary<number>, i: Invoice) => {
             const f = i.createdAt().format(format);

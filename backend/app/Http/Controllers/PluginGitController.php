@@ -28,7 +28,6 @@ class PluginGitController extends PluginController {
     public function __construct($credentials = null) {
         $this->credentials = $credentials;
 
-        // inside try/catch block because this Controller is also instantiated in api.php, where the database is not set up yet
         try {
             if (! $credentials && DB::connection()->getDatabaseName()) {
                 $this->credentials = $this->getCredentials();

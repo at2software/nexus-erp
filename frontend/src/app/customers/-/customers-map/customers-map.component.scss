@@ -26,7 +26,6 @@
         opacity: 0.5;
     }
     
-    // Override Leaflet's default z-index and background
     ::ng-deep .leaflet-pane {
         z-index: 0 !important;
     }
@@ -65,7 +64,6 @@
     }
 }
 
-// Leaflet popup styling
 ::ng-deep .leaflet-popup-content-wrapper {
     background: #212529 !important;
     border-radius: 0.375rem !important;

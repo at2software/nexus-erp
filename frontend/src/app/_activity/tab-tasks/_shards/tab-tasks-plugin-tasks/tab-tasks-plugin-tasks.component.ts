@@ -4,12 +4,12 @@ import { RouterModule } from '@angular/router';
 import { Nx } from '@app/nx/nx.directive';
 import { NComponent } from '@shards/n/n.component';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 import { Color } from '@constants/Color';
-import { PluginInstance } from '@models/http/plugin.instance';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
-import { Task } from '@models/tasks/task.model';
-import { ITaskPlugin } from '@models/tasks/task.plugin.interface';
+import { PluginInstance } from '@models/http/plugins/plugin.instance';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
+import { Task } from '@models/task/task.model';
+import { ITaskPlugin } from '@models/task/task.plugin.interface';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { TabTasksBaseComponent } from '../tab-tasks-base.component';
 

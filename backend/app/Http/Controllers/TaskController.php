@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Assignment;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class TaskController extends Controller {
@@ -21,14 +22,12 @@ class TaskController extends Controller {
             'parent_id'   => 'nullable|integer',
         ]);
 
-        // Use provided parent or default to project
         if (isset($data['parent_type']) && isset($data['parent_id'])) {
             $task = Task::create($data);
         } else {
             $task = Task::create(array_merge($_->toPoly(), $data));
         }
 
-        // Auto-assign to current user
         Assignment::create([
             'parent_type'   => 'App\\Models\\Task',
             'parent_id'     => $task->id,
@@ -38,13 +37,13 @@ class TaskController extends Controller {
         return $task->load('assignee.assignee');
     }
     public function index(Request $request) {
-        return $request->user()?->unfinishedTasks()->with('parent')->get() ?? [];
+        return $request->user()?->unfinishedTasks()->with('parent', 'assignee.assignee', 'coAssignees.assignee')->get() ?? [];
     }
     public function show(Task $task) {
-        return $task->load('parent');
+        return $task->load('parent', 'assignee.assignee', 'coAssignees.assignee');
     }
     public function indexForProject(Request $request, Project $_) {
-        return $_->unfinishedTasks;
+        return $_->unfinishedTasks()->with('assignee.assignee', 'coAssignees.assignee')->get();
     }
     public function destroy(Request $request, Project $_, Task $task) {
         return $task->delete();
@@ -57,5 +56,20 @@ class TaskController extends Controller {
         $ass              = $_->assignees()->where('user_id', $body->user_id)->firstOrFail();
         $_->assignment_id = $ass->id;
         return $task;
+    }
+    public function addCoAssignee(Request $request, Task $task) {
+        $data = $request->validate(['user_id' => 'required|integer|exists:users,id']);
+
+        return Assignment::create([
+            'parent_type'   => Task::class,
+            'parent_id'     => $task->id,
+            'assignee_type' => User::class,
+            'assignee_id'   => $data['user_id'],
+            'flags'         => Assignment::FLAG_CO_ASSIGNEE,
+        ])->load('assignee');
+    }
+    public function removeCoAssignee(Request $request, Task $task, Assignment $assignment) {
+        abort_unless($assignment->parent_type === Task::class && (int) $assignment->parent_id === (int) $task->id && ($assignment->flags & Assignment::FLAG_CO_ASSIGNEE), 404);
+        $assignment->delete();
     }
 }

@@ -1,7 +1,7 @@
 @let _loading = loading();
 @let _assets = assets();
 @let _categories = categories();
-<div class="row">
+<div class="row" cdkDropListGroup>
     <!-- Categories Sidebar -->
     <div class="col-md-3">
         <div class="card" data-tour="assets-categories">
@@ -12,7 +12,7 @@
                 <div class="list-group list-group-flush">
                     <!-- Category Items -->
                     @for (category of _categories; track category.name) {
-                        <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" [class.active]="selectedCategory === category.name" (click)="filterByCategory(category.name)" tabindex="0" (keydown.enter)="filterByCategory(category.name)">
+                        <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" [class.active]="selectedCategory() === category.name" (click)="filterByCategory(category.name)" tabindex="0" (keydown.enter)="filterByCategory(category.name)" cdkDropList (cdkDropListDropped)="onDropOnCategory($event, category.name)">
                             <div>
                                 <i class="me-2">{{ category.icon }}</i>
                                 <span>{{ category.name }}</span>
@@ -72,27 +72,27 @@
         }
 
         <!-- Category Description RTE -->
-        @if (selectedCategory) {
+        @if (selectedCategory()) {
             <div class="mb-4">
                 <div class="card">
                     <div class="card-header">
-                        <h6 class="mb-0" i18n="@@i18n.marketing.category_description">{{ selectedCategory }} description</h6>
+                        <h6 class="mb-0" i18n="@@i18n.marketing.category_description">{{ selectedCategory() }} description</h6>
                     </div>
                     <div class="card-body">
-                        <text-param-editor [key]="getCategoryParamKey(selectedCategory)" maxHeight="150px"></text-param-editor>
+                        <text-param-editor [key]="getCategoryParamKey(selectedCategory())" maxHeight="150px"></text-param-editor>
                     </div>
                 </div>
             </div>
         }
 
         <!-- Upload Area when category selected -->
-        @if (!_loading && _assets.length > 0 && selectedCategory) {
+        @if (!_loading && _assets.length > 0 && selectedCategory()) {
             <div class="mb-4">
-                <div class="card border-dashed" data-tour="assets-upload" [dnd]="'marketing-assets'" [dndCategory]="selectedCategory" (dndUploaded)="onFilesUploaded()">
+                <div class="card border-dashed" data-tour="assets-upload" [dnd]="'marketing-assets'" [dndCategory]="selectedCategory()" (dndUploaded)="onFilesUploaded()">
                     <div class="card-body text-center py-3">
                         <i class="me-2">cloud_upload</i>
                         <span i18n="@@i18n.marketing.drop_files_to_add"
-                            >drop files here to add to <strong>{{ selectedCategory }}</strong></span
+                            >drop files here to add to <strong>{{ selectedCategory() }}</strong></span
                         >
                     </div>
                 </div>
@@ -101,14 +101,14 @@
 
         <!-- Assets Grid -->
         @if (!_loading && _assets.length > 0) {
-            <div class="row">
+            <div class="row" cdkDropList cdkDropListSortingDisabled [cdkDropListData]="_assets" (cdkDropListDropped)="onDropOnGrid()">
                 @for (asset of _assets; track asset.id) {
-                    <div class="col-sm-6 col-md-4 col-lg-3 mb-4">
+                    <div class="col-sm-6 col-md-4 col-lg-3 mb-4" cdkDrag [cdkDragData]="asset">
                         <div class="card h-100" [nx]="asset">
                             <!-- Asset Preview -->
                             <div class="text-center p-3">
                                 @if (asset.thumbnail || (isImage(asset.mime) && asset.preview_url)) {
-                                    <img [src]="asset.thumbnail || asset.preview_url" [alt]="asset.name" class="card-img-top" style="max-height: 150px; object-fit: cover" />
+                                    <img [src]="asset.thumbnail || asset.preview_url" [alt]="asset.name" class="card-img-top" style="max-height: 150px; object-fit: cover" draggable="false" />
                                 }
                                 @if (!asset.thumbnail && (!isImage(asset.mime) || !asset.preview_url)) {
                                     <i class="material-icons" style="font-size: 4rem; color: #6c757d">{{ getFileIcon(asset.mime) }}</i>
@@ -128,7 +128,7 @@
                                             <span class="badge bg-light text-dark small pointer" (click)="removeTagFromAsset(asset, tag)" tabindex="0" (keydown.enter)="removeTagFromAsset(asset, tag)" [title]="getRemoveTagTitle(tag)">{{ tag }}</span>
                                         }
                                     </div>
-                                    <input type="text" class="form-control form-control-sm" placeholder="Add new tag..." i18n-placeholder="@@i18n.marketing.add_new_tag_placeholder" [ngbTypeahead]="tagTypeahead" (keyup)="onTagInputKeyup($event, asset, tagInput)" (selectItem)="onTagSelected($event, asset)" #tagInput />
+                                    <input type="text" class="form-control form-control-sm" placeholder="Add new tag..." i18n-placeholder="@@i18n.marketing.add_new_tag_placeholder" [ngbTypeahead]="tagTypeahead" (keyup)="onTagInputKeyup($event, asset, tagInput)" (selectItem)="onTagSelected($event, asset, tagInput)" #tagInput />
                                 </div>
                             </div>
                         </div>
@@ -139,7 +139,7 @@
 
         <!-- Empty State with Drag & Drop -->
         @if (!_loading && _assets.length === 0) {
-            <div class="card border-dashed" [dnd]="'marketing-assets'" [dndCategory]="selectedCategory" (dndUploaded)="onFilesUploaded()">
+            <div class="card border-dashed" [dnd]="'marketing-assets'" [dndCategory]="selectedCategory()" (dndUploaded)="onFilesUploaded()">
                 <empty-state [card]="false" class="marketing" i18n-title="@@i18n.marketing.no_assets" title="no assets found">
                     <p class="text-muted small" i18n="@@i18n.marketing.no_assets_description">Drop files here to build your marketing asset library. Supports images, videos, documents and more.</p>
                 </empty-state>

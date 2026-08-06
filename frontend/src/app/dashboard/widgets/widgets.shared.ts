@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { DatePipe, DecimalPipe, NgStyle, PercentPipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { Nx } from '@app/nx/nx.directive';
 import { NComponent } from '@shards/n/n.component';
@@ -19,8 +19,4 @@ import { CompactItemDirective } from '@shards/ul-compact/CompactItemDirective';
 import { UlCompactComponent } from '@shards/ul-compact/ul-compact.component';
 import { RevealListDirective } from '@directives/reveal-list.directive';
 
-/**
- * Shared imports for dashboard widget components. Spread into a standalone
- * component's `imports` array (replaces the former `WidgetsModule`).
- */
-export const WIDGET_SHARED = [Nx, NComponent, AvatarComponent, ProjectComponent, MoneyShortPipe, ProgressBarComponent, CommonModule, WidgetOptionsComponent, MoneyPipe, NgbTooltipModule, EchartsComponent, EchartsCardComponent, EchartsRangeCardComponent, UlCompactComponent, CompactItemDirective, RevealListDirective, RouterModule, LoadingPipe, EmptyStateComponent, NgxEchartsDirective];
+export const WIDGET_SHARED = [Nx, NComponent, AvatarComponent, ProjectComponent, MoneyShortPipe, ProgressBarComponent, DatePipe, DecimalPipe, NgStyle, PercentPipe, WidgetOptionsComponent, MoneyPipe, NgbTooltipModule, EchartsComponent, EchartsCardComponent, EchartsRangeCardComponent, UlCompactComponent, CompactItemDirective, RevealListDirective, RouterModule, LoadingPipe, EmptyStateComponent, NgxEchartsDirective];

@@ -10,13 +10,15 @@
                     <label class="form-label" for="email" i18n="@@i18n.common.email_address">email address</label>
                 </div>
 
-                <!-- Password input -->
                 <div data-mdb-input-init class="form-floating mb-3">
                     <input type="password" id="pass" [(ngModel)]="password" (keyup.enter)="login()" placeholder="" class="form-control" />
                     <label class="form-label" for="pass" i18n="@@i18n.common.password">password</label>
                 </div>
 
-                <!-- Submit button -->
+                @if (failed()) {
+                    <div class="text-danger small mb-3" i18n="@@i18n.common.login_failed">login failed, please check your credentials</div>
+                }
+
                 <button type="button" (click)="login()" [disabled]="!canLogin()" data-mdb-button-init data-mdb-ripple-init class="btn btn-primary btn-block w-100 mb-3" i18n="@@i18n.common.sign_in">sign in</button>
             </div>
         </div>

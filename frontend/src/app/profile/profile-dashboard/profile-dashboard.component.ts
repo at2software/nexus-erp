@@ -6,7 +6,7 @@ import { UserService } from '@models/user/user.service';
 import { ProfileVacationWidgetComponent } from '../widgets/profile-vacation-widget/profile-vacation-widget.component';
 import { ColorPickerDirective } from 'ngx-color-picker';
 import { FormsModule } from '@angular/forms';
-import { LiveSharingService } from '@models/live-sharing.service';
+import { LiveSharingService } from '@models/live/live-sharing.service';
 import { HrWorkloadComponent } from '@app/hr/hr-workload/hr-workload.component';
 import { HrWorkloadHeatmapComponent } from '@app/hr/hr-workload-heatmap/hr-workload-heatmap.component';
 import { RouterModule } from '@angular/router';

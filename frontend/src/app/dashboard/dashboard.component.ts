@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { merge, switchMap, tap } from 'rxjs';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 import { GlobalService } from '@models/global.service';
 import { ConfirmationService } from '@app/_modals/modal-confirm/confirmation.service';
 import { WidgetFactory } from '@dashboard/availableWidgets';
 import { ActivatedRoute } from '@angular/router';
 import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
-import { NxGlobal } from '@app/nx/nx.global';
+import { NxStatic } from '@app/nx/nx.static';
 import { HeaderComponent } from '@app/app/header/header.component';
 import { HeaderLinkItemComponent } from '@app/app/header/header-link-item/header-link-item.component';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
@@ -57,7 +57,7 @@ export class DashboardComponent {
                         this.#route.params.pipe(
                             tap((_) => {
                                 this.currentDashboard.set('dashboard' in _ ? parseInt(_['dashboard']) : 0);
-                                NxGlobal.setTitle(this.global.dashboards[this.currentDashboard()]?.title ?? '');
+                                NxStatic.setTitle(this.global.dashboards[this.currentDashboard()]?.title ?? '');
                             }),
                         ),
                     );
@@ -80,7 +80,7 @@ export class DashboardComponent {
 
     toggleEditing = () => {
         this.is_editing.set(!this.is_editing());
-        NxGlobal.setDashboardEditMode(this.is_editing());
+        NxStatic.setDashboardEditMode(this.is_editing());
     };
 
     onNewDashboard = () =>

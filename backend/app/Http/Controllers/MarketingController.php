@@ -23,7 +23,6 @@ class MarketingController extends Controller {
 
     // ===== Marketing Automation Methods =====
 
-    // Addon Authentication
     public function showUserForAddon(Request $request) {
         $user = $request->user();
         return [

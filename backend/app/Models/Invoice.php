@@ -91,6 +91,13 @@ class Invoice extends BaseModel {
     public static function format($value): string {
         return CurrencyFormatCast::format($value);
     }
+    public static function formatQty($value): string {
+        $value = (float)$value;
+        if (fmod($value, 1) === 0.0) {
+            return number_format($value, 0, ',', '.');
+        }
+        return rtrim(number_format($value, 2, ',', '.'), '0');
+    }
     public function setCancelledAttributes() {
         $this->is_cancelled = true;
         $this->paid_at      = now();
@@ -109,7 +116,6 @@ class Invoice extends BaseModel {
     public function sendReminder() {
         $this->sent = 1;
 
-        // Calculate and set the next remind_at date immediately (before the job runs)
         $projectId       = $this->invoiceItems()->whereNotNull('project_id')->value('project_id');
         $paymentDuration = $projectId
             ? Project::find($projectId)?->param('INVOICE_PAYMENT_DURATION', true)->value
@@ -119,7 +125,6 @@ class Invoice extends BaseModel {
         $this->save();
         SendInvoiceReminderJob::dispatch($this);
 
-        // Reload the reminders relationship to get the newly created reminder
         $this->load('reminders');
         return $this;
     }
@@ -221,11 +226,6 @@ class Invoice extends BaseModel {
         return response($zugferdPdf)->withHeaders(File::headers($filename, 'application/pdf'));
     }
 
-    /**
-     * Render a non-binding draft PDF: same content as the real invoice but with a
-     * "draft" header instead of an invoice number. Nothing is persisted, the invoice
-     * number is not incremented and items are not assigned to any invoice.
-     */
     private static function makeDraftInvoiceFor($items, string $prefix, string $suffix, Company $company, string $documentType, ?Project $project) {
         [$pdf, $filename] = app(InvoicePdfService::class)->generateInvoicePdf(
             $items,

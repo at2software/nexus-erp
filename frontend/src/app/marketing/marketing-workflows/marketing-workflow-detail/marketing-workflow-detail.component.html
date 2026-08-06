@@ -3,7 +3,7 @@
 @if (_workflow) {
     <div class="row">
         <!-- Main Content (col-6) -->
-        <div class="col-6">
+        <div class="col-12 col-md-6">
             <scrollbar class="sticky-side">
                 <div class="card mb-3">
                     <div class="card-header d-flex justify-content-between align-items-center gap-2">
@@ -56,7 +56,7 @@
         </div>
 
         <!-- Activity Detail (col-6) -->
-        <div class="col-6">
+        <div class="col-12 col-md-6">
             <router-outlet></router-outlet>
         </div>
     </div>
@@ -76,38 +76,35 @@
     </div>
     <div class="offcanvas-body">
         <form>
-            <!-- Name -->
             <div class="row mb-3 align-items-center">
-                <label for="activityName" class="col-3 col-form-label">
+                <label for="activityName" class="col-12 col-md-3 col-form-label">
                     <span i18n="@@i18n.common.name">name</span>
                     <span class="notranslate text-danger"> *</span>
                 </label>
-                <div class="col-8">
+                <div class="col-10 col-md-8">
                     <input type="text" class="form-control" id="activityName" [(ngModel)]="newActivity.name" name="name" placeholder="e.g., Send Connection Request" i18n-placeholder="@@i18n.marketing.activity_name_placeholder" />
                 </div>
-                <div class="col-1 text-center">
+                <div class="col-2 col-md-1 text-center">
                     <i class="material-icons text-muted" style="font-size: 1.2rem; cursor: help" ngbTooltip="short name for this activity" i18n-ngbTooltip="@@i18n.marketing.activity_name_description">info</i>
                 </div>
             </div>
 
-            <!-- Day Offset -->
             <div class="row mb-3 align-items-center">
-                <label for="activityDay" class="col-3 col-form-label">
+                <label for="activityDay" class="col-12 col-md-3 col-form-label">
                     <span i18n="@@i18n.marketing.dayOffset">day offset</span>
                     <span class="notranslate text-danger"> *</span>
                 </label>
-                <div class="col-8">
+                <div class="col-10 col-md-8">
                     <input type="number" class="form-control" id="activityDay" [(ngModel)]="newActivity.day_offset" name="dayOffset" min="0" placeholder="0" />
                 </div>
-                <div class="col-1 text-center">
+                <div class="col-2 col-md-1 text-center">
                     <i class="material-icons text-muted" style="font-size: 1.2rem; cursor: help" ngbTooltip="number of days after workflow starts" i18n-ngbTooltip="@@i18n.marketing.day_offset_description">info</i>
                 </div>
             </div>
 
-            <!-- Depends On -->
             <div class="row mb-3 align-items-center">
-                <label for="parentActivity" class="col-3 col-form-label" i18n="@@i18n.marketing.depends_on">depends on</label>
-                <div class="col-8">
+                <label for="parentActivity" class="col-12 col-md-3 col-form-label" i18n="@@i18n.marketing.depends_on">depends on</label>
+                <div class="col-10 col-md-8">
                     <select class="form-select" id="parentActivity" [(ngModel)]="newActivity.parent_activity_id" name="parentActivity">
                         <option [ngValue]="null" i18n="@@i18n.common.none">none</option>
                         @for (activity of _workflow?.marketing_activities; track activity.id) {
@@ -117,34 +114,31 @@
                         }
                     </select>
                 </div>
-                <div class="col-1 text-center">
+                <div class="col-2 col-md-1 text-center">
                     <i class="material-icons text-muted" style="font-size: 1.2rem; cursor: help" ngbTooltip="this activity will be scheduled after the selected dependency" i18n-ngbTooltip="@@i18n.marketing.depends_on_description">info</i>
                 </div>
             </div>
 
-            <!-- Description -->
             <div class="mb-3">
                 <i18n-textarea [(ngModel)]="newActivity.description" name="description" label="description" placeholder="Additional details about this activity" [rows]="4" [showPlaceholderInfo]="true" i18n-placeholder="@@i18n.marketing.additionalDetailsAboutThisActivity"></i18n-textarea>
             </div>
 
-            <!-- Required Activity -->
             <div class="row mb-3 align-items-center">
-                <span class="col-3 col-form-label" i18n="@@i18n.marketing.required_activity">required</span>
-                <div class="col-8">
+                <span class="col-12 col-md-3 col-form-label" i18n="@@i18n.marketing.required_activity">required</span>
+                <div class="col-10 col-md-8">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="activityRequired" [(ngModel)]="newActivity.is_required" name="isRequired" />
                         <label class="form-check-label" for="activityRequired" i18n="@@i18n.marketing.required_activity_check"> this is a required activity </label>
                     </div>
                 </div>
-                <div class="col-1 text-center">
+                <div class="col-2 col-md-1 text-center">
                     <i class="material-icons text-muted" style="font-size: 1.2rem; cursor: help" ngbTooltip="required activities must be completed before moving to next steps" i18n-ngbTooltip="@@i18n.marketing.required_activity_description">info</i>
                 </div>
             </div>
 
-            <!-- Quick Action -->
             <div class="row mb-3 align-items-center">
-                <label for="quickAction" class="col-3 col-form-label" i18n="@@i18n.marketing.quick_action">quick action</label>
-                <div class="col-8">
+                <label for="quickAction" class="col-12 col-md-3 col-form-label" i18n="@@i18n.marketing.quick_action">quick action</label>
+                <div class="col-10 col-md-8">
                     <select class="form-select" id="quickAction" [(ngModel)]="newActivity.quick_action" name="quickAction">
                         <option [ngValue]="null" i18n="@@i18n.common.none">none</option>
                         <option value="EMAIL" i18n="@@i18n.marketing.quick_action_email">send email</option>
@@ -153,7 +147,7 @@
                         <option value="CALL" i18n="@@i18n.marketing.quick_action_call">call</option>
                     </select>
                 </div>
-                <div class="col-1 text-center">
+                <div class="col-2 col-md-1 text-center">
                     <i class="material-icons text-muted" style="font-size: 1.2rem; cursor: help" ngbTooltip="display a quick action button next to this activity on prospect pages" i18n-ngbTooltip="@@i18n.marketing.quick_action_description">info</i>
                 </div>
             </div>

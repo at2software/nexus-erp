@@ -3,7 +3,7 @@
 import { FormsModule } from '@angular/forms';
 import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { Company } from '@models/company/company.model';
-import { VcardRow } from '@models/vcard/VcardRow';
+import { VcardRow } from '@models/vcard/vcard-row';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,

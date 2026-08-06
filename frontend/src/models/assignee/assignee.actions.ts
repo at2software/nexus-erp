@@ -1,13 +1,14 @@
-import { NxAction, NxActionType } from '@app/nx/nx.actions';
+import { NxAction, NxActionType } from '@models/_core/nx.actions';
 import { Assignee, I18N_REMOVE_FROM_TEAM } from './assignee.model';
 import { CompanyContact } from '../company/company-contact.model';
-import { NxGlobal } from '@app/nx/nx.global';
+import { nx } from '@models/_core/nx-bridge';
 import { Project } from '../project/project.model';
 
 export function getAssigneeActions(self: Assignee): NxAction[] {
     return [
         {
             title: $localize`:@@i18n.common.edit:edit`,
+            doubleClick: true,
             action: () => {
                 if (self.isUser()) {
                     self.navigateTo(`/hr/${self.user_id}`);
@@ -20,11 +21,9 @@ export function getAssigneeActions(self: Assignee): NxAction[] {
             title: $localize`:@@i18n.projects.makeProjectManager:make project manager`,
             group: false,
             on: () => self.isUser(),
-            action: () => NxGlobal.service.put(`projects/${self.parent_id}`, { project_manager_id: self.assignee_id }).subscribe(() => {
-                const project = NxGlobal.getCurrentRoot();
+            action: () => nx().service.put(`projects/${self.parent_id}`, { project_manager_id: self.assignee_id }).subscribe(() => {
+                const project = nx().getCurrentRoot();
                 if (project instanceof Project) {
-                    // patch() (not raw field assignment) bumps Serializable#state so signal-based
-                    // template consumers (e.g. tracked(project)) re-render under zoneless CD.
                     project.patch({ project_manager: self.getUser(), project_manager_id: self.assignee_id });
                     project.projectManagerChanged.next();
                 }
@@ -46,7 +45,7 @@ export function getAssigneeActions(self: Assignee): NxAction[] {
             action: () => self.delete(),
             type: NxActionType.Destructive,
             hotkey: 'CTRL+DELETE',
-            on: () => (self.isUser() && self.assignee_id === NxGlobal.global.user?.id) || (NxGlobal.global.user?.hasRole('project_manager') ?? false),
+            on: () => (self.isUser() && self.assignee_id === nx().global.user?.id) || (nx().global.user?.hasRole('project_manager') ?? false),
         },
         {
             title: $localize`:@@i18n.companies.changeRoleTo:change role to...`,

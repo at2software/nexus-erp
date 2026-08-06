@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, effect
 import { Company } from '@models/company/company.model';
 import { Connection } from '@models/company/connection.model';
 import { select, forceSimulation, forceManyBody, forceCenter, forceLink, drag, zoom, zoomIdentity, Simulation, Selection, ZoomBehavior, D3DragEvent, D3ZoomEvent, ForceLink } from 'd3';
-import { NxGlobal } from '@app/nx/nx.global';
+import { GlobalService } from '@models/global.service';
 
 interface NetworkNode {
     id: string;
@@ -48,6 +48,7 @@ export class NetworkChart {
     #panStart = { x: 0, y: 0 };
 
     readonly #el = inject(ElementRef);
+    readonly #global = inject(GlobalService);
 
     constructor() {
         afterNextRender(() => {
@@ -58,7 +59,6 @@ export class NetworkChart {
         });
 
         effect(() => {
-            // read signals to track them
             this.data();
             this.root();
             this.focus();
@@ -200,7 +200,7 @@ export class NetworkChart {
 
         const nodeIdSet = new Set(newNodes.map((n) => n.id));
         const newLinks: NetworkLink[] = [];
-        const meId = NxGlobal.ME_ID ? String(NxGlobal.ME_ID) : null;
+        const meId = this.#global.me_id ? String(this.#global.me_id) : null;
 
         for (const conn of data) {
             if (!conn.company1 || !conn.company2) continue;

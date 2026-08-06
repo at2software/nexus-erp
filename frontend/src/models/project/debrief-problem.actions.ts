@@ -1,8 +1,7 @@
-import { ModalBaseService } from "@app/_modals/modal-base-service";
-import { ModalCombineDebriefItemsComponent } from "@app/_modals/modal-combine-debrief-items/modal-combine-debrief-items.component";
-import { ModalInputComponent } from "@app/_modals/modal-input/modal-input.component";
-import { NxAction, NxActionType } from "@app/nx/nx.actions";
-import { NxGlobal } from "@app/nx/nx.global";
+import { MODAL } from '@models/_core/modal-registry';
+import { ModalInputResult, CombineDebriefItemsResult } from '@models/_core/modal-results';
+import { NxAction, NxActionType } from "@models/_core/nx.actions";
+import { nx } from '@models/_core/nx-bridge';
 import { DebriefProblem } from "./debrief-problem.model";
 import { DebriefService } from "./debrief.service";
 
@@ -11,7 +10,7 @@ export const DebriefProblemsActions = (that: DebriefProblem): NxAction[] => [
             title: $localize`:@@i18n.common.rename:rename`,
             group: false,
             action: (success) => {
-                ModalBaseService.open(ModalInputComponent, { title: $localize`:@@i18n.common.rename:rename`, initialValue: that.title })
+                nx().openModal<ModalInputResult>(MODAL.input, { title: $localize`:@@i18n.common.rename:rename`, initialValue: that.title })
                     .then((result) => {
                         if (result?.text?.trim()) that.update({ title: result.text }).subscribe(() => success?.(undefined));
                     });
@@ -20,17 +19,17 @@ export const DebriefProblemsActions = (that: DebriefProblem): NxAction[] => [
         {
             title: $localize`:@@i18n.common.combine:combine`,
             group: true,
-            on: () => NxGlobal.nxService.selected.length >= 2,
+            on: () => nx().nxService.selected.length >= 2,
             action: (success) => {
-                const items = NxGlobal.nxService.selected.map((s) => s.nx() as DebriefProblem);
+                const items = nx().nxService.selected.map((s) => s.nx() as DebriefProblem);
                 if (items[0] !== that) return;
-                ModalBaseService.open(
-                    ModalCombineDebriefItemsComponent,
+                nx().openModal<CombineDebriefItemsResult>(
+                    MODAL.combineDebriefItems,
                     items.map((i) => ({ id: i.id, title: i.title })),
                 )
                     .then((result) => {
                         if (!result?.title?.trim()) return;
-                        NxGlobal.getService(DebriefService)
+                        nx().getService(DebriefService)
                             .combineProblems(
                                 items[0].id,
                                 items.slice(1).map((i) => i.id),

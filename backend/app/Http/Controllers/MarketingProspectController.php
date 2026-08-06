@@ -118,7 +118,8 @@ class MarketingProspectController extends Controller {
         return MarketingDashboardService::getOverdueActivitiesForAddon(
             $request->user()->id,
             $request->get('lead_source_id'),
-            $request->get('marketing_initiative_id')
+            $request->get('marketing_initiative_id'),
+            $request->boolean('count_only')
         );
     }
     public function updateProspectActivityStatus(Request $request, MarketingProspect $marketingProspect, int $activityId) {

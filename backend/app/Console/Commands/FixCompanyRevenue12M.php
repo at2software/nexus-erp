@@ -21,7 +21,6 @@ class FixCompanyRevenue12M extends Command {
             return 1;
         }
 
-        // All company-level entries, grouped by company
         $companyEntries = FloatParam::where('param_id', $revenueParam->id)
             ->where('parent_type', Company::class)
             ->whereNotNull('parent_id')

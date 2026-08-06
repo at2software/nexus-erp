@@ -3,10 +3,8 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
-    "module": "CommonJS",
-    "moduleResolution": "node",
     "types": [
-      "jest",
+      "vitest/globals",
       "node",
       "@angular/localize"
     ]
@@ -14,6 +12,7 @@
   "include": [
     "src/**/*.spec.ts",
     "src/**/*.d.ts",
-    "setup-jest.ts"
+    "src/polyfills.ts",
+    "src/setup-test.ts"
   ]
 }

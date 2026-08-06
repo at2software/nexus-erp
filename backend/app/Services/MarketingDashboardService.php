@@ -18,7 +18,6 @@ class MarketingDashboardService {
         $heatmapEnd    = now()->addDays(6)->endOfDay();
         $thirtyDaysAgo = now()->subDays(30);
 
-        // 1. Activity schedule heatmap: past 3 days through next 6 days
         $heatmap = MarketingProspectActivity::query()
             ->whereBetween('scheduled_at', [$heatmapStart, $heatmapEnd])
             ->selectRaw("
@@ -31,7 +30,6 @@ class MarketingDashboardService {
             ->orderBy('date')
             ->get();
 
-        // 2. Recent conversions
         $recentConversions = MarketingProspect::with([
             'marketingInitiative:id,name',
             'leadSource:id,name',
@@ -49,7 +47,6 @@ class MarketingDashboardService {
                 'converted_at' => $p->updated_at?->toDateString(),
             ]);
 
-        // 3. Lead source breakdown using LeadSource model
         $leadSources = LeadSource::withCount([
             'marketingProspects as total',
             'marketingProspects as converted' => fn ($q) => $q->where('status', 'converted'),
@@ -57,7 +54,6 @@ class MarketingDashboardService {
             ->orderByDesc('total')
             ->get(['id', 'name']);
 
-        // 4. Prospect aging — active pipeline only
         $aging = MarketingProspect::whereNotIn('status', ['converted', 'disqualified'])
             ->selectRaw('
                 SUM(CASE WHEN DATEDIFF(NOW(), created_at) <= 7             THEN 1 ELSE 0 END) as fresh,
@@ -67,7 +63,6 @@ class MarketingDashboardService {
             ')
             ->first();
 
-        // 5. Team performance over the last 30 days
         $userStats = MarketingProspectActivity::query()
             ->join('marketing_prospects as mp', 'mp.id', '=', 'marketing_prospect_activities.marketing_prospect_id')
             ->select('mp.user_id')
@@ -91,7 +86,6 @@ class MarketingDashboardService {
             'overdue'       => (int)$stat->overdue,
         ])->values();
 
-        // 6. Top initiatives ranked by conversion
         $topInitiatives = MarketingInitiative::withCount([
             'prospects as total_prospects',
             'prospects as converted' => fn ($q) => $q->where('status', 'converted'),
@@ -106,7 +100,6 @@ class MarketingDashboardService {
                 return $i;
             });
 
-        // 7. Workflow effectiveness — completion rate + prospect conversion rate per workflow
         $workflowEffectiveness = MarketingWorkflow::select('id', 'name', 'is_active')
             ->withCount([
                 'prospectActivities as total_activities',
@@ -151,14 +144,14 @@ class MarketingDashboardService {
             'workflow_effectiveness' => $workflowEffectiveness,
         ];
     }
-    public static function getOverdueActivitiesForAddon(int $userId, ?int $leadSourceId, ?int $initiativeId): mixed {
+    public static function getOverdueActivitiesForAddon(int $userId, ?int $leadSourceId, ?int $initiativeId, bool $countOnly = false): mixed {
         $prospectsWithOverdueTasks = DB::table('marketing_prospect_activities as mpa')
             ->join('marketing_prospects as mp', 'mp.id', '=', 'mpa.marketing_prospect_id')
             ->select('mp.id')
             ->where('mp.user_id', $userId)
             ->whereNotIn('mp.status', ['unresponsive', 'disqualified'])
             ->where('mpa.status', 'pending')
-            ->whereDate('mpa.scheduled_at', '<=', today())
+            ->where('mpa.scheduled_at', '<=', today()->endOfDay())
             ->when($leadSourceId, fn ($q) => $q->where('mp.lead_source_id', $leadSourceId))
             ->when($initiativeId, fn ($q) => $q->where('mp.marketing_initiative_id', $initiativeId))
             ->distinct()
@@ -173,6 +166,10 @@ class MarketingDashboardService {
             ->map(fn ($activities) => $activities->sortBy('id')->first()->id)
             ->values();
 
+        if ($countOnly) {
+            return ['count' => $oldestActivityIds->count()];
+        }
+
         $activities = MarketingProspectActivity::with([
             'marketingProspect' => fn ($q) => $q->select(['id', 'vcard', 'notes', 'user_id', 'lead_source_id', 'marketing_initiative_id', 'status', 'created_at', 'company_contact_id'])
                 ->withMax('completedActivities as last_completed_activity', 'completed_at')
@@ -184,7 +181,6 @@ class MarketingDashboardService {
             ->orderBy('scheduled_at')
             ->get();
 
-        // Load ALL other pending tasks for these prospects (for accordion)
         $prospectIds     = $activities->pluck('marketing_prospect_id')->unique();
         $allPendingTasks = MarketingProspectActivity::with([
             'marketingProspect' => fn ($q) => $q->select(['id', 'vcard', 'notes', 'lead_source_id', 'created_at', 'company_contact_id'])
@@ -206,7 +202,6 @@ class MarketingDashboardService {
             $activity->succeeding_tasks = $succeedingTasksMap->get($activity->marketing_prospect_id, collect())->values();
         });
 
-        // Expand i18n descriptions
         $expandI18n = function ($activity) {
             if ($activity->marketingInitiativeActivity && $activity->marketingInitiativeActivity->description === '@@i18n') {
                 $i18nRecords = I18n::where([

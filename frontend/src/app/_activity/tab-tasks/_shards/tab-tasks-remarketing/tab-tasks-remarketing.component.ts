@@ -1,10 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { modelListResource } from '@models/http/model-resource';
 import { Nx } from '@app/nx/nx.directive';
 import { NComponent } from '@shards/n/n.component';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
-import { Company } from '@models/company/company.model';
 import { MarketingService } from '@models/marketing/marketing.service';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { TabTasksBaseComponent } from '../tab-tasks-base.component';
@@ -16,14 +15,12 @@ import { TabTasksBaseComponent } from '../tab-tasks-base.component';
     imports: [Nx, NComponent, AvatarComponent, NgbTooltipModule, DatePipe],
 })
 export class TabTasksRemarketingComponent extends TabTasksBaseComponent {
-    due = signal<Company[]>([]);
-
     #marketing = inject(MarketingService);
 
+    #due = modelListResource(this.ready, () => this.#marketing.getRemarketingDue());
+    due = this.#due.value;
+
     override reload() {
-        this.#marketing
-            .getRemarketingDue()
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe((response) => this.due.set(response));
+        this.#due.reload();
     }
 }

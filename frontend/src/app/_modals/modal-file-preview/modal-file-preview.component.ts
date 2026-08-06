@@ -28,7 +28,9 @@ export class ModalFilePreviewComponent extends ModalBaseComponent<void> implemen
         this.#service.previewBlob(file).subscribe((blob) => this.blobUrl.set(URL.createObjectURL(blob)));
     }
 
-    onSuccess(): void {}
+    onSuccess(): void {
+        // ModalBaseComponent<void> - nothing to return.
+    }
 
     download = () => this.#service.download(this.file()!);
 

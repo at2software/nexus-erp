@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, effect, inject, input, output, signal } from '@angular/core';
 import { Observable, Subscription } from 'rxjs';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { NexusHttp, Page } from '@models/http/http.nexus';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 
@@ -27,7 +27,7 @@ export class ContinuousMarkerComponent<T extends Serializable> {
     #service = inject(NexusHttp);
     #destroyRef = inject(DestroyRef);
 
-    observer = input<Observable<T[]> | undefined>(undefined);
+    observer = input<Observable<Page<T>> | undefined>(undefined);
     dataReceived = output<T[]>();
 
     constructor() {
@@ -51,7 +51,7 @@ export class ContinuousMarkerComponent<T extends Serializable> {
             this.autoloadRemaining.set(false);
             this.#base = undefined;
             this.#observerSub?.unsubscribe();
-            this.#observerSub = obs.subscribe((x) => this.#onResult(x as unknown as Page<T>));
+            this.#observerSub = obs.subscribe((x) => this.#onResult(x));
         });
     }
 
@@ -60,7 +60,7 @@ export class ContinuousMarkerComponent<T extends Serializable> {
         this.autoloadRemaining.set(true);
     }
 
-    #onResult(x: Page<T>) { // see `observer` for the Observable<T[]>-vs-Page<T> note
+    #onResult(x: Page<T>) {
         if (this.#base === undefined) {
             if (x.data.length) this.#base = x.data[0];
         } else {

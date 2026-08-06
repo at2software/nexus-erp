@@ -7,16 +7,12 @@ export class Color extends tinycolor {
     changeHsl = (changes: Partial<tinycolor.ColorFormats.HSLA>): Color => new Color(Object.assign(this.toHsl(), changes));
 
     /**
-     * Returns the best contrasting text color (black or white) for this background color
-     * Uses WCAG luminance calculation to determine optimal contrast
      * @returns Color object representing black (#000000) or white (#ffffff)
      */
     bestBW = (): Color => {
-        // Get the luminance of the current color (0-1 scale)
         const luminance = this.getLuminance();
 
-        // Use WCAG threshold: if luminance > 0.5, use black text, otherwise white text
-        // This provides good contrast for most colors
+        // 0.5 is the WCAG relative-luminance midpoint.
         return luminance > 0.5 ? new Color('#000000') : new Color('#ffffff');
     };
 

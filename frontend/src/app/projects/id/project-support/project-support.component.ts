@@ -1,11 +1,12 @@
 import { CdkTableModule } from '@angular/cdk/table';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, input, linkedSignal, output, signal, viewChild } from '@angular/core';
+import { modelListResource, modelResource } from '@models/http/model-resource';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Nx } from '@app/nx/nx.directive';
 import { NComponent } from '@shards/n/n.component';
 import { StartEnd } from '@constants/constants';
-import { DATESPAN_RANGE } from '@constants/dateSpanRange';
+import { DATESPAN_RANGE } from '@constants/date/dateSpanRange';
 import { AffixInputDirective } from '@directives/affix-input.directive';
 import { Focus } from '@models/focus/focus.model';
 import { FocusService } from '@models/focus/focus.service';
@@ -16,23 +17,25 @@ import { Product } from '@models/product/product.model';
 import { ProductService } from '@models/product/product.service';
 import { Project } from '@models/project/project.model';
 import { Company } from '@models/company/company.model';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { ExtIssueResolverService, ExtIssueRef } from '@models/ext-issue/ext-issue-resolver.service';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { MoneyPipe } from '@pipes/money.pipe';
-import { Dayjs, dayjsMin, dayjsMax } from '@constants/dates';
+import { Dayjs, dayjsMin, dayjsMax } from '@constants/date/dates';
 import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
-import { Subscription } from 'rxjs';
+import { map, Subscription } from 'rxjs';
+import { AvatarComponent } from '@shards/avatar/avatar.component';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'project-support',
-    imports: [CdkTableModule, DatePipe, DecimalPipe, FormsModule, RouterLink, Nx, NComponent, AffixInputDirective, NgbTooltipModule, NgxDaterangepickerMd, EmptyStateComponent, SearchInputComponent, SpinnerComponent, MoneyPipe],
+    imports: [StackedTableDirective, AvatarComponent, CdkTableModule, DatePipe, DecimalPipe, FormsModule, RouterLink, Nx, NComponent, AffixInputDirective, NgbTooltipModule, NgxDaterangepickerMd, EmptyStateComponent, SearchInputComponent, SpinnerComponent, MoneyPipe],
     templateUrl: './project-support.component.html',
     styleUrl: './project-support.component.scss',
 })
@@ -50,15 +53,11 @@ export class ProjectSupportComponent {
     parentReloadRequested = output<void>();
 
     readonly ranges = DATESPAN_RANGE;
-    span: StartEnd = new StartEnd();
-    foci = signal<Focus[]>([]);
-    selectionProduct = signal<Product | undefined>(undefined);
+    span = signal<StartEnd>(new StartEnd());
     selectionSum = signal<string>('0');
     selectionDescription = signal<string>('');
     selection = signal<Focus[]>([]);
-    supportItems = signal<InvoiceItem[]>([]);
 
-    /** Live-resolved external issue links keyed by focus id. Status is fetched, never stored. */
     extIssues = signal<Record<string, ExtIssueRef>>({});
 
     readonly supportItemColumns = ['text', 'net'];
@@ -72,16 +71,38 @@ export class ProjectSupportComponent {
     readonly descField = viewChild<ElementRef>('desc');
     readonly fociSpinner = viewChild<SpinnerComponent>('fociSpinner');
 
-    #allFoci: Focus[] = [];
     #selectionSub: Subscription;
+
+    readonly #parentId = computed(() => this.parent().id);
+
+    readonly #defaultProduct = modelResource(
+        () => (this.parent() instanceof Company ? (this.parent() as Company).default_product_id || undefined : undefined),
+        (productId) => this.#productService.show(productId),
+    );
+    readonly selectionProduct = linkedSignal<Product | undefined>(() => {
+        const parent = this.parent();
+        return parent instanceof Project ? parent.product : this.#defaultProduct.value();
+    });
+
+    readonly #foci = modelListResource(this.#parentId, () => this.#focusService.uninvoicedFoci(this.parent()));
+    readonly allFoci = linkedSignal(this.#foci.value);
+    readonly foci = computed(() => {
+        const span = this.span();
+        if (!span?.startDate || !span?.endDate) return this.allFoci();
+        return this.allFoci().filter((_) => span.startDate!.diff(_.momentStarted(), 'seconds') < 0 && span.endDate!.diff(_.momentStarted(), 'seconds') >= 0);
+    });
+
+    readonly #supportItems = modelListResource(this.#parentId, () =>
+        this.#invoiceItemService.getInvoiceItems(this.parent(), { append: 'my_prediction', with: 'predictions' }).pipe(map((items: InvoiceItem[]) => items.filter((x) => x.stage === 1 && !x.invoice_id))),
+    );
+    readonly supportItems = this.#supportItems.value;
 
     constructor() {
         effect(() => {
-            const p = this.parent();
-            this.#initProduct(p);
-            this.reloadFoci();
-            this.reloadSupportItems();
+            if (this.#foci.isLoading()) this.fociSpinner()?.show();
+            else this.fociSpinner()?.hide();
         });
+        effect(() => this.#extIssueResolver.resolveRows(this.isProject() ? (this.parent() as Project) : undefined, this.allFoci(), this.extIssues));
 
         this.#selectionSub = this.global.onObjectSelected.subscribe((_) => this.#onSelection(_));
         this.#destroyRef.onDestroy(() => {
@@ -90,37 +111,11 @@ export class ProjectSupportComponent {
         });
     }
 
-    #initProduct(project: Project | Company) {
-        if (project instanceof Project && project.product) {
-            this.selectionProduct.set(project.product);
-        } else if (project instanceof Company && (project as Company).default_product_id) {
-            this.#productService.show((project as Company).default_product_id).subscribe((_) => this.selectionProduct.set(_));
-        }
-    }
+    reloadFoci = () => this.#foci.reload();
 
-    reloadFoci() {
-        this.fociSpinner()?.show();
-        this.#allFoci = [];
-        this.foci.set([]);
-        this.#focusService.uninvoicedFoci(this.parent()).subscribe({
-            next: (_) => {
-                this.#allFoci = _;
-                this.#filterFoci();
-                this.#extIssueResolver.resolveRows(this.isProject() ? (this.parent() as Project) : undefined, this.#allFoci, this.extIssues);
-                this.fociSpinner()?.hide();
-            },
-            error: () => this.fociSpinner()?.hide(),
-        });
-    }
+    onFociActionsResolved = () => this.#extIssueResolver.resolveRows(this.isProject() ? (this.parent() as Project) : undefined, this.allFoci(), this.extIssues);
 
-    /** Re-resolves ext-issue links after a row action (e.g. "link external issue") completes. */
-    onFociActionsResolved = () => this.#extIssueResolver.resolveRows(this.isProject() ? (this.parent() as Project) : undefined, this.#allFoci, this.extIssues);
-
-    reloadSupportItems() {
-        this.#invoiceItemService.getInvoiceItems(this.parent(), { append: 'my_prediction', with: 'predictions' }).subscribe((items: InvoiceItem[]) => {
-            this.supportItems.set(items.filter((x) => x.stage === 1 && !x.invoice_id));
-        });
-    }
+    reloadSupportItems = () => this.#supportItems.reload();
 
     #onSelection(_: unknown) {
         setTimeout(() => {
@@ -137,20 +132,6 @@ export class ProjectSupportComponent {
         });
     }
 
-    datesUpdated() {
-        this.#filterFoci();
-    }
-
-    #filterFoci() {
-        if (this.span?.startDate && this.span?.endDate) {
-            const sb = (_: Focus) => this.span.startDate!.diff(_.momentStarted(), 'seconds') < 0;
-            const se = (_: Focus) => this.span.endDate!.diff(_.momentStarted(), 'seconds') >= 0;
-            this.foci.set(this.#allFoci.filter((_) => sb(_) && se(_)));
-        } else {
-            this.foci.set(this.#allFoci);
-        }
-    }
-
     onCreateNewSupportItem() {
         const sel = this.selection();
         let min: Dayjs | undefined = undefined;
@@ -163,7 +144,7 @@ export class ProjectSupportComponent {
         });
         setTimeout(() => {
             this.selection.set([]);
-            this.foci.update((f) => f.filter((_: Focus) => !selectedIds.includes(_.id)));
+            this.allFoci.update((f) => f.filter((_: Focus) => !selectedIds.includes(_.id)));
         });
         const product = this.selectionProduct();
         if (product) {

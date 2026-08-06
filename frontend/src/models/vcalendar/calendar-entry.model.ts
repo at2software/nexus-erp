@@ -1,22 +1,20 @@
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { VCalendarEvent } from './vcalendar-event.model';
-import { VCalendarService } from './vcalendar.service';
 import { map, Observable } from 'rxjs';
-import { NxGlobal } from '@app/nx/nx.global';
-import { NxAction } from '@app/nx/nx.actions';
-import { Model } from '@constants/type-discriminators';
+import { nx } from '@models/_core/nx-bridge';
+import { NxAction } from '@models/_core/nx.actions';
+import { Model } from '@constants/model/type-discriminators';
 
 @Model('CalendarEntry')
 export class CalendarEntry extends Serializable {
     static API_PATH = (): string => 'calendar_entries';
-    SERVICE = VCalendarService;
 
     vcalendar: string = '';
     is_editable: boolean = true;
 
     vcalendar_event: VCalendarEvent = new VCalendarEvent();
 
-    actions: NxAction[] = [NxGlobal.deleteAction(this, 'Do you really want to delete this calendar item?', { on: () => this.is_editable })];
+    protected override buildActions(): NxAction[] { return [nx().deleteAction(this, 'Do you really want to delete this calendar item?', { on: () => this.is_editable })] }
 
     save(): Observable<CalendarEntry> {
         if (this.id) {

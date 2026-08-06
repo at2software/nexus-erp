@@ -22,7 +22,6 @@ trait HasFociTrait {
         });
     }
 
-    // Sum relations for eager loading to prevent N+1
     public function hoursInvestedSum() {
         return $this->hasOne(Focus::class, 'parent_id')
             ->where('parent_type', $this::class)
@@ -60,7 +59,7 @@ trait HasFociTrait {
     }
     protected function uninvoicedHours(): Attribute {
         return Attribute::make(
-            get: fn () => $this->foci_unbilled()->sum('duration')
+            get: fn () => $this->foci_unbilled_sum_duration ?? $this->foci_unbilled()->sum('duration')
         );
     }
     protected function fociSum(): Attribute {
@@ -77,12 +76,10 @@ trait HasFociTrait {
             return response('no items selected', 400);
         }
 
-        // company specific discount applied
         $firstItem = Focus::findOrFail($data->itemIds[0]);
         $company   = $firstItem->rootCompany;
         $discount  = $company->param('INVOICE_DISCOUNT')->value ?? 0;
 
-        // override, if project-based individual wage is set
         $parent = $firstItem->parent;
         if (is_a($parent, Project::class) && $parent->individual_wage !== null) {
             $price    = $parent->individual_wage;
@@ -116,7 +113,6 @@ trait HasFociTrait {
             }
             $newItem->save();
         }
-        // mark foci as converted to invoice
         if ($newItem) {
             Focus::whereIn('id', $data->itemIds)->update(['invoiced_in_item_id' => $newItem->id]);
         }

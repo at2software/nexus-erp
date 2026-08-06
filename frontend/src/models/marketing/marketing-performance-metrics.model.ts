@@ -1,8 +1,7 @@
-import { Serializable } from '../serializable';
-import { MarketingService } from './marketing.service';
-import { NxActionType } from '@app/nx/nx.actions';
-import type { ActivityStats } from '@models/api-response';
-import { Model } from '@constants/type-discriminators';
+import { Serializable } from '@models/_core/serializable';
+import { NxAction, NxActionType } from '@models/_core/nx.actions';
+import type { ActivityStatsDto } from '@models/_core/api-response';
+import { Model } from '@constants/model/type-discriminators';
 
 export type TPivot<K1 extends string, K2 extends string> = {
     created_at?: string;
@@ -12,7 +11,6 @@ export type TPivot<K1 extends string, K2 extends string> = {
 @Model('MarketingPerformanceMetric')
 export class MarketingPerformanceMetric extends Serializable {
     static API_PATH = (): string => 'marketing_performance_metrics';
-    SERVICE = MarketingService;
 
     name!: string;
     description?: string;
@@ -20,38 +18,40 @@ export class MarketingPerformanceMetric extends Serializable {
     target_value?: number;
     current_value?: number;
     progress_percentage?: number;
-    activity_stats?: ActivityStats;
+    activity_stats?: ActivityStatsDto;
     pivot?: TPivot<'marketing_initiative', 'marketing_performance_metric'> & { target_value?: number };
     kpi_icon?: string;
     kpi_color?: string;
     related_metric_id?: string;
 
-    doubleClickAction = 0;
 
-    actions = [
-        {
-            title: $localize`:@@i18n.common.edit:edit`,
-            action: (_: any, nxContext: any) => { nxContext?.openEdit?.(this); },
-            roles: 'marketing',
-        },
-        {
-            title: $localize`:@@i18n.marketing.unlink_from_initiative:unlink from initiative`,
-            group: true,
-            type: NxActionType.Destructive,
-            context: 'initiative_details',
-            action: () => this.httpService.delete(`marketing/initiatives/${this.pivot?.marketing_initiative_id}/metrics/${this.id}`).subscribe(),
-            roles: 'marketing',
-        },
-        {
-            title: $localize`:@@i18n.common.delete:delete`,
-            group: true,
-            type: NxActionType.Destructive,
-            context: '!initiative_details',
-            action: () => this.modalConfirm().then(() => this.httpService.delete(`marketing/metrics/${this.id}`).subscribe()),
-            hotkey: 'DEL',
-            roles: 'marketing',
-        },
-    ];
+    protected override buildActions(): NxAction[] {
+        return [
+            {
+                title: $localize`:@@i18n.common.edit:edit`,
+                doubleClick: true,
+                action: (_: any, nxContext: any) => { nxContext?.openEdit?.(this); },
+                roles: 'marketing',
+            },
+            {
+                title: $localize`:@@i18n.marketing.unlink_from_initiative:unlink from initiative`,
+                group: true,
+                type: NxActionType.Destructive,
+                context: 'initiative_details',
+                action: () => this.httpService.delete(`marketing/initiatives/${this.pivot?.marketing_initiative_id}/metrics/${this.id}`).subscribe(),
+                roles: 'marketing',
+            },
+            {
+                title: $localize`:@@i18n.common.delete:delete`,
+                group: true,
+                type: NxActionType.Destructive,
+                context: '!initiative_details',
+                action: () => this.modalConfirm().then(() => this.httpService.delete(`marketing/metrics/${this.id}`).subscribe()),
+                hotkey: 'DEL',
+                roles: 'marketing',
+            },
+        ];
+    }
 
     getIcon(): string {
         if (this.kpi_icon) return this.kpi_icon;

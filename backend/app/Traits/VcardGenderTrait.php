@@ -17,12 +17,10 @@ trait VcardGenderTrait {
         return null;
     }
     public function getGenderAttribute(): ?string {
-        // First, check if GENDER field is explicitly set
         if ($g = $this->vcard->getFirstValue('GENDER')) {
             return $g;
         }
 
-        // Try to get first name from N field: [Family, Given, Middle, Prefix, Suffix]
         if ($n = $this->vcard->getFirstAttr('N')) {
             $firstName = $n[1] ?? null; // Given name is at index 1
             if ($firstName) {
@@ -30,10 +28,7 @@ trait VcardGenderTrait {
             }
         }
 
-        // Fallback to FN (formatted name) field
         if ($fn = $this->vcard->getFirstValue('FN')) {
-            // Try to extract first name from formatted name
-            // Assuming format like "John Smith" or "John"
             $parts = explode(' ', trim($fn));
             if (count($parts) > 0 && ! empty($parts[0])) {
                 return self::findGenderInDatabase($parts[0]);

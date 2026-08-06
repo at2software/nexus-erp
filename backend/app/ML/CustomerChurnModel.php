@@ -35,19 +35,11 @@ use Rubix\ML\Transformers\ZScaleStandardizer;
 class CustomerChurnModel {
     private const MODEL_PATH = 'ml/customer_churn.rbx';
 
-    /** Naive baseline: a customer silent for more than this many days is called "churned". */
     public const BASELINE_RECENCY_DAYS = 365;
 
-    /** The positive (minority) class label. */
     public const CHURNED = 1;
 
     /**
-     * The churned class is a ~11% minority, so the classifiers are configured for
-     * imbalance where they support it: RandomForest with balanced bootstrap sampling,
-     * GaussianNB with uniform (0.5/0.5) priors instead of the empirical 0.11/0.89.
-     * Untunable-for-imbalance learners (KNN, plain tree) are kept for comparison and
-     * to confirm they collapse to the majority class (they do — see the plan doc).
-     *
      * @return array<string, callable(): Learner>
      */
     public static function candidates(): array {
@@ -81,7 +73,6 @@ class CustomerChurnModel {
         ];
     }
 
-    /** Rubix classifier labels must be strings. */
     public static function label(array $row): string {
         return (string)$row[CustomerChurnDataset::LABEL];
     }
@@ -161,9 +152,6 @@ class CustomerChurnModel {
     }
 
     /**
-     * Accuracy / F1 / MCC plus manually-computed precision & recall for the
-     * churned (positive) class — the imbalance-relevant numbers.
-     *
      * @param string[] $predictions
      * @param string[] $actual
      * @return array<string, float>
@@ -184,10 +172,6 @@ class CustomerChurnModel {
         }
         $precision = ($tp + $fp) > 0 ? $tp / ($tp + $fp) : 0.0;
         $recall    = ($tp + $fn) > 0 ? $tp / ($tp + $fn) : 0.0;
-        // Positive-class (churned) F1 — the right headline for imbalanced churn, and the
-        // metric used for model selection. Rubix's FBeta is macro-averaged over BOTH
-        // classes (dominated by the 89% "retained" majority), so it's reported alongside
-        // as 'macro_f1' for reference but not used to pick the winner.
         $f1 = ($precision + $recall) > 0 ? 2 * $precision * $recall / ($precision + $recall) : 0.0;
 
         return [
@@ -200,7 +184,6 @@ class CustomerChurnModel {
         ];
     }
 
-    /** Train the given estimator on the full dataset and persist it to disk. */
     public static function train(array $rows, Learner $estimator): PersistentModel {
         $samples = array_map(fn ($row) => self::toSample($row), $rows);
         $labels  = array_map(fn ($row) => self::label($row), $rows);
@@ -225,11 +208,6 @@ class CustomerChurnModel {
         return PersistentModel::load(new Filesystem($path));
     }
 
-    /**
-     * Predicted probability [0,1] that the company will churn (make no purchase
-     * in the next 12 months), from features known today (today as the cutoff).
-     * Null if no trained model, or not enough purchase history to compute features.
-     */
     public static function predict(Company $company): ?float {
         $model = self::load();
         if (! $model) {
@@ -245,7 +223,6 @@ class CustomerChurnModel {
         $row    = CustomerChurnDataset::extractRow($company, $purchases, now());
         $sample = self::toSample($row);
 
-        // PersistentModel wraps the Pipeline (Probabilistic), so proba() is always available.
         $proba = $model->proba(Unlabeled::build([$sample]))[0];
         return (float)($proba[(string)self::CHURNED] ?? 0.0);
     }

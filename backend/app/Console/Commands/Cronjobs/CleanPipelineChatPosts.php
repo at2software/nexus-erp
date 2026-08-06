@@ -74,7 +74,6 @@ class CleanPipelineChatPosts extends Command {
 
             $page++;
 
-            // Stop if the oldest post on this page predates the window — everything further back was already cleaned
             $oldestOnPage = min(array_map(fn ($id) => $posts[$id]['create_at'] ?? PHP_INT_MAX, $order));
             if ($oldestOnPage < $windowMs) {
                 break;

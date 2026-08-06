@@ -1,4 +1,4 @@
-import { ElementRef, Injectable } from '@angular/core';
+import { ElementRef, Service } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { storageGet, storageSet } from '@constants/storage';
 
@@ -6,23 +6,7 @@ export interface GuidedSlide {
     id: string;
     title?: string;
     content: string;
-    /**
-     * CSS selector for the element to highlight.
-     * Alternative to focusElement — use when you don't have a template ref.
-     */
     focusSelector?: string;
-    /**
-     * Element to highlight — accepts either:
-     * - A template variable `#ref` on a plain HTML element (passes native HTMLElement)
-     * - An Angular `ElementRef` from @ViewChild
-     *
-     * Preferred over focusSelector: TypeScript will give a compile error when the
-     * referenced template variable is removed, making deprecated slides easy to spot.
-     *
-     * HTML usage:
-     *   <li #dashboardNav>...</li>
-     *   <guided-tour [focusElement]="dashboardNav" ...></guided-tour>
-     */
     focusElement?: HTMLElement | ElementRef;
 }
 
@@ -33,7 +17,7 @@ interface InternalSlide extends GuidedSlide {
 const SEEN_KEY = 'nexus_guide_seen';
 const DISABLED_KEY = 'nexus_guide_disabled';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class GuidedTourService {
     #seenIds = new Set<string>();
     #disabled = false;
@@ -67,7 +51,6 @@ export class GuidedTourService {
         this.sessionTotal$.next(this.#sessionTotal);
         this.queueLength$.next(this.#queue.length);
 
-        // If nothing showing yet, show first slide
         if (!this.currentSlide$.value) {
             this.#showCurrent();
         }
@@ -100,8 +83,6 @@ export class GuidedTourService {
 
     #showCurrent(): void {
         if (!this.#queue.length) return;
-        // Update queueLength$ BEFORE currentSlide$ so the overlay reads the correct
-        // dot count when its currentSlide$ subscription fires synchronously.
         this.queueLength$.next(this.#queue.length);
         this.currentSlide$.next(this.#queue[0]);
     }

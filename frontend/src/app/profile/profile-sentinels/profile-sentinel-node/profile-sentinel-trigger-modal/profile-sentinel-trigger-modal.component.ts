@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { NgbActiveModal, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
-import { Sentinel } from '@models/sentinels/sentinel.model';
+import { Sentinel } from '@models/sentinel/sentinel.model';
 import { ObserverTrigger } from '@enums/observer-trigger';
 import { GlobalService } from '@models/global.service';
-import type { TableSchema } from '@models/api-response';
+import type { TableSchemaDto } from '@models/_core/api-response';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -25,7 +25,7 @@ export class ProfileSentinelTriggerModalComponent extends ModalBaseComponent<boo
         .filter((key) => !isNaN(Number(ObserverTrigger[key as any])))
         .map((key) => ({ label: key, value: ObserverTrigger[key as keyof typeof ObserverTrigger] as number }))
         .filter((opt) => ![ObserverTrigger.Always, ObserverTrigger.Once].includes(opt.value));
-    tables: TableSchema[] = [];
+    tables: TableSchemaDto[] = [];
     allowedTimes = ['00:00', '08:00', '12:00', '17:00'];
 
     init(sentinel: Sentinel): void {
@@ -37,7 +37,6 @@ export class ProfileSentinelTriggerModalComponent extends ModalBaseComponent<boo
     #hasReadAccess(tableName: string): boolean {
         if (this.#isExcludedTable(tableName)) return false;
         if (this.#isPivotTable(tableName)) return true;
-        // Admin has access to all tables
         return this.#global.user?.hasRole('admin') ?? false;
     }
 

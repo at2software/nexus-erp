@@ -13,15 +13,12 @@ class CleanThumbnailsCommand extends Command {
     public function handle() {
         $this->info('Cleaning thumbnail cache...');
 
-        // Get all thumbnail files
         $thumbnailFiles = Storage::files('thumbnails');
         $this->info('Found '.count($thumbnailFiles).' thumbnail files');
 
-        // Get all file IDs that should have thumbnails
         $fileIds            = File::whereNotNull('mime')->pluck('id')->toArray();
         $expectedThumbnails = array_map(fn ($id) => "thumbnails/{$id}.webp", $fileIds);
 
-        // Find orphaned thumbnails (thumbnails without corresponding files)
         $orphanedThumbnails = array_diff($thumbnailFiles, $expectedThumbnails);
 
         if (count($orphanedThumbnails) > 0) {
@@ -38,7 +35,6 @@ class CleanThumbnailsCommand extends Command {
             $this->info('No orphaned thumbnails found');
         }
 
-        // Find missing thumbnails (files that should have thumbnails but don't)
         $missingThumbnails = array_diff($expectedThumbnails, $thumbnailFiles);
 
         if (count($missingThumbnails) > 0) {
@@ -49,13 +45,11 @@ class CleanThumbnailsCommand extends Command {
                 $progressBar->start();
 
                 foreach ($missingThumbnails as $missingThumbnail) {
-                    // Extract file ID from thumbnail path
                     $fileId = basename($missingThumbnail, '.webp');
                     $file   = File::find($fileId);
 
                     if ($file) {
                         try {
-                            // Trigger thumbnail generation by accessing the attribute
                             $thumbnail = $file->thumbnail;
 
                             if ($thumbnail) {

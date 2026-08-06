@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('apikey:X-Auth-Token,'.config('app.team_monitor_api_key'))->get('/team-monitor', [TeamMonitorController::class, 'index']);
 Route::get('/', fn () => view('welcome'));
 
-// API-friendly login route to prevent RouteNotFoundException
 Route::get('/login', function () {
     if (request()->expectsJson()) {
         return response()->json(['message' => 'Unauthenticated.'], 401);

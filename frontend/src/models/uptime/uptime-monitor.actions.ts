@@ -1,4 +1,4 @@
-import { NxActionType } from '@app/nx/nx.actions';
+import { NxActionType } from '@models/_core/nx.actions';
 import { UptimeMonitor } from './uptime-monitor.model';
 
 export const getUptimeMonitorActions = (self: UptimeMonitor) => [

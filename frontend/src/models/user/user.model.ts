@@ -1,20 +1,20 @@
-import { UserService } from '@models/user/user.service';
-import { VcardClass } from '../vcard/VcardClass';
-import { environment } from 'src/environments/environment';
+import { VcardClass } from '../vcard/vcard-class.model';
+import { environment } from '@environments/environment';
 import { Vacation } from '../vacation/vacation.model';
 import { UserEmployment } from './user-employment.model';
 import { Encryption } from '../encryption/encryption.model';
 import * as forge from 'node-forge';
-import { NxAction } from '@app/nx/nx.actions';
+import { NxAction } from '@models/_core/nx.actions';
 import { ReplaySubject } from 'rxjs';
-import { Type } from 'class-transformer';
+import { Type } from '@models/_core/hydrate';
 import { Company } from '@models/company/company.model';
 import { Project } from '@models/project/project.model';
 import { getUserActions } from './user.actions';
-import { Model, TypeFromClass } from '@constants/type-discriminators';
-import { IHasFoci } from '@models/focus/hasFoci.interface';
+import { Model, TypeFromClass } from '@constants/model/type-discriminators';
+import { IHasFoci } from '@models/focus/has-foci.interface';
 import { computed } from '@angular/core';
 import { storageGet, storageSet, storageRemove } from '@constants/storage';
+import { nx } from '@models/_core/nx-bridge';
 
 @Model('User')
 export class User extends VcardClass {
@@ -22,9 +22,8 @@ export class User extends VcardClass {
     static iconPathFor = (user_id: string) => environment.envApi + `users/${user_id}/icon`;
     static COOKIE_ENC_KEY = 'ENC_PEM';
     
-    protected override computedIcon = computed(() => environment.envApi + `users/${this.id}/icon`);
-
-    SERVICE = UserService;
+    override readonly getAvatar = computed(() => { this.snapshot(); return environment.envApi + `users/${this.id}/icon`; });
+    override frontendUrl = (): string | undefined => (nx().global.user?.hasAnyRole(['hr', 'project_manager']) ? `/hr/${this.id}` : undefined);
 
     readonly #encryptionInitialized = new ReplaySubject<boolean>(1);
     readonly encryptionInitialized = this.#encryptionInitialized.asObservable();
@@ -51,11 +50,11 @@ export class User extends VcardClass {
     @TypeFromClass() current_focus?: Company | Project | undefined;
     @TypeFromClass() active_projects!: IHasFoci[];
 
-    actions: NxAction[] = getUserActions(this);
+    protected override buildActions(): NxAction[] { return getUserActions(this) }
 
     css = computed(() => this.snapshot().color);
 
-    avatar = () => this.icon;
+    avatar = () => this.getAvatar();
 
     getHpwArray = () => this.active_employment?.hpwArray() ?? [0, 0, 0, 0, 0, 0, 0];
     getHpwWithKeys = () => Object.assign({}, ...['mo', 'tu', 'we', 'th', 'fr', 'sa', 'su'].map((_: string, i: number) => ({ [_]: this.getHpwArray()[i] })));
@@ -64,7 +63,6 @@ export class User extends VcardClass {
     getAverageHpd = () => this.getHpw() / this.getWorkingDaysAmount();
 
     hasRole = (roleName: string): boolean => {
-        // Admin has all permissions
         if (roleName !== 'admin' && this.role_names.includes('admin')) {
             return true;
         }
@@ -72,14 +70,12 @@ export class User extends VcardClass {
     };
 
     hasAnyRole = (roles: string[]): boolean => {
-        // Admin has all permissions
         if (this.role_names.includes('admin')) {
             return true;
         }
         return roles.some((role) => this.role_names.includes(role));
     };
 
-    // encryption
     initRsaEncryption() {
         const pem = storageGet<string>(User.COOKIE_ENC_KEY, '');
         if (pem && pem.length) {
@@ -124,7 +120,6 @@ export class User extends VcardClass {
             const enc = Encryption.fromJson();
             enc.key = key;
             enc.value = this.keyPair.publicKey.encrypt(value);
-            //enc.path = this.apiPathWithId()
             enc.store().subscribe();
         }
     }

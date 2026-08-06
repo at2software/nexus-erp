@@ -7,7 +7,7 @@ import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { REPEATING_TYPES } from '@enums/invoice-item.type';
 import { Invoice } from '@models/invoice/invoice.model';
-import { BillingConsideration } from '@models/api-response';
+import { BillingConsiderationDto } from '@models/_core/api-response';
 import { InvoicePrepareWrapper } from '@app/invoices/_shards/invoice-prepare-wrapper/invoice-prepare-wrapper';
 import { NComponent } from '@shards/n/n.component';
 import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
@@ -25,7 +25,7 @@ export class CustomerBillingComponent {
 
     readonly invoiceNumber = Invoice.formattedInvoiceNumber();
     company = tracked(this.#parent.object);
-    backendConsiderations = computed<BillingConsideration[]>(() => this.company().billing_considerations || []);
+    backendConsiderations = computed<BillingConsiderationDto[]>(() => this.company().billing_considerations || []);
     invoicingContent = viewChild.required(InvoicePrepareWrapper);
 
     hasInactiveRepeatingItems = computed(() => {
@@ -40,7 +40,6 @@ export class CustomerBillingComponent {
         this.#companyService.makeInvoice(
             this.company(),
             () => {
-                // A draft is just a downloaded preview — no invoice is created to navigate to.
                 if (draft) return;
                 this.#router.navigate(['customers/' + this.company().id + '/invoices/prepare']);
             },

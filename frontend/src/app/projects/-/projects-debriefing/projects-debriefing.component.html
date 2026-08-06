@@ -12,7 +12,7 @@
 <toolbar>
     <div class="hstack gap-2">
         <span class="badge text-muted daterange-badge">
-            <input type="text" ngxDaterangepickerMd [(ngModel)]="period" [alwaysShowCalendars]="true" (datesUpdated)="onDateRangeChanged()" [showCustomRangeLabel]="true" [ranges]="ranges" [showClearButton]="true" [locale]="{ applyLabel: 'ok', format: 'DD.MM.YYYY' }" placeholder="select date range" i18n-placeholder="@@i18n.common.selectDateRange" />
+            <input type="text" ngxDaterangepickerMd [ngModel]="period()" (ngModelChange)="period.set($event)" [alwaysShowCalendars]="true"[showCustomRangeLabel]="true" [ranges]="ranges" [showClearButton]="true" [locale]="{ applyLabel: 'ok', format: 'DD.MM.YYYY' }" placeholder="select date range" i18n-placeholder="@@i18n.common.selectDateRange" />
         </span>
 
         <div ngbDropdown>
@@ -56,7 +56,7 @@
 @if (!_loading) {
     <!-- Row 1: Radar charts + Top 5 lists -->
     <div class="row">
-        <div class="col-3 mb-3">
+        <div class="col-12 col-md-6 col-xl-3 mb-3">
             <div class="card h-100">
                 <div class="card-header" i18n="@@i18n.debrief.problemDistribution">problem distribution</div>
                 <div class="card-body">
@@ -65,7 +65,7 @@
             </div>
         </div>
 
-        <div class="col-3 mb-3">
+        <div class="col-12 col-md-6 col-xl-3 mb-3">
             <div class="card h-100">
                 <div class="card-header" i18n="@@i18n.debrief.worstCustomers">worst customers</div>
                 <ul class="list-group list-group-flush">
@@ -83,7 +83,7 @@
             </div>
         </div>
 
-        <div class="col-3 mb-3">
+        <div class="col-12 col-md-6 col-xl-3 mb-3">
             <div class="card h-100">
                 <div class="card-header" i18n="@@i18n.debrief.topCustomers">top customers</div>
                 <ul class="list-group list-group-flush">
@@ -101,7 +101,7 @@
             </div>
         </div>
 
-        <div class="col-3 mb-3">
+        <div class="col-12 col-md-6 col-xl-3 mb-3">
             @if (_stats) {
                 <div class="card h-100">
                     <div class="card-header" i18n="@@i18n.common.summary">summary</div>
@@ -130,7 +130,7 @@
 
     <!-- Row 2: All problems / All positives for current category -->
     <div class="row">
-        <div class="col-6 mb-3">
+        <div class="col-12 col-md-6 mb-3">
             <div class="card">
                 <div class="card-header" i18n="@@i18n.debrief.problems">problems</div>
                 <ul class="list-group list-group-flush">
@@ -166,7 +166,7 @@
             </div>
         </div>
 
-        <div class="col-6 mb-3">
+        <div class="col-12 col-md-6 mb-3">
             <div class="card">
                 <div class="card-header" i18n="@@i18n.debrief.positives">positives</div>
                 <ul class="list-group list-group-flush">

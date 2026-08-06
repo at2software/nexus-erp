@@ -1,4 +1,4 @@
-import { NxAction } from '@app/nx/nx.actions';
+import { NxAction } from '@models/_core/nx.actions';
 import { User } from './user.model';
 
 export function getUserActions(self: User): NxAction[] {
@@ -6,11 +6,9 @@ export function getUserActions(self: User): NxAction[] {
         {
             title: $localize`:@@i18n.marketing.unsubscribe_from_initiative:unsubscribe from initiative`,
             context: 'initiative_subscriber',
-            action: () => {
-                const context = (self as any).__nxContext;
-                if (context?.component && context?.initiative) {
-                    context.component.unsubscribeFromInitiative(self.id);
-                }
+            action: (_success?: (v: unknown) => void, nxContext?: unknown) => {
+                const context = nxContext as { component?: { unsubscribeFromInitiative(id: string): void }; initiative?: unknown } | undefined;
+                if (context?.component && context.initiative) context.component.unsubscribeFromInitiative(self.id);
             },
         },
         { title: $localize`:@@i18n.common.retire:retire`, on: () => !self.is_retired, context: '!initiative_subscriber', action: () => self.update({ is_retired: true }).subscribe(), roles: 'hr' },
@@ -19,7 +17,7 @@ export function getUserActions(self: User): NxAction[] {
             group: true,
             context: '!initiative_subscriber',
             on: () => self.getLinkableRootInstances().length > 0,
-            children: () => self.getLinkableRootInstances().map((inst: any) => ({
+            children: () => self.getLinkableRootInstances().map((inst) => ({
                 title: `link to ${inst.icon()} user`,
                 action: () => self.linkToPlugin(inst),
             })),

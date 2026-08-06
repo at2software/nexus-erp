@@ -1,16 +1,16 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, effect, inject, linkedSignal, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { map } from 'rxjs';
 import { MarketingService } from '@models/marketing/marketing.service';
-import { MarketingInitiative } from '@models/marketing/marketing-initiative.model';
 import { MarketingPerformanceMetric } from '@models/marketing/marketing-performance-metrics.model';
 import { MarketingWorkflow } from '@models/marketing/marketing-workflow.model';
 import { MarketingActivity } from '@models/marketing/marketing-activity.model';
-import { LeadSource } from '@models/project/lead_source.model';
-import { NxGlobal } from '@app/nx/nx.global';
+import { modelListResource, modelResource } from '@models/http/model-resource';
+import { LeadSource } from '@models/project/lead-source.model';
+import { GlobalService } from '@models/global.service';
 import { Nx } from '@app/nx/nx.directive';
 import { AvatarComponent } from '@app/_shards/avatar/avatar.component';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
@@ -21,7 +21,7 @@ import { ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
 import { ActivityTableComponent } from '@app/marketing/shared/activity-table/activity-table.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import type { EChartsOption } from 'echarts';
-import { ActivityStatsMap, InitiativeTimelineEntry } from '@models/api-response';
+import { ActivityStatsMapDto, InitiativeTimelineEntryDto } from '@models/_core/api-response';
 
 const ActivityStatsColors = MarketingActivity.STATS_COLORS;
 
@@ -36,105 +36,74 @@ export class MarketingInitiativeDetailComponent {
     #route = inject(ActivatedRoute);
     #router = inject(Router);
     #marketingService = inject(MarketingService);
+    #global = inject(GlobalService);
     #cd = inject(ChangeDetectorRef);
 
     readonly STATS_COLORS = ActivityStatsColors;
 
-    initiative = signal<MarketingInitiative | undefined>(undefined);
-    isLoading = signal(true);
-    chartOptions = signal<EChartsOption | null>(null);
-    donutChartOptions = signal<EChartsOption | null>(null);
+    #initiativeId = toSignal(this.#route.params.pipe(map((params) => params['id'] as string | undefined)));
+    #initiative = modelResource(this.#initiativeId, (id) => this.#marketingService.showInitiative(id));
+    #stats = modelResource(this.#initiativeId, (id) => this.#marketingService.showInitiativeStats(id));
 
-    readonly isSubscribed = computed(() => this.initiative()?.users?.some((u) => u.id === NxGlobal.global.user?.id) ?? false);
+    initiative = linkedSignal(() => this.#initiative.value());
+    isLoading = this.#initiative.isLoading;
+    chartOptions = computed(() => this.#charts()?.line ?? null);
+    donutChartOptions = computed(() => this.#charts()?.donut ?? null);
 
-    // Channel assignment
+    readonly isSubscribed = computed(() => this.initiative()?.users?.some((u) => u.id === this.#global.user?.id) ?? false);
+
     showChannelModal = signal(false);
     selectedChannelId: string = '';
     isPrimaryChannel = signal(false);
     availableLeadSources: LeadSource[] = [];
 
-    // Workflow selection
     showWorkflowModal = signal(false);
-    availableWorkflows = signal<MarketingWorkflow[]>([]);
+    availableWorkflows = modelListResource(() => this.#marketingService.indexWorkflows()).value;
     selectedWorkflowId: string = '';
 
-    // Metric selection
     showMetricModal = signal(false);
-    availableMetrics = signal<MarketingPerformanceMetric[]>([]);
+    availableMetrics = modelListResource(() => this.#marketingService.indexMetrics()).value;
     selectedMetricId: string = '';
     metricTargetValue?: number;
 
 
     constructor() {
-        this.loadLeadSources();
-        this.loadWorkflows();
-        this.loadMetrics();
-        this.#route.params.subscribe((params) => {
-            if (params['id']) {
-                this.loadInitiative(params['id']);
-            }
-        });
+        this.availableLeadSources = this.#global.lead_sources();
+
         this.#marketingService.initiativeActivitySaved$
             .pipe(takeUntilDestroyed())
             .subscribe((initiativeId) => {
-                if (String(this.#route.snapshot.params['id']) === initiativeId) {
-                    this.loadInitiative(initiativeId);
-                }
+                if (String(this.#initiativeId()) === initiativeId) this.loadInitiative();
             });
-    }
 
-    loadLeadSources() {
-        this.availableLeadSources = NxGlobal.global.lead_sources();
-    }
+        effect(() => {
+            const first = this.initiative()?.initiative_activities?.[0];
+            if (first && !this.#route.firstChild) this.#router.navigate(['activity', first.id], { relativeTo: this.#route });
+        });
 
-    loadWorkflows() {
-        this.#marketingService.indexWorkflows().subscribe((workflows: MarketingWorkflow[]) => {
-            this.availableWorkflows.set(workflows);
+        effect(() => {
+            const stats = this.#stats.value();
+            const loaded = this.#initiative.value();
+            const actStats = stats?.activities ?? stats?.activity_stats ?? stats?.initiative_activities ?? stats?.per_activity;
+            if (actStats && loaded?.initiative_activities) untracked(() => this.#applyActivityStats(actStats));
         });
     }
 
-    loadMetrics() {
-        this.#marketingService.indexMetrics().subscribe((metrics: MarketingPerformanceMetric[]) => {
-            this.availableMetrics.set(metrics);
-        });
+    loadInitiative() {
+        this.#initiative.reload();
+        this.#stats.reload();
     }
 
-    loadInitiative(id: string) {
-        this.isLoading.set(true);
-        this.#marketingService.showInitiative(id).subscribe({
-            next: (initiative: MarketingInitiative) => {
-                this.initiative.set(initiative);
-                this.isLoading.set(false);
-                this.#loadInitiativeStats(id);
-                if (!this.#route.firstChild && initiative.initiative_activities?.length) {
-                    this.#router.navigate(['activity', initiative.initiative_activities[0].id], { relativeTo: this.#route });
-                }
-            },
-            error: () => this.isLoading.set(false),
-        });
-    }
+    readonly #charts = computed(() => {
+        const timeline = this.#stats.value()?.timeline;
+        return timeline?.length ? this.#buildCharts(timeline) : null;
+    });
 
-    #loadInitiativeStats(id: string) {
-        this.#marketingService.showInitiativeStats(id).subscribe((stats) => {
-            this.#buildChart(stats.timeline);
-            const actStats = stats.activities ?? stats.activity_stats ?? stats.initiative_activities ?? stats.per_activity;
-            if (actStats && this.initiative()?.initiative_activities) {
-                this.#applyActivityStats(actStats);
-            }
-        });
-    }
-
-    #buildChart(timeline: InitiativeTimelineEntry[]) {
-        if (!timeline || timeline.length === 0) {
-            this.chartOptions.set(null);
-            this.donutChartOptions.set(null);
-            return;
-        }
-
+    #buildCharts(timeline: InitiativeTimelineEntryDto[]): { line: EChartsOption; donut: EChartsOption } {
         const primaryColor = '#00c9a7';
         const totalData = timeline.map((t) => [t.timestamp, (t.new || 0) + (t.engaged || 0) + (t.unresponsive || 0) + (t.converted || 0)]);
 
-        this.chartOptions.set({
+        const line: EChartsOption = {
             chart: { height: 90 },
             backgroundColor: 'transparent',
             animation: false,
@@ -169,7 +138,7 @@ export class MarketingInitiativeDetailComponent {
                     },
                 },
             ],
-        });
+        };
 
         const latest = timeline[timeline.length - 1];
         const totalNew = latest.new || 0;
@@ -178,7 +147,7 @@ export class MarketingInitiativeDetailComponent {
         const totalConverted = latest.converted || 0;
         const total = totalNew + totalEngaged + totalUnresponsive + totalConverted;
 
-        this.donutChartOptions.set({
+        const donut: EChartsOption = {
             chart: { height: 100, width: 100 },
             backgroundColor: 'transparent',
             animation: false,
@@ -199,10 +168,12 @@ export class MarketingInitiativeDetailComponent {
                     label: { show: false },
                 },
             ],
-        });
+        };
+
+        return { line, donut };
     }
 
-    #applyActivityStats(activityStats: ActivityStatsMap) {
+    #applyActivityStats(activityStats: ActivityStatsMapDto) {
         const initiative = this.initiative()!;
         for (const activity of initiative.initiative_activities!) {
             const s = Array.isArray(activityStats) ? activityStats.find((a) => String(a.id) === String(activity.id)) : activityStats[activity.id];
@@ -215,23 +186,23 @@ export class MarketingInitiativeDetailComponent {
 
     subscribe() {
         const initiative = this.initiative();
-        if (!initiative || !NxGlobal.global.user) return;
+        if (!initiative || !this.#global.user) return;
 
-        this.#marketingService.subscribeToInitiative(initiative.id, NxGlobal.global.user.id).subscribe(() => {
+        this.#marketingService.subscribeToInitiative(initiative.id, this.#global.user.id).subscribe(() => {
             if (this.initiative()) {
-                this.loadInitiative(initiative.id);
+                this.loadInitiative();
             }
         });
     }
 
     unsubscribe() {
         const initiative = this.initiative();
-        if (!initiative || !NxGlobal.global.user) return;
+        if (!initiative || !this.#global.user) return;
         if (!confirm('Unsubscribe from this initiative?')) return;
 
-        this.#marketingService.unsubscribeFromInitiative(initiative.id, NxGlobal.global.user.id.toString()).subscribe(() => {
+        this.#marketingService.unsubscribeFromInitiative(initiative.id, this.#global.user.id.toString()).subscribe(() => {
             if (this.initiative()) {
-                this.loadInitiative(initiative.id);
+                this.loadInitiative();
             }
         });
     }
@@ -256,7 +227,7 @@ export class MarketingInitiativeDetailComponent {
 
         this.#marketingService.removeInitiativeChannel(initiative.id, channelId).subscribe(() => {
             if (this.initiative()) {
-                this.loadInitiative(initiative.id.toString());
+                this.loadInitiative();
             }
         });
     }
@@ -267,14 +238,13 @@ export class MarketingInitiativeDetailComponent {
         });
     }
 
-    // Channel Management
     assignChannel() {
         const initiative = this.initiative();
         if (!initiative || !this.selectedChannelId) return;
 
         this.#marketingService.assignInitiativeChannel(initiative.id, parseInt(this.selectedChannelId), this.isPrimaryChannel()).subscribe(() => {
             if (this.initiative()) {
-                this.loadInitiative(initiative.id.toString());
+                this.loadInitiative();
             }
             this.resetChannelForm();
         });
@@ -286,7 +256,6 @@ export class MarketingInitiativeDetailComponent {
         this.showChannelModal.set(false);
     }
 
-    // Workflow Management
     attachWorkflow() {
         const initiative = this.initiative();
         if (!initiative || !this.selectedWorkflowId) return;
@@ -314,7 +283,6 @@ export class MarketingInitiativeDetailComponent {
         this.showWorkflowModal.set(false);
     }
 
-    // Metric Management
     attachMetric() {
         const initiative = this.initiative();
         if (!initiative || !this.selectedMetricId) return;

@@ -1,13 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, linkedSignal, signal, computed } from '@angular/core';
+import { modelListResource } from '@models/http/model-resource';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgbTooltipModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
-import { forkJoin } from 'rxjs';
 import { DebriefService } from '@models/project/debrief.service';
-import { CategoryBreakdown } from '@models/api-response';
+import { CategoryBreakdownDto } from '@models/_core/api-response';
 import { DebriefProjectDebrief } from '@models/project/debrief-project-debrief.model';
 import { DebriefProblem } from '@models/project/debrief-problem.model';
-import { DebriefProblemCategory } from '@models/project/debrief-problem-category.model';
 import { DebriefPositive } from '@models/project/debrief-positive.model';
 import { User } from '@models/user/user.model';
 import { ProjectDetailGuard } from '@app/projects/project-details.guard';
@@ -21,8 +20,8 @@ import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { Toast } from '@shards/toast/toast';
 import { AutosaveDirective } from '@directives/autosave.directive';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
-import { LocalAIPlugin } from '@models/http/plugin.localai';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
+import { LocalAIPlugin } from '@models/http/plugins/plugin.localai';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { Dictionary } from '@constants/constants';
 
@@ -43,10 +42,7 @@ interface AISuggestion {
     styleUrls: ['./project-debriefing.component.scss'],
 })
 export class ProjectDebriefingComponent {
-    loading = signal(true);
     creating = signal(false);
-    debriefs = signal<DebriefProjectDebrief[]>([]);
-    categories = signal<DebriefProblemCategory[]>([]);
     expandedProblemId = signal<string | null>(null);
 
     severityMap = signal<Dictionary<Severity>>({});
@@ -62,32 +58,21 @@ export class ProjectDebriefingComponent {
     projectUsers = computed(() => this.#guard.object()?.assignedUsers().map(a => a.assignee as User) || []);
     #categoryMap = computed(() => new Map(this.categories().map(c => [c.id, c])));
 
+    readonly #categories = modelListResource(() => this.#service.indexCategories());
+    readonly categories = this.#categories.value;
+
+    readonly #debriefs = modelListResource(
+        () => this.projectId() || undefined,
+        (projectId) => this.#service.indexProjectDebriefs(projectId),
+    );
+    readonly debriefs = linkedSignal(this.#debriefs.value);
+    readonly loading = computed(() => this.#categories.isLoading() || this.#debriefs.isLoading());
+
     get localAiPlugin(): LocalAIPlugin | null {
         const encs = this.#pluginFactory.getPluginEncryptionsOfType('local_ai');
         if (!encs.length) return null;
         const plugin = this.#pluginFactory.instanceFor(encs[0]) as LocalAIPlugin;
         return plugin?.state === 'connected' ? plugin : null;
-    }
-
-    constructor() {
-        this.loadData();
-    }
-
-    loadData() {
-        this.loading.set(true);
-
-        this.#fetchData().subscribe({
-            next: ([categories, debriefs]) => {
-                this.categories.set(categories || []);
-                this.debriefs.set(debriefs || []);
-                this.loading.set(false);
-            },
-            error: () => this.loading.set(false),
-        });
-    }
-
-    #fetchData() {
-        return forkJoin([this.#service.indexCategories(), this.#service.indexProjectDebriefs(this.projectId())]);
     }
 
     createDebrief() {
@@ -102,7 +87,7 @@ export class ProjectDebriefingComponent {
         });
     }
 
-    getCategoryBreakdown(debrief: DebriefProjectDebrief): CategoryBreakdown[] {
+    getCategoryBreakdown(debrief: DebriefProjectDebrief): CategoryBreakdownDto[] {
         const weights: Dictionary<number> = { low: 1, medium: 2, high: 3, critical: 4 };
         return this.categories().map(cat => {
             const problems = debrief.problems.filter(p => p.debrief_problem_category_id === cat.id);
@@ -134,9 +119,7 @@ export class ProjectDebriefingComponent {
     }
 
     reloadDebrief(_debriefId: string) {
-        this.#service.indexProjectDebriefs(this.projectId()).subscribe(debriefs => {
-            this.debriefs.set(debriefs || []);
-        });
+        this.#debriefs.reload();
     }
 
     onProblemSelected(debrief: DebriefProjectDebrief, problem: DebriefProblem) {
@@ -246,8 +229,6 @@ export class ProjectDebriefingComponent {
         const map: Dictionary<string> = { critical: 'bg-red', high: 'bg-orange', medium: 'bg-cyan', low: 'bg-grey' };
         return map[severity] ?? 'bg-grey';
     }
-
-    // ── Local AI ──
 
     runLocalAI(debrief: DebriefProjectDebrief) {
         const plugin = this.localAiPlugin;

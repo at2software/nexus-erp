@@ -44,13 +44,11 @@ export class VCalendarEvent {
         let icon: string | undefined;
         if (!isEditable) {
             description = title;
-            // Detect event type and assign appropriate Material Icon
             if (title.toLowerCase().includes('vacation of')) {
                 icon = Vacation.VACATION_ICON;
             } else if (title.toLowerCase().includes('birthday of')) {
                 icon = 'cake';
             }
-            // Keep original title without emoji replacements
         }
 
         const obj: any = {
@@ -71,7 +69,6 @@ export class VCalendarEvent {
 
     static extractValue = (vcalString: string | undefined | null, key: string): string | null => {
         if (!vcalString) return null;
-        // Escape regex special characters for safe pattern matching
         const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         // nosemgrep: eslint.detect-non-literal-regexp - key is escaped before use
         return vcalString.match(new RegExp(escapedKey + '(?:;[^:]+)?:([^\n\r]+)'))?.[1]?.trim() ?? null;

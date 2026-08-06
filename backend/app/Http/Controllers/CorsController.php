@@ -44,7 +44,6 @@ class CorsController extends Controller {
             ->withOptions($options)
             ->send($method, $url, $body);
 
-        // Follow redirects manually so every hop is re-validated
         if ($response->redirect() && $hopsLeft > 0) {
             $location = $response->header('Location');
             if (! $location) {

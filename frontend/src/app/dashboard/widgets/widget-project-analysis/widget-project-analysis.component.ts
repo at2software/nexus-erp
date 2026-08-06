@@ -1,16 +1,16 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Dictionary } from '@constants/constants';
 import { BaseWidgetComponent } from '../base.widget.component';
 import { OptionType } from '../widget-options/widget-options.component';
 import { WIDGET_SHARED } from '../widgets.shared';
 import { Project } from '@models/project/project.model';
-import type { ProjectTimelineEntry } from '@models/api-response';
+import type { ProjectTimelineEntryDto } from '@models/_core/api-response';
 import { ProjectService } from '@models/project/project.service';
 import { WidgetService } from '@models/widget.service';
 import { Color } from '@constants/Color';
 import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS, ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
 import { ChartProgressComponent } from '@charts/chart-progress/chart-progress.component';
-import { MILESTONE_STATES } from '@models/milestones/milestone-state.enum';
+import { MILESTONE_STATES } from '@models/milestone/milestone-state.enum';
 import { ProjectState } from '@models/project/project-state.model';
 import type { EChartsOption } from 'echarts';
 import type { TopLevelFormatterParams } from 'echarts/types/dist/shared';
@@ -26,12 +26,6 @@ interface MilestoneStateCount { name: string; count: number; color: string; }
     imports: [...WIDGET_SHARED, ChartProgressComponent],
 })
 export class WidgetProjectAnalysisComponent extends BaseWidgetComponent {
-    project = signal<Project | null>(null);
-    runningProjects = signal<Project[]>([]);
-    budgetChartOptions = signal<EChartsOption | null>(null);
-    budgetWrapperStyle = signal<Dictionary>({});
-    milestoneStates = signal<MilestoneStateCount[]>([]);
-
     #projectService = inject(ProjectService);
     #widgetService = inject(WidgetService);
 
@@ -39,38 +33,36 @@ export class WidgetProjectAnalysisComponent extends BaseWidgetComponent {
         'project-id': { type: OptionType.String, value: '', i18n: $localize`:@@i18n.common.projectId:project ID` },
     });
 
-    reload(): void {
-        const projectId = this.getOptions()['project-id']?.value as string | undefined;
-        if (projectId) this.#loadProject(projectId);
-        else this.#loadRunningProjects();
-    }
+    #hasProjectId = () => !!this.getOptions()['project-id']?.value;
 
-    #loadProject(id: string): void {
-        this.#projectService.show(id).subscribe((project: Project) => {
-            this.#computeWorkshares(project);
-            this.project.set(project);
-            this.budgetChartOptions.set(null);
-            this.milestoneStates.set(this.#computeMilestoneStates(project));
-            if (this.#shouldShowBudgetChart()) this.#buildBudgetChart();
-        });
-    }
+    readonly #project = this.optionsResource((options) => this.#projectService.show(String(options['project-id'])), this.#hasProjectId);
+    readonly #runningProjects = this.optionsResource(() => this.#widgetService.indexCashflow('PROJECTS', {}, Project), () => !this.#hasProjectId());
 
-    #loadRunningProjects(): void {
-        this.#widgetService.indexCashflow('PROJECTS', {}, Project).subscribe((response) => {
-            this.runningProjects.set(response.objects);
-        });
-    }
+    readonly project = computed<Project | null>(() => {
+        const project = this.#project.value();
+        if (!project) return null;
+        this.#computeWorkshares(project);
+        return project;
+    });
+    readonly runningProjects = computed<Project[]>(() => this.#runningProjects.value()?.objects ?? []);
+    readonly milestoneStates = computed<MilestoneStateCount[]>(() => {
+        const project = this.project();
+        return project ? this.#computeMilestoneStates(project) : [];
+    });
+
+    readonly #budgetChart = computed(() => (this.#shouldShowBudgetChart() ? this.#buildBudgetChart() : null));
+    readonly budgetChartOptions = computed<EChartsOption | null>(() => this.#budgetChart()?.options ?? null);
+    readonly budgetWrapperStyle = computed<Dictionary>(() => this.#budgetChart()?.wrapperStyle ?? {});
 
     selectProject(project: Project): void {
         const newOptions = { ...this.getOptions() };
         newOptions['project-id'] = { ...newOptions['project-id'], value: project.id.toString() };
         this._onUpdate(newOptions);
-        this.#loadProject(project.id.toString());
     }
 
     #computeWorkshares(project: Project): void {
         project.var = project.var || ({} as Dictionary);
-        project.var['workshares'] = (project.timeline_chart || []).map((_: ProjectTimelineEntry) => ({
+        project.var['workshares'] = (project.timeline_chart || []).map((_: ProjectTimelineEntryDto) => ({
             name: _.user?.name || 'Unknown',
             color: _.user?.color || '#cccccc',
             val: _.data.reduce((sum: number, d) => sum + (parseFloat(String(d.value)) || 0), 0),
@@ -85,7 +77,7 @@ export class WidgetProjectAnalysisComponent extends BaseWidgetComponent {
             p.var?.workshares?.length > 0 && p.worksharesTotal() > 0 && (p.work_estimated ?? 0) > 0;
     }
 
-    #buildBudgetChart(): void {
+    #buildBudgetChart() {
         const project = this.project()!;
         const timePercentage = project.timePercentage();
         const dangerColor = Color.fromVar('danger').toHexString();
@@ -97,18 +89,18 @@ export class WidgetProjectAnalysisComponent extends BaseWidgetComponent {
             ? [...workShares.map((u) => ({ value: u.val, name: u.name, itemStyle: { color: u.color, ...ECHARTS_DONUT_ITEM_STYLE } })), { value: (project.work_estimated ?? 0) - project.hours_invested, name: 'remaining', itemStyle: { color: '#6c757d', ...ECHARTS_DONUT_ITEM_STYLE } }]
             : workShares.map((u) => ({ value: u.val, name: u.name, itemStyle: { color: u.color, ...ECHARTS_DONUT_ITEM_STYLE } }));
 
-        this.budgetChartOptions.set({
-            backgroundColor: 'transparent',
-            animation: false,
-            tooltip: { trigger: 'item', ...ECHARTS_DEFAULT_TOOLTIP_OPTIONS, formatter: (params: TopLevelFormatterParams) => { const p = Array.isArray(params) ? params[0] : params; return `${p.name}: ${(p.value as number).toFixed(1)}h`; } },
-            graphic: [{ type: 'text', left: 'center', top: 'center', style: { text: centerText, fill: centerColor, fontSize: 20, fontFamily: 'BrunoAce' } }],
-            series: [{ type: 'pie', radius: ['35%', '70%'], data: pieData, label: { show: false } }],
-        } satisfies EChartsOption);
-
-        this.budgetWrapperStyle.set(timePercentage >= 1 ? {
-            '--budget-over-percentage': `${Math.min(timePercentage - 1, 1) * 360}deg`,
-            '--budget-danger-color': dangerColor,
-        } : {});
+        return {
+            options: {
+                backgroundColor: 'transparent',
+                animation: false,
+                tooltip: { trigger: 'item', ...ECHARTS_DEFAULT_TOOLTIP_OPTIONS, formatter: (params: TopLevelFormatterParams) => { const p = Array.isArray(params) ? params[0] : params; return `${p.name}: ${(p.value as number).toFixed(1)}h`; } },
+                graphic: [{ type: 'text', left: 'center', top: 'center', style: { text: centerText, fill: centerColor, fontSize: 20, fontFamily: 'BrunoAce' } }],
+                series: [{ type: 'pie', radius: ['35%', '70%'], data: pieData, label: { show: false } }],
+            } satisfies EChartsOption,
+            wrapperStyle: (timePercentage >= 1
+                ? { '--budget-over-percentage': `${Math.min(timePercentage - 1, 1) * 360}deg`, '--budget-danger-color': dangerColor }
+                : {}) as Dictionary,
+        };
     }
 
     #computeMilestoneStates(project: Project) {

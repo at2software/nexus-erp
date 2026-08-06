@@ -13,8 +13,6 @@ class InvoiceFactory extends Factory {
     protected $model = Invoice::class;
 
     /**
-     * Define the model's default state.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array {
@@ -25,7 +23,6 @@ class InvoiceFactory extends Factory {
         ];
     }
 
-    /** Backdate the invoice — net is precomputed from invoiceItems, so callers still need withNet(). */
     public function createdAt(\DateTimeInterface $at): static {
         return $this->state(['created_at' => $at, 'updated_at' => $at]);
     }

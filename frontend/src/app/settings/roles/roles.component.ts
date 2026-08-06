@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
+import { modelResource } from '@models/http/model-resource';
 import { FormsModule } from '@angular/forms';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { environment } from 'src/environments/environment';
+import { environment } from '@environments/environment';
 import { Role } from '@models/user/role.model';
 import { User } from '@models/user/user.model';
 import { RoleService } from '@models/user/role.service';
@@ -14,6 +15,7 @@ import { ModalNewUserService } from '@app/_modals/modal-new-user/modal-new-user.
 import { AuthenticationService } from '@models/auth.service';
 import { Nx } from '@app/nx/nx.directive';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 const SPECIALIZED_ROLES = ['project_manager', 'invoicing', 'financial', 'marketing', 'hr', 'product_manager'];
 
@@ -21,16 +23,12 @@ const SPECIALIZED_ROLES = ['project_manager', 'invoicing', 'financial', 'marketi
     selector: 'settings-users',
     templateUrl: './roles.component.html',
     styleUrls: ['./roles.component.scss'],
-    imports: [FormsModule, NgbTooltipModule, RolePipe, ScrollbarComponent, ToolbarComponent, Nx, SpinnerComponent],
+    imports: [StackedTableDirective, FormsModule, NgbTooltipModule, RolePipe, ScrollbarComponent, ToolbarComponent, Nx, SpinnerComponent],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UsersComponent {
     readonly env = environment;
     readonly isTokenAuth = AuthenticationService.sysinfo?.method === 'token';
-    roles = signal<Role[]>([]);
-    users = signal<User[]>([]);
-    selectedRole = signal<Role | null>(null);
-    isLoading = signal(true);
     resetPasswordUserId = signal<string | null>(null);
     resetPasswordValue = signal('');
 
@@ -42,14 +40,14 @@ export class UsersComponent {
     readonly currentUserId = computed(() => this.#global.user?.id);
     readonly isAdmin = computed(() => this.#global.user?.hasRole('admin') ?? false);
 
-    constructor() {
-        this.#roleService.loadRoleManagement().then((data) => {
-            this.roles.set(this.#sortRoles(data.roles));
-            this.users.set(data.users);
-            this.selectedRole.set(this.roles()[0] ?? null);
-            this.isLoading.set(false);
-        });
-    }
+    readonly #management = modelResource(() => this.#roleService.indexRoleManagement());
+    readonly isLoading = this.#management.isLoading;
+    readonly roles = linkedSignal(() => this.#sortRoles(this.#management.value()?.roles ?? []));
+    readonly users = linkedSignal(() => this.#management.value()?.users ?? []);
+    readonly selectedRole = linkedSignal<Role[], Role | null>({
+        source: this.roles,
+        computation: (roles, previous) => roles.find((_) => _.id === previous?.value?.id) ?? roles[0] ?? null,
+    });
 
     selectRole = (role: Role) => this.selectedRole.set(role);
     hasRole = (user: User, roleName: string) => user.role_names.includes(roleName);
@@ -78,11 +76,7 @@ export class UsersComponent {
     async addUser() {
         const data = await this.#newUserModal.open().catch(() => undefined);
         if (!data) return;
-        this.#userService.create(data).subscribe(async () => {
-            const result = await this.#roleService.loadRoleManagement();
-            this.roles.set(this.#sortRoles(result.roles));
-            this.users.set(result.users);
-        });
+        this.#userService.create(data).subscribe(() => this.#management.reload());
     }
 
     startResetPassword(user: User) {

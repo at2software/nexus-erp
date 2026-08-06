@@ -2,7 +2,7 @@
     <div class="card-header gap-2">
         <n>invoice</n>
         <span class="flex-fill text-truncate" i18n="@@i18n.widget-invoice-manager">invoice manager</span>
-        <div class="chart-title" roles="invoicing">{{ value() ? (value()! | mshort) : (value() | loading) }}</div>
+        <div class="chart-title" roles="invoicing" i18n-ngbTooltip="@@i18n.widget.invoiceManager.headline" ngbTooltip="currently invoiceable in total: uninvoiced hours on time-based projects, unbilled customer support and prepared invoice items">{{ value() ? (value()! | mshort) : (value() | loading) }}</div>
     </div>
 
     @if (hasInvoicesModule()) {
@@ -14,7 +14,7 @@
     @if (!onlyChart() && !getOptions()['chart-only']?.value) {
         <ul-compact revealList>
             @for (group of groupedData(); track group.company.id) {
-                <li class="list-group-item hstack gap-2 text-nowrap" [compact]="isCompactGroup(group)">
+                <li class="list-group-item hstack gap-2 text-nowrap" [nx]="group.company" [compact]="isCompactGroup(group)">
                     <div>
                         <avatar [object]="group.company"></avatar>
                     </div>

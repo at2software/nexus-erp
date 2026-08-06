@@ -22,7 +22,7 @@
                         </div>
                     }
                     @for (u of getGitUsers(); track u.id) {
-                        <div class="card mb-2 user-card" [class.border-primary]="isSelected(u.var.data?.username)" [class.selected]="isSelected(u.var.data?.username)" (click)="selectUser(u.var.data?.username)" tabindex="0" (keydown.enter)="selectUser(u.var.data?.username)" style="cursor: pointer">
+                        <div class="card mb-2 user-card cursor-pointer" [class.border-primary]="isSelected(u.var.data?.username)" [class.selected]="isSelected(u.var.data?.username)" (click)="selectUser(u.var.data?.username)" tabindex="0" (keydown.enter)="selectUser(u.var.data?.username)">
                             <div class="card-body py-2 px-3">
                                 <div class="d-flex align-items-center gap-3">
                                     @if (u.var.avatar_url) {

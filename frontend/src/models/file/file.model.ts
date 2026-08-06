@@ -1,7 +1,7 @@
-import { FileService } from './file.service';
-import { Serializable } from '../serializable';
+import type { NxAction } from '@models/_core/nx.actions';
+import { Serializable } from '@models/_core/serializable';
 import { getFileActions } from './file.actions';
-import { Model } from '@constants/type-discriminators';
+import { Model } from '@constants/model/type-discriminators';
 import { computed } from '@angular/core';
 
 enum MimeType {
@@ -13,7 +13,6 @@ enum MimeType {
 @Model('File')
 export class File extends Serializable {
     static API_PATH = (): string => 'files';
-    SERVICE = FileService;
 
     name: string = '';
     dir: string = '';
@@ -21,7 +20,6 @@ export class File extends Serializable {
     mime: string = '';
     permissions: string | null = null;
 
-    // Marketing asset fields
     category?: string;
     tags?: string[];
     file_size?: number;
@@ -30,13 +28,11 @@ export class File extends Serializable {
     preview_url?: string;
     thumbnail?: string; // Base64 encoded thumbnail
 
-    doubleClickAction: number = 0;
-    actions = getFileActions(this);
+    protected override buildActions(): NxAction[] { return getFileActions(this) }
 
     css = computed(() => this.#getColorCss(this.snapshot().mime));
 
     /**
-     * Get Icon string for file type
      * @returns google fonts string
      */
     getIcon(): string {
@@ -48,7 +44,6 @@ export class File extends Serializable {
         return '';
     }
     /**
-     * Get color for file type
      * @returns hex or var color string
      */
     #getColorCss(mime: string): string {

@@ -1,0 +1,36 @@
+@let _info = info();
+<div class="row">
+    <div class="col-12 col-md-6">
+        <div class="card mb-3">
+            <div class="card-header" i18n="@@i18n.knownseq.caller_number">caller number</div>
+            <div class="card-body">
+                <div class="font-monospace fs-5">{{ number() }}</div>
+                @if (_info) {
+                    <div class="hstack gap-2 mt-3">
+                        <i [class.text-warning]="_info.warn" [class.text-primary]="!_info.warn">{{ _info.icon }}</i>
+                        <div class="vstack gap-0">
+                            <span>{{ _info.label }}</span>
+                            <small class="text-muted">{{ _info.detail }}</small>
+                        </div>
+                    </div>
+                } @else {
+                    <small class="text-muted mt-3 d-block" i18n="@@i18n.knownseq.number_unrecognized">could not classify this number</small>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6">
+        <div class="card mb-3">
+            <div class="card-header" i18n="@@i18n.knownseq.lookup">reverse lookup</div>
+            <ul class="list-group list-group-flush">
+                @for (l of lookups(); track l.url) {
+                    <li class="list-group-item p-0">
+                        <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 cursor-pointer text-primary" [href]="l.url" target="_blank" rel="noopener">
+                            <i>{{ l.icon }}</i><span class="notranslate">{{ l.label }}</span><i class="ms-auto text-muted">open_in_new</i>
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>

@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { PluginConfigModalComponent } from './plugin-config-modal/plugin-config-modal.component';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 import { ConfirmationService } from '@app/_modals/modal-confirm/confirmation.service';
-import { NxGlobal } from '@app/nx/nx.global';
+import { NexusHttp } from '@models/http/http.nexus';
 import { Encryption } from '@models/encryption/encryption.model';
 import { GlobalService } from '@models/global.service';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
-import { MantisPlugin } from '@models/http/plugin.mantis';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
+import { MantisPlugin } from '@models/http/plugins/plugin.mantis';
 import { UserService } from '@models/user/user.service';
 import { RsaSettingsEmptyComponent } from '@shards/rsa-settings/rsa-settings-empty.component';
 import { SlicePipe } from '@angular/common';
@@ -15,7 +15,7 @@ import { NComponent } from '@shards/n/n.component';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { TabPluginsComponent } from '@activity/tab-plugins/tab-plugins.component';
 import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
-import { PluginEntry } from '@models/api-response';
+import { PluginEntryDto } from '@models/_core/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,6 +26,7 @@ import { PluginEntry } from '@models/api-response';
 export class ProfilePluginsComponent {
     global = inject(GlobalService);
     factory = inject(PluginInstanceFactory);
+    #http = inject(NexusHttp);
     #userService = inject(UserService);
     #confirmationService = inject(ConfirmationService);
     #modalInput = inject(InputModalService);
@@ -40,7 +41,7 @@ export class ProfilePluginsComponent {
                 btnCancelText: $localize`:@@i18n.common.no:no`,
             })
             .then(() => {
-                NxGlobal.service.delete(`encryptions/${_.id}`).subscribe(() => this.global.reload());
+                this.#http.delete(`encryptions/${_.id}`).subscribe(() => this.global.reload());
             });
     };
     linkMyId = (_: Encryption) => {
@@ -51,10 +52,9 @@ export class ProfilePluginsComponent {
 
     getMantisProjects = (_: Encryption) => (this.factory.instanceFor(_) as MantisPlugin).projects ?? [];
 
-    #makeEntry = (p: Encryption, type: string, displayName: string): PluginEntry => Object.assign(p, { type, displayName });
+    #makeEntry = (p: Encryption, type: string, displayName: string): PluginEntryDto => Object.assign(p, { type, displayName });
 
-    // Get all plugin types with their configurations
-    getAllPlugins = (): PluginEntry[] => [
+    getAllPlugins = (): PluginEntryDto[] => [
         ...this.factory.getPluginEncryptionsOfType('mattermost').map((p) => this.#makeEntry(p, 'mattermost', 'Mattermost')),
         ...this.factory.getPluginEncryptionsOfType('git').map((p) => this.#makeEntry(p, 'git', 'GitLab')),
         ...this.factory.getPluginEncryptionsOfType('mantis').map((p) => this.#makeEntry(p, 'mantis', 'MantisBT')),
@@ -63,8 +63,7 @@ export class ProfilePluginsComponent {
         ...this.factory.getPluginEncryptionsOfType('nexus').map((p) => this.#makeEntry(p, 'nexus', 'NEXUS')),
     ];
 
-    // Get plugin status text for badge
-    getPluginStatusText = (plugin: PluginEntry): string => {
+    getPluginStatusText = (plugin: PluginEntryDto): string => {
         try {
             if (plugin.type === 'nexus') return '';
             if (!plugin?.value?.url) return 'not configured';
@@ -77,11 +76,9 @@ export class ProfilePluginsComponent {
         }
     };
 
-    // Check if plugin has successfully connected (for badge styling)
-    isPluginConnected = (plugin: PluginEntry): boolean => this.getPluginStatusText(plugin) === 'connected';
+    isPluginConnected = (plugin: PluginEntryDto): boolean => this.getPluginStatusText(plugin) === 'connected';
 
-    // Open configuration modal for a plugin
-    openPluginModal = (plugin: PluginEntry) => {
+    openPluginModal = (plugin: PluginEntryDto) => {
         const modalRef = this.#modalService.open(PluginConfigModalComponent, { size: 'lg' });
         modalRef.componentInstance.plugin = plugin;
 
@@ -98,16 +95,13 @@ export class ProfilePluginsComponent {
             });
     };
 
-    // Open modal for creating new plugin
     openNewPluginModal = (type: string, displayName: string) => {
-        // Create a new plugin object with default values
-        const defaultValues = this.#getDefaultValuesForPlugin(type);
         const newPlugin = {
-            type: type,
-            displayName: displayName,
-            value: defaultValues,
+            type,
+            displayName,
+            value: this.#getDefaultValuesForPlugin(type),
             my_id: null,
-            id: null, // New plugin has no ID yet
+            id: null,
         };
 
         const modalRef = this.#modalService.open(PluginConfigModalComponent, { size: 'lg' });
@@ -117,10 +111,8 @@ export class ProfilePluginsComponent {
         modalRef.result
             .then((result) => {
                 if (result === 'save') {
-                    // Save the new plugin
                     this.#onLinkAdded(type, newPlugin.value);
                 }
-                // Reload to refresh the display
                 this.global.reload();
             })
             .catch(() => {
@@ -140,7 +132,6 @@ export class ProfilePluginsComponent {
     }
 
     #onLinkAdded = (key: string, object: Record<string, string>) => this.#userService.encrypt(key, object).subscribe((_) => this.global.reload());
-    // Helper methods for template access to dynamic properties
-    getPluginType = (plugin: PluginEntry): string => plugin.type;
-    getPluginDisplayName = (plugin: PluginEntry): string => plugin.displayName;
+    getPluginType = (plugin: PluginEntryDto): string => plugin.type;
+    getPluginDisplayName = (plugin: PluginEntryDto): string => plugin.displayName;
 }

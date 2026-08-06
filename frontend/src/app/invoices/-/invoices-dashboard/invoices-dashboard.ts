@@ -1,3 +1,4 @@
+import { Page } from '@models/http/http.nexus';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { InvoicesTable } from '@app/invoices/_shards/invoices-table/invoices-table';
@@ -6,7 +7,7 @@ import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { Observable } from 'rxjs';
 import { Dictionary, StartEnd } from '@constants/constants';
-import { DATESPAN_RANGE } from '@constants/dateSpanRange';
+import { DATESPAN_RANGE } from '@constants/date/dateSpanRange';
 import { Invoice } from '@models/invoice/invoice.model';
 import { InvoiceService } from '@models/invoice/invoice.service';
 import { WidgetInvoiceManagerComponent } from '@dashboard/widgets/widget-invoice-manager/widget-invoice-manager.component';
@@ -28,7 +29,7 @@ export class InvoicesDashboard {
     onlyPaid = signal(false);
     selCreated = signal<StartEnd>(null!);
     selPaid = signal<StartEnd>(null!);
-    observer = signal<Observable<Invoice[]> | undefined>(undefined);
+    observer = signal<Observable<Page<Invoice>> | undefined>(undefined);
 
     readonly ranges = DATESPAN_RANGE;
     #currentFilter = '';
@@ -44,7 +45,7 @@ export class InvoicesDashboard {
         this.#currentFilter = filterStr;
         this.invoices.set([]);
         this.hasLoaded.set(false);
-        this.observer.set(this.#invoiceService.index(filters));
+        this.observer.set(this.#invoiceService.indexPaginated(filters));
     }
 
     onResult = (result: Invoice[]) => {

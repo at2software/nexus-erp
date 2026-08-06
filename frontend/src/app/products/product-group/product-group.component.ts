@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { tracked } from '@constants/tracked';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 import { ProductGroup } from '@models/product/product-group.model';
 import { Product } from '@models/product/product.model';
 import { ProductGroupDetailGuard } from './product-group-detail.guard';

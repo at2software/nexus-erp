@@ -3,11 +3,11 @@ import { catchError, of, switchMap, take } from 'rxjs';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { NComponent } from '@shards/n/n.component';
-import { PluginInstance } from '@models/http/plugin.instance';
-import { MantisPlugin } from '@models/http/plugin.mantis';
-import { ITaskPlugin } from '@models/tasks/task.plugin.interface';
-import { PluginLink } from '@models/pluginLink/plugin-link.model';
-import { Task } from '@models/tasks/task.model';
+import { PluginInstance } from '@models/http/plugins/plugin.instance';
+import { MantisPlugin } from '@models/http/plugins/plugin.mantis';
+import { ITaskPlugin } from '@models/task/task.plugin.interface';
+import { PluginLink } from '@models/plugin-link/plugin-link.model';
+import { Task } from '@models/task/task.model';
 
 export interface ExtIssueImportTracker {
     link: PluginLink;
@@ -16,7 +16,6 @@ export interface ExtIssueImportTracker {
 
 const PAGE_SIZE = 100;
 
-/** Bulk-imports open tracker issues as invoice items, narrowed by version (Mantis) or tags (Git); issues already linked to an item in the project are pre-excluded. */
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'modal-import-ext-issues',
@@ -32,8 +31,6 @@ export class ModalImportExtIssuesComponent extends ModalBaseComponent<Task[]> {
     selectedLabels = signal<Set<string>>(new Set());
     selectedIds = signal<Set<string>>(new Set());
 
-    // Mantis target versions marked obsolete shouldn't clutter the filter, even if some
-    // already-loaded issue still points at one.
     readonly #obsoleteVersionNames = computed(() => {
         const instance = this.tracker.instance;
         return instance instanceof MantisPlugin ? new Set(instance.versions.filter((_) => _.obsolete).map((_) => _.name)) : new Set<string>();
@@ -42,8 +39,6 @@ export class ModalImportExtIssuesComponent extends ModalBaseComponent<Task[]> {
         const obsolete = this.#obsoleteVersionNames();
         return Array.from(new Set(this.allTasks().flatMap((_) => _.labels))).filter((_) => !obsolete.has(_)).sort();
     });
-    // `openOnly` passed to indexTasksPage isn't honored server-side by every tracker (Mantis's
-    // REST API has no open/closed query param), so re-filter resolved issues here too.
     readonly #unresolvedTasks = computed(() => this.allTasks().filter((_) => _.state !== 1));
     readonly importableTasks = computed(() => this.#unresolvedTasks().filter((_) => !this.#existingIssueIds.has(_.id)));
     readonly skippedCount = computed(() => this.#unresolvedTasks().length - this.importableTasks().length);

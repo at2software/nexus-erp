@@ -1,9 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 import { User } from '@models/user/user.model';
 import { NexusHttpService } from '../http/http.nexus';
 import { CalendarEntry } from './calendar-entry.model';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class VCalendarService extends NexusHttpService<User> {
     apiPath = 'calendar_entries';
 

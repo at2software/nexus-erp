@@ -1,11 +1,11 @@
 ﻿import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { LiveSharingService } from '@models/live-sharing.service';
+import { LiveSharingService } from '@models/live/live-sharing.service';
 import { Subject, fromEvent, throttleTime } from 'rxjs';
-import { MousePosition, MouseClick, WebSocketService } from 'src/services/websocket.service';
+import { MousePosition, MouseClick, WebSocketService } from '@services/websocket.service';
 import { Router } from '@angular/router';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,9 +1,8 @@
-import { Serializable } from '@models/serializable';
-import { ProjectService } from './project.service';
-import { NxGlobal } from '@app/nx/nx.global';
+import { Serializable } from '@models/_core/serializable';
+import { nx } from '@models/_core/nx-bridge';
 import { Project } from './project.model';
-import { deepMerge } from '@constants/deepMerge';
-import { Model } from '@constants/type-discriminators';
+import { deepMerge } from '@constants/object/deepMerge';
+import { Model } from '@constants/model/type-discriminators';
 import { Dictionary } from '@constants/constants';
 import { computed } from '@angular/core';
 
@@ -24,7 +23,6 @@ export class ProjectAvatar {
 @Model('ProjectState')
 export class ProjectState extends Serializable {
 
-    SERVICE = () => ProjectService;
     static API_PATH = (): string => 'project_states';
 
     static ProgressPrepared = 0;
@@ -50,21 +48,22 @@ export class ProjectState extends Serializable {
     is_successful: boolean = false;
     pivot: { created_at: string } = { created_at: '' };
 
-    isPrepared           = computed(() => this.progress === ProjectState.ProgressPrepared);
-    isRunning            = computed(() => this.progress === ProjectState.ProgressRunning);
-    isFinishedAny        = computed(() => this.progress === ProjectState.ProgressFinished);
-    isFinishedSuccessful = computed(() => this.isFinishedAny() && this.is_in_stats && this.is_successful);
-    isFinishedFailed     = computed(() => this.isFinishedAny() && this.is_in_stats && !this.is_successful);
-    isFinishedIgnored    = computed(() => this.isFinishedAny() && !this.is_in_stats);
+    isPrepared           = computed(() => { this.snapshot(); return this.progress === ProjectState.ProgressPrepared; });
+    isRunning            = computed(() => { this.snapshot(); return this.progress === ProjectState.ProgressRunning; });
+    isFinishedAny        = computed(() => { this.snapshot(); return this.progress === ProjectState.ProgressFinished; });
+    isFinishedSuccessful = computed(() => { this.snapshot(); return this.isFinishedAny() && this.is_in_stats && this.is_successful; });
+    isFinishedFailed     = computed(() => { this.snapshot(); return this.isFinishedAny() && this.is_in_stats && !this.is_successful; });
+    isFinishedIgnored    = computed(() => { this.snapshot(); return this.isFinishedAny() && !this.is_in_stats; });
 
-    static stateFor      = (id: number): ProjectState | undefined => NxGlobal.global.project_states.find((_) => _.id == '' + id);
-    static _idsFor       = (cmp: (s: ProjectState) => boolean) => NxGlobal.global.project_states.filter(cmp).map((_) => _.id).join(',');
+    static stateFor      = (id: number): ProjectState | undefined => nx().global.project_states.find((_) => _.id == '' + id);
+    static _idsFor       = (cmp: (s: ProjectState) => boolean) => nx().global.project_states.filter(cmp).map((_) => _.id).join(',');
     static idsFor        = (progress: number) => ProjectState._idsFor((s) => s.progress === progress);
     static idsPrepared   = computed(() => ProjectState._idsFor((s) => s.isPrepared()));
     static idsRunning    = computed(() => ProjectState._idsFor((s) => s.isRunning()));
     static idsSuccessful = computed(() => ProjectState._idsFor((s) => s.isFinishedSuccessful()));
     static idsFailed     = computed(() => ProjectState._idsFor((s) => s.isFinishedFailed()));
     static idsIgnored    = computed(() => ProjectState._idsFor((s) => s.isFinishedIgnored()));
+    static idsPreparedOrRunning = computed(() => [ProjectState.idsPrepared(), ProjectState.idsRunning()].filter(Boolean).join(','));
 
     getStateIcon(): string {
         switch (this.progress) {

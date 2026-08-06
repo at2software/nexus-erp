@@ -1,40 +1,37 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { modelListResource } from '@models/http/model-resource';
 import { Nx } from '@app/nx/nx.directive';
 import { ActionEmitterType } from '@app/nx/nx.directive';
 import { Vacation } from '@models/vacation/vacation.model';
 import { VacationService } from '@models/vacation/vacation.service';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { TabTasksBaseComponent } from '../tab-tasks-base.component';
+import { AvatarComponent } from '@shards/avatar/avatar.component';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'tab-tasks-hr',
     templateUrl: './tab-tasks-hr.component.html',
-    imports: [Nx, NgbTooltipModule, DatePipe],
+    imports: [AvatarComponent, Nx, NgbTooltipModule, DatePipe],
 })
 export class TabTasksHrComponent extends TabTasksBaseComponent {
-    vacationRequests = signal<Vacation[]>([]);
-    sickNotes = signal<Vacation[]>([]);
-
     #vacationService = inject(VacationService);
 
+    #vacationRequests = modelListResource(this.ready, () => this.#vacationService.indexPendingRequests());
+    #sickNotes = modelListResource(this.ready, () => this.#vacationService.indexSickNotes());
+
+    vacationRequests = this.#vacationRequests.value;
+    sickNotes = this.#sickNotes.value;
+
+    constructor() {
+        super();
+        effect(() => this.countChanged.emit(this.vacationRequests().length + this.sickNotes().length));
+    }
+
     override reload() {
-        this.#vacationService
-            .indexPendingRequests()
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe((_) => {
-                this.vacationRequests.set(_);
-                this.countChanged.emit(_.length + this.sickNotes().length);
-            });
-        this.#vacationService
-            .indexSickNotes()
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe((_) => {
-                this.sickNotes.set(_);
-                this.countChanged.emit(this.vacationRequests().length + _.length);
-            });
+        this.#vacationRequests.reload();
+        this.#sickNotes.reload();
     }
 
     actionsResolved(e: ActionEmitterType) {

@@ -27,13 +27,19 @@ class FociTimelineQuery {
         return ($this->foci)()->groupBy('user_id')->get();
     }
     private function mapUsersToClusterData(Collection $users, ClusterType $cluster): Collection {
+        $rows = ($this->foci)()
+            ->whereIn('user_id', $users->pluck('user_id'))
+            ->clusterBy('started_at', $cluster->toString(), sumColumn: 'duration')
+            ->addSelect('user_id')
+            ->groupBy('user_id')
+            ->get()
+            ->groupBy('user_id');
+
         return $users->map(fn ($_) => [
             'user' => $_->user->only(['name', 'color', 'id']),
-            'data' => ($this->foci)()
-                ->where('user_id', $_->user->id)
-                ->clusterBy('started_at', $cluster->toString(), sumColumn: 'duration')
-                ->oldest('started_at')
-                ->get()
+            'data' => ($rows->get($_->user->id) ?? collect())
+                ->sortBy('month')
+                ->values()
                 ->map(fn ($x) => ['period' => $x->month, 'value' => $x->sum]),
         ]);
     }

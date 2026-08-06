@@ -1,15 +1,13 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, effect, signal, afterNextRender } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, effect, linkedSignal, signal, untracked, afterNextRender } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { CustomerQuickstatsComponent } from '@app/customers/_shards/customer-quickstats/customer-quickstats.component';
 import { ListGroupItemContactComponent } from '@app/customers/_shards/list-group-item-contact/list-group-item-contact.component';
-import { CustomerDetailGuard } from '@app/customers/customers.details.guard';
 import { Nx } from '@app/nx/nx.directive';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { ProjectComponent } from '@shards/project/project.component';
 import { ActionEmitterType } from '@app/nx/nx.directive';
-import { NxGlobal } from '@app/nx/nx.global';
 import { EchartsRangeCardComponent } from '@charts/echarts-card/echarts-range-card.component';
 import { Comment } from '@models/comment/comment.model';
 import { Company } from '@models/company/company.model';
@@ -18,36 +16,40 @@ import { CompanyService } from '@models/company/company.service';
 import { Connection } from '@models/company/connection.model';
 import { Project } from '@models/project/project.model';
 import { ProjectService } from '@models/project/project.service';
-import { VcardRow } from '@models/vcard/VcardRow';
+import { VcardRow } from '@models/vcard/vcard-row';
 import { NgbPopoverModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 import { RteComponent } from '@shards/rte/rte.component';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
-import { dayjs } from '@constants/dates';
-import { forkJoin, Observable, of, switchMap } from 'rxjs';
+import { dayjs } from '@constants/date/dates';
+import { forkJoin, Observable } from 'rxjs';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { MoneyPipe } from '@pipes/money.pipe';
 import { AssignmentService } from '@models/assignee/assignment.service';
 import { User } from '@models/user/user.model';
 import { GlobalService } from '@models/global.service';
 import { ActivityService } from '@app/_activity/activity.service';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { SafePipe } from '@pipes/safe.pipe';
 import { VcardComponent } from '@app/customers/_shards/vcard/vcard.component';
 import { MediaPreviewComponent } from '@app/projects/id/project-media/media-preview/media-preview.component';
 import { CompactItemDirective } from '@shards/ul-compact/CompactItemDirective';
 import { UlCompactComponent } from '@shards/ul-compact/ul-compact.component';
+import { KnownseqCallerCardsComponent } from './knownseq-caller-cards.component';
+import { modelListResource } from '@models/http/model-resource';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'customers-known-sequitur',
     templateUrl: './customers-known-sequitur.component.html',
     styleUrls: ['./customers-known-sequitur.component.scss'],
-    imports: [ToolbarComponent, ListGroupItemContactComponent, Nx, AvatarComponent, ProjectComponent, NgbPopoverModule, NgbDropdownModule, SearchInputComponent, NgTemplateOutlet, EchartsRangeCardComponent, VcardComponent, CustomerQuickstatsComponent, EmptyStateComponent, UlCompactComponent, CompactItemDirective, FormsModule, HotkeyDirective, MoneyPipe, MediaPreviewComponent, AvatarComponent, RteComponent, SafePipe],
+    imports: [ToolbarComponent, ListGroupItemContactComponent, Nx, AvatarComponent, ProjectComponent, NgbPopoverModule, NgbDropdownModule, SearchInputComponent, NgTemplateOutlet, EchartsRangeCardComponent, VcardComponent, CustomerQuickstatsComponent, EmptyStateComponent, UlCompactComponent, CompactItemDirective, FormsModule, HotkeyDirective, MoneyPipe, MediaPreviewComponent, AvatarComponent, RteComponent, SafePipe, KnownseqCallerCardsComponent],
 })
 export class CustomersKnownSequiturComponent {
-    parent = inject(CustomerDetailGuard);
+    company = input.required<Company>();
+    autoSelectContact = input(false);
+    callerNumber = input('');
     #companyService = inject(CompanyService);
     #projectService = inject(ProjectService);
     #inputModalService = inject(InputModalService);
@@ -56,19 +58,34 @@ export class CustomersKnownSequiturComponent {
     #activityService = inject(ActivityService);
     customer = signal<Company | undefined>(undefined);
     noCustomerFound: boolean = false;
-    projects = signal<Project[]>([]);
     notes = signal<Comment[]>([]);
-    connections = signal<Connection[]>([]);
     selectedItem: Serializable | null = null;
 
-    // Class references for type-safe `assert` narrowing in the template.
+    #projects = modelListResource(
+        () => this.customer()?.id || undefined,
+        () => this.#projectService.indexForCompany(untracked(this.customer)!),
+    );
+    #connections = modelListResource(
+        () => this.customer()?.id || undefined,
+        (companyId) => this.#companyService.showConnections(companyId),
+    );
+    projects = linkedSignal(() => this.#projects.value());
+    connections = linkedSignal<Connection[], Connection[]>({
+        source: this.#connections.value,
+        computation: (rows) => {
+            const company = untracked(this.customer);
+            if (company) rows.forEach((_) => _.addCompanyAction(_.otherCompany(company)));
+            return rows;
+        },
+    });
+
     protected readonly Project = Project;
     protected readonly Company = Company;
     protected readonly CompanyContact = CompanyContact;
 
     constructor() {
         effect(() => {
-            this.setCustomer(this.parent.object());
+            this.setCustomer(this.company());
         });
         afterNextRender(() => {
             const commentsTab = this.#activityService.tabs().find((tab) => tab.icon() === 'chat');
@@ -78,8 +95,11 @@ export class CustomersKnownSequiturComponent {
         });
     }
 
-    // Helper to compare items by their API path
     isSameItem = (a: Serializable | null | undefined, b: Serializable | null | undefined) => a?.apiPathWithId() === b?.apiPathWithId();
+
+    #target = (note: Comment): Serializable | undefined => note.parent as Serializable | undefined;
+    noteKey = (note: Comment): string => this.#target(note)?.apiPathWithId() ?? '';
+    isSelected = (item: Serializable | null | undefined): boolean => !!item && this.isSameItem(this.selectedItem, item);
 
     onSearchResultSelect(_: Serializable & { company?: Company }) {
         let customerId = '';
@@ -99,14 +119,8 @@ export class CustomersKnownSequiturComponent {
     };
 
     setCustomer(company: Company) {
-        const object = this.parent.object();
         this.customer.set(company);
         this.noCustomerFound = false;
-        this.#projectService.indexForCompany(company).subscribe((p) => this.projects.set(p));
-        this.#companyService.showConnections(object).subscribe((data) => {
-            this.connections.set(data);
-            this.connections().forEach((_) => _.addCompanyAction(_.otherCompany(object)));
-        });
         const commentData = {
             path: company.apiPathWithId(),
             parent: company,
@@ -115,6 +129,11 @@ export class CustomersKnownSequiturComponent {
         note.parent = company;
         note.var.active = true;
         this.notes.set([note]);
+
+        if (this.autoSelectContact()) {
+            const contact = company.employees?.find((_) => !_.is_retired);
+            if (contact) this.selectItem(contact);
+        }
     }
 
     onQuickLinksLoaded(p: Project[]) {
@@ -130,27 +149,21 @@ export class CustomersKnownSequiturComponent {
             else if (item.company2.id == cust?.id) item = item.company1;
         }
 
+        this.selectedItem = item;
+        const key = item.apiPathWithId();
         this.notes.update(notes => {
             notes.forEach(n => (n.var.active = false));
-            const index = notes.findIndex(note => this.isSameItem(note, item));
-            if (index > -1) {
-                const [note] = notes.splice(index, 1);
-                note.var.active = true;
-                notes.unshift(note);
-            } else {
-                const commentData = {
-                    path: item.apiPathWithId(),
-                    text: item instanceof Project ? item.description : '',
-                };
-                const note = Comment.fromJson(commentData);
-                note.parent = item;
-                note.var.active = true;
-                notes.unshift(note);
+            const existing = notes.find(n => this.noteKey(n) === key);
+            if (existing) {
+                existing.var.active = true;
+                return [existing, ...notes.filter(n => n !== existing)];
             }
-            return [...notes];
+            const note = Comment.fromJson({ path: key, text: item instanceof Project ? item.description : '' });
+            note.parent = item;
+            note.var.active = true;
+            return [note, ...notes];
         });
 
-        this.selectedItem = item;
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -159,28 +172,12 @@ export class CustomersKnownSequiturComponent {
     }
 
     removeNote(item: Serializable) {
-        this.notes.update(notes => notes.filter(n => !this.isSameItem(n, item)));
+        const key = item.apiPathWithId();
+        this.notes.update(notes => notes.filter(n => this.noteKey(n) !== key));
     }
 
-    getItem(item: Serializable): Project | CompanyContact | Company | undefined {
-
-        const projects = this.projects();
-        const cust = this.customer();
-        const connections = this.connections();
-
-        let index: number = projects.findIndex((_) => this.isSameItem(_, item));
-        if (index > -1) return projects[index];
-
-        index = cust?.employees.findIndex((_) => this.isSameItem(_, item)) ?? -1;
-        if (index > -1) return cust?.employees[index];
-
-        index = connections.findIndex((_) => (!this.isSameItem(_.company1, cust) && this.isSameItem(_.company1, item)) || (!this.isSameItem(_.company2, cust) && this.isSameItem(_.company2, item)));
-        if (index > -1) {
-            const con = connections[index];
-            if (this.isSameItem(con.company1, item)) return con.company1;
-            return con.company2;
-        }
-        return cust;
+    getItem(note: Serializable): Project | CompanyContact | Company | undefined {
+        return this.#target(note as Comment) as Project | CompanyContact | Company | undefined;
     }
 
     createProject = (event: Event) => {
@@ -198,7 +195,9 @@ export class CustomersKnownSequiturComponent {
     };
 
     createContact = () => {
-        this.#companyService.createEmployee(this.customer()!.id).subscribe(() => this.parent.reload());
+        this.#companyService.createEmployee(this.customer()!.id).subscribe(() => {
+            this.#companyService.show(this.customer()!.id).subscribe((_) => this.customer.set(_));
+        });
     };
 
     createCompany = () => {
@@ -226,7 +225,6 @@ export class CustomersKnownSequiturComponent {
     birthdayMissing = (item: Serializable) => this.isInstanceOf(item, 'CompanyContact') && !(item as unknown as { contact?: { card?: { get?: (k: string) => unknown[] } } }).contact?.card?.get?.('BDAY')?.length;
     linkedinMissing = (item: Serializable) => this.isInstanceOf(item, 'CompanyContact') && !(item as unknown as { contact?: { card?: { get?: (k: string) => VcardRow[] } } }).contact?.card?.get?.('URL')?.filter((row: VcardRow) => row.getType() == 'linkedin')?.length;
 
-    // `.card` is a signal function, not called here, matching the original (pre-typing) runtime behavior
     webUrlMissing = (item: Serializable) => this.isInstanceOf(item, 'Company') && (item as unknown as { card: { get: (k: string) => VcardRow[] } }).card.get('URL').every((row: VcardRow) => row.isSocialMedia());
     commercialRegisterNumberMissing = (item: Serializable) => {
         const company = item as Company & { name: string };
@@ -238,62 +236,16 @@ export class CustomersKnownSequiturComponent {
     }
 
     saveComments() {
-        const subs: Observable<null>[] = [];
+        const subs: Observable<unknown>[] = [];
         this.notes().forEach((note) => {
-            if (note.text != null && note.text != '') {
-                const item = this.getItem(note);
-                if (item instanceof Project) {
-                    item.description = note.text;
-                    subs.push(
-                        item.update({ description: item.description }).pipe(
-                            switchMap((_) => {
-                                this.projects.update(ps => {
-                                    const index = ps.findIndex(p => p.id === _.id);
-                                    if (index > -1) ps[index].description = _.description;
-                                    return [...ps];
-                                });
-                                return of(null);
-                            }),
-                        ),
-                    );
-                } else {
-                    const data = {
-                        text: note.text,
-                        type: note.type,
-                        path: note.apiPathWithId(),
-                    };
-                    if (note.id) {
-                        subs.push(
-                            note.update(data).pipe(
-                                switchMap((_) => {
-                                    this.notes.update(notes => {
-                                        const index = notes.findIndex(n => this.isSameItem(n, _));
-                                        if (index > -1) notes[index] = _;
-                                        return [...notes];
-                                    });
-                                    return of(null);
-                                }),
-                            ),
-                        );
-                    } else {
-                        subs.push(
-                            note.store(data).pipe(
-                                switchMap((_) => {
-                                    this.notes.update(notes => {
-                                        const index = notes.findIndex(n => this.isSameItem(n, _));
-                                        if (index > -1) {
-                                            const text = notes[index].text;
-                                            notes[index] = _;
-                                            notes[index].text = text;
-                                        }
-                                        return [...notes];
-                                    });
-                                    return of(null);
-                                }),
-                            ),
-                        );
-                    }
-                }
+            const target = this.getItem(note);
+            if (note.text == null || note.text === '' || !target) return;
+            if (target instanceof Project) {
+                target.description = note.text;
+                subs.push(target.update({ description: target.description }));
+            } else {
+                const data = { text: note.text, type: note.type, path: target.apiPathWithId() };
+                subs.push(note.id ? note.update(data) : note.store(data));
             }
         });
         if (subs.length > 0) {
@@ -318,16 +270,13 @@ export class CustomersKnownSequiturComponent {
         if (!comment) return;
 
         const now = dayjs().format('YYYY-MM-DD HH:mm');
-        const userName = NxGlobal.global.user?.getName() || 'Unknown User';
+        const userName = this.#global.user?.getName() || 'Unknown User';
 
-        // Convert newlines to <br> tags
         const formattedComment = comment.replace(/\n/g, '<br>');
         const newCommentText = `<br><br><code>${now} - ${userName}</code> ${formattedComment}`;
 
-        // Add the comment to the project description
         project.description = (project.description || '') + newCommentText;
 
-        // Update the project
         project.update({ description: project.description }).subscribe(() => {
             this.projects.update(ps => {
                 const index = ps.findIndex(p => p.id === project.id);
@@ -336,12 +285,10 @@ export class CustomersKnownSequiturComponent {
             });
         });
 
-        // Clear the textarea and reset height
         textareaElement.value = '';
         textareaElement.style.height = 'auto';
     }
 
-    // User Assignment Methods for individual items
     availableUsersForItem(item: Company | Project): User[] {
         const assignedUserIds = item.assignees?.map((a) => a.assignee.id) || [];
         return this.#global.team.filter((user: User) => !assignedUserIds.includes(user.id));

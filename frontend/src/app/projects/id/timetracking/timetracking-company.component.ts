@@ -14,11 +14,12 @@ import { FormsModule } from '@angular/forms';
 import { NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
 import { SafePipe } from '@pipes/safe.pipe';
 import { IssuePickerComponent } from '@shards/issue-picker/issue-picker.component';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl: './timetracking.component.html',
-    imports: [AvatarComponent, CdkTableModule, DatePipe, DecimalPipe, NComponent, ContinuousMarkerComponent, EmptyStateComponent, EnableTableExportDirective, Nx, NgbTooltipModule, FormsModule, NgxDaterangepickerMd, SafePipe, IssuePickerComponent],
+    imports: [StackedTableDirective, AvatarComponent, CdkTableModule, DatePipe, DecimalPipe, NComponent, ContinuousMarkerComponent, EmptyStateComponent, EnableTableExportDirective, Nx, NgbTooltipModule, FormsModule, NgxDaterangepickerMd, SafePipe, IssuePickerComponent],
     host: { id: 'TimetrackingCompanyComponent' },
 })
 export class TimetrackingCompanyComponent extends TimetrackingComponent {

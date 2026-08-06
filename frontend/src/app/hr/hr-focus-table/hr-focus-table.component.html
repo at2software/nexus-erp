@@ -4,7 +4,7 @@
     <div class="card-header hstack gap-2">
         <div class="flex-fill">{{ _user.getName() }}</div>
         <div>
-            <i class="cursor-pointer text-primary" roles="admin" (click)="openAddFocusModal(addFocus)" ngbTooltip="CTRL+ALT+N" hotkey="CTRL+ALT+N">add</i>
+            <i class="cursor-pointer text-primary" roles="admin" role="button" tabindex="0" (click)="openAddFocusModal(addFocus)" (keydown.enter)="openAddFocusModal(addFocus)" (keydown.space)="openAddFocusModal(addFocus)" ngbTooltip="CTRL+ALT+N" hotkey="CTRL+ALT+N">add</i>
         </div>
     </div>
     <ul class="list-group">
@@ -31,7 +31,7 @@
                     }
                 </div>
                 <div [class.d-none]="!x.details">
-                    <table class="table table-sm align-middle mb-0">
+                    <table stackedTable class="table table-sm align-middle mb-0">
                         @for (f of x.foci; track f.id) {
                             <tr class="detail-row" [nx]="f" [tables]="x.foci" [style.borderLeftColor]="f.color()" (actionsResolved)="reorderDays()">
                                 <td class="ps-2"><img class="avatar avatar-sm p-0" [src]="iconFor(f)" alt="" /></td>

@@ -1,15 +1,13 @@
-import { Serializable } from '@models/serializable';
-import { DebriefService } from './debrief.service';
+import { Serializable } from '@models/_core/serializable';
 import { User } from '@models/user/user.model';
-import { Type } from 'class-transformer';
-import { NxAction, NxActionType } from '@app/nx/nx.actions';
+import { Type } from '@models/_core/hydrate';
+import { NxAction, NxActionType } from '@models/_core/nx.actions';
 import { computed } from '@angular/core';
-import { Model } from '@constants/type-discriminators';
+import { Model } from '@constants/model/type-discriminators';
 
 @Model('DebriefSolution')
 export class DebriefSolution extends Serializable {
     static override API_PATH = (): string => 'debrief_problem_solutions';
-    override SERVICE = DebriefService;
 
     title: string = '';
     description?: string;
@@ -21,19 +19,21 @@ export class DebriefSolution extends Serializable {
 
     @Type(()=>User) created_by?: User;
 
-    effectiveness_rating = computed(() => this.pivot?.effectiveness_rating ?? 0);
-    notes = computed(() => this.pivot?.notes ?? '');
+    effectiveness_rating = computed(() => { this.snapshot(); return this.pivot?.effectiveness_rating ?? 0; });
+    notes = computed(() => { this.snapshot(); return this.pivot?.notes ?? ''; });
 
-    actions: NxAction[] = [
-        {
-            title: $localize`:@@i18n.common.delete:delete`,
-            action: () => this.delete(),
-            type: NxActionType.Destructive,
-            group: true,
-            hotkey: 'CTRL+DELETE',
-            roles: 'project_manager',
-        },
-    ];
+    protected override buildActions(): NxAction[] {
+        return [
+            {
+                title: $localize`:@@i18n.common.delete:delete`,
+                action: () => this.delete(),
+                type: NxActionType.Destructive,
+                group: true,
+                hotkey: 'CTRL+DELETE',
+                roles: 'project_manager',
+            },
+        ];
+    }
 
     getEffectivenessStars(): boolean[] {
         const rating = this.effectiveness_rating();

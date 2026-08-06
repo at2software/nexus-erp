@@ -36,7 +36,6 @@ class CancelInvoiceAction {
             $invoice
         );
 
-        // Free original items so they reappear in their billing section (stage-based)
         $invoice->invoiceItems()->update(['invoice_id' => null]);
 
         $invoice->setCancelledAttributes();

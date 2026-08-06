@@ -1,8 +1,8 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 import { NexusHttpService } from './http/http.nexus';
 import { Dictionary } from '@constants/constants';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class SearchService extends NexusHttpService<any> {
     apiPath = 'search';
 

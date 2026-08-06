@@ -1,4 +1,3 @@
-// Dark overlay panels that create a "hole" around the focused element
 .gt-panel {
     position: fixed;
     background: rgba(0, 0, 0, 0.65);
@@ -7,7 +6,6 @@
     transition: all 0.25s ease;
 }
 
-// Full-screen overlay when no focus element
 .gt-overlay-full {
     position: fixed;
     inset: 0;
@@ -16,7 +14,6 @@
     pointer-events: none;
 }
 
-// Highlight ring around focused element
 .gt-ring {
     position: fixed;
     z-index: 1061;
@@ -32,7 +29,6 @@
     50%       { box-shadow: 0 0 0 3px var(--bs-primary), 0 0 32px rgba(var(--bs-primary-rgb), 0.7); }
 }
 
-// Info card
 .gt-card {
     position: fixed;
     z-index: 1062;
@@ -46,7 +42,6 @@
     overflow: hidden;
 }
 
-// Fully centered (no focus element)
 .gt-card-centered {
     top: 50% !important;
     left: 50% !important;
@@ -59,7 +54,6 @@
     to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
-// Horizontally centered (wide/tall focus element — card is centered on X axis only)
 .gt-card-centered-h {
     transform: translateX(-50%);
     animation: gt-fade-in-centered-h 0.2s ease !important;
@@ -127,7 +121,6 @@
     flex-shrink: 0;
 }
 
-// Slide indicator dots
 .gt-dots {
     display: flex;
     align-items: center;

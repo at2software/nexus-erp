@@ -1,11 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, linkedSignal, signal, untracked } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { Observable, forkJoin, of, switchMap } from 'rxjs';
+import { Observable, forkJoin, map, of, switchMap } from 'rxjs';
 import { MarketingService } from '@models/marketing/marketing.service';
+import { modelListResource, modelResource } from '@models/http/model-resource';
 import { MarketingInitiative } from '@models/marketing/marketing-initiative.model';
 import { MarketingWorkflow } from '@models/marketing/marketing-workflow.model';
-import { MarketingPerformanceMetric } from '@models/marketing/marketing-performance-metrics.model';
 import { IActivityBase } from '@models/marketing/activity-base.interface';
 import { QuickActionType } from '@models/marketing/marketing-activity.model';
 import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
@@ -24,13 +25,24 @@ export class MarketingActivityDetailComponent {
     #route = inject(ActivatedRoute);
     #marketingService = inject(MarketingService);
 
-    readonly mode: ActivityMode;
+    readonly mode: ActivityMode = this.#route.snapshot.data['mode'] ?? 'initiative';
 
-    context = signal<MarketingInitiative | MarketingWorkflow | null>(null);
-    activity = signal<IActivityBase | null>(null);
-    isLoading = signal(false);
+    #target = toSignal(this.#route.params.pipe(map((params) => {
+        const parentId = this.#route.parent?.snapshot.params['id'] as string | undefined;
+        const activityId = params['activityId'] as string | undefined;
+        return parentId && activityId ? { parentId, activityId } : undefined;
+    })));
+
+    #context = modelResource(
+        () => this.#target()?.parentId,
+        (parentId): Observable<MarketingInitiative | MarketingWorkflow> =>
+            this.mode === 'initiative' ? this.#marketingService.showInitiative(parentId) : this.#marketingService.showWorkflow(parentId),
+    );
+
+    context = this.#context.value;
+    isLoading = this.#context.isLoading;
     isSaving = signal(false);
-    availableMetrics = signal<MarketingPerformanceMetric[]>([]);
+    availableMetrics = modelListResource(() => this.#marketingService.indexMetrics()).value;
 
     editName = '';
     editDayOffset = 0;
@@ -57,6 +69,13 @@ export class MarketingActivityDetailComponent {
             : (ctx as MarketingWorkflow).marketing_activities ?? [];
     });
 
+    readonly #loadedActivity = computed<IActivityBase | null>(() => {
+        const activityId = this.#target()?.activityId;
+        return this.siblingActivities().find((a) => String(a.id) === activityId) ?? null;
+    });
+
+    activity = linkedSignal(() => this.#loadedActivity());
+
     readonly selectedQuickAction = computed(() => {
         const value = this.editQuickAction();
         return this.quickActions.find((qa) => qa.value === value) ?? this.quickActions[0];
@@ -75,32 +94,9 @@ export class MarketingActivityDetailComponent {
     });
 
     constructor() {
-        this.mode = this.#route.snapshot.data['mode'] ?? 'initiative';
-        this.#route.params.subscribe((params) => {
-            const parentId = this.#route.parent?.snapshot.params['id'];
-            const activityId = params['activityId'];
-            if (parentId && activityId) this.#loadData(parentId, activityId);
-        });
-    }
-
-    #loadData(parentId: string, activityId: string) {
-        this.isLoading.set(true);
-        if (!this.availableMetrics().length) {
-            this.#marketingService.indexMetrics().subscribe((m) => this.availableMetrics.set(m));
-        }
-        const load$: Observable<MarketingInitiative | MarketingWorkflow> = this.mode === 'initiative'
-            ? this.#marketingService.showInitiative(parentId)
-            : this.#marketingService.showWorkflow(parentId);
-
-        load$.subscribe({
-            next: (ctx) => {
-                this.context.set(ctx);
-                const activity = this.siblingActivities().find((a) => String(a.id) === activityId) ?? null;
-                this.activity.set(activity);
-                if (activity) this.#populateForm(activity);
-                this.isLoading.set(false);
-            },
-            error: () => this.isLoading.set(false),
+        effect(() => {
+            const activity = this.#loadedActivity();
+            if (activity) untracked(() => this.#populateForm(activity));
         });
     }
 

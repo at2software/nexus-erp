@@ -1,18 +1,16 @@
-import { Serializable } from '@models/serializable';
-import { DebriefService } from './debrief.service';
+import { Serializable } from '@models/_core/serializable';
 import { Project } from './project.model';
 import { User } from '@models/user/user.model';
 import { DebriefProblem } from './debrief-problem.model';
 import { DebriefPositive } from './debrief-positive.model';
 import { computed } from '@angular/core';
-import { plainToInstance, Type } from 'class-transformer';
-import { Model } from '@constants/type-discriminators';
+import { Type } from '@models/_core/hydrate';
+import { Model } from '@constants/model/type-discriminators';
 
 @Model('DebriefProjectDebrief')
 export class DebriefProjectDebrief extends Serializable {
     static override API_PATH = (): string => 'debriefs';
     static override DB_TABLE_NAME = (): string => 'debrief_project_debriefs';
-    override SERVICE = DebriefService;
 
     project_id: string = '';
     conducted_by_user_id?: string;
@@ -30,9 +28,7 @@ export class DebriefProjectDebrief extends Serializable {
     get problems(): DebriefProblem[] { return this.#problems; }
     set problems(values: unknown[]) {
         if (!Array.isArray(values)) return;
-        // afterDeserialize() must run explicitly here (plainToInstance() alone won't call it) -
-        // DebriefProblem relies on it to backfill severity from the debrief-problem pivot.
-        this.#problems = values.map(v => { const p = plainToInstance(DebriefProblem, v); p.afterDeserialize(v); return p; });
+        this.#problems = values.map((v) => DebriefProblem.fromJson(v));
         this.#problems.forEach(p => p._parent.set(this));
     }
 
@@ -40,12 +36,12 @@ export class DebriefProjectDebrief extends Serializable {
     get positives(): DebriefPositive[] { return this.#positives; }
     set positives(values: unknown[]) {
         if (!Array.isArray(values)) return;
-        this.#positives = values.map(v => { const p = plainToInstance(DebriefPositive, v); p.afterDeserialize(v); return p; });
+        this.#positives = values.map((v) => DebriefPositive.fromJson(v));
         this.#positives.forEach(p => p._parent.set(this));
     }
 
-    isCompleted = computed((): boolean => this.status === 'completed');
-    isDraft = computed((): boolean => this.status === 'draft');
+    isCompleted = computed((): boolean => { this.snapshot(); return this.status === 'completed'; });
+    isDraft = computed((): boolean => { this.snapshot(); return this.status === 'draft'; });
 
     getProblemsByCategory(): Map<string, DebriefProblem[]> {
         const map = new Map<string, DebriefProblem[]>();

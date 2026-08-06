@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Project } from '@models/project/project.model';
 import { ProjectService } from '@models/project/project.service';
 import { BaseWidgetComponent, WidgetOptions } from '../base.widget.component';
@@ -16,10 +16,9 @@ import { ProjectState } from '@models/project/project-state.model';
 export class WidgetMissingProjectManagerComponent extends BaseWidgetComponent {
     readonly #FILTERS = {
         missing_project_manager: true,
-        states: [...ProjectState.idsPrepared(), ...ProjectState.idsRunning()],
+        states: ProjectState.idsPreparedOrRunning(),
     };
 
-    data = signal<Project[]>([]);
     #projectService = inject(ProjectService);
 
     defaultOptions = () => ({
@@ -27,10 +26,7 @@ export class WidgetMissingProjectManagerComponent extends BaseWidgetComponent {
         ...WidgetOptions.onlyMineAsPm,
     });
 
-    reload(): void {
-        this.#projectService.index(Object.assign({}, this.#FILTERS, this.getOptionsURI())).subscribe((_: Project[]) => {
-            this.data.set(_.sort((a, b) => `${a.company_id}`.localeCompare(`${b.company_id}`)));
-            this.value.set(this.data().length);
-        });
-    }
+    readonly #projects = this.optionsResource((options) => this.#projectService.index({ ...this.#FILTERS, ...options }));
+    readonly data = computed<Project[]>(() => [...(this.#projects.value() ?? [])].sort((a, b) => `${a.company_id}`.localeCompare(`${b.company_id}`)));
+    override value = this.headline(this.#projects, () => this.data().length);
 }

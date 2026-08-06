@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, NgZone, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, computed, inject } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { GuidedSlide, GuidedTourService } from './guided-tour.service';
 import { fromEvent } from 'rxjs';
@@ -11,7 +11,6 @@ interface OverlayPanels {
     right: Dictionary<string>;
     ring: Dictionary<string>;
     card: Dictionary<string>;
-    /** True when the focused element is too wide/tall for side placement — card is centered instead */
     cardCentered: boolean;
 }
 
@@ -19,7 +18,6 @@ const PAD = 10;
 const CARD_WIDTH = 380;
 const CARD_MARGIN = 32;
 const CARD_HEIGHT_EST = 220;
-/** Elements wider than this fraction of the viewport trigger centered card placement */
 const WIDE_THRESHOLD = 0.5;
 
 @Component({
@@ -32,7 +30,6 @@ export class GuidedTourOverlayComponent {
     #service = inject(GuidedTourService);
     #cdr = inject(ChangeDetectorRef);
     #destroyRef = inject(DestroyRef);
-    #ngZone = inject(NgZone);
 
     currentSlide: GuidedSlide | null = null;
     panels: OverlayPanels | null = null;
@@ -55,16 +52,14 @@ export class GuidedTourOverlayComponent {
             this.#cdr.markForCheck();
         });
 
-        this.#ngZone.runOutsideAngular(() => {
-            fromEvent(window, 'resize')
-                .pipe(takeUntilDestroyed(this.#destroyRef))
-                .subscribe(() => {
-                    if (this.currentSlide) {
-                        this.panels = this.#computePanels(this.currentSlide);
-                        this.#cdr.markForCheck();
-                    }
-                });
-        });
+        fromEvent(window, 'resize')
+            .pipe(takeUntilDestroyed(this.#destroyRef))
+            .subscribe(() => {
+                if (this.currentSlide) {
+                    this.panels = this.#computePanels(this.currentSlide);
+                    this.#cdr.markForCheck();
+                }
+            });
     }
 
     onNext(): void {
@@ -118,28 +113,22 @@ export class GuidedTourOverlayComponent {
         const isTall = r.height > sh * WIDE_THRESHOLD;
 
         if (isWide) {
-            // Element fills most of the width → center the card horizontally
-            // and place it above or below depending on where the element is
             style['left'] = '50%';
             if (cy < sh / 2) {
-                // element in top half → card below it
                 const top = Math.min(sh - CARD_HEIGHT_EST - CARD_MARGIN, r.bottom + PAD + CARD_MARGIN);
                 style['top'] = `${top}px`;
             } else {
-                // element in bottom half → card above it
                 style['bottom'] = `${sh - r.top + PAD + CARD_MARGIN}px`;
             }
             return { style, centered: true };
         }
 
-        // Standard: place horizontally on opposite side of element
         if (cx < sw / 2) {
             style['left'] = `${Math.min(sw - CARD_WIDTH - CARD_MARGIN, r.right + PAD + CARD_MARGIN)}px`;
         } else {
             style['right'] = `${sw - r.left + PAD + CARD_MARGIN}px`;
         }
 
-        // Vertical: center relative to element (or center screen when element is tall)
         if (isTall) {
             style['top'] = '50%';
             return { style, centered: true };

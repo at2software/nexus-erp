@@ -3,7 +3,7 @@ import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { Product } from '@models/product/product.model';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { GlobalService } from '@models/global.service';
 import { Company } from '@models/company/company.model';
 import { QuillEditorComponent, QuillModules } from 'ngx-quill';
@@ -37,10 +37,6 @@ export class ModalEditInvoiceItemComponent extends ModalBaseComponent<{ item: In
     #companyRef!: Company;
     #activeModal = inject(NgbActiveModal);
 
-    // Quill registers its own (high-frequency) keystroke/selection listeners during construction.
-    // Deferring its creation into afterNextRender() — which Angular always runs outside the zone —
-    // keeps those listeners out of zone.js, so typing doesn't trigger a full-app change detection
-    // tick on every keystroke.
     readonly editorReady = signal(false);
 
     constructor() {

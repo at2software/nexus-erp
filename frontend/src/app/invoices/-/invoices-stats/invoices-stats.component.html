@@ -1,10 +1,9 @@
 <div class="row">
-    <div class="col-3">
+    <div class="col-12 col-md-6 col-xl-3">
         <widget-cashflow></widget-cashflow>
-        <!-- <widget-revenue-12></widget-revenue-12> -->
         <widget-revenue-current-year></widget-revenue-current-year>
     </div>
-    <div class="col-6">
+    <div class="col-12 col-md-6">
         @if (overallChart()) {
             <div class="card mb-3">
                 <div class="card-header" i18n="@@i18n.common.overall">overall</div>
@@ -15,7 +14,7 @@
         }
 
         <div class="row g-2">
-            <div class="col-6">
+            <div class="col-12 col-md-6">
                 <div class="card h-100">
                     <div class="card-header hstack gap-2">
                         <div class="flex-fill" i18n="@@i18n.invoices.invoice_funnel">invoice funnel</div>
@@ -28,34 +27,34 @@
                     </div>
                 </div>
             </div>
-            <div class="col-6">
+            <div class="col-12 col-md-6">
                 <customer-revenue-bubble-chart xAxisKey="cross_sell_ratio" label="Cross-sell ratio"
                     hint="Top-right: diversified loyal customers. Bottom-right: broad engagement but no follow-up. Top-left: cross-selling without retention."
                     [data]="customerScatterData()"></customer-revenue-bubble-chart>
             </div>
-            <div class="col-6">
+            <div class="col-12 col-md-6">
                 <customer-revenue-bubble-chart xAxisKey="customer_age" label="Customer age (months)"
                     hint="Top-right: long-standing loyal customers. Top-left: old customers with no follow-up — re-engagement targets. Bottom-right: young customers already returning — promising early retention."
                     [data]="customerScatterData()"></customer-revenue-bubble-chart>
             </div>
-            <div class="col-6">
+            <div class="col-12 col-md-6">
                 <customer-revenue-bubble-chart xAxisKey="lifetime_revenue" label="Lifetime revenue"
                     hint="Top-right: highest-value loyal customers. Top-left: high revenue but no follow-up — retention opportunity. Bubble size = total revenue."
                     [data]="customerScatterData()"></customer-revenue-bubble-chart>
             </div>
-            <div class="col-6">
+            <div class="col-12 col-md-6">
                 <customer-revenue-bubble-chart xAxisKey="project_count" label="Number of projects"
                     hint="Top-right: many projects with strong retention. Top-left: many projects but no follow-up — investigate drop-off reasons."
                     [data]="customerScatterData()"></customer-revenue-bubble-chart>
             </div>
-            <div class="col-6">
+            <div class="col-12 col-md-6">
                 <customer-revenue-bubble-chart xAxisKey="months_since_last" label="Months since last invoice"
                     hint="Top = recently active, bottom = dormant. Bottom-right: formerly loyal customers going silent — re-engage before they churn. Bottom-left: long dormant with no follow-up — likely lost."
                     [data]="customerScatterData()"></customer-revenue-bubble-chart>
             </div>
         </div>
     </div>
-    <div class="col-3">
+    <div class="col-12 col-md-6 col-xl-3">
         <div class="card mb-3">
             <div class="card-header d-flex align-items-center gap-2">
                 <span class="flex-fill text-truncate">

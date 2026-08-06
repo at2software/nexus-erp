@@ -14,7 +14,6 @@ class DeletionRequest extends BaseModel {
         return $this->morphTo();
     }
 
-    /** Approve the request: delete the target, then remove the request itself. */
     public function approve(): void {
         $this->model?->delete();
         $this->delete();

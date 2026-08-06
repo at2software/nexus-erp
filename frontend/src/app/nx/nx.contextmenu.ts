@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, ElementRef, Renderer2, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NxAction } from './nx.actions';
+import { NxAction } from '@models/_core/nx.actions';
 import { ContextMenuTrigger, NxService } from './nx.service';
 import { NgbDropdown, NgbDropdownMenu } from '@ng-bootstrap/ng-bootstrap';
 import { AutopositionDirective } from '@directives/autoposition.directive';
 import { NxDropdown } from './nx.dropdown';
-import { NxGlobal } from './nx.global';
-import { Serializable } from '@models/serializable';
+import { SelectionService } from './selection.service';
+import { Serializable } from '@models/_core/serializable';
 
 @Component({
     selector: 'nx-contextmenu',
@@ -16,9 +16,6 @@ import { Serializable } from '@models/serializable';
     host: { '(window:keydown)': 'onDocumentKeyDown($event)' },
 })
 export class NxContextMenu {
-    static _track_id = 0;
-    static getTrackId = () => ++NxContextMenu._track_id;
-
     private readonly ngbDropdown = viewChild.required(NgbDropdown);
     private readonly dropdown = viewChild.required('dropdown', { read: ElementRef });
 
@@ -26,6 +23,7 @@ export class NxContextMenu {
 
     #service = inject(NxService);
     #re = inject(Renderer2);
+    #selection = inject(SelectionService);
 
     constructor() {
         this.#service.onContextMenu.pipe(takeUntilDestroyed()).subscribe(e => this.#onNewContextMenu(e));
@@ -38,7 +36,7 @@ export class NxContextMenu {
         if (e.objects.length === 0) return console.error('no objects selected');
 
         const firstNx = e.objects[0].nx();
-        NxGlobal.context = firstNx instanceof Serializable ? firstNx : undefined;
+        this.#selection.setContext(firstNx instanceof Serializable ? firstNx : undefined);
 
         const sameClass = e.objects.every(_ => _.nx().class === firstNx.class);
         if (!sameClass) return console.error('different classes have been selected');

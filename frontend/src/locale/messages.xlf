@@ -1779,6 +1779,22 @@
         <source>requires attention</source>
       </segment>
     </unit>
+    <unit id="i18n.common.tooManyRequests">
+      <notes>
+        <note category="location">src/guards/detail.guard.ts:63</note>
+      </notes>
+      <segment>
+        <source>too many requests - please wait a moment and try again</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.loadFailed">
+      <notes>
+        <note category="location">src/guards/detail.guard.ts:64</note>
+      </notes>
+      <segment>
+        <source>could not load the requested entry</source>
+      </segment>
+    </unit>
     <unit id="i18n.common.requiresReview">
       <notes>
         <note category="location">src/app/_shards/avatar/avatar.component.ts:72</note>
@@ -1830,6 +1846,14 @@
       </notes>
       <segment>
         <source>load all remaining pages from database</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.insertCurrentDate">
+      <notes>
+        <note category="location">src/app/_shards/text-param-editor/text-param-editor.component.html:91</note>
+      </notes>
+      <segment>
+        <source>Insert current date</source>
       </segment>
     </unit>
     <unit id="i18n.common.localize">
@@ -2018,7 +2042,7 @@
         <note category="location">src/app/dashboard/dashboard.component.ts:97</note>
         <note category="location">src/app/dashboard/dashboard.component.ts:106</note>
         <note category="location">src/app/invoices/_shards/invoice-prepare/invoice-prepare.ts:177</note>
-        <note category="location">src/app/nx/nx.global.ts:88</note>
+        <note category="location">src/app/nx/nx.static.ts:88</note>
         <note category="location">src/app/projects/_shards/custom-gantt/milestone-popup/milestone-popup.component.html:121,122</note>
         <note category="location">src/app/projects/id/project-milestones/project-milestones.component.ts:205</note>
         <note category="location">src/models/encryption/encryption.actions.ts:5</note>
@@ -2265,10 +2289,18 @@
     </unit>
     <unit id="i18n.common.sign_in">
       <notes>
-        <note category="location">src/app/app/login/login.component.html:20,22</note>
+        <note category="location">src/app/app/login/login.component.html:24,26</note>
       </notes>
       <segment>
         <source>sign in</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.login_failed">
+      <notes>
+        <note category="location">src/app/app/login/login.component.html:20</note>
+      </notes>
+      <segment>
+        <source>login failed, please check your credentials</source>
       </segment>
     </unit>
     <unit id="i18n.guidedTour.nav.introTitle">
@@ -2325,6 +2357,22 @@
       </notes>
       <segment>
         <source>Contacts</source>
+      </segment>
+    </unit>
+    <unit id="i18n.contacts.personalDetails">
+      <notes>
+        <note category="location">src/app/customers/_shards/edit-vcard.ts/edit-vcard.ts.component.html:3</note>
+      </notes>
+      <segment>
+        <source>personal details</source>
+      </segment>
+    </unit>
+    <unit id="i18n.contacts.employmentAt">
+      <notes>
+        <note category="location">src/app/customers/_shards/edit-vcard.ts/edit-vcard.ts.component.html:7</note>
+      </notes>
+      <segment>
+        <source>employment at</source>
       </segment>
     </unit>
     <unit id="i18n.guidedTour.nav.contacts">
@@ -2476,6 +2524,14 @@
         <source>System-wide configuration and administrative settings. Only available to administrators.</source>
       </segment>
     </unit>
+    <unit id="i18n.common.vacationRequest">
+      <notes>
+        <note category="location">src/app/calendar/calendar-detail/calendar-detail.component.html:22</note>
+      </notes>
+      <segment>
+        <source>vacation request</source>
+      </segment>
+    </unit>
     <unit id="i18n.common.year">
       <notes>
         <note category="location">src/app/calendar/calendar-detail/calendar-detail.component.html:29,30</note>
@@ -2615,7 +2671,7 @@
     <unit id="i18n.common.attention">
       <notes>
         <note category="location">src/app/calendar/calendar-entry-modal/calendar-entry-modal.component.ts:210</note>
-        <note category="location">src/app/nx/nx.global.ts:89</note>
+        <note category="location">src/app/nx/nx.static.ts:89</note>
         <note category="location">src/app/profile/profile-nav.component.ts:28</note>
         <note category="location">src/models/vacation/vacation-grant.model.ts:22</note>
       </notes>
@@ -3674,6 +3730,94 @@
         <source>import from imprint</source>
       </segment>
     </unit>
+    <unit id="i18n.knownseq.unknown_caller">
+      <notes>
+        <note category="location">src/app/customers/-/customers-known-sequitur/knownseq-draft.component.html:6</note>
+      </notes>
+      <segment>
+        <source>unknown caller — start taking notes</source>
+      </segment>
+    </unit>
+    <unit id="i18n.knownseq.keep_caller">
+      <notes>
+        <note category="location">src/app/customers/-/customers-known-sequitur/knownseq-draft.component.html:12</note>
+      </notes>
+      <segment>
+        <source>keep caller</source>
+      </segment>
+    </unit>
+    <unit id="i18n.knownseq.edit_company">
+      <notes>
+        <note category="location">src/app/customers/-/customers-known-sequitur/customers-known-sequitur.component.html:20</note>
+      </notes>
+      <segment>
+        <source>edit company details</source>
+      </segment>
+    </unit>
+    <unit id="i18n.knownseq.caller_number">
+      <notes>
+        <note category="location">src/app/customers/-/customers-known-sequitur/knownseq-caller-cards.component.html:5</note>
+      </notes>
+      <segment>
+        <source>caller number</source>
+      </segment>
+    </unit>
+    <unit id="i18n.knownseq.lookup">
+      <notes>
+        <note category="location">src/app/customers/-/customers-known-sequitur/knownseq-caller-cards.component.html:24</note>
+      </notes>
+      <segment>
+        <source>reverse lookup</source>
+      </segment>
+    </unit>
+    <unit id="i18n.knownseq.number_unrecognized">
+      <notes>
+        <note category="location">src/app/customers/-/customers-known-sequitur/knownseq-caller-cards.component.html:18</note>
+      </notes>
+      <segment>
+        <source>could not classify this number</source>
+      </segment>
+    </unit>
+    <unit id="i18n.knownseq.caller_name">
+      <notes>
+        <note category="location">src/app/customers/-/customers-known-sequitur/knownseq-draft.component.html:22</note>
+      </notes>
+      <segment>
+        <source>caller name</source>
+      </segment>
+    </unit>
+    <unit id="i18n.knownseq.discard_caller">
+      <notes>
+        <note category="location">src/app/customers/-/customers-known-sequitur/knownseq-draft.component.ts:113</note>
+      </notes>
+      <segment>
+        <source>discard caller?</source>
+      </segment>
+    </unit>
+    <unit id="i18n.knownseq.discard_caller_confirm">
+      <notes>
+        <note category="location">src/app/customers/-/customers-known-sequitur/knownseq-draft.component.ts:113</note>
+      </notes>
+      <segment>
+        <source>Discard this caller and everything noted during the call?</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.discard">
+      <notes>
+        <note category="location">src/app/customers/-/customers-known-sequitur/knownseq-draft.component.html:15</note>
+      </notes>
+      <segment>
+        <source>discard</source>
+      </segment>
+    </unit>
+    <unit id="i18n.common.website">
+      <notes>
+        <note category="location">src/app/customers/-/customers-known-sequitur/knownseq-draft.component.html:30</note>
+      </notes>
+      <segment>
+        <source>website</source>
+      </segment>
+    </unit>
     <unit id="i18n.common.language">
       <notes>
         <note category="location">src/app/customers/_shards/vcard/vcard.component.html:300</note>
@@ -3882,6 +4026,54 @@
       </notes>
       <segment>
         <source>default product</source>
+      </segment>
+    </unit>
+    <unit id="i18n.project.quoteIntroText">
+      <notes>
+        <note category="location">src/app/settings/settings-projects/settings-projects-quote/settings-projects-quote.component.html:14</note>
+      </notes>
+      <segment>
+        <source>intro text — salutation and opening, above the price table</source>
+      </segment>
+    </unit>
+    <unit id="i18n.project.quotePriceTable">
+      <notes>
+        <note category="location">src/app/settings/settings-projects/settings-projects-quote/settings-projects-quote.component.html:18</note>
+      </notes>
+      <segment>
+        <source>price table — generated from the project items</source>
+      </segment>
+    </unit>
+    <unit id="i18n.project.quoteClosingText">
+      <notes>
+        <note category="location">src/app/settings/settings-projects/settings-projects-quote/settings-projects-quote.component.html:21</note>
+      </notes>
+      <segment>
+        <source>closing text — below the price table, including the signature; the acceptance block follows automatically</source>
+      </segment>
+    </unit>
+    <unit id="i18n.project.quoteLegalText">
+      <notes>
+        <note category="location">src/app/settings/settings-projects/settings-projects-quote/settings-projects-quote.component.html:25</note>
+      </notes>
+      <segment>
+        <source>terms &amp; conditions — annexed on its own page, small type, two columns</source>
+      </segment>
+    </unit>
+    <unit id="i18n.project.quoteNumber">
+      <notes>
+        <note category="location">src/app/settings/settings-projects/settings-projects-quote/settings-projects-quote.component.html:2</note>
+      </notes>
+      <segment>
+        <source>quote number</source>
+      </segment>
+    </unit>
+    <unit id="i18n.project.quoteValidFor">
+      <notes>
+        <note category="location">src/app/settings/settings-projects/settings-projects-quote/settings-projects-quote.component.html:9</note>
+      </notes>
+      <segment>
+        <source>quote valid for</source>
       </segment>
     </unit>
     <unit id="i18n.projects.leadSource">
@@ -4501,6 +4693,14 @@
       </notes>
       <segment>
         <source>time-based projects</source>
+      </segment>
+    </unit>
+    <unit id="i18n.widget.invoiceManager.headline">
+      <notes>
+        <note category="location">src/app/dashboard/widgets/widget-invoice-manager/widget-invoice-manager.component.html:5</note>
+      </notes>
+      <segment>
+        <source>currently invoiceable in total: uninvoiced hours on time-based projects, unbilled customer support and prepared invoice items</source>
       </segment>
     </unit>
     <unit id="i18n.common.birthdaysAndJubilees">
@@ -5444,6 +5644,14 @@
       </notes>
       <segment>
         <source>new sick note</source>
+      </segment>
+    </unit>
+    <unit id="i18n.profile.sickPeriodRequired">
+      <notes>
+        <note category="location">src/app/profile/profile-sick-note/profile-sick-note.component.ts:22</note>
+      </notes>
+      <segment>
+        <source>please pick the period you were sick</source>
       </segment>
     </unit>
     <unit id="i18n.profile.sickPeriod">
@@ -6695,7 +6903,7 @@
     </unit>
     <unit id="i18n.marketing.uncategorized">
       <notes>
-        <note category="location">src/app/marketing/marketing-assets/marketing-assets.component.ts:225</note>
+        <note category="location">src/app/marketing/marketing-assets/marketing-assets.component.ts:238</note>
       </notes>
       <segment>
         <source>uncategorized</source>
@@ -8134,7 +8342,7 @@
     </unit>
     <unit id="i18n.common.addToClipboard">
       <notes>
-        <note category="location">src/app/nx/nx.global.ts:102</note>
+        <note category="location">src/app/nx/nx.static.ts:102</note>
       </notes>
       <segment>
         <source>add to clipboard</source>
@@ -8142,7 +8350,7 @@
     </unit>
     <unit id="i18n.common.removeFromClipboard">
       <notes>
-        <note category="location">src/app/nx/nx.global.ts:108</note>
+        <note category="location">src/app/nx/nx.static.ts:108</note>
       </notes>
       <segment>
         <source>remove from clipboard</source>
@@ -9346,10 +9554,18 @@
     </unit>
     <unit id="i18n.profile.infoSelectLeaveAllowance">
       <notes>
-        <note category="location">src/app/profile/profile-vacation-request/profile-vacation-request.component.html:28</note>
+        <note category="location">src/app/profile/profile-vacation-request/profile-vacation-request.component.html:29</note>
       </notes>
       <segment>
         <source>Please select a leave allowance pool on the left</source>
+      </segment>
+    </unit>
+    <unit id="i18n.profile.noActiveLeaveAllowance">
+      <notes>
+        <note category="location">src/app/profile/profile-vacation-request/profile-vacation-request.component.html:31</note>
+      </notes>
+      <segment>
+        <source>No active leave allowance — yours has expired or has not been granted yet. Please contact HR.</source>
       </segment>
     </unit>
     <unit id="i18n.common.pendingTimeOffRequest">
@@ -10043,14 +10259,6 @@
       </notes>
       <segment>
         <source>test failed</source>
-      </segment>
-    </unit>
-    <unit id="i18n.common.quickLinks">
-      <notes>
-        <note category="location">src/app/projects/_shards/activity-projects/activity-projects.component.html:3,5</note>
-      </notes>
-      <segment>
-        <source>quick links</source>
       </segment>
     </unit>
     <unit id="i18n.common.assigned_user">
@@ -13301,6 +13509,22 @@
         <source>assign to...</source>
       </segment>
     </unit>
+    <unit id="i18n.tasks.addCoAssignee">
+      <notes>
+        <note category="location">src/models/task/task.actions.ts:23</note>
+      </notes>
+      <segment>
+        <source>add co-assignee...</source>
+      </segment>
+    </unit>
+    <unit id="i18n.tasks.removeCoAssignee">
+      <notes>
+        <note category="location">src/models/task/task.actions.ts:36</note>
+      </notes>
+      <segment>
+        <source>remove co-assignee...</source>
+      </segment>
+    </unit>
     <unit id="i18n.milestone.setDuration">
       <notes>
         <note category="location">src/models/milestones/milestone.actions.ts:41</note>
@@ -13742,7 +13966,7 @@
     </unit>
     <unit id="i18n.common.requestDeletion">
       <notes>
-        <note category="location">src/app/nx/nx.global.ts:88</note>
+        <note category="location">src/app/nx/nx.static.ts:88</note>
       </notes>
       <segment>
         <source>request deletion</source>
@@ -13750,7 +13974,7 @@
     </unit>
     <unit id="i18n.common.requestDeletionReason">
       <notes>
-        <note category="location">src/app/nx/nx.global.ts:92</note>
+        <note category="location">src/app/nx/nx.static.ts:92</note>
       </notes>
       <segment>
         <source>Why should this be deleted?</source>
@@ -13758,7 +13982,7 @@
     </unit>
     <unit id="i18n.common.deletionRequested">
       <notes>
-        <note category="location">src/app/nx/nx.global.ts:99</note>
+        <note category="location">src/app/nx/nx.static.ts:99</note>
       </notes>
       <segment>
         <source>Deletion requested</source>

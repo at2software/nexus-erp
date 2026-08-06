@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, effect, inject, signal, untracked } from '@angular/core';
-import { Task } from '@models/tasks/task.model';
-import { forkJoin } from 'rxjs';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
-import { ITaskPlugin } from '@models/tasks/task.plugin.interface';
+import { Task } from '@models/task/task.model';
+import { User } from '@models/user/user.model';
+import { forkJoin, map } from 'rxjs';
+import { modelListResource } from '@models/http/model-resource';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
+import { ITaskPlugin } from '@models/task/task.plugin.interface';
 import { Color } from '@constants/Color';
 import { ProjectDetailGuard } from '../../project-details.guard';
 import { NgTemplateOutlet } from '@angular/common';
@@ -22,11 +24,16 @@ import { CompactItemDirective } from '@shards/ul-compact/CompactItemDirective';
 })
 export class ProjectDetailTasksComponent {
     newTask!: Task;
-    tasks = signal<Task[]>([]);
     instances = signal<ITaskPlugin[]>([]);
 
     #parent = inject(ProjectDetailGuard);
     factory = inject(PluginInstanceFactory);
+
+    readonly #tasks = modelListResource(
+        () => (this.instances().length ? this.instances() : undefined),
+        (instances) => forkJoin(instances.map((_) => _.indexTasks())).pipe(map((tasks) => tasks.flat())),
+    );
+    readonly tasks = this.#tasks.value;
 
     constructor() {
         effect(() => {
@@ -36,7 +43,6 @@ export class ProjectDetailTasksComponent {
                     this.instances.set(instances);
                     this.newTask = new Task();
                     this.newTask.httpService = instances[0];
-                    this.reloadTasks();
                 });
             });
         });
@@ -53,12 +59,10 @@ export class ProjectDetailTasksComponent {
     actionsResolved = () => this.reloadTasks();
     getLabelFor = (_: string, i: Task) => i.httpService.getLabelFor(_);
 
-    reloadTasks = () => {
-        const sub = this.instances().map((_) => _.indexTasks());
-        forkJoin(sub).subscribe((tasks) => this.tasks.set(tasks.flat()));
-    };
+    reloadTasks = () => this.#tasks.reload();
     hideIcon = ($e: Event) => {
         ($e.target as HTMLImageElement).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HgAGgwJ/lK3Q6wAAAABJRU5ErkJggg==';
     };
     colorFor = (_: Task) => (_?.user_name?.length ? Color.uniqueColorFromString(_.user_name) : '#333333');
+    coAssigneeUsers = (item: Task): User[] => (item.co_assignees ?? []).map((c) => c.assignee).filter((a): a is User => a instanceof User);
 }

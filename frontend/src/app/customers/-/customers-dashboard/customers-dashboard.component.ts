@@ -1,18 +1,18 @@
+import { Page } from '@models/http/http.nexus';
 import { Router } from '@angular/router';
 import { AfterViewInit, ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { CompanyService } from '@models/company/company.service';
-import { ProductService } from '@models/product/product.service';
 import { Observable } from 'rxjs';
 import { span, StartEnd } from '@constants/constants';
-import { DATESPAN_RANGE } from '@constants/dateSpanRange';
-import { dayjs, Dayjs } from '@constants/dates';
+import { DATESPAN_RANGE } from '@constants/date/dateSpanRange';
+import { dayjs, Dayjs } from '@constants/date/dates';
 import { Company } from '@models/company/company.model';
 import { Project } from '@models/project/project.model';
 import { Product } from '@models/product/product.model';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { SortData } from '@app/app/table-controls/sort-data';
 import { SortMode } from '@app/app/table-controls/sort-mode';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 import { HttpHeaders } from '@angular/common/http';
 import { GlobalService } from '@models/global.service';
 import { TableSearchSortBase } from '@app/app/table-controls/table-base/table-search-sort-base.component';
@@ -32,42 +32,38 @@ import { EnableTableExportDirective } from '@app/app/table-controls/enable-table
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { GuidedTourComponent } from '@shards/guided-tour/guided-tour.component';
 import { Dictionary } from '@constants/constants';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'customers-dashboard',
     templateUrl: './customers-dashboard.component.html',
     styleUrls: ['./customers-dashboard.component.scss'],
-    imports: [ToolbarComponent, EnableTableExportDirective, CdkTableModule, Nx, AvatarComponent, ProjectComponent, MoneyPipe, ContinuousMarkerComponent, FormsModule, DatePipe, ProjectComponent, NgxDaterangepickerMd, SearchInputComponent, EmptyStateComponent, GuidedTourComponent],
+    imports: [StackedTableDirective, ToolbarComponent, EnableTableExportDirective, CdkTableModule, Nx, AvatarComponent, ProjectComponent, MoneyPipe, ContinuousMarkerComponent, FormsModule, DatePipe, ProjectComponent, NgxDaterangepickerMd, SearchInputComponent, EmptyStateComponent, GuidedTourComponent],
 })
 export class CustomersDashboardComponent extends TableSearchSortBase<Company> implements AfterViewInit {
     protected getItems(): Company[] {
         return this.companies;
     }
 
-    // Static permission computed on init for performance
     hasInvoicesModule: boolean = false;
 
     displayedColumns = ['created_at', 'icon', 'name', 'projects'];
 
     hasLoaded = signal(false);
     companies: Company[] = [];
-    products: Product[] = [];
 
-    // Existing filters
     revenueOn: boolean = false;
     onlyWithActiveProjects = signal(true);
     revenueSpan: StartEnd = new StartEnd();
     selUpdated: StartEnd = new StartEnd();
     revenueMin: number = 0;
 
-    // New filter toggles
     dateRangeFilterActive = signal(false);
     updatedAtFilterActive = signal(false);
     revenueFilterActive = signal(false);
     productFilterActive = signal(false);
 
-    // Filter values
     dateRange?: { startDate: Dayjs; endDate: Dayjs };
     updatedAtRange?: { startDate: Dayjs; endDate: Dayjs };
     revenue_min?: number;
@@ -79,7 +75,7 @@ export class CustomersDashboardComponent extends TableSearchSortBase<Company> im
     currentFilter: string = '';
     global = inject(GlobalService);
 
-    observer!: Observable<Company[]>;
+    observer!: Observable<Page<Company>>;
     onResult = (x: Company[]) => {
         this.hasLoaded.set(true);
         this.companies = this.companies.concat(x);
@@ -87,25 +83,18 @@ export class CustomersDashboardComponent extends TableSearchSortBase<Company> im
     };
 
     #companyService: CompanyService = inject(CompanyService);
-    #productService: ProductService = inject(ProductService);
     #router: Router = inject(Router);
     #inputModalService: InputModalService = inject(InputModalService);
 
     constructor() {
         super();
-        // Compute static roles once to avoid repeated hasRole() calls in template
         this.hasInvoicesModule = this.global.user?.hasRole('invoicing') ?? false;
         if (this.hasInvoicesModule) {
             this.displayedColumns.push('revenue');
         }
 
-        // Load products for dropdown
-        this.#productService.index().subscribe((products) => {
-            this.products = products;
-        });
-
         this.updatedAtRanges = {
-            ...DATESPAN_RANGE, // Include standard ranges
+            ...DATESPAN_RANGE,
             'Before 1 Year': [dayjs('1900-01-01'), dayjs().subtract(1, 'years')],
             'Before 2 Years': [dayjs('1900-01-01'), dayjs().subtract(2, 'years')],
             'Before 3 Years': [dayjs('1900-01-01'), dayjs().subtract(3, 'years')],
@@ -121,7 +110,7 @@ export class CustomersDashboardComponent extends TableSearchSortBase<Company> im
         this.currentFilter = nextFilter;
         this.companies = [];
         this.hasLoaded.set(false);
-        this.observer = this.#companyService.index(filters);
+        this.observer = this.#companyService.indexPaginated(filters);
     };
 
     filters = () => {
@@ -132,29 +121,24 @@ export class CustomersDashboardComponent extends TableSearchSortBase<Company> im
             revenueMin: this.revenueMin,
         };
 
-        // Add date range filter if active
         if (this.dateRangeFilterActive() && this.dateRange) {
             if (this.dateRange.startDate) filters.created_from = this.dateRange.startDate.format('YYYY-MM-DD');
             if (this.dateRange.endDate) filters.created_to = this.dateRange.endDate.format('YYYY-MM-DD');
         }
 
-        // Add updated_at filter if active
         if (this.updatedAtFilterActive() && this.updatedAtRange) {
             if (this.updatedAtRange.startDate) filters.updated_from = this.updatedAtRange.startDate.format('YYYY-MM-DD');
             if (this.updatedAtRange.endDate) filters.updated_to = this.updatedAtRange.endDate.format('YYYY-MM-DD');
         }
 
-        // Add revenue filter if active
         if (this.revenueFilterActive() && this.revenue_min !== undefined) {
             filters.revenue_min = this.revenue_min;
         }
 
-        // Add product filter if active
         if (this.productFilterActive() && this.selectedProduct) {
             filters.product_id = this.selectedProduct.id;
         }
 
-        // Add sorting parameters
         if (this.sortData.sortMode !== SortMode.NONE) {
             filters.sort_by = this.sortData.key;
             filters.sort_direction = this.sortData.sortMode === SortMode.ASCENDING ? 'asc' : 'desc';
@@ -173,24 +157,19 @@ export class CustomersDashboardComponent extends TableSearchSortBase<Company> im
         this.filtersUpdated(null);
     };
 
-    // Override sorting to use backend API instead of client-side sorting
     override sortBy(sortData: SortData): void {
         this.sortData = sortData;
         this.filtersUpdated(null);
     }
 
-    // Override refresh to prevent client-side sorting
     override refreshItems(): void {
         this.sortedItems = this.companies;
     }
 
-    // Manual sort header click handler
     sortByColumn(column: string): void {
-        // Toggle sort mode for the same column
         if (this.sortData.key === column) {
             this.sortData.sortMode = this.sortData.sortMode === SortMode.ASCENDING ? SortMode.DESCENDING : this.sortData.sortMode === SortMode.DESCENDING ? SortMode.NONE : SortMode.ASCENDING;
         } else {
-            // New column, start with ascending
             this.sortData.key = column;
             this.sortData.sortMode = SortMode.ASCENDING;
         }
@@ -198,7 +177,6 @@ export class CustomersDashboardComponent extends TableSearchSortBase<Company> im
         this.filtersUpdated(null);
     }
 
-    // Get sort icon for column
     getSortIcon(column: string): string {
         if (this.sortData.key !== column) return '';
 

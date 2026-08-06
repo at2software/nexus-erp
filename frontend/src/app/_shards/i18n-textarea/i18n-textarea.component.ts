@@ -41,7 +41,6 @@ export class I18nTextareaComponent implements ControlValueAccessor {
         // No-op
     };
 
-    // Derived state
     readonly isLocalized = computed(() => this.#i18nVariants().length > 0);
 
     readonly availableLocales = computed(() =>
@@ -58,7 +57,6 @@ export class I18nTextareaComponent implements ControlValueAccessor {
         () => this.availableLocales().find((v) => `${v.language}-${v.formality}` === this.selectedLocaleKey())?.label ?? this.selectedLocaleKey(),
     );
 
-    // ControlValueAccessor implementation
     writeValue(value: I18nValue): void {
         if (Array.isArray(value)) {
             this.#i18nVariants.set(value);
@@ -69,7 +67,6 @@ export class I18nTextareaComponent implements ControlValueAccessor {
                 this.#internalValue.set(defaultVariant.text);
             }
         } else if (value === '@@i18n') {
-            // Backend marker without resolved variants (e.g. no i18n records yet) — initialize as empty localized state
             this.#i18nVariants.set([
                 { language: 'de', formality: 'formal', text: '' },
                 { language: 'de', formality: 'informal', text: '' },
@@ -93,9 +90,6 @@ export class I18nTextareaComponent implements ControlValueAccessor {
         this.#onTouched = fn;
     }
 
-    setDisabledState?(): void {
-        // Handle disabled state if needed
-    }
 
     get textValue(): string {
         return this.#internalValue();
@@ -106,7 +100,6 @@ export class I18nTextareaComponent implements ControlValueAccessor {
         this.#onTouched();
 
         if (this.isLocalized()) {
-            // Update the current variant immutably so the signal notifies
             const lang = this.currentLanguage();
             const formality = this.currentFormality();
             const variants = this.#i18nVariants().map((v) => (v.language === lang && v.formality === formality ? { ...v, text: val } : v));
@@ -117,11 +110,9 @@ export class I18nTextareaComponent implements ControlValueAccessor {
         }
     }
 
-    // Actions
     localize() {
         if (this.isLocalized()) return;
 
-        // Create all 4 variants with current text
         const text = this.#internalValue();
         const variants: I18nVariant[] = [
             { language: 'de', formality: 'formal', text },
@@ -154,7 +145,6 @@ export class I18nTextareaComponent implements ControlValueAccessor {
         this.currentLanguage.set(lang);
         this.currentFormality.set(formality);
 
-        // Load text for selected locale
         const variant = this.#i18nVariants().find((v) => v.language === lang && v.formality === formality);
         if (variant) {
             this.#internalValue.set(variant.text);

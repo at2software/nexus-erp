@@ -1,3 +1,4 @@
+import { Page } from '@models/http/http.nexus';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Focus } from '@models/focus/focus.model';
 import { Observable, Subject } from 'rxjs';
@@ -5,14 +6,14 @@ import { debounceTime } from 'rxjs/operators';
 import { FocusService } from '@models/focus/focus.service';
 import { User } from '@models/user/user.model';
 import { GlobalService } from '@models/global.service';
-import { IHasFociGuard } from '@models/focus/hasFoci.interface';
+import { IHasFociGuard } from '@models/focus/has-foci.interface';
 import { InvoiceItemType } from '@enums/invoice-item.type';
 import { StartEnd } from '@constants/constants';
-import { dayjs } from '@constants/dates';
+import { dayjs } from '@constants/date/dates';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { Project } from '@models/project/project.model';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
-import { Task } from '@models/tasks/task.model';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
+import { Task } from '@models/task/task.model';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -22,7 +23,7 @@ import { Task } from '@models/tasks/task.model';
 export abstract class TimetrackingComponent {
     abstract parent: IHasFociGuard;
 
-    observer!: Observable<Focus[]>;
+    observer!: Observable<Page<Focus>>;
     filteredFoci = signal<Focus[]>([]);
     users: User[] = [];
     filteredUsers = signal<User[]>([]);
@@ -32,7 +33,6 @@ export abstract class TimetrackingComponent {
     sortDirection: 'asc' | 'desc' = 'desc';
     displayedColumns = ['started_at', 'timespan', 'userIcon', 'comment', 'duration', 'invoiced', 'focus_item'];
 
-    // New filter properties
     showNotYetInvoiced = signal(false);
     dateRange?: StartEnd;
     #dateRangeChange$ = new Subject<void>();
@@ -69,22 +69,14 @@ export abstract class TimetrackingComponent {
                 this.selectionDuration.set(selectionDuration);
             });
 
-        // Debounce date range changes to prevent duplicate reloads
         this.#dateRangeChange$.pipe(debounceTime(300)).subscribe(() => this.reload());
     }
 
     onReload = () => {
         const selectedUserIds = this.users.filter((u) => !u.var.hidden).map((u) => u.id);
 
-        // Prepare date range parameters
-        let startDate: string | undefined;
-        let endDate: string | undefined;
-        if (this.dateRange?.startDate) {
-            startDate = this.dateRange.startDate.format('YYYY-MM-DD');
-        }
-        if (this.dateRange?.endDate) {
-            endDate = this.dateRange.endDate.format('YYYY-MM-DD');
-        }
+        const startDate = this.dateRange?.startDate?.format('YYYY-MM-DD');
+        const endDate = this.dateRange?.endDate?.format('YYYY-MM-DD');
         return this.focusService.getFociFor(this.parent.object() as any, selectedUserIds.length ? selectedUserIds : undefined, this.sortField, this.sortDirection, this.showNotYetInvoiced(), startDate, endDate);
     };
 
@@ -168,7 +160,6 @@ export abstract class TimetrackingComponent {
         return div.textContent || '';
     };
 
-    // New filter methods
     onNotYetInvoicedFilterChange() {
         this.reload();
     }

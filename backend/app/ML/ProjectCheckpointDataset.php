@@ -6,16 +6,6 @@ use App\Models\Project;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
-/**
- * Feature extraction for Model 2 (early-warning): predicts REMAINING hours
- * for a RUNNING project from progress-so-far (burn rate), not quote-time
- * features alone. Different leakage boundary than ProjectDataset/Model 1:
- * training rows are synthesized as "checkpoints" partway through each
- * FINISHED project's own timeline, using only foci that happened at or
- * before the checkpoint — so the model never sees data from "the future"
- * relative to its own prediction point, matching what a real running
- * project looks like today.
- */
 class ProjectCheckpointDataset {
     public const FEATURES = [
         'work_estimated',
@@ -27,13 +17,10 @@ class ProjectCheckpointDataset {
     ];
     public const LABEL = 'remaining_hours';
 
-    /** Checkpoint fractions of a finished project's own started_at → finished_at span. */
     public const CHECKPOINT_FRACTIONS = [0.25, 0.5, 0.75];
 
-    /** Projects too short-lived for a meaningful "partway through" checkpoint. */
     public const MIN_DURATION_DAYS = 5;
 
-    /** Finished, quote-eligible projects with a known, non-trivial start→finish span. */
     public static function eligibleProjects(): Collection {
         return ProjectDataset::eligibleProjects()
             ->filter(fn (Project $project) => $project->started_at && $project->finished_at)
@@ -43,11 +30,6 @@ class ProjectCheckpointDataset {
     }
 
     /**
-     * One row per (project, checkpoint fraction). `project_id` is kept so
-     * callers can group by project for cross-validation — checkpoints of the
-     * same project are correlated, not independent samples, and must never
-     * be split across train/test folds.
-     *
      * @param Collection<int, Project> $projects
      * @return list<array<string, mixed>>
      */
@@ -74,12 +56,6 @@ class ProjectCheckpointDataset {
         return $rows;
     }
 
-    /**
-     * A running project's CURRENT checkpoint (no fraction needed — "now" is
-     * the checkpoint). Same feature shape as checkpointRows(), just anchored
-     * at now() instead of a synthetic fraction of a known, already-elapsed
-     * span. No label, since the final hours aren't known yet.
-     */
     public static function currentRow(Project $project): ?array {
         if (! $project->started_at) {
             return null;
@@ -112,7 +88,6 @@ class ProjectCheckpointDataset {
         return $row;
     }
 
-    /** Right-skewed hours → log-transform for the regression target. */
     public static function logLabel(float $remainingHours): float {
         return log($remainingHours + 1);
     }

@@ -35,10 +35,8 @@ return new class extends Migration {
 
     public function up(): void {
 
-        // Roles, assignment roles, and initial admin user
         Artisan::call('db:insert-basic-roles');
 
-        // Frameworks (final consolidated state)
         $now        = now();
         $frameworks = [
             ['name' => 'unknown',  'latest_version' => null,  'created_at' => $now, 'updated_at' => $now],
@@ -52,7 +50,6 @@ return new class extends Migration {
             DB::table('frameworks')->insertOrIgnore($framework);
         }
 
-        // Debrief problem categories
         $categories = [
             ['name' => 'Customer',  'color' => '#0A8BC9', 'icon' => 'person', 'position' => 1],
             ['name' => 'Process',   'color' => '#30E800', 'icon' => 'sync',   'position' => 2],
@@ -67,7 +64,6 @@ return new class extends Migration {
             ]);
         }
 
-        // Default payment plan tiers
         $param = Param::get('PROJECT_PAYMENT_PLAN_TIERS');
         if ($param->value === null) {
             $param->value = json_encode(self::DEFAULT_PAYMENT_PLAN_TIERS);

@@ -6,7 +6,7 @@
         </div>
         <ul class="list-group list-group-flush" cdkDropList [cdkDropListSortingDisabled]="true">
             @for (milestone of unconfiguredMilestones(); track milestone.id) {
-                <li class="list-group-item backlog-chip hstack gap-2" cdkDrag [cdkDragData]="milestoneItem(milestone)">
+                <li class="list-group-item backlog-chip hstack gap-2" [nx]="milestone" cdkDrag [cdkDragData]="milestoneItem(milestone)">
                     <avatar [object]="milestone.project"></avatar>
                     <span class="flex-fill text-truncate">{{ milestone.name }}</span>
                 </li>
@@ -23,7 +23,7 @@
         </div>
         <ul class="list-group list-group-flush" cdkDropList [cdkDropListSortingDisabled]="true">
             @for (milestone of undatedMilestones(); track milestone.id) {
-                <li class="list-group-item backlog-chip hstack gap-2" cdkDrag [cdkDragData]="milestoneItem(milestone)">
+                <li class="list-group-item backlog-chip hstack gap-2" [nx]="milestone" cdkDrag [cdkDragData]="milestoneItem(milestone)">
                     <avatar [object]="milestone.project"></avatar>
                     <span class="flex-fill text-truncate">{{ milestone.name }}</span>
                 </li>
@@ -44,7 +44,7 @@
         </div>
         <ul class="list-group list-group-flush" cdkDropList [cdkDropListSortingDisabled]="true">
             @for (issue of externalIssues(); track issue.id) {
-                <li class="list-group-item backlog-chip hstack gap-2" cdkDrag [cdkDragData]="issueItem(issue)" [cdkDragDisabled]="!issue.project">
+                <li class="list-group-item backlog-chip hstack gap-2" [nx]="issue.task" cdkDrag [cdkDragData]="issueItem(issue)" [cdkDragDisabled]="!issue.project">
                     <n class="issue-tracker-icon text-primary" (click)="openIssue(issue, $event)" (keydown.enter)="openIssue(issue, $event)" tabindex="0" [ngbTooltip]="issue.trackerProjectName">{{ issue.task.httpService.icon() }}</n>
                     <span class="flex-fill text-truncate" [class.text-muted]="!issue.project">{{ issue.task.name }}</span>
                     @if (issue.project) {

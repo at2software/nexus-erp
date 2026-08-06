@@ -1,23 +1,23 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 import { Focus } from '@models/focus/focus.model';
-import { Serializable } from '@models/serializable';
-import { NexusHttpService } from '../http/http.nexus';
+import { Serializable } from '@models/_core/serializable';
+import { NexusHttpService, Page } from '../http/http.nexus';
 import { InvoiceItem } from '../invoice/invoice-item.model';
 import { Project } from '../project/project.model';
 import { Company } from '../company/company.model';
 import { Observable } from 'rxjs';
 import { User } from '../user/user.model';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class FocusService extends NexusHttpService<Focus> {
     public apiPath = 'foci';
     override readonly model = Focus;
-    indexFor = (_: Serializable) => this.aget(`${_.apiPathWithId()}/foci`);
+    indexFor = (_: Serializable) => this.paginate(`${_.apiPathWithId()}/foci`);
     storeFor = (date: string, duration: number, user: User, parentPath?: string) =>
         this.post('foci', { date: date, duration: duration, user_id: user.id, ...(parentPath ? { parent_path: parentPath } : {}) }, Focus);
-    getFociFor(project: Project, userIds?: string[], sortField?: string, sortDirection?: string, notYetInvoiced?: boolean, startDate?: string, endDate?: string): Observable<Focus[]>;
-    getFociFor(company: Company, userIds?: string[], sortField?: string, sortDirection?: string, notYetInvoiced?: boolean, startDate?: string, endDate?: string): Observable<Focus[]>;
-    getFociFor(_: Project | Company, userIds?: string[], sortField?: string, sortDirection?: string, notYetInvoiced?: boolean, startDate?: string, endDate?: string): Observable<Focus[]> {
+    getFociFor(project: Project, userIds?: string[], sortField?: string, sortDirection?: string, notYetInvoiced?: boolean, startDate?: string, endDate?: string): Observable<Page<Focus>>;
+    getFociFor(company: Company, userIds?: string[], sortField?: string, sortDirection?: string, notYetInvoiced?: boolean, startDate?: string, endDate?: string): Observable<Page<Focus>>;
+    getFociFor(_: Project | Company, userIds?: string[], sortField?: string, sortDirection?: string, notYetInvoiced?: boolean, startDate?: string, endDate?: string): Observable<Page<Focus>> {
         const params: any = {};
 
         if (userIds && userIds.length > 0) {
@@ -40,7 +40,7 @@ export class FocusService extends NexusHttpService<Focus> {
         if (endDate) {
             params.end_date = endDate;
         }
-        return this.aget(`${_.apiPathWithId()}/foci`, params);
+        return this.paginate(`${_.apiPathWithId()}/foci`, params);
     }
     uninvoicedFoci = (_: Serializable) => this.aget(`foci/uninvoiced/${_.apiPathWithId()}`);
 

@@ -5,10 +5,7 @@ import { InvoiceItem } from '@models/invoice/invoice-item.model';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { SafePipe } from '@pipes/safe.pipe';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
-
-export interface CombineInvoiceItemsResult {
-    description: string;
-}
+import { CombineInvoiceItemsResult } from '@models/_core/modal-results';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,

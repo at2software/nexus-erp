@@ -5,7 +5,6 @@ import { HeaderComponent } from '@app/app/header/header.component';
 import { RouterModule } from '@angular/router';
 import { ActivityTabComponent } from '@activity/activity-tab.component';
 import { TabCommentsComponent } from '@activity/tab-comments/tab-comments.component';
-import { ActivityProjectsComponent } from '@app/projects/_shards/activity-projects/activity-projects.component';
 import { HeaderRouteNavComponent } from '@app/app/header/header-route-nav/header-route-nav.component';
 import { DndDirective } from '@directives/dnd.directive';
 import { Nx } from '@app/nx/nx.directive';
@@ -16,7 +15,7 @@ import { SmartLinkDirective } from '@directives/smart-link.directive';
 @Component({
     selector: 'customer-nav',
     templateUrl: './customer-nav.component.html',
-    imports: [HeaderComponent, HeaderRouteNavComponent, RouterModule, ActivityTabComponent, TabCommentsComponent, ActivityProjectsComponent, DndDirective, Nx, ProjectComponent, NgbDropdownModule, ProjectComponent, SmartLinkDirective],
+    imports: [HeaderComponent, HeaderRouteNavComponent, RouterModule, ActivityTabComponent, TabCommentsComponent, DndDirective, Nx, ProjectComponent, NgbDropdownModule, ProjectComponent, SmartLinkDirective],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CustomerNavComponent {

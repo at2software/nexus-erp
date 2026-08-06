@@ -4,14 +4,15 @@ import { FormsModule } from '@angular/forms';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin, switchMap, tap } from 'rxjs';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
 import { GitlabAuditService } from '@models/gitlab-audit/gitlab-audit.service';
 import { NComponent } from '@app/_shards/n/n.component';
 import { SearchInputComponent } from '@app/_shards/search-input/search-input.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { Company } from '@models/company/company.model';
-import { Serializable } from '@models/serializable';
-import { GitlabProject } from '@models/api-response';
+import { Serializable } from '@models/_core/serializable';
+import { GitlabProjectDto } from '@models/_core/api-response';
+import { ModalBaseComponent } from '../modal-base.component';
 
 const NEXUS_PREFIX = '[NEXUS] ';
 
@@ -27,7 +28,10 @@ const CRON_PRESETS = [
     imports: [FormsModule, NComponent, SearchInputComponent, SpinnerComponent],
     templateUrl: './modal-audit-pipeline.component.html',
 })
-export class ModalAuditPipelineComponent {
+export class ModalAuditPipelineComponent extends ModalBaseComponent<boolean> {
+    init(): void { /* nothing to seed */ }
+    onSuccess = () => true;
+
     activeModal = inject(NgbActiveModal);
     #http       = inject(HttpClient);
     #factory    = inject(PluginInstanceFactory);
@@ -38,7 +42,7 @@ export class ModalAuditPipelineComponent {
     checking        = signal(false);
     creating        = signal(false);
     error           = signal('');
-    checkedProject  = signal<GitlabProject | null>(null);
+    checkedProject  = signal<GitlabProjectDto | null>(null);
     stages          = signal<string[]>([]);
     selectedStages  = signal<Dictionary<boolean>>({});
     branch          = signal('main');
@@ -69,7 +73,7 @@ export class ModalAuditPipelineComponent {
         const base = enc.value.url + 'api/v4/';
         this.checking.set(true);
         this.#http
-            .get<GitlabProject>(`${base}projects/${path}`)
+            .get<GitlabProjectDto>(`${base}projects/${path}`)
             .pipe(
                 tap((project) => {
                     this.checkedProject.set(project);

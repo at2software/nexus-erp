@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ModalBaseComponent } from '../modal-base.component';
 import { SearchInputComponent } from '@app/_shards/search-input/search-input.component';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 
 @Component({
     selector: 'modal-search',

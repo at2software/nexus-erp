@@ -10,25 +10,25 @@
 
             <div class="card">
                 <div class="card-body">
-                    <div class="input-group mb-3 gap-2">
+                    <div class="vstack gap-1 mb-3">
                         <span class="capitalize-first" i18n="@@i18n.common.created_at">created at</span>
                         <input type="text" class="form-control" ngxDaterangepickerMd id="creationPicker" [(ngModel)]="selCreated" [alwaysShowCalendars]="true" (datesUpdated)="reloadWithCalendar($event)" [showCustomRangeLabel]="true" [ranges]="ranges" [showClearButton]="true" [locale]="{ applyLabel: 'ok', format: 'DD.MM.YYYY' }" i18n-placeholder="@@i18n.common.customDateRange" placeholder="custom date range" />
                     </div>
                     @if (showStartedAtFilter()) {
-                        <div class="input-group mb-3 gap-2">
+                        <div class="vstack gap-1 mb-3">
                             <span class="capitalize-first" i18n="@@i18n.common.startedAt">started at</span>
                             <input type="text" class="form-control" ngxDaterangepickerMd id="startPicker" [(ngModel)]="selStarted" [alwaysShowCalendars]="true" (datesUpdated)="reloadWithCalendar($event)" [showCustomRangeLabel]="true" [ranges]="ranges" [showClearButton]="true" [locale]="{ applyLabel: 'ok', format: 'DD.MM.YYYY' }" i18n-placeholder="@@i18n.common.customDateRange" placeholder="custom date range" />
                         </div>
                     }
                     @if (showFinishedAtFilter()) {
-                        <div class="input-group mb-3 gap-2">
+                        <div class="vstack gap-1 mb-3">
                             <span class="capitalize-first" i18n="@@i18n.common.finishedAt">finished at</span>
                             <input type="text" class="form-control" ngxDaterangepickerMd id="finishedPicker" [(ngModel)]="selFinished" [alwaysShowCalendars]="true" (datesUpdated)="reloadWithCalendar($event)" [showCustomRangeLabel]="true" [ranges]="ranges" [showClearButton]="true" [locale]="{ applyLabel: 'ok', format: 'DD.MM.YYYY' }" i18n-placeholder="@@i18n.common.customDateRange" placeholder="custom date range" />
                         </div>
                     }
 
                     <!-- Assignee Filter -->
-                    <div class="input-group mb-3 gap-2">
+                    <div class="vstack gap-1 mb-3">
                         <span class="capitalize-first" i18n="@@i18n.common.assignee">assignee</span>
                         <select class="form-select" [(ngModel)]="selectedAssigneeId" (change)="filtersUpdated()">
                             <option [value]="undefined" i18n="@@i18n.common.any">any</option>
@@ -39,7 +39,7 @@
                     </div>
 
                     <!-- Project Manager Filter -->
-                    <div class="input-group mb-3 gap-2">
+                    <div class="vstack gap-1 mb-3">
                         <span class="capitalize-first" i18n="@@i18n.common.projectManager">project manager</span>
                         <select class="form-select" [(ngModel)]="selectedProjectManagerId" (change)="filtersUpdated()">
                             <option [value]="undefined" i18n="@@i18n.common.any">any</option>

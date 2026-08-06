@@ -22,7 +22,6 @@ $icon-size: $grid-width * 2;
     background-color: $bg-card;
     box-shadow: inset 6px 0 12px -4px #0004;
 
-    // Mobile: Hide navigation bar completely (width 0) since it's in burger menu
     @media (max-width: 768px) {
         width: 0;
         padding: 0;
@@ -99,14 +98,18 @@ $active-outset: $grid-width;
     .img-round { border-radius: 100%; }
 }
 
-// Mobile Burger Button (using <n>nexus</n> icon)
 .mobile-burger-btn {
 
     display: none;
 
     @media (max-width: 768px) {
         display: flex !important;
-    }    
+        bottom: $mobile-burger-offset;
+        left: $mobile-burger-offset;
+        width: $mobile-burger-size;
+        height: $mobile-burger-size;
+        z-index: 101;
+    }
 
     &:hover {
         transform: scale(1.1);
@@ -119,9 +122,7 @@ $active-outset: $grid-width;
 }
 
 
-// Navigation Container Mobile Styles
 .nav-container {
-    // Default desktop - no additional styling needed
     
     &.is-mobile {
         position: fixed !important;

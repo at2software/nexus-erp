@@ -24,8 +24,6 @@ class LiveSyncBroadcaster {
     }
 
     public function add(string $class, string|int $id, string $event, int $actorId): void {
-        // terminating() is unreliable outside HTTP (tinker/psysh never runs it, queue
-        // workers only on shutdown) - dispatch directly there, dedupe is an HTTP concern
         if (app()->runningInConsole()) {
             event(new DataChanged($class, $id, $event, $actorId));
             return;
@@ -47,8 +45,6 @@ class LiveSyncBroadcaster {
     }
 
     public function flush(): void {
-        // flushRegistered stays true: re-registering the terminating callback per
-        // flush would let callbacks pile up in long-running workers.
         foreach ($this->pending as $tuple) {
             event(new DataChanged($tuple['class'], $tuple['id'], $tuple['event'], $tuple['actorId']));
         }

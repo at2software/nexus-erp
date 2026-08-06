@@ -3,20 +3,20 @@ import { CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
 import { NgbCollapseModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { NComponent } from '@shards/n/n.component';
-import { Milestone } from '@models/milestones/milestone.model';
+import { Milestone } from '@models/milestone/milestone.model';
 import { Project } from '@models/project/project.model';
-import { MilestonesGroup } from '@models/milestones/api.milestone-group';
+import { MilestonesGroup } from '@models/milestone/milestone-group.model';
 import { ExtIssueBacklogItem } from '../external-issues/ext-issue-backlog.service';
+import { Nx } from '@app/nx/nx.directive';
 
 export type BacklogDragItem = { kind: 'milestone'; milestone: Milestone } | { kind: 'issue'; issue: ExtIssueBacklogItem };
 
-/** "To plan" rail: unconfigured/undated milestones plus live external issues, all draggable onto the capacity calendar. */
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'planner-backlog',
     templateUrl: './planner-backlog.component.html',
     styleUrls: ['./planner-backlog.component.scss'],
-    imports: [CdkDrag, CdkDropList, NgbCollapseModule, NgbTooltipModule, AvatarComponent, NComponent],
+    imports: [CdkDrag, CdkDropList, NgbCollapseModule, NgbTooltipModule, AvatarComponent, NComponent, Nx],
 })
 export class PlannerBacklogComponent {
     unconfiguredMilestones = input<Milestone[]>([]);

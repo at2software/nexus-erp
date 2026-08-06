@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 import { Observable } from 'rxjs';
 import { NexusHttpService } from './http/http.nexus';
 
@@ -11,8 +11,7 @@ export interface PdfTemplate {
     hasOriginal: boolean;
 }
 
-/** Read/write client for the shared PDF letterhead template (admin only). */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class PdfTemplateService extends NexusHttpService<never> {
     apiPath = 'pdf-template';
 

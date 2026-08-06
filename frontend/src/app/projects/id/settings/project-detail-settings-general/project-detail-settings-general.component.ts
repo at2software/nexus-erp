@@ -9,7 +9,7 @@ import { NgbDate, NgbDatepickerModule, NgbTooltipModule } from '@ng-bootstrap/ng
 import { ProjectDefaultProductComponent } from '@app/projects/_shards/project-default-product/project-default-product.component';
 import { ParentProjectSelectorComponent } from '@app/projects/_shards/parent-project-selector/parent-project-selector.component';
 import { AffixInputDirective } from '@directives/affix-input.directive';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,7 +47,6 @@ export class ProjectDetailSettingsGeneralComponent {
     }
 
     removePaymentDuration() {
-        // Use HTTP DELETE instead of updating with null value
         this.parent.object().httpService.delete(this.parent.object().getParamPath('INVOICE_PAYMENT_DURATION')).subscribe(() => this.parent.reload());
     }
 }

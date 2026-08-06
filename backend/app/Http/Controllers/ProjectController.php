@@ -130,11 +130,6 @@ class ProjectController extends Controller {
         $items->append(['progress']);
         return $items;
     }
-    /**
-     * All "Default" (feature) invoice items regardless of billing status - unlike
-     * indexedItems()/indexInvoiceItems(), this includes already-invoiced items so
-     * finished/invoiced projects still show their full feature list (e.g. in debriefs).
-     */
     public function indexFeatures(Project $_) {
         $items = $_->invoiceItems()
             ->where('type', InvoiceItemType::Default)
@@ -284,7 +279,6 @@ class ProjectController extends Controller {
     public function storeMilestone(MilestoneRequest $request, Project $_) {
         $data = $request->validated();
 
-        // Set defaults if not provided
         $data['name']     = $data['name'] ?? 'New Milestone';
         $data['duration'] = $data['duration'] ?? 1;
         $data['progress'] = $data['progress'] ?? 0;

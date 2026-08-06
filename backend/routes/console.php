@@ -10,9 +10,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('webhooks:add-missing')->everyTenMinutes();
-// Must run before cron:cashflow / cron:monthly-stats, which consume the
-// projects.lead_probability it (re)computes — same-time-due commands run in
-// registration order (Laravel scheduler), so this stays first among :daily().
+Schedule::command('knownseq:cleanup-drafts')->hourly();
 Schedule::command('cron:update-lead-probability')->daily();
 Schedule::command('cron:standing-orders')->daily();
 Schedule::command('cron:cashflow')->daily();

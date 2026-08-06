@@ -7,6 +7,8 @@ use Illuminate\Contracts\Support\Arrayable;
 use JsonSerializable;
 
 class Vcard implements Arrayable, JsonSerializable {
+    private const PHOTO_CACHE_SECONDS = 86400;
+
     private array $rows = [];
 
     public function __construct(string $vcardString = '') {
@@ -152,16 +154,23 @@ class Vcard implements Arrayable, JsonSerializable {
             return base64_encode(file_get_contents($defaultPath));
         }
 
-        // Fallback to 64x64 black pixel PNG if file doesn't exist
         return 'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEwAACxMBAJqcGAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAANSURBVHhe7cExAQAAAMKg9U9tCU+gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOBvA8YgAAFNr4A0AAAAAElFTkSuQmCC';
     }
     public function getPhotoResponse($defaultPath = null) {
-        $photo = $this->getPhoto();
-        return response()->make(base64_decode($photo))
-            ->header('Content-Type', 'image/png')
-            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-            ->header('Pragma', 'no-cache')
-            ->header('Expires', '0');
+        $binary = base64_decode($this->getPhoto());
+        $etag   = '"'.hash('sha256', $binary).'"';
+
+        $headers = [
+            'Content-Type'  => 'image/png',
+            'Cache-Control' => 'private, max-age='.self::PHOTO_CACHE_SECONDS.', stale-while-revalidate=604800',
+            'ETag'          => $etag,
+        ];
+
+        if (trim(request()->header('If-None-Match', '')) === $etag) {
+            return response()->noContent(304, $headers);
+        }
+
+        return response()->make($binary, 200, $headers + ['Content-Length' => strlen($binary)]);
     }
     public function wrapped(string $vcard): string {
         return "BEGIN:VCARD\nVERSION:3.0\n$vcard\nEND:VCARD";

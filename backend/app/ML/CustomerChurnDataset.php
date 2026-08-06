@@ -25,7 +25,6 @@ use Illuminate\Support\Collection;
  * could just mean "we haven't observed the next 12 months yet".
  */
 class CustomerChurnDataset {
-    /** Feature names, in extraction order. */
     public const FEATURES = [
         'days_since_last_purchase',
         'mean_gap_days',
@@ -40,16 +39,11 @@ class CustomerChurnDataset {
 
     public const LABEL = 'churned';
 
-    /** How many months after the cutoff define the churn observation window. */
     public const LABEL_WINDOW_MONTHS = 12;
 
-    /** Need at least this many prior purchase events (2 real gaps) to compute cadence features. */
     public const MIN_PRIOR_PURCHASES = 3;
 
     /**
-     * Eligible companies: active, not ME_ID, with at least MIN_PRIOR_PURCHASES
-     * non-repeating-only purchase-event invoices.
-     *
      * @return Collection<int, Company>
      */
     public static function eligibleCompanies(): Collection {
@@ -60,10 +54,6 @@ class CustomerChurnDataset {
     }
 
     /**
-     * All valid snapshot rows for one company: one row per candidate cutoff
-     * with enough prior purchases AND a fully-observed 12-month post-cutoff
-     * window (so a "not churned" label is trustworthy).
-     *
      * @return array<int, array<string, mixed>>
      */
     public static function extractRowsForCompany(Company $company): array {
@@ -82,11 +72,6 @@ class CustomerChurnDataset {
                 continue;
             }
 
-            // The 12-month observation window must be fully in the past relative to the
-            // company's data, i.e. the last purchase we know about must be at/after
-            // cutoff + 12mo, OR the cutoff + 12mo is before the last purchase — either way
-            // we must be able to observe the whole window. We require cutoff+12mo <= last
-            // known purchase date so "no purchase in window" isn't just "unobserved yet".
             if ($cutoff->copy()->addMonths(self::LABEL_WINDOW_MONTHS)->gt($lastPurchaseAt)) {
                 continue;
             }
@@ -97,8 +82,6 @@ class CustomerChurnDataset {
     }
 
     /**
-     * One (company, cutoff) snapshot's features + binary churn label.
-     *
      * @param Collection<int, Invoice> $purchases ALL of the company's purchase-event invoices
      * @return array<string, mixed>
      */
@@ -117,7 +100,6 @@ class CustomerChurnDataset {
 
         $trailing12m = $before->filter(fn ($i) => Carbon::parse($i->created_at)->gt($cutoff->copy()->subMonths(12)));
 
-        // Churn = zero purchase events in (cutoff, cutoff + 12 months].
         $windowEnd     = $cutoff->copy()->addMonths(self::LABEL_WINDOW_MONTHS);
         $purchasesNext = $purchases->filter(function ($i) use ($cutoff, $windowEnd) {
             $at = Carbon::parse($i->created_at);
@@ -135,16 +117,12 @@ class CustomerChurnDataset {
             'purchase_count_to_date'        => $before->count(),
             'purchase_count_trailing_12m'   => $trailing12m->count(),
             'tenure_days'                   => $dates->first()->diffInDays($cutoff),
-            // Recency relative to the customer's own rhythm — the single strongest churn
-            // signal (well past your usual gap = probably gone). Null if mean gap is 0.
             'recency_over_mean_gap'         => ($mean !== null && $mean > 0) ? $daysSinceLast / $mean : null,
             self::LABEL                     => $purchasesNext->isEmpty() ? 1 : 0,
         ];
     }
 
     /**
-     * extractRowsForCompany() across a whole collection of eligible companies.
-     *
      * @param Collection<int, Company> $companies
      * @return Collection<int, array<string, mixed>>
      */

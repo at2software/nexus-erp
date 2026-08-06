@@ -1,7 +1,7 @@
 import { NxService } from './nx.service';
-import { DestroyRef, Directive, ElementRef, NgZone, inject, input, output, signal } from '@angular/core';
-import { NxAction } from './nx.actions';
-import { INxContextMenu } from './nx.contextmenu.interface';
+import { DestroyRef, Directive, ElementRef, inject, input, output, signal } from '@angular/core';
+import { NxAction } from '@models/_core/nx.actions';
+import { INxContextMenu } from '@models/_core/nx.contextmenu.interface';
 
 export interface ActionEmitterType {
     action: NxAction;
@@ -24,17 +24,13 @@ export class Nx {
     readonly nx = input.required<INxContextMenu>();
     readonly tables = input<INxContextMenu | INxContextMenu[]>();
     readonly context = input<string>();
-    // Per-template context payload passed through to NxAction.action(); shape is consumer-defined.
     readonly nxContext = input<unknown>();
     readonly singleActionResolved = output<ActionEmitterType>();
     readonly actionsResolved = output<ActionEmitterType>();
 
     constructor() {
-        // Expose directive instance on the DOM element for NxService.getSiblings() traversal
         this.el.nativeElement.nx = this;
 
-        // Outside-zone listeners prevent zone.js from triggering a full CD cycle on every row interaction.
-        const ngZone = inject(NgZone);
         const destroyRef = inject(DestroyRef);
         const handler = (event: MouseEvent) => this.#handleClick(event);
         const contextHandler = (event: MouseEvent) => {
@@ -42,10 +38,8 @@ export class Nx {
             event.stopPropagation();
             event.preventDefault();
         };
-        ngZone.runOutsideAngular(() => {
-            this.el.nativeElement.addEventListener('click', handler);
-            this.el.nativeElement.addEventListener('contextmenu', contextHandler);
-        });
+        this.el.nativeElement.addEventListener('click', handler);
+        this.el.nativeElement.addEventListener('contextmenu', contextHandler);
         destroyRef.onDestroy(() => {
             this.el.nativeElement.removeEventListener('click', handler);
             this.el.nativeElement.removeEventListener('contextmenu', contextHandler);

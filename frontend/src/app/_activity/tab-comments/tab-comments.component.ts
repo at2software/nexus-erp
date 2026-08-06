@@ -1,9 +1,9 @@
 import { Dictionary } from '@constants/constants';
-import { Company } from '@models/company/company.model';
 import { CommentService } from '@models/comment/comment.service';
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, effect, inject, input, model, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, effect, inject, input, linkedSignal, model, signal, untracked, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Comment } from '@models/comment/comment.model';
+import { modelListResource } from '@models/http/model-resource';
 import { Project } from '@models/project/project.model';
 import { User } from '@models/user/user.model';
 import { TabCommentComponent } from './tab-comment.component';
@@ -14,10 +14,10 @@ import { GitService } from '@models/http/git.service';
 import { GlobalService } from '@models/global.service';
 import { NgbTooltipModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { ActivityTabComponent } from '../activity-tab.component';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
-import { ChatPluginInstance } from '@models/http/chat.plugin.instance';
-import { PluginInstance } from '@models/http/plugin.instance';
-import { VcardClass } from '@models/vcard/VcardClass';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
+import { ChatPluginInstance } from '@models/http/plugins/chat.plugin.instance';
+import { PluginInstance } from '@models/http/plugins/plugin.instance';
+import { VcardClass } from '@models/vcard/vcard-class.model';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,14 +27,9 @@ import { VcardClass } from '@models/vcard/VcardClass';
     imports: [TabCommentComponent, Nx, NComponent, ScrollbarComponent, NgbTooltipModule, NgbDropdownModule],
 })
 export class TabCommentsComponent {
-    quickLinks = input<Company>();
     projects = model<Project[]>();
     currentProject = input<Project>();
     path = input.required<string>();
-
-    stickies = signal<Comment[]>([]);
-    #allComments = signal<Comment[]>([]);
-    groupedComments = signal<{ date: string; header: string; comments: Comment[] }[]>([]);
 
     hasActivity = signal<Dictionary<boolean>>({});
     showActivity = signal<Dictionary<boolean>>({ nexus: true });
@@ -45,6 +40,23 @@ export class TabCommentsComponent {
     #pluginFactory = inject(PluginInstanceFactory);
     #destroyRef = inject(DestroyRef);
 
+    #nexusComments = modelListResource(this.path, (path) => this.#commentService.indexFor(path));
+    #allComments = linkedSignal(() => this.#nexusComments.value().map((c) => {
+        c.var = c.var || {};
+        c.var.source = 'nexus';
+        return c;
+    }));
+
+    #visibleComments = computed(() => this.#allComments()
+        .filter((c) => {
+            const source = c.var?.source;
+            return source ? this.showActivity()[source] ?? true : true;
+        })
+        .sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()));
+
+    stickies = computed(() => this.#visibleComments().filter((_) => _.is_sticky));
+    groupedComments = computed(() => this.groupCommentsByDay(this.#visibleComments().filter((_) => !_.is_sticky)));
+
     readonly commentTextarea = viewChild<ElementRef<HTMLTextAreaElement>>('commentTextarea');
     readonly scrollbar = viewChild(ScrollbarComponent);
 
@@ -53,51 +65,42 @@ export class TabCommentsComponent {
 
     constructor() {
         effect(() => {
-            this.path();
-            this.reload();
+            if (this.#nexusComments.hasValue()) untracked(() => this.#loadPlugins());
         });
 
-        const activityTab = inject(ActivityTabComponent);        
+        effect(() => {
+            this.#visibleComments();
+            setTimeout(() => this.scrollToBottom(), 0);
+        });
+
+        const activityTab = inject(ActivityTabComponent);
         activityTab.onFocus = () => setTimeout(() => this.scrollToBottom(), 0);
     }
 
-    reload() {
-        // Detect plugin activity by iterating through instances
+    reload = () => this.#nexusComments.reload();
+
+    #loadPlugins() {
         const currentProject = this.currentProject();
-        if (currentProject) {
-            const instances = this.#pluginFactory.getInstances(currentProject, ['IRepositoryPluginProperty', 'ITaskPluginProperty', 'IChatPluginProperty']);
+        if (!currentProject) return;
 
-            // Collect available chat plugin instances
-            this.availableChatTargets.set(instances.filter((i) => i instanceof ChatPluginInstance && i.enc && this.#globalService.getEnc(i.enc.key).length > 0) as ChatPluginInstance[]);
+        const instances = this.#pluginFactory.getInstances(currentProject, ['IRepositoryPluginProperty', 'ITaskPluginProperty', 'IChatPluginProperty']);
 
-            instances.forEach((instance) => {
-                const ctorName = instance.constructor?.name;
-                if (ctorName && instance.enc && this.#globalService.getEnc(instance.enc.key).length > 0) {
-                    this.hasActivity.update((h) => ({ ...h, [ctorName]: true }));
-                    this.showActivity.update((s) => ({ ...s, [ctorName]: s[ctorName] ?? true }));
-                }
-            });
-        }
+        this.availableChatTargets.set(instances.filter((i) => i instanceof ChatPluginInstance && i.enc && this.#globalService.getEnc(i.enc.key).length > 0) as ChatPluginInstance[]);
 
-        this.#commentService.indexFor(this.path()).subscribe((nexusComments) => {
-            this.#allComments.set(nexusComments.map((c) => {
-                c.var = c.var || {};
-                c.var.source = 'nexus';
-                return c;
-            }));
-            this.filterAndSortComments();
-
-            // Load activity from all plugin types
-            if (this.currentProject()) {
-                this.loadPluginActivity();
+        instances.forEach((instance) => {
+            const ctorName = instance.constructor?.name;
+            if (ctorName && instance.enc && this.#globalService.getEnc(instance.enc.key).length > 0) {
+                this.hasActivity.update((h) => ({ ...h, [ctorName]: true }));
+                this.showActivity.update((s) => ({ ...s, [ctorName]: s[ctorName] ?? true }));
             }
         });
+
+        this.loadPluginActivity();
     }
 
     loadPluginActivity() {
         if (!this.currentProject()) return;
 
-        // Load from all plugin types (automatically deduplicates)
         const instances = this.#pluginFactory.getInstances(this.currentProject(), ['IRepositoryPluginProperty', 'ITaskPluginProperty', 'IChatPluginProperty']);
 
         instances.forEach((instance) => {
@@ -114,12 +117,7 @@ export class TabCommentsComponent {
             .getActivityComments(projectId, 150, this.resolveUser.bind(this))
             .pipe(takeUntilDestroyed(this.#destroyRef))
             .subscribe({
-                next: (commentData) => {
-                    const comments = commentData.map((data) => Comment.fromJson(data));
-
-                    this.#allComments.set([...this.#allComments(), ...comments]);
-                    this.filterAndSortComments();
-                },
+                next: (commentData) => this.#allComments.update((all) => [...all, ...commentData.map((data) => Comment.fromJson(data))]),
                 error: (err: unknown) => {
                     console.error('Failed to load plugin activity:', err);
                 },
@@ -136,7 +134,6 @@ export class TabCommentsComponent {
         return undefined;
     }
 
-    // Helper to resolve users from multiple sources
     resolveUser(email?: string, username?: string, name?: string, pluginAttributeName?: string): User | undefined {
         const searchSources: VcardClass[] = [
             ...(this.#globalService.teamAll || []),
@@ -145,36 +142,19 @@ export class TabCommentsComponent {
                 .filter((u) => u?.class === 'User' || u?.class === 'CompanyContact') || []),
         ];
         return searchSources.find((u) => {
-            // Check plugin-specific attribute (X-NEXUS-GIT or X-NEXUS-MANTISBT)
             if (pluginAttributeName && username) {
                 const attrValue = u.card()?.get(pluginAttributeName)?.[0]?.val();
                 if (attrValue === username) return true;
             }
 
-            // Check email
             if (email && u.card()?.get('EMAIL')?.some((e) => e.val() === email)) return true;
 
-            // Partial name matching
             if (name) {
                 const nameMatch = u.getName()?.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(u.getName()?.toLowerCase());
                 if (nameMatch) return true;
             }
             return false;
         }) as User | undefined;
-    }
-
-    filterAndSortComments() {
-        const filtered = this.#allComments()
-            .filter((c) => {
-                const source = c.var?.source;
-                if (!source) return true;
-                return this.showActivity()[source] ?? true;
-            })
-            .sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
-
-        this.stickies.set(filtered.filter((_) => _.is_sticky));
-        this.groupedComments.set(this.groupCommentsByDay(filtered.filter((_) => !_.is_sticky)));
-        setTimeout(() => this.scrollToBottom(), 0);
     }
 
     scrollToBottom() {
@@ -216,7 +196,6 @@ export class TabCommentsComponent {
 
     toggleActivity(source: string) {
         this.showActivity.update((s) => ({ ...s, [source]: !s[source] }));
-        this.filterAndSortComments();
     }
 
     onQuickLinksLoaded(p: Project[]) {
@@ -229,13 +208,12 @@ export class TabCommentsComponent {
         if (!text) return;
 
         if (this.selectedTarget === 'nexus') {
-            this.#commentService.store({ text, path: this.path() }).subscribe(() => {
+            Comment.fromJson({}).store({ text, path: this.path() }).subscribe(() => {
                 this.reload();
                 target.value = '';
                 this.resetTextareaHeight();
             });
         } else {
-            // Send to chat plugin
             (this.selectedTarget as ChatPluginInstance).send(text).subscribe(() => {
                 this.reload();
                 target.value = '';

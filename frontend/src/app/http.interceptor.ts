@@ -1,21 +1,13 @@
-import { Dictionary } from '@constants/constants';
-import { HttpInterceptorFn, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
+import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
+import { deleteCookie } from '@constants/cookies';
+import { NexusHttpInterceptor } from '@models/http/http-headers';
+import { AuthenticationService } from '@models/auth.service';
 
-export const NexusHttpInterceptor = {
-    headers: {} as Dictionary<HttpHeaders>,
-    add(url: string, headers: HttpHeaders) {
-        NexusHttpInterceptor.headers[url] = headers;
-    },
-};
+export { NexusHttpInterceptor };
 
-/**
- * Centralized auth/401 handling. Adds per-base-URL headers and redirects to /login
- * on unauthenticated responses. Other errors propagate untouched (HttpWrapper handles
- * user-facing toasts).
- */
 export const nexusHttpInterceptor: HttpInterceptorFn = (req, next) => {
     const router = inject(Router);
     let request = req;
@@ -30,7 +22,12 @@ export const nexusHttpInterceptor: HttpInterceptorFn = (req, next) => {
             if (err instanceof HttpErrorResponse && err.status === 401) {
                 localStorage.removeItem('currentUser');
                 localStorage.removeItem('token');
-                router.navigate(['/login']);
+                if (AuthenticationService.sysinfo?.method === 'keycloak' && AuthenticationService.keycloak) {
+                    AuthenticationService.keycloak.login();
+                } else {
+                    deleteCookie('api_token');
+                    router.navigate(['/login']);
+                }
             }
             return throwError(() => err);
         }),

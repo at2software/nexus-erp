@@ -7,9 +7,7 @@
                 <n>{{ _nicon || _comment.var.nicon }}</n>
             </div>
         } @else {
-            <div class="avatar avatar-xs text-end">
-                <img [src]="_comment.icon" class="avatar avatar-xs avatar-img" alt="User avatar" />
-            </div>
+            <avatar [object]="_comment" size="xs"></avatar>
         }
         <div class="flex-fill small" title="{{ _comment.created_at | date }}" [innerHTML]="getFormattedTextWithLink() | safe: 'html'"></div>
     </div>
@@ -22,7 +20,7 @@
         } @else {
             <div class="callout-avatar">
                 @if (_comment.user_id) {
-                    <img src="{{ _comment.icon }}" class="avatar avatar-sm" alt="User avatar" />
+                    <avatar [object]="_comment" size="sm"></avatar>
                 }
             </div>
         }

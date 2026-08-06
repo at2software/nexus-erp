@@ -1,19 +1,19 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, NgZone, AfterViewInit, Injector, afterNextRender, inject, input, output, computed, signal, effect, untracked, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, AfterViewInit, Injector, afterNextRender, inject, input, output, computed, signal, effect, untracked, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { fromEvent } from 'rxjs';
 import { Router } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { NgbDropdown, NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { Milestone } from '@models/milestones/milestone.model';
+import { Milestone } from '@models/milestone/milestone.model';
 import { Project } from '@models/project/project.model';
-import { Task } from '@models/tasks/task.model';
+import { Task } from '@models/task/task.model';
 import { User } from '@models/user/user.model';
 import { UserService } from '@models/user/user.service';
 import { NxService } from '@app/nx/nx.service';
 import { Nx } from '@app/nx/nx.directive';
-import { MilestoneService } from '@models/milestones/milestone.service';
+import { MilestoneService } from '@models/milestone/milestone.service';
 import { Toast } from '@shards/toast/toast';
-import { environment } from 'src/environments/environment';
+import { environment } from '@environments/environment';
 import { Color } from '@constants/Color';
 import { storageGet, storageSet } from '@constants/storage';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
@@ -76,7 +76,6 @@ export class CustomGanttComponent implements AfterViewInit {
     addMilestone = output<Project>();
     addTask = output<Project>();
 
-    // Template-exposed signals
     svgWidth = signal(0);
     svgHeight = signal(0);
     scrollY = signal(0);
@@ -103,7 +102,6 @@ export class CustomGanttComponent implements AfterViewInit {
     readonly GRID_COLOR = '#333';
     readonly UNIT_WIDTH = computed(() => ({ Day: 40, Week: 80, Month: 120, Year: 200 })[this.viewMode()] ?? 40);
 
-    // Private mutable arrays for internal computation — synced to signals after each render pass
     #timelineUnits: TimelineUnit[] = [];
     #timelineGroups: TimelineGroup[] = [];
     #renderedMilestones: RenderedMilestone[] = [];
@@ -136,7 +134,6 @@ export class CustomGanttComponent implements AfterViewInit {
     #milestoneService = inject(MilestoneService);
     #userService = inject(UserService);
     #destroyRef = inject(DestroyRef);
-    #ngZone = inject(NgZone);
     #injector = inject(Injector);
 
     visibleRows = computed(() => {
@@ -188,14 +185,12 @@ export class CustomGanttComponent implements AfterViewInit {
             this.#initialized = true;
         }, { injector: this.#injector });
 
-        this.#ngZone.runOutsideAngular(() => {
-            fromEvent<Event>(this.#elementRef.nativeElement, 'scroll')
-                .pipe(takeUntilDestroyed(this.#destroyRef))
-                .subscribe((event) => {
-                    this.scrollY.set((event.target as HTMLElement).scrollTop || 0);
-                    this.#updateViewportBounds();
-                });
-        });
+        fromEvent<Event>(this.#elementRef.nativeElement, 'scroll')
+            .pipe(takeUntilDestroyed(this.#destroyRef))
+            .subscribe((event) => {
+                this.scrollY.set((event.target as HTMLElement).scrollTop || 0);
+                this.#updateViewportBounds();
+            });
     }
 
     #loadWorkloadData() {
@@ -884,7 +879,7 @@ export class CustomGanttComponent implements AfterViewInit {
         }
 
         if (this.#resizingMilestone) {
-            this.#milestoneService.update(Number(this.#resizingMilestone.id), { started_at: this.#resizingMilestone.started_at, due_at: this.#resizingMilestone.due_at }).subscribe({
+            this.#resizingMilestone.update({ started_at: this.#resizingMilestone.started_at, due_at: this.#resizingMilestone.due_at }, true).subscribe({
                 next: () => Toast.success($localize`:@@i18n.milestone.updated:Milestone updated successfully`),
                 error: () => Toast.error($localize`:@@i18n.milestone.updateError:Failed to update milestone`),
             });
@@ -899,7 +894,7 @@ export class CustomGanttComponent implements AfterViewInit {
                 this.#dragOriginalDates.forEach((_, milestoneId) => {
                     const milestone = this.#renderedMilestones.find((rm) => rm.milestone.id === milestoneId)?.milestone;
                     if (milestone) {
-                        this.#milestoneService.update(Number(milestone.id), { started_at: milestone.started_at, due_at: milestone.due_at }).subscribe({
+                        milestone.update({ started_at: milestone.started_at, due_at: milestone.due_at }, true).subscribe({
                             error: () => Toast.error($localize`:@@i18n.milestone.updateError:Failed to update milestone`),
                         });
                     }
@@ -965,7 +960,7 @@ export class CustomGanttComponent implements AfterViewInit {
                             from.due_at = newEnd.toISOString().split('T')[0];
                         }
                         this.#updateMilestonePosition(from);
-                        this.#milestoneService.update(Number(from.id), { started_at: from.started_at, due_at: from.due_at }).subscribe({
+                        from.update({ started_at: from.started_at, due_at: from.due_at }, true).subscribe({
                             error: () => Toast.error($localize`:@@i18n.milestone.updateError:Failed to update milestone`),
                         });
                     }

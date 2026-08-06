@@ -2,10 +2,7 @@
 import { FormsModule } from '@angular/forms';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { ModalBaseComponent } from '../modal-base.component';
-
-export interface CombineDebriefItemsResult {
-    title: string;
-}
+import { CombineDebriefItemsResult } from '@models/_core/modal-results';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,

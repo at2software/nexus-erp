@@ -6,6 +6,7 @@ import { Company } from '@models/company/company.model';
 import { CompanyContact } from '@models/company/company-contact.model';
 import { MarketingInitiative } from '@models/marketing/marketing-initiative.model';
 import { MarketingService } from '@models/marketing/marketing.service';
+import { modelResource } from '@models/http/model-resource';
 import { AvatarComponent } from '@app/_shards/avatar/avatar.component';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
@@ -19,20 +20,18 @@ import { SpinnerComponent } from '@shards/spinner/spinner.component';
 export class CustomerAddToInitiativeModalComponent extends ModalBaseComponent<{ initiative_id: string; contact_ids: string[] } | null> {
     company!: Company;
     contacts: CompanyContact[] = [];
-    initiatives: MarketingInitiative[] = [];
     selectedInitiativeId = signal('');
     selectedContactIds = signal(new Set<string>());
-    isLoading = signal(true);
 
     #marketingService = inject(MarketingService);
+
+    #initiatives = modelResource(() => this.#marketingService.indexInitiatives({ status: 'active', per_page: 100 }));
+    initiatives = computed<MarketingInitiative[]>(() => this.#initiatives.value()?.data ?? []);
+    isLoading = this.#initiatives.isLoading;
 
     init(args: { company: Company }): void {
         this.company = args.company;
         this.contacts = this.company.employees?.filter((c) => !c.is_retired) ?? [];
-        this.#marketingService.indexInitiatives({ status: 'active', per_page: 100 }).subscribe((r) => {
-            this.initiatives = r.data;
-            this.isLoading.set(false);
-        });
     }
 
     toggleContact(id: string) {

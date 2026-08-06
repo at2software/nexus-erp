@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Project } from '@models/project/project.model';
 import { BaseWidgetComponent, WidgetOptions } from '../base.widget.component';
 import { WIDGET_SHARED } from '../widgets.shared';
 import { PermissionsDirective } from '@directives/permissions.directive';
 import { WidgetService } from '@models/widget.service';
-import { ParamChartSeries } from '@models/api-response';
+import { ParamChartSeriesDto } from '@models/_core/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -14,8 +14,6 @@ import { ParamChartSeries } from '@models/api-response';
     imports: [...WIDGET_SHARED, PermissionsDirective],
 })
 export class WidgetProjectAcquisitionsComponent extends BaseWidgetComponent {
-    data = signal<Project[]>([]);
-    chartData = signal<ParamChartSeries[] | undefined>(undefined);
     #widgetService = inject(WidgetService);
 
     defaultOptions = () => ({
@@ -25,16 +23,12 @@ export class WidgetProjectAcquisitionsComponent extends BaseWidgetComponent {
         ...WidgetOptions.chartOnly,
     });
 
-    reload(): void {
-        const options = { ...this.getOptionsURI() };
-        if (this.hasInvoicesModule()) options['withChart'] = '1';
-        this.#widgetService.indexCashflow('PROJECTS_ACQUISITIONS', options, Project).subscribe((response) => {
-            const data = response.objects.sort((a, b) => (b.net ?? 0) - (a.net ?? 0));
-            this.data.set(data);
-            this.value.set(data.reduce((a, b) => a + (b.net ?? 0), 0));
-            this.chartData.set(response.history);
-        });
-    }
+    readonly #cashflow = this.optionsResource((options) =>
+        this.#widgetService.indexCashflow('PROJECTS_ACQUISITIONS', this.hasInvoicesModule() ? { ...options, withChart: '1' } : options, Project),
+    );
+    readonly data = computed<Project[]>(() => [...(this.#cashflow.value()?.objects ?? [])].sort((a, b) => (b.net ?? 0) - (a.net ?? 0)));
+    readonly chartData = computed<ParamChartSeriesDto[] | undefined>(() => this.#cashflow.value()?.history);
+    override value = this.headline(this.#cashflow, () => this.data().reduce((a, b) => a + (b.net ?? 0), 0));
 
     getProbabilityTooltip = (project: Project) =>
         $localize`:@@i18n.common.probability:probability` + ': ' + ((project.lead_probability || 0) * 100).toFixed(1) + '%';

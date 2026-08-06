@@ -1,36 +1,38 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 import { Company } from '@models/company/company.model';
 import { CompanyContact } from '@models/company/company-contact.model';
 import { PdfCreationType } from '@enums/PdfCreationType';
-import { NexusHttpService } from '../http/http.nexus';
+import { Observable } from 'rxjs';
+import { NexusHttpService, idOf } from '../http/http.nexus';
 import { Connection } from './connection.model';
 import { Dictionary } from '@constants/constants';
-import { NxGlobal } from '@app/nx/nx.global';
-import { CustomerLocation, MonthlyBiasData } from '@models/api-response';
+import { nx } from '@models/_core/nx-bridge';
+import { CustomerLocationDto, MonthlyBiasDataDto } from '@models/_core/api-response';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class CompanyService extends NexusHttpService<Company> {
     apiPath = 'companies';
+    indexPaginated = (filters?: Dictionary) => this.paginate(this.apiPath, filters);
 
     override readonly model = Company;
 
     indexSupport = (options: Dictionary = {}) => this.aget(`companies/support`, options);
-    /** Model C actionable output: customers ranked by ML churn probability, highest risk first. Powers widget-customer-churn. */
     indexByChurnRisk = () => this.aget('companies/churn-risk');
     showForPath = (path: string) => this.show(path.split('/')[1]);
-    showConnections = (_: Company) => this.aget(`companies/${_.id}/connections`, {}, Connection);
-    indexAllConnections = () => this.aget(`connections`, {}, Connection);
+    showConnections = (_: Company | string | number) => this.aget(`companies/${idOf(_)}/connections`, {}, Connection);
+    indexAllConnections = (): Observable<Connection[]> => this.aget(`connections`, {}, Connection);
     create = (name: string = 'New company') => this.post('companies', { name: name });
     createEmployee = (id: string) => this.post(`companies/${id}/employees`, {}, CompanyContact);
     updateGeneric = (id: string, api: string, data: object) => this.put(api + '/' + id, data);
     importImprint = (_: Company) => this.get(`companies/${_.id}/import_imprint`);
     getByPhone = (phone_number: string) => this.get(`companies/by-phone`, { phone_number: phone_number });
+    getOrCreateDraft = (phone_number: string) => this.post(`companies/draft`, { phone_number });
+    keepDraft = (_: Company) => this.put(`companies/${_.id}/keep`, {});
+    discardDraft = (_: Company) => this.delete(`companies/${_.id}/draft`);
 
     makeInvoice(_: Company, success?: () => unknown, draft = false) {
         const params: Dictionary = draft ? { type: PdfCreationType.Create, draft: 1 } : { type: PdfCreationType.Create };
-        // A draft is never persisted, so it must always be downloaded from the response — the
-        // "view stored invoice" path (getBlob + navigate) has nothing to show afterwards.
-        const download = NxGlobal.global.user!.getFloatParam('INVOICE_DOWNLOAD', 1);
+        const download = nx().global.user!.getFloatParam('INVOICE_DOWNLOAD', 1);
         if (draft || download === 1) {
             return this.getFile(`companies/${_.id}/invoice`, params, success);
         } else {
@@ -42,11 +44,9 @@ export class CompanyService extends NexusHttpService<Company> {
 
     maintenanceCommercialRegister = () => this.aget('companies/maintenance/commercial-register');
 
-    // stats
     getRevenueStats = (c: Company) => this.aget(`companies/${c.id}/stats-revenue`, {}, Object);
     getProjectStats = (c: Company) => this.aget(`companies/${c.id}/stats-projects`, {}, Object);
-    getPredictionAccuracy = (c: Company) => this.aget<MonthlyBiasData>(`companies/${c.id}/prediction-accuracy`);
+    getPredictionAccuracy = (companyId: string) => this.aget<MonthlyBiasDataDto>(`companies/${companyId}/prediction-accuracy`);
 
-    // map
-    getWithCoordinates = () => this.aget<CustomerLocation>('companies/with-coordinates');
+    getWithCoordinates = () => this.aget<CustomerLocationDto>('companies/with-coordinates');
 }

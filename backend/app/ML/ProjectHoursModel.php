@@ -142,10 +142,6 @@ class ProjectHoursModel {
             'r2'    => new RSquared,
             'smape' => new SMAPE,
         ];
-        // Rubix negates error metrics (MAE/RMSE/SMAPE) to keep "maximize the score" a
-        // universal convention; flip those back to their natural positive magnitude
-        // (lower is better) so callers can compare directly against real-world hours.
-        // RSquared is already "higher is better" natively (max 1.0) and is left as-is.
         $score = function (array $predictions) use ($metrics, $actual): array {
             $scores = [];
             foreach ($metrics as $key => $metric) {
@@ -167,7 +163,6 @@ class ProjectHoursModel {
         return $result;
     }
 
-    /** Train the given estimator on the full dataset and persist it to disk. */
     public static function train(array $rows, Learner $estimator): PersistentModel {
         $samples = [];
         $labels  = [];
@@ -196,10 +191,6 @@ class ProjectHoursModel {
         return PersistentModel::load(new Filesystem($path));
     }
 
-    /**
-     * Predict a project's final hours_invested from quote-time features.
-     * Returns null if no trained model is persisted yet.
-     */
     public static function predict(Project $project): ?float {
         $model = self::load();
         if (! $model) {

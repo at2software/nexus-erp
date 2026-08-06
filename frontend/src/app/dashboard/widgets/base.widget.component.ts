@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, ResourceRef, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Observable } from 'rxjs';
 import { OptionType } from './widget-options/widget-options.component';
 import { Dictionary } from '@constants/constants';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { BaseWidgetListener } from './base.widget.listener';
 import { GlobalService } from '@models/global.service';
+import { modelResource } from '@models/http/model-resource';
 
 export type TOptions = Dictionary<{ type: OptionType; value: unknown; i18n?: string }>;
 export interface TWidgetConfig {
@@ -32,7 +34,6 @@ export abstract class BaseWidgetComponent {
     protected global = inject(GlobalService);
 
     defaultOptions: () => TOptions = () => ({});
-    reload(): void { /** overwritten in subclasses */ }
 
     is_editing = input<boolean>();
     options    = input<TOptions>({});
@@ -41,7 +42,7 @@ export abstract class BaseWidgetComponent {
     widget     = input<TWidgetConfig>();
     onlyChart  = input<boolean>(false);
 
-    value = signal<number | undefined>(undefined);
+    value: Signal<number | undefined> = signal(undefined);
 
     readonly hasInvoicesModule    = computed(() => this.global.user?.hasRole('invoicing') ?? false);
     readonly hasInvoicesValues    = computed(() => this.global.user?.hasRole('financial') ?? false);
@@ -51,12 +52,24 @@ export abstract class BaseWidgetComponent {
 
     protected isReloading = false;
 
+    readonly #resources: ResourceRef<unknown>[] = [];
+
     constructor() {
         this.listener.reloadRequested.pipe(takeUntilDestroyed()).subscribe(() => this.reload());
-        effect(() => {
-            this.options();
-            this.reload();
-        });
+    }
+
+    protected optionsResource<T>(stream: (options: Dictionary) => Observable<T>, enabled: () => boolean = () => true): ResourceRef<T | undefined> {
+        const resource = modelResource(() => (enabled() ? this.getOptionsURI() : undefined), stream);
+        this.#resources.push(resource);
+        return resource;
+    }
+
+    protected headline(resource: ResourceRef<unknown>, compute: () => number): Signal<number | undefined> {
+        return computed(() => (resource.hasValue() ? compute() : undefined));
+    }
+
+    reload(): void {
+        this.#resources.forEach((_) => _.reload());
     }
 
     _onUpdate = ($event: TOptions) => {
@@ -83,5 +96,5 @@ export abstract class BaseWidgetComponent {
         return m;
     };
     indexExceedsSettings = (i: number) => ('max-items' in this.getOptions() && 'value' in this.getOptions()['max-items'] ? ((this.getOptions()['max-items']?.value as number) ?? 0) <= i : true);
-    badgeCount = (data: Serializable[]) => data.filter((_) => _.badge()).length;
+    badgeCount = (data: Serializable[]) => data.filter((_) => _.getBadge()).length;
 }

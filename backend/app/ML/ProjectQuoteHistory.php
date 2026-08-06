@@ -40,11 +40,6 @@ class ProjectQuoteHistory {
 
         $result = [];
         foreach ($targets as $project) {
-            // Training rows always have a decision_at (eligibleQuery requires
-            // whereHasDesicion()). An inference target may not be decided yet —
-            // that's the normal on-demand-prediction case — so fall back to "now"
-            // as the cutoff: no leakage risk there, since it's a real-time
-            // prediction, not a historical label.
             $cutoff  = $decisionAtById->get($project->id, fn () => $project->decision_at) ?? Carbon::now();
             $exclude = $project->id;
 

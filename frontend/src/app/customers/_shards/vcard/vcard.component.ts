@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, computed, effect, ElementRef, inject, input, signal, viewChildren } from '@angular/core';
-import { VcardRow } from '@models/vcard/VcardRow';
+import { VcardRow } from '@models/vcard/vcard-row';
 import { Company } from '@models/company/company.model';
 import { CompanyContact } from '@models/company/company-contact.model';
 import { Contact } from '@models/company/contact.model';
 import { ActionEmitterType } from '@app/nx/nx.directive';
-import { VcardClass } from '@models/vcard/VcardClass';
+import { VcardClass } from '@models/vcard/vcard-class.model';
 import { User } from '@models/user/user.model';
-import { MarketingProspect } from '@models/marketing/marketing.prospect.model';
+import { MarketingProspect } from '@models/marketing/marketing-prospect.model';
 import { NominatimHttpWrapper } from '@models/http/http.nominatim';
 import { SOCIAL_MEDIA_TYPES } from './socialmediatypes';
 import { NgTemplateOutlet } from '@angular/common';
@@ -16,7 +16,7 @@ import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap'
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import * as Leaflet from 'leaflet';
 import { DB_COUNTRIES } from '../db.countries';
-import { CountryEntry } from '@models/api-response';
+import { CountryEntryDto } from '@models/_core/api-response';
 import { PlzDbService } from '../plz-db.service';
 import { NComponent } from '@shards/n/n.component';
 
@@ -41,7 +41,7 @@ export class VcardComponent {
 
     liClass: string = 'list-group-item pe-9 px-3 py-1';
 
-    db_countries: CountryEntry[] = DB_COUNTRIES;
+    db_countries: CountryEntryDto[] = DB_COUNTRIES;
     showNameDetails = signal(false);
     smtypes = SOCIAL_MEDIA_TYPES;
     smtypekeys: string[] = Object.keys(this.smtypes);
@@ -65,7 +65,6 @@ export class VcardComponent {
             this.object();
             this.resetDirty();
             this.ensureI18nFields();
-            // Re-initialize maps when object changes.
             setTimeout(() => this.initializeMaps(), 0);
         });
 
@@ -94,7 +93,7 @@ export class VcardComponent {
                             this.#nominatim.lookup(adr).subscribe((info) => {
                                 if (Array.isArray(info) && info.length) {
                                     card.rows.push(new VcardRow('GEO', [], [info[0].lat, info[0].lon]));
-                                    this.updateVcard();
+                                    this.updateVcard(true);
                                 }
                             });
                         }
@@ -109,7 +108,7 @@ export class VcardComponent {
         }
     };
 
-    isDirty = (): boolean => this.src_string != this.object().card.toString();
+    isDirty = (): boolean => this.src_string != (this.object().card()?.toString() ?? '');
 
     delete = (r: number) => {
         this.object().card()?.rows.splice(r, 1);
@@ -130,16 +129,12 @@ export class VcardComponent {
             card.rows.push(VcardRow.fromString('TEL;TYPE=cell,emergency:')!);
         }
     };
-    updateVcard = () => {
-        if (this.isDirty()) {
-            const obj = this.object();
-            obj.update({ vcard: obj.card()?.toString() }).subscribe(() => {
-                if (obj instanceof CompanyContact) {
-                    const rawContact = obj.contact;
-                    if (rawContact) obj.patch({ contact: Contact.fromJson(rawContact) });
-                }
-            });
-        }
+    updateVcard = (silent = false) => {
+        if (!this.isDirty()) return;
+        const obj = this.object();
+        obj.update({ vcard: obj.card()?.toString() }, silent).subscribe(() => {
+            this.src_string = obj.card()?.toString() ?? '';
+        });
     };
     importImprint = () => {
         const obj = this.object();
@@ -237,7 +232,6 @@ export class VcardComponent {
     async onPlzUpdate(o: VcardRow): Promise<void> {
         if (o.vals[6] != 'DE') return;
         if (o.vals[5].length != 5) return;
-        //if (o.vals[3].length > 0) return
         const res = await this.#plzDb.lookup(o.vals[5]);
         if (res.length > 0) {
             o.vals[3] = res[0].ort;
@@ -255,7 +249,6 @@ export class VcardComponent {
         }
         if (this.isContact()) {
             if (['ORG'].includes(o.key)) return o.key + ' is not needed here (personal contact could  work in many companies)';
-            //if (['URL'].includes(o.key)) return o.key + ' is not needed here (personal contact could  work in many companies)'
         }
         return undefined;
     }
@@ -292,15 +285,12 @@ export class VcardComponent {
             return;
         }
 
-        // If map already exists for this container, don't recreate it
         if (this.#mapInstances.has(container)) {
             return;
         }
 
-        // Clear container
         container.innerHTML = '';
 
-        // Create map
         const map = Leaflet.map(container, {
             zoomControl: false,
             attributionControl: false,
@@ -308,10 +298,8 @@ export class VcardComponent {
             scrollWheelZoom: true,
         }).setView([lat, lon], 15);
 
-        // Detect dark mode (you can adjust this based on your theme detection)
         const isDarkMode = document.body.classList.contains('dark') || document.body.classList.contains('dark-theme') || window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-        // Choose tile layer based on theme
         const tileLayer = isDarkMode
             ? Leaflet.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
                   attribution: '© <a href="https://carto.com/">CARTO</a> © <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
@@ -333,13 +321,11 @@ export class VcardComponent {
         });
         Leaflet.marker([lat, lon], { icon: pinIcon }).addTo(map);
 
-        // Store map instance
         this.#mapInstances.set(container, map);
 
-        // Force tile loading and map sizing
         setTimeout(() => {
             map.invalidateSize();
-            map.setView([lat, lon], 15); // Re-set view to force tile loading
+            map.setView([lat, lon], 15);
         }, 200);
     }
 

@@ -38,7 +38,6 @@ class GitIssueWebhookJob implements ShouldQueue {
     ) {}
 
     public function handle(): void {
-        // ignore state_id update because the "close"/"reopen" event will fire as well
         if ($this->objectAttributes['action'] === 'update' && isset($this->changes['state_id'])) {
             return;
         }

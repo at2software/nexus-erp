@@ -6,7 +6,7 @@
 @let _predictionTotal = predictionTotal();
 @let _product = product();
 <div class="row">
-    <div class="col-8" [class.col-8]="!_showPredictions" [class.col-12]="_showPredictions">
+    <div class="col-12 col-xl-8" [class.col-8]="!_showPredictions" [class.col-12]="_showPredictions">
         <ng-content></ng-content>
 
         <media-preview [parent]="_project"></media-preview>
@@ -31,7 +31,7 @@
                     <empty-state [card]="false" title="nothing planned so far" i18n-title="@@i18n.info.nothingPlannedSoFar" class="projects"></empty-state>
                 }
                 @if (!loading() && _items.length > 0) {
-                    <table class="card-table table mb-0" cdkDropList [cdkDropListData]="_items" (cdkDropListDropped)="onDrop($event)">
+                    <table stackedTable class="card-table table mb-0" cdkDropList [cdkDropListData]="_items" (cdkDropListDropped)="onDrop($event)">
                         <thead>
                             <tr>
                                 <th style="width: 25px"></th>
@@ -45,8 +45,8 @@
                                 @if (_showPredictions) {
                                     @for (p of _predictions; track p) {
                                         <th style="width: 45px">
-                                            <img alt="" class="avatar avatar-img avatar-sm" src="{{ p.user.icon }}" noroles="financial|project_manager" ngbTooltip="{{ p.user.getName() }}" />
-                                            <img alt="" class="avatar avatar-img avatar-sm pointer" src="{{ p.user.icon }}" roles="financial|project_manager" ngbTooltip="use all predictions from this user" (click)="onUseAllPredictionsForUser(p.user)" tabindex="0" (keydown.enter)="onUseAllPredictionsForUser(p.user)" i18n-ngbTooltip="@@i18n.projects.useAllPredictionsFromThis" />
+                                            <img alt="" class="avatar avatar-img avatar-sm" src="{{ p.user.getAvatar() }}" noroles="financial|project_manager" ngbTooltip="{{ p.user.getName() }}" />
+                                            <img alt="" class="avatar avatar-img avatar-sm pointer" src="{{ p.user.getAvatar() }}" roles="financial|project_manager" ngbTooltip="use all predictions from this user" (click)="onUseAllPredictionsForUser(p.user)" tabindex="0" (keydown.enter)="onUseAllPredictionsForUser(p.user)" i18n-ngbTooltip="@@i18n.projects.useAllPredictionsFromThis" />
                                         </th>
                                     }
                                 }
@@ -170,7 +170,7 @@
             </div>
         }
     </div>
-    <div class="col-4" [class.d-none]="_showPredictions">
+    <div class="col-12 col-xl-4" [class.d-none]="_showPredictions">
         <project-info [project]="_project"></project-info>
 
         @if (_predictions && _project.state.isPrepared()) {
@@ -179,7 +179,7 @@
                 <ul class="list-group mb-0">
                     @for (p of _predictions; track p) {
                         <li class="list-group-item hstack gap-2">
-                            <div><img class="avatar avatar-img avatar-sm" src="{{ p.user.icon }}" alt="" /></div>
+                            <div><avatar [object]="p.user" size="sm"></avatar></div>
                             <div class="flex-fill">
                                 <chart-progress class="mb-3" scss="primary" [title]="p.user.getName()" [max]="_predictionTotal" [value]="p.total"> </chart-progress>
                             </div>

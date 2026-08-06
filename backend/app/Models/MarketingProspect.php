@@ -40,7 +40,6 @@ class MarketingProspect extends BaseModel {
         'gender',
     ];
 
-    // Relationships
     public function marketingInitiative(): BelongsTo {
         return $this->belongsTo(MarketingInitiative::class);
     }
@@ -76,7 +75,6 @@ class MarketingProspect extends BaseModel {
             ->whereDate('scheduled_at', today());
     }
 
-    // Scopes
     public function scopeByStatus($query, string $status) {
         return $query->where('status', $status);
     }
@@ -90,7 +88,6 @@ class MarketingProspect extends BaseModel {
         return $query->where('created_at', '>=', now()->subDays($days));
     }
 
-    // Helper methods
     public function getStatusLabel(): string {
         return match ($this->status) {
             'new'          => 'New',
@@ -135,14 +132,12 @@ class MarketingProspect extends BaseModel {
             'performance_value' => $performanceValue,
         ]);
 
-        // Update prospect status if all activities are completed
         if (! $this->pendingActivities()->exists()) {
             $this->update(['status' => 'engaged']);
         }
         return true;
     }
     public function initializeWorkflowActivities(): void {
-        // Get all initiative activities for this prospect's initiative
         $initiativeActivities = $this->marketingInitiative->orderedInitiativeActivities;
 
         if ($initiativeActivities->isEmpty()) {
@@ -151,20 +146,14 @@ class MarketingProspect extends BaseModel {
 
         $baseDate = $this->created_at;
 
-        // Sort activities to ensure parents are processed before children (topological sort)
         $sortedActivities = $this->topologicalSort($initiativeActivities);
 
-        // Create prospect activities in correct order
         $createdActivities = [];
         foreach ($sortedActivities as $activity) {
-            // Calculate scheduled date based on parent or base date
             if ($activity->parent_activity_id && isset($createdActivities[$activity->parent_activity_id])) {
-                // For dependent activities: schedule relative to parent's scheduled date
                 $parentScheduledAt = $createdActivities[$activity->parent_activity_id];
                 $scheduledAt       = $parentScheduledAt->copy()->addDays($activity->day_offset);
             } else {
-                // For independent activities: schedule relative to prospect creation
-                // day_offset = 1 means first day (same as creation day), so subtract 1
                 $scheduledAt = $baseDate->copy()->addDays($activity->day_offset - 1);
             }
 
@@ -175,25 +164,19 @@ class MarketingProspect extends BaseModel {
                 'status'                           => 'pending',
             ]);
 
-            // Store for potential child activities
             $createdActivities[$activity->id] = $scheduledAt;
         }
     }
 
-    /**
-     * Sort activities to ensure parents are processed before children (topological sort)
-     */
     private function topologicalSort($activities): array {
         $sorted         = [];
         $visited        = [];
         $activitiesById = [];
 
-        // Index activities by ID
         foreach ($activities as $activity) {
             $activitiesById[$activity->id] = $activity;
         }
 
-        // Recursive visit function
         $visit = function ($activity) use (&$visit, &$sorted, &$visited, $activitiesById) {
             if (isset($visited[$activity->id])) {
                 return;
@@ -201,16 +184,13 @@ class MarketingProspect extends BaseModel {
 
             $visited[$activity->id] = true;
 
-            // Visit parent first if it exists
             if ($activity->parent_activity_id && isset($activitiesById[$activity->parent_activity_id])) {
                 $visit($activitiesById[$activity->parent_activity_id]);
             }
 
-            // Add current activity to sorted list
             $sorted[] = $activity;
         };
 
-        // Visit all activities
         foreach ($activities as $activity) {
             $visit($activity);
         }
@@ -221,7 +201,6 @@ class MarketingProspect extends BaseModel {
         return $this->created_at->diffInDays(now());
     }
 
-    // Virtual accessors from vCard
     public function getLinkedinUrlAttribute(): ?string {
         return $this->vcard->getFirstValue('URL', null);
     }
@@ -241,19 +220,16 @@ class MarketingProspect extends BaseModel {
             return null;
         }
 
-        // Extract LinkedIn profile ID from URL
         preg_match('/\/in\/([^\/\?]+)/', $linkedinUrl, $matches);
         return $matches[1] ?? null;
     }
     public function postponeActivities(int $days): bool {
-        // Postpone all pending activities
         $updated = $this->activities()
             ->where('status', 'pending')
             ->update([
                 'scheduled_at' => DB::raw("DATE_ADD(scheduled_at, INTERVAL {$days} DAY)"),
             ]);
 
-        // Increment days_skipped counter
         $this->increment('days_skipped', $days);
         return $updated > 0;
     }

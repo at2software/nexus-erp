@@ -1,6 +1,6 @@
 @let _project = object();
 <app-header>
-    <div class="logo cursor-pointer" [style.background-image]="'url(' + _project.icon + ')'" smartLink="/customers/{{ _project.company!.id }}">
+    <div class="logo cursor-pointer" [style.background-image]="'url(' + _project.getAvatar() + ')'" smartLink="/customers/{{ _project.company!.id }}">
         <div ngbDropdown>
             <div class="dropdown-toggle dropdown-toggle-simple bg-transparent" (click)="$event.stopPropagation()" tabindex="0" (keydown.enter)="$event.stopPropagation()" style="font-weight: normal" ngbDropdownToggle>
                 <project [project]="_project" [noRouting]="true"></project>
@@ -51,8 +51,6 @@
 
 <ng-container>
     <activity-tab class="list-group list-group-accent" icon="chat">
-        <app-tab-comments path="projects/{{ _project.id }}" [quickLinks]="_project.company" [projects]="_project.companys_active_projects" [currentProject]="_project">
-            <activity-projects [project]="_project" [company]="_project.company"></activity-projects>
-        </app-tab-comments>
+        <app-tab-comments path="projects/{{ _project.id }}" [projects]="_project.companys_active_projects" [currentProject]="_project"></app-tab-comments>
     </activity-tab>
 </ng-container>

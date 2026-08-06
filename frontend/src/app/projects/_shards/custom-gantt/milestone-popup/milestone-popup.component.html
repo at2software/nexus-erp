@@ -9,7 +9,7 @@
                 <div class="modal-body">
                     <!-- Title -->
                     <div class="row mb-3 align-items-center">
-                        <div class="col-3 text-truncate" i18n="@@i18n.common.title">title</div>
+                        <div class="col-12 col-md-6 col-xl-3 text-truncate" i18n="@@i18n.common.title">title</div>
                         <div class="col">
                             <input type="text" class="form-control form-control-sm" formControlName="name" [class.is-invalid]="milestoneForm.get('name')?.invalid && milestoneForm.get('name')?.touched" />
                             @if (milestoneForm.get('name')?.invalid && milestoneForm.get('name')?.touched) {
@@ -21,7 +21,7 @@
                     </div>
                     <!-- Duration with Date Range Picker + Workload -->
                     <div class="row mb-3 align-items-center">
-                        <div class="col-3 text-truncate" i18n="@@i18n.common.duration">duration</div>
+                        <div class="col-12 col-md-6 col-xl-3 text-truncate" i18n="@@i18n.common.duration">duration</div>
                         <div class="col d-flex gap-2 align-items-center">
                             <input type="text" style="width: 160px" class="form-control form-control-sm" ngxDaterangepickerMd [(ngModel)]="dateRangeModel" [ngModelOptions]="{ standalone: true }" [ranges]="dateRanges" [showCustomRangeLabel]="true" [alwaysShowCalendars]="true" (datesUpdated)="onDateRangeChange($event)" [locale]="{ applyLabel: 'Apply', format: 'DD.MM.YYYY' }" readonly />
                             <input type="number" style="width: 80px" class="form-control form-control-sm text-end" formControlName="workload_hours" suffix="h" min="0" step="0.5" placeholder="e.g. 8" i18n-placeholder="@@i18n.projects.eg81640" />
@@ -32,7 +32,7 @@
                     </div>
                     <!-- Project -->
                     <div class="row mb-3 align-items-center">
-                        <div class="col-3 text-truncate" i18n="@@i18n.common.project">project</div>
+                        <div class="col-12 col-md-6 col-xl-3 text-truncate" i18n="@@i18n.common.project">project</div>
                         <div class="col">
                             <div class="dropdown" style="width: 160px" ngbDropdown>
                                 <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle w-100 d-flex align-items-center justify-content-between" ngbDropdownToggle [disabled]="selectableProjects().length <= 1">
@@ -51,7 +51,7 @@
                     <!-- Progress -->
                     @if (hasInvoiceItems()) {
                         <div class="row mb-3 align-items-center">
-                            <div class="col-3 text-truncate" i18n="@@i18n.milestone.progress">progress</div>
+                            <div class="col-12 col-md-6 col-xl-3 text-truncate" i18n="@@i18n.milestone.progress">progress</div>
                             <div class="col text-white">
                                 {{ (milestoneForm.get('progress')?.value || 0) * 100 | number: '1.0-0' }}%
                                 <span class="text-muted"> ({{ totalInvoiceItemDuration() }}h total) </span>
@@ -60,7 +60,7 @@
                     }
                     <!-- State -->
                     <div class="row mb-3 align-items-center">
-                        <div class="col-3 text-truncate" i18n="@@i18n.common.state">state</div>
+                        <div class="col-12 col-md-6 col-xl-3 text-truncate" i18n="@@i18n.common.state">state</div>
                         <div class="col">
                             <div class="btn-group d-flex" role="group">
                                 <button type="button" class="btn btn-sm" [class.btn-secondary]="milestoneForm.get('state')?.value === MilestoneState.TODO" [class.btn-outline-primary]="milestoneForm.get('state')?.value !== MilestoneState.TODO" (click)="selectState(MilestoneState.TODO)">
@@ -77,7 +77,7 @@
                     </div>
                     <!-- Assignee -->
                     <div class="row mb-3 align-items-center">
-                        <div class="col-3 text-truncate" i18n="@@i18n.common.assignee">assignee</div>
+                        <div class="col-12 col-md-6 col-xl-3 text-truncate" i18n="@@i18n.common.assignee">assignee</div>
                         <div class="col">
                             <div class="dropdown" ngbDropdown>
                                 <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle w-100 d-flex align-items-center justify-content-between" ngbDropdownToggle>
@@ -106,7 +106,7 @@
                     </div>
                     <!-- Comment -->
                     <div class="row mb-3 align-items-start">
-                        <div class="col-3 text-truncate" i18n="@@i18n.common.comment">comment</div>
+                        <div class="col-12 col-md-6 col-xl-3 text-truncate" i18n="@@i18n.common.comment">comment</div>
                         <div class="col">
                             <textarea class="form-control form-control-sm" formControlName="comments" rows="2" placeholder="Add a comment..." i18n-placeholder="@@i18n.projects.addAComment"></textarea>
                         </div>

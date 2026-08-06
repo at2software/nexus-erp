@@ -1,11 +1,7 @@
 import { QuickActionType } from './marketing-activity.model';
 import { MarketingPerformanceMetric } from './marketing-performance-metrics.model';
-import type { ActivityStats } from '@models/api-response';
+import type { ActivityStatsDto } from '@models/_core/api-response';
 
-/**
- * Base interface for all activity types (workflow activities, initiative activities, prospect activities)
- * Defines common properties shared across different activity contexts
- */
 export interface IActivityBase {
     id: string;
     name: string;
@@ -16,5 +12,5 @@ export interface IActivityBase {
     parent_activity_id?: string;
     quick_action?: QuickActionType;
     performance_metrics?: MarketingPerformanceMetric[];
-    stats?: ActivityStats;
+    stats?: ActivityStatsDto;
 }

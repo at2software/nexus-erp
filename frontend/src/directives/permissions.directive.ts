@@ -1,4 +1,4 @@
-import { DestroyRef, Directive, ElementRef, inject, input, OnInit } from '@angular/core';
+import { DestroyRef, Directive, effect, ElementRef, inject, input } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
@@ -8,8 +8,7 @@ import { RoleService } from '@models/user/role.service';
 @Directive({
     selector: '[roles], [noroles]',
 })
-export class PermissionsDirective implements OnInit {
-    /** Direct role name(s), pipe-separated: "admin|invoicing" */
+export class PermissionsDirective {
     readonly roles = input<string>();
     readonly noroles = input<string>();
 
@@ -19,8 +18,8 @@ export class PermissionsDirective implements OnInit {
     readonly #global = inject(GlobalService);
     readonly #destroyRef = inject(DestroyRef);
 
-    ngOnInit() {
-        this.#updateVisibility();
+    constructor() {
+        effect(() => this.#updateVisibility());
 
         this.#router.events
             .pipe(

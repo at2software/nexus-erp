@@ -1,11 +1,9 @@
-import { Serializable } from '../serializable';
-import { InvoiceService } from './invoice.service';
-import { Model } from '@constants/type-discriminators';
+import { Serializable } from '@models/_core/serializable';
+import { Model } from '@constants/model/type-discriminators';
 
 @Model('InvoiceReminder')
 export class InvoiceReminder extends Serializable {
     static API_PATH = (): string => 'invoice_reminders';
-    SERVICE = InvoiceService;
 
     stage: number = 0;
     fee: number = 0;

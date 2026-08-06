@@ -11,7 +11,6 @@ export interface AddMilestoneResult {
     project: Project;
 }
 
-/** Creates a new milestone scheduled on a given day, picking from the user's assigned projects. */
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'modal-add-milestone',

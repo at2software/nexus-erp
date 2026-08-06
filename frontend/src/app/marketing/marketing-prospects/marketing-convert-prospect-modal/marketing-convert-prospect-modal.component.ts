@@ -2,7 +2,7 @@
 import { FormsModule } from '@angular/forms';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { SearchService } from '@models/search.service';
-import { MarketingProspect } from '@models/marketing/marketing.prospect.model';
+import { MarketingProspect } from '@models/marketing/marketing-prospect.model';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { AvatarComponent } from '@app/_shards/avatar/avatar.component';
 import { Company } from '@models/company/company.model';
@@ -29,7 +29,6 @@ export class MarketingConvertProspectModalComponent extends ModalBaseComponent<{
 
     init(args: { prospect: MarketingProspect }): void {
         this.prospect = args.prospect;
-        // Pre-fill search with company name from prospect's vcard
         const companyFromVcard = this.prospect.card()
             ?.get('ORG')
             ?.map((_) => _.vals.join(' '))

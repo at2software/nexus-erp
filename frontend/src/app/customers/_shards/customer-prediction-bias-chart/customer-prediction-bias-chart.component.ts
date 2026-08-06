@@ -1,12 +1,13 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { Company } from '@models/company/company.model';
 import { CompanyService } from '@models/company/company.service';
-import { MonthlyBiasData } from '@models/api-response';
+import { modelListResource } from '@models/http/model-resource';
+import { MonthlyBiasDataDto } from '@models/_core/api-response';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { Color } from '@constants/Color';
 import { tracked } from '@constants/tracked';
 import { EChartsSimpleOptions, ECHARTS_DEFAULT_TOOLTIP_OPTIONS } from '@charts/echarts-presets';
-import { dayjs } from '@constants/dates';
+import { dayjs } from '@constants/date/dates';
 import type { EChartsOption } from 'echarts';
 
 @Component({
@@ -18,22 +19,15 @@ import type { EChartsOption } from 'echarts';
 export class CustomerPredictionBiasChartComponent {
     readonly company = input.required<Company>();
     readonly trackedCompany = tracked(this.company);
-    chartOptions = signal<EChartsOption>({ ...EChartsSimpleOptions, series: [] });
     readonly #companyService = inject(CompanyService);
 
-    constructor() {
-        effect(() => {
-            if (this.company().id) this.#load();
-        });
-    }
+    readonly #accuracy = modelListResource(
+        () => this.company()?.id || undefined,
+        (companyId) => this.#companyService.getPredictionAccuracy(companyId),
+    );
+    readonly chartOptions = computed<EChartsOption>(() => this.#buildChart(this.#accuracy.value()));
 
-    #load() {
-        this.#companyService.getPredictionAccuracy(this.company()).subscribe((data) => {
-            this.chartOptions.set(this.#buildChart(data ?? []));
-        });
-    }
-
-    #buildChart(data: MonthlyBiasData[]): EChartsOption {
+    #buildChart(data: MonthlyBiasDataDto[]): EChartsOption {
         const successColor = Color.fromVar('success').toHexString();
         const dangerColor = Color.fromVar('danger').toHexString();
         const mutedColor = 'rgba(255,255,255,0.15)';
@@ -41,7 +35,7 @@ export class CustomerPredictionBiasChartComponent {
         const dataMap = new Map(data.map((d) => [d.period, d]));
         const months: string[] = [];
         const barData: { value: number | null; itemStyle: { color: string } }[] = [];
-        const tooltipData: (MonthlyBiasData | null)[] = [];
+        const tooltipData: (MonthlyBiasDataDto | null)[] = [];
 
         for (let i = 36; i >= 0; i--) {
             const m = dayjs().subtract(i, 'months').format('YYYY-MM');

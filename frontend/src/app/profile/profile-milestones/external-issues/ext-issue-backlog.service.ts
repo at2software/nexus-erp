@@ -1,9 +1,9 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { catchError, concat, forkJoin, map, Observable, of, switchMap, take, timeout } from 'rxjs';
-import { PluginInstance } from '@models/http/plugin.instance';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
-import { ITaskPlugin } from '@models/tasks/task.plugin.interface';
-import { Task } from '@models/tasks/task.model';
+import { PluginInstance } from '@models/http/plugins/plugin.instance';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
+import { ITaskPlugin } from '@models/task/task.plugin.interface';
+import { Task } from '@models/task/task.model';
 import { Project } from '@models/project/project.model';
 import { ProjectPluginLinkResolution, ProjectService } from '@models/project/project.service';
 
@@ -16,14 +16,10 @@ export interface ExtIssueBacklogItem {
     id: string;
     task: Task;
     issueId: string;
-    /** Every NEXUS project (+ its plugin link id) that maps to this issue's exact tracker project (usually 0 or 1, rarely more). */
     resolved: ExtIssueProjectMatch[];
-    /** First of `resolved` — convenience accessor, undefined when nothing maps. */
     project?: Project;
     pluginLinkId?: string;
-    /** Friendly tracker project name for display when no NEXUS project is mapped. */
     trackerProjectName: string;
-    /** True while the project-resolution call is still in flight — show a spinner, not the unresolved warning. */
     resolving: boolean;
 }
 
@@ -33,14 +29,14 @@ const CONNECT_TIMEOUT_MS = 15000;
 /**
  * Aggregates "my open issues" across the user's task-tracker encryptions in one shot. Each tracker's
  * root instance exposes a *global* assigned-to-me query (GitLab `issues?assignee_id=me`, Mantis
- * `filter_id=assigned`), so we hit one endpoint per encryption instead of crawling every project —
+ * `filter_id=assigned`), so we hit one endpoint per encryption instead of crawling every project -
  * issues surface even for projects the user has no milestones in. Nothing is persisted server-side.
  *
  * Issue->project resolution sends just the distinct tracker project urls the fetch actually returned
- * to the backend, which resolves them to NEXUS projects — far cheaper than listing every project (and
+ * to the backend, which resolves them to NEXUS projects - far cheaper than listing every project (and
  * every plugin link) the user has just to find the handful that matter for these issues.
  */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ExtIssueBacklogService {
     #factory = inject(PluginInstanceFactory);
     #projectService = inject(ProjectService);
@@ -50,7 +46,6 @@ export class ExtIssueBacklogService {
         const roots = this.#factory
             .getPluginInstances()
             .filter((inst): inst is PluginInstance & ITaskPlugin => !!inst && 'ITaskPluginProperty' in inst && inst.isRootInstance())
-            // Skip trackers the user has no personal token for — their `init` never resolves and would hang forkJoin.
             .filter((inst) => inst.state !== 'no token' && inst.state !== 'connection fail');
 
         if (!roots.length) return of([]);
@@ -68,9 +63,6 @@ export class ExtIssueBacklogService {
         return forkJoin(perRootTasks).pipe(
             map((lists) => lists.flat()),
             switchMap((tasks) => {
-                // Render the issues immediately (names are already known) with a per-item "resolving"
-                // flag, then patch in the resolved project once the lookup completes — so unresolved
-                // issues show a spinner first instead of flashing the "no project" warning prematurely.
                 const pending = of(this.#toItems(tasks, [], excludeKeys, true));
                 const urls = Array.from(new Set(tasks.map((t) => t.project_url).filter((u): u is string => !!u)));
                 const resolved = this.#projectService.resolveProjectsByPluginLinkUrls(urls).pipe(map((matches) => this.#toItems(tasks, matches, excludeKeys, false)));
@@ -83,8 +75,6 @@ export class ExtIssueBacklogService {
         const myId = root.myUser()?.id;
         return tasks
             .filter((task) => task.state !== 1) // open only (Mantis can't filter server-side)
-            // Server-side `assignedOnly` isn't honored by every tracker (Mantis ignores it entirely
-            // without a configured filter_id) — re-check assignment here so unassigned issues never leak in.
             .filter((task) => !myId || String(task.user_id) === String(myId));
     }
 

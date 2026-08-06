@@ -22,7 +22,7 @@
                         </div>
                     }
                     @for (u of getMantisUsers(); track u.id) {
-                        <div class="card mb-2 user-card" [class.border-primary]="isSelected(u.id)" [class.selected]="isSelected(u.id)" (click)="selectUser(u.id)" tabindex="0" (keydown.enter)="selectUser(u.id)" style="cursor: pointer">
+                        <div class="card mb-2 user-card cursor-pointer" [class.border-primary]="isSelected(u.id)" [class.selected]="isSelected(u.id)" (click)="selectUser(u.id)" tabindex="0" (keydown.enter)="selectUser(u.id)">
                             <div class="card-body py-2 px-3">
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="flex-shrink-0">

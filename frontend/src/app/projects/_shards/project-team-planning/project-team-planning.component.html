@@ -58,17 +58,17 @@
                     </div>
                     <div class="input-group w-auto flex-nowrap">
                         @if (c.assignee.getUserIdForPlugin('X-NEXUS-MANTISBT') && _mantisInstance) {
-                            <a class="input-group-text text-decoration-none px-1" (click)="openMantisLink($event)" (keyup.enter)="openMantisLink($event)" tabindex="0" style="cursor: pointer">
+                            <a class="input-group-text text-decoration-none px-1 cursor-pointer" (click)="openMantisLink($event)" (keyup.enter)="openMantisLink($event)" tabindex="0">
                                 <n [class]="c.assignee.getInstanceIconClass(_mantisInstance)" style="font-size: 0.7rem">mantis</n>
                             </a>
                         }
                         @if (c.assignee.getUserIdForPlugin('X-NEXUS-GIT') && _gitInstance) {
-                            <a class="input-group-text text-decoration-none px-1" (click)="openGitLink($event)" (keyup.enter)="openGitLink($event)" tabindex="0" style="cursor: pointer">
+                            <a class="input-group-text text-decoration-none px-1 cursor-pointer" (click)="openGitLink($event)" (keyup.enter)="openGitLink($event)" tabindex="0">
                                 <n [class]="c.assignee.getInstanceIconClass(_gitInstance)" style="font-size: 0.7rem">git</n>
                             </a>
                         }
                         @if (c.assignee.getUserIdForPlugin('X-NEXUS-MATTERMOST') && _mattermostInstance) {
-                            <a class="input-group-text text-decoration-none px-1" (click)="openMattermostLink($event)" (keyup.enter)="openMattermostLink($event)" tabindex="0" style="cursor: pointer">
+                            <a class="input-group-text text-decoration-none px-1 cursor-pointer" (click)="openMattermostLink($event)" (keyup.enter)="openMattermostLink($event)" tabindex="0">
                                 <n [class]="c.assignee.getInstanceIconClass(_mattermostInstance)" style="font-size: 0.7rem">mattermost</n>
                             </a>
                         }

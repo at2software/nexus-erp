@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { Company } from '@models/company/company.model';
+import { ChangeDetectionStrategy, Component, effect, inject, linkedSignal, signal } from '@angular/core';
+import { modelListResource, modelResource } from '@models/http/model-resource';
 import { HttpClient } from '@angular/common/http';
 import { catchError, of } from 'rxjs';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
@@ -7,13 +9,14 @@ import { AvatarComponent } from '@app/_shards/avatar/avatar.component';
 import { SearchInputComponent } from '@app/_shards/search-input/search-input.component';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { RouterModule } from '@angular/router';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
 import { GitlabAuditService } from '@models/gitlab-audit/gitlab-audit.service';
 import { GitlabAuditProject } from '@models/gitlab-audit/gitlab-audit-project.model';
 import { GitlabSchedule } from '@models/gitlab-audit/gitlab-schedule.model';
 import { ProductService } from '@models/product/product.service';
-import { ParamService } from '@models/param.service';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { ParamService } from '@models/param/param.service';
+import { Param } from '@models/param/param.model';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
 import { ModalAuditPipelineComponent } from '@app/_modals/modal-audit-pipeline/modal-audit-pipeline.component';
@@ -24,7 +27,7 @@ import { Nx } from '@app/nx/nx.directive';
 import { NComponent } from '@shards/n/n.component';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { Product } from '@models/product/product.model';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { Dictionary } from '@constants/constants';
 
 const NEXUS_PREFIX = '[NEXUS] ';
@@ -36,10 +39,6 @@ const NEXUS_PREFIX = '[NEXUS] ';
     templateUrl: './projects-audit.component.html',
 })
 export class ProjectsAuditComponent {
-    projects = signal<GitlabAuditProject[]>([]);
-    loading = signal(true);
-
-    defaultProduct = signal<Product|undefined>(undefined);
     savingProduct = signal(false);
 
     #service = inject(GitlabAuditService);
@@ -51,42 +50,32 @@ export class ProjectsAuditComponent {
     #productService = inject(ProductService);
     #paramService = inject(ParamService);
 
+    readonly #projects = modelListResource(() => this.#service.index());
+    readonly projects = linkedSignal(this.#projects.value);
+    readonly loading = this.#projects.isLoading;
+
+    readonly #defaultProductParam = modelResource(() => this.#paramService.show('params/AUDIT_DEFAULT_PRODUCT_ID'));
+    readonly #storedDefaultProduct = modelResource(
+        () => (this.#defaultProductParam.value()?.value as string) || undefined,
+        (productId) => this.#productService.show(productId),
+    );
+    readonly defaultProduct = linkedSignal(this.#storedDefaultProduct.value);
+
     constructor() {
-        this.load();
-        this.loadDefaultProduct();
-    }
-
-    load() {
-        this.loading.set(true);
-        this.#service.index().subscribe({
-            next: (projects) => {
-                this.projects.set(projects);
-                this.loading.set(false);
-                this.projects().forEach((p) => this.#bindCallbacks(p));
-                this.loadSchedules();
-            },
-            error: () => {
-                this.loading.set(false);
-            },
+        effect(() => {
+            this.projects().forEach((p) => this.#bindCallbacks(p));
+            this.loadSchedules();
         });
     }
 
-    loadDefaultProduct() {
-        this.#paramService.show('params/AUDIT_DEFAULT_PRODUCT_ID').subscribe({
-            next: (param) => {
-                const id = param.value as string;
-                if (!id) return;
-                this.#productService.show(id).subscribe((product) => this.defaultProduct.set(product));
-            },
-        });
-    }
+    load = () => this.#projects.reload();
 
     selectDefaultProduct(selected: Serializable) {
         const product = selected.assert(Product);
         if (!product) return;
         this.defaultProduct.set(product);
         this.savingProduct.set(true);
-        this.#paramService.update('params/AUDIT_DEFAULT_PRODUCT_ID', { value: product.id }).subscribe({
+        Param.write('params/AUDIT_DEFAULT_PRODUCT_ID', product.id).subscribe({
             next: () => {
                 this.savingProduct.set(false);
             },
@@ -98,7 +87,7 @@ export class ProjectsAuditComponent {
 
     clearDefaultProduct() {
         this.defaultProduct.set(undefined);
-        this.#paramService.update('params/AUDIT_DEFAULT_PRODUCT_ID', { value: null }).subscribe();
+        Param.write('params/AUDIT_DEFAULT_PRODUCT_ID', null).subscribe();
     }
 
     #enc(project: GitlabAuditProject) {
@@ -136,7 +125,7 @@ export class ProjectsAuditComponent {
                 project.schedules = project.schedules.filter((sc) => sc.id !== schedule.id);
                 done?.();
                 if (!project.schedules.length) {
-                    this.#service.destroy(project.id).subscribe(() => {
+                    project.delete().subscribe(() => {
                         this.projects.set(this.projects().filter((p) => p.id !== project.id));
                     });
                 }
@@ -149,22 +138,23 @@ export class ProjectsAuditComponent {
         p.var.onRename = async (project: GitlabAuditProject) => {
             const result = await this.#inputModal.open('rename audit', false, undefined, project.project_name).catch(() => null);
             if (!result?.text?.trim()) return;
-            this.#service.update(project.id, { project_name: result.text.trim() }).subscribe(() => {
+            project.update({ project_name: result.text.trim() }).subscribe(() => {
                 project.project_name = result.text.trim();
             });
         };
 
         p.var.onLinkCompany = async (project: GitlabAuditProject) => {
-            const company = await (this.#modalBase as any).open(ModalSearchComponent, 'Company', 'select company').catch(() => null);
+            const selected = await this.#modalBase.open(ModalSearchComponent, 'Company', 'select company').catch(() => null);
+            const company = selected?.assert(Company);
             if (!company) return;
-            this.#service.update(project.id, { company_id: company.id }).subscribe((updated) => {
+            project.update({ company_id: company.id }).subscribe((updated) => {
                 project.company_id = updated.company_id;
                 project.company = updated.company ?? company;
             });
         };
 
         p.var.onUnlinkCompany = (project: GitlabAuditProject) => {
-            this.#service.update(project.id, { company_id: null }).subscribe(() => {
+            project.update({ company_id: null }).subscribe(() => {
                 project.company_id = undefined;
                 project.company = undefined;
             });
@@ -174,23 +164,25 @@ export class ProjectsAuditComponent {
             const modalRef = this.#ngbModal.open(ModalSelectInvoiceItemComponent, { size: 'lg' });
             const item = await modalRef.result.catch(() => null);
             if (!item) return;
-            this.#service.update(project.id, { invoice_item_id: item.id }).subscribe((updated) => {
+            project.update({ invoice_item_id: item.id }).subscribe((updated) => {
                 project.invoice_item_id = updated.invoice_item_id;
                 project.invoice_item = updated.invoice_item ?? item;
             });
         };
 
         p.var.onUnlinkInvoiceItem = (project: GitlabAuditProject) => {
-            this.#service.update(project.id, { invoice_item_id: null }).subscribe(() => {
+            project.update({ invoice_item_id: null }).subscribe(() => {
                 project.invoice_item_id = undefined;
                 project.invoice_item = undefined;
             });
         };
 
         p.var.onCreateInvoiceItem = async (project: GitlabAuditProject) => {
-            const item = await (this.#modalBase as any).open(ModalCreateAuditInvoiceItemComponent, project.company, this.defaultProduct).catch(() => null);
+            const company = project.company;
+            if (!company) return;
+            const item = await this.#modalBase.open(ModalCreateAuditInvoiceItemComponent, company, this.defaultProduct()).catch(() => null);
             if (!item) return;
-            this.#service.update(project.id, { invoice_item_id: item.id }).subscribe((updated) => {
+            project.update({ invoice_item_id: item.id }).subscribe((updated) => {
                 project.invoice_item_id = updated.invoice_item_id;
                 project.invoice_item = updated.invoice_item ?? item;
             });
@@ -198,7 +190,7 @@ export class ProjectsAuditComponent {
     }
 
     openAddModal() {
-        (this.#modalBase as any)
+        this.#modalBase
             .open(ModalAuditPipelineComponent)
             .then(() => this.load())
             .catch(() => {

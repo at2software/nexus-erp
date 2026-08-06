@@ -11,8 +11,6 @@ use Illuminate\Support\Facades\Auth;
 
 class Authenticate extends Middleware {
     /**
-     * Handle an incoming request.
-     *
      * @param Request $request
      * @param string[] ...$guards
      * @return mixed
@@ -20,7 +18,6 @@ class Authenticate extends Middleware {
      * @throws AuthenticationException
      */
     public function handle($request, Closure $next, ...$guards) {
-        // Check for Bearer token authentication first
         if ($request->hasHeader('Authorization')) {
             $token = preg_replace('/^Bearer /is', '', $request->header('Authorization'));
             if (strlen($token) > 0) {
@@ -39,10 +36,6 @@ class Authenticate extends Middleware {
         return $next($request);
     }
 
-    /**
-     * Dev-only: swap the authenticated user for IMPERSONATE_USER_ID, if set.
-     * Never active outside local/testing to avoid an accidental auth bypass in production.
-     */
     protected function applyImpersonation(): void {
         if (! app()->environment(['local', 'testing'])) {
             return;
@@ -57,11 +50,7 @@ class Authenticate extends Middleware {
         }
     }
 
-    /**
-     * Get the path the user should be redirected to when they are not authenticated.
-     */
     protected function redirectTo($request): ?string {
-        // Always return null to trigger JSON response - this is a pure API backend
         return null;
     }
 }

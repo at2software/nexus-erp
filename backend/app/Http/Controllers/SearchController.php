@@ -30,7 +30,7 @@ class SearchController extends Controller {
                 return response()->make(null, 400);
             }
 
-            $allowed('Company') && $collection        = $collection->merge(Company::select()->whereLike('vcard', $input->query)->get());
+            $allowed('Company') && $collection        = $collection->merge(Company::select()->whereNotDraft()->whereLike('vcard', $input->query)->get());
             $allowed('User') && $collection           = $collection->merge(User::select()->whereLike('vcard', $input->query)->get());
             $allowed('CompanyContact') && $collection = $collection->merge(CompanyContact::select()->whereLike('vcard', $input->query)->with('company', 'contact')->get());
 
@@ -51,6 +51,7 @@ class SearchController extends Controller {
             $allowed('LeadSource') && $collection        = $collection->merge(LeadSource::select()->whereLike('name', $input->query)->get());
             $allowed('MarketingProspect') && $collection = $collection->merge(MarketingProspect::select()->whereLike('vcard', $input->query)->get());
 
+            $collection = $collection->reject(fn ($m) => $m instanceof CompanyContact && $m->company?->isDraft());
             $collection = $collection->unique('path');
             $collection = $collection->sortByDesc('updated_at');
             return $collection;

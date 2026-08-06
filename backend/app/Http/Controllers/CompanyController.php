@@ -76,20 +76,17 @@ class CompanyController extends Controller {
     }
     public function index(Request $request) {
         $myCompany = Param::get('ME_ID')->value;
-        $query     = Company::select()->whereNot('id', $myCompany);
+        $query     = Company::select()->whereNot('id', $myCompany)->whereNotDraft();
         $user      = Auth::user();
 
-        // Project-based filters
         if ($request->onlyWithActiveProjects == 'true') {
-            $query->withCount(['projects' => fn ($q) => $q->wherePreparedOrRunning()])->having('projects_count', '>', 0);
+            $query->whereHas('projectsUnfinished');
         }
 
-        // Revenue filters
         if ($request->revenueOn == 'true') {
             $query->having('revenue', '>', $request->revenueMin);
         }
 
-        // Date range filter (created_at)
         if ($request->has('created_from')) {
             $query->where('created_at', '>=', $request->created_from);
         }
@@ -97,7 +94,6 @@ class CompanyController extends Controller {
             $query->where('created_at', '<=', $request->created_to);
         }
 
-        // Updated date filter (updated_at)
         if ($request->has('updated_from')) {
             $query->where('updated_at', '>=', $request->updated_from);
         }
@@ -105,12 +101,10 @@ class CompanyController extends Controller {
             $query->where('updated_at', '<=', $request->updated_to);
         }
 
-        // Revenue larger than X filter
         if ($request->has('revenue_min') && is_numeric($request->revenue_min)) {
             $query->where('net', '>=', floatval($request->revenue_min));
         }
 
-        // Customer of specific product filter
         if ($request->has('product_id') && is_numeric($request->product_id)) {
             $query->whereHas('invoices', function ($invoiceQuery) use ($request) {
                 $invoiceQuery->whereHas('invoiceItems', function ($itemQuery) use ($request) {
@@ -119,11 +113,9 @@ class CompanyController extends Controller {
             });
         }
 
-        // Sorting
         $sortBy        = $request->get('sort_by', 'created_at');
         $sortDirection = $request->get('sort_direction', 'desc');
 
-        // Validate sort column to prevent SQL injection
         $allowedSortColumns = ['created_at', 'updated_at', 'customer_number', 'net'];
         if (in_array($sortBy, $allowedSortColumns)) {
             $query->orderBy($sortBy, $sortDirection === 'asc' ? 'asc' : 'desc');
@@ -131,7 +123,6 @@ class CompanyController extends Controller {
             $query->latest(); // Default fallback
         }
 
-        // Eager load counts and sums at database level to avoid N+1
         $query->withCount(['projectsUnfinished as running_project_count']);
 
         if ($user->hasAnyRole(['admin', 'financial'])) {
@@ -269,7 +260,6 @@ class CompanyController extends Controller {
             ...HasParams::$WITH,
         ]);
 
-        // Load available connections for adding participants to projects
         $connections = Connection::where('company1_id', $company->id)
             ->orWhere('company2_id', $company->id)
             ->with(['company1', 'company2'])
@@ -308,6 +298,44 @@ class CompanyController extends Controller {
         } // Add missing customer numbers
         return $new;
     }
+    public function storeDraft(Request $request) {
+        $phone  = preg_replace('/\D/', '', (string)$request->input('phone_number', ''));
+        $company = Company::draftByPhone($phone);
+        if (! $company) {
+            $vcard  = "FN:\n";
+            $vcard .= "ORG:\n";
+            $vcard .= "URL;type=work:\n";
+            $vcard .= "X-KNOWNSEQ-DRAFT:".$phone."\n";
+            $company        = new Company;
+            $company->vcard = $vcard;
+            $company->flags = Company::FLAG_DRAFT;
+            $company->save();
+            $employee        = $company->createEmployee();
+            $employee->vcard = "EMAIL:\nTEL;type=voice,work:\nTEL;type=cell,work:".$phone."\n";
+            $employee->save();
+        }
+        $company->load('employees.contact');
+        $company->append('address');
+        return response()->json($company);
+    }
+
+    public function keep(Company $_) {
+        $_->flags = (int)$_->flags & ~Company::FLAG_DRAFT;
+        $_->vcard = preg_replace('/^X-KNOWNSEQ-DRAFT:.*\R?/m', '', (string)$_->vcard);
+        $_->save();
+        while (Artisan::call('customers:fixMissingNumbers') != Command::SUCCESS) {
+        }
+        return response()->json($_->fresh());
+    }
+
+    public function discardDraft(Company $_) {
+        if (! $_->isDraft()) {
+            return response()->make('not a draft', 403);
+        }
+        $_->purgeDraft();
+        return response()->make('success', 202);
+    }
+
     public function storeProject(Request $request, Company $_) {
         return $_->createProject(
             $request->input('name', 'New project'),
@@ -345,17 +373,14 @@ class CompanyController extends Controller {
             NLog::info('ImportImprint: Found URL in company vcard', ['url' => $url]);
 
             try {
-                // Get the scraped data including business register information
                 \Artisan::call('app:analyzeUrlImprint', [
                     'url'              => $url,
                     '--existing-vcard' => $_->vcard,
                 ]);
                 $scrapedData = json_decode(\Artisan::output());
 
-                // Update vcard with scraped webpage data
                 $_->vcard = Company::scrapeWebpage($url, $_);
 
-                // Update commercial register if found and not already set
                 if (! empty($scrapedData->BUSINESS_REGISTER)) {
                     if (empty($_->commercial_register)) {
                         $_->commercial_register = $scrapedData->BUSINESS_REGISTER;
@@ -395,7 +420,6 @@ class CompanyController extends Controller {
             ->whereNull('next_recurrence_at')
             ->update(['next_recurrence_at' => now()]);
 
-        // trigger spawns
         Artisan::call('cron:standing-orders');
         return response()->json(['activated_count' => $updated]);
     }

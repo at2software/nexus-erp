@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, effect, input, signal } from '@angular/core';
 import { EchartsComponent } from '@charts/echarts-wrapper/echarts-wrapper.component';
 import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS } from '@charts/echarts-presets';
-import { CustomerRevenueScatterAxes, CustomerRevenueScatterResponse } from '@models/api-response';
+import { CustomerRevenueScatterAxesDto, CustomerRevenueScatterDto } from '@models/_core/api-response';
 import { MoneyPipe } from '@pipes/money.pipe';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import type { EChartsOption } from 'echarts';
@@ -29,10 +29,10 @@ const FALLBACK_COLOR = '#0d6efd';
     imports: [EchartsComponent, NgbTooltipModule],
 })
 export class CustomerRevenueBubbleChartComponent {
-    xAxisKey = input.required<keyof CustomerRevenueScatterAxes>();
+    xAxisKey = input.required<keyof CustomerRevenueScatterAxesDto>();
     label = input.required<string>();
     hint = input<string>('');
-    data = input<CustomerRevenueScatterResponse | undefined>(undefined);
+    data = input<CustomerRevenueScatterDto | undefined>(undefined);
 
     chartOptions = signal<EChartsOption | undefined>(undefined);
 

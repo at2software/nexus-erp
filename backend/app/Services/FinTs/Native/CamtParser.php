@@ -64,14 +64,12 @@ class CamtParser {
             }
         }
 
-        // Purpose: concatenate all Ustrd elements
         $purpose = '';
         foreach ($xpath->query('.//*[local-name()="Ustrd"]', $entry) as $node) {
             $purpose .= $node->textContent;
         }
         $purpose = trim($purpose);
 
-        // Counterparty name: Dbtr for incoming credits, Cdtr for outgoing debits
         $nmPath  = $cd === FinTsTransaction::CD_CREDIT
             ? './/*[local-name()="Dbtr"]/*[local-name()="Nm"]'
             : './/*[local-name()="Cdtr"]/*[local-name()="Nm"]';

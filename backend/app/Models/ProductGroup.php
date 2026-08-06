@@ -67,7 +67,6 @@ class ProductGroup extends BaseModel {
         });
     }
 
-    // API
     public static function _indexAll($id) {
         $results = [];
         $query   = ProductGroup::with([

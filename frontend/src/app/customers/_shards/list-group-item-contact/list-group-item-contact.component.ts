@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, effect, input, signal, untracked } from '@angular/core';
-import { VcardClass } from '@models/vcard/VcardClass';
+import { VcardClass } from '@models/vcard/vcard-class.model';
 import { User } from '@models/user/user.model';
 import { Company } from '@models/company/company.model';
 import { CompanyContact } from '@models/company/company-contact.model';
-import { PluginInstance } from '@models/http/plugin.instance';
+import { PluginInstance } from '@models/http/plugins/plugin.instance';
 import { NComponent } from '@shards/n/n.component';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
@@ -47,21 +47,14 @@ export class ListGroupItemContactComponent {
 
     linkedInstances = computed(() => this.contact()?.getLinkedInstances() ?? []);
 
-    // PluginInstance state (connection, user roster) is plain mutable state, not signal-based.
-    // Re-subscribing to each instance's `init` and bumping this tick is what invalidates `icons` below.
     #tick = signal(0);
-    // `inst.init` is a ReplaySubject(1): if already connected, subscribe() replays synchronously while
-    // this effect is still running. `untracked` keeps that write from also registering as a *read*
-    // dependency of this same effect (which would otherwise re-trigger itself forever).
-    #trackInstances = effect((onCleanup) => {
-        const subs = this.linkedInstances().map((inst) => inst.init.subscribe(() => untracked(() => this.#tick.update((v) => v + 1))));
-        onCleanup(() => subs.forEach((s) => s.unsubscribe()));
-    });
+    constructor() {
+        effect((onCleanup) => {
+            const subs = this.linkedInstances().map((inst) => inst.init.subscribe(() => untracked(() => this.#tick.update((v) => v + 1))));
+            onCleanup(() => subs.forEach((s) => s.unsubscribe()));
+        });
+    }
 
-    // Plain method, not computed(): a computed here would make the icon list part of the signal
-    // graph alongside #tick and linkedInstances, which previously produced a self-triggering cycle.
-    // Calling #tick() directly registers this view as a consumer so it re-renders on each tick,
-    // while the icon data itself is recomputed fresh on every call (cheap, and always current).
     icons(): PluginIcon[] {
         this.#tick();
         const contact = this.contact();

@@ -5,9 +5,11 @@ import { VacationGuardComponent } from './profile/vacation-details/vacation-guar
 import { LoginComponent } from './app/login/login.component';
 import { Environment404Component } from './app/environment404/environment404.component';
 import { AuthenticationService } from '@models/auth.service';
+import { handleChunkError, isChunkError } from '@constants/ChunkErrorHandler';
 
 const moduleLoadError = (error: unknown) => {
-    console.error('lazy load error', error);
+    if (isChunkError(error)) handleChunkError(error);
+    else console.error('lazy load error', error);
     return Promise.reject(error);
 };
 

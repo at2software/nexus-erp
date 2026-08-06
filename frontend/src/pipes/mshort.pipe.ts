@@ -14,9 +14,10 @@ export class MoneyShortPipe implements PipeTransform {
 
     getCurrencySymbol = (locale: string, currency: string) => (0).toLocaleString(locale, { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).replace(/\d/g, '').trim();
 
-    transform(value: any): string {
+    transform(value: number | null | undefined): string {
+        const amount = value ?? NaN;
         if (!this.#global.loaded()) {
-            return ShortPipe.shorten(value) + ' ' + this.getCurrencySymbol('en-UK', 'EUR');
+            return ShortPipe.shorten(amount) + ' ' + this.getCurrencySymbol('en-UK', 'EUR');
         }
         let locale = this.#language() + '-' + this.#country();
         let symbol = this.#symbol();
@@ -26,6 +27,6 @@ export class MoneyShortPipe implements PipeTransform {
         if (symbol == '') {
             symbol = 'EUR';
         }
-        return ShortPipe.shorten(value) + ' ' + this.getCurrencySymbol(locale, symbol);
+        return ShortPipe.shorten(amount) + ' ' + this.getCurrencySymbol(locale, symbol);
     }
 }

@@ -22,8 +22,6 @@ export interface ToastItem extends ToastOptions {
 export class Toast {
     static service: ToastService;
 
-    // classname: 'bg-green bg-gradient text-dark accent-success'
-    // icon: material-icon
     static show(textOrTpl: string | TemplateRef<unknown>, options: ToastOptions = { classname: 'bg-green bg-gradient text-dark accent-success' }): ToastItem {
         const toast = { textOrTpl, ...options };
         Toast.service?.toasts.update((toasts) => [...toasts, toast]);

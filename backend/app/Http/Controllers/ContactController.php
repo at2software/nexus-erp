@@ -14,12 +14,10 @@ class ContactController extends Controller {
     public function updateAddLinkedIn(Request $request, Contact $_) {
         $validated = $request->validate(['linkedin_url' => 'required|url']);
 
-        // Get the vcard and add the LinkedIn URL
         $vcard = $_->vcard;
         $vcard->remove('URL', 'type:linkedin'); // Remove existing LinkedIn URLs
         $vcard->setProperty('URL', $validated['linkedin_url'], ['type' => 'linkedin']);
 
-        // Save the updated vcard
         $_->vcard = $vcard;
         $_->save();
         return $_;

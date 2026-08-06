@@ -15,8 +15,6 @@ class ProjectFactory extends Factory {
     protected $model = Project::class;
 
     /**
-     * Define the model's default state.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array {
@@ -30,10 +28,6 @@ class ProjectFactory extends Factory {
         ];
     }
 
-    /**
-     * Attach an additional state so it becomes the project's latest state
-     * (the initial "Prepared" state, id 1, is auto-attached on creation).
-     */
     public function withState(int $progress, bool $successful = true): static {
         return $this->afterCreating(function (Project $project) use ($progress, $successful) {
             $project->states()->attach(
@@ -52,12 +46,6 @@ class ProjectFactory extends Factory {
         return $this->withState(ProjectState::Finished, $successful);
     }
 
-    /**
-     * `work_estimated` is precomputed from invoice items and gets reset on every
-     * Eloquent save of this project (or of a related Focus, which touches its
-     * parent) via PrecomputedTrait — so it's written directly to the DB here,
-     * bypassing model events. Call this AFTER creating any related Focus records.
-     */
     public function workEstimated(float $hours): static {
         return $this->afterCreating(function (Project $project) use ($hours) {
             DB::table('projects')->where('id', $project->id)->update(['work_estimated' => $hours]);

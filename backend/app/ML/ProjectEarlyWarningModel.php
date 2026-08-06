@@ -21,15 +21,6 @@ use Rubix\ML\Transformers\MissingDataImputer;
 use Rubix\ML\Transformers\NumericStringConverter;
 use Rubix\ML\Transformers\ZScaleStandardizer;
 
-/**
- * Model 2 — early-warning regression. For a RUNNING project, predicts
- * REMAINING hours from progress-so-far (burn rate), compared against the
- * naive "trust the quote's remaining budget" baseline
- * (predict = max(0, work_estimated - hours_logged_so_far)).
- *
- * No categorical features here (unlike Model 1's product_id), so the
- * pipeline skips OneHotEncoder.
- */
 class ProjectEarlyWarningModel {
     private const MODEL_PATH = 'ml/project_early_warning.rbx';
 
@@ -148,7 +139,6 @@ class ProjectEarlyWarningModel {
         return $result;
     }
 
-    /** Train the given estimator on the full checkpoint dataset and persist it. */
     public static function train(array $rows, Learner $estimator): PersistentModel {
         $samples = array_map(fn ($row) => self::toSample($row), $rows);
         $labels  = array_map(fn ($row) => ProjectCheckpointDataset::logLabel($row[ProjectCheckpointDataset::LABEL]), $rows);
@@ -173,7 +163,6 @@ class ProjectEarlyWarningModel {
         return PersistentModel::load(new Filesystem($path));
     }
 
-    /** Predicted REMAINING hours for a running project. Null if unpredictable (no model, or no started_at). */
     public static function predictRemaining(Project $project): ?float {
         $model = self::load();
         $row   = ProjectCheckpointDataset::currentRow($project);
@@ -187,7 +176,6 @@ class ProjectEarlyWarningModel {
         return max(0.0, exp($logPrediction) - 1);
     }
 
-    /** Predicted FINAL hours (hours logged so far + predicted remaining) for a running project. */
     public static function predictFinal(Project $project): ?float {
         $remaining = self::predictRemaining($project);
         if ($remaining === null) {

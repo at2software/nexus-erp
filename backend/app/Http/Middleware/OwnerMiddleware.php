@@ -37,7 +37,6 @@ class OwnerMiddleware {
             abort(401);
         }
 
-        // Admins, and any explicitly allowed role, bypass the ownership check.
         $allowedRoles = $roles !== null && $roles !== '' ? explode('|', $roles) : [];
         if ($user->hasAnyRole(array_merge(['admin'], $allowedRoles))) {
             return $next($request);
@@ -50,10 +49,6 @@ class OwnerMiddleware {
         abort(403, 'Unauthorized');
     }
 
-    /**
-     * Resolve the owning user id by walking the dot-path and compare it to the
-     * authenticated user. Relation hops are resolved through `{segment}_id`.
-     */
     private function ownsResource(Request $request, string $column, mixed $userId): bool {
         $segments  = explode('.', $column);
         $attribute = array_pop($segments);
@@ -81,10 +76,6 @@ class OwnerMiddleware {
         return $ownerId !== null && (string)$ownerId === (string)$userId;
     }
 
-    /**
-     * Read a key from the (bound or loaded) model, falling back to the request
-     * body when there is no model yet (e.g. on store).
-     */
     private function readValue(?Model $model, Request $request, string $key): mixed {
         if ($model) {
             return $model->getAttribute($key);

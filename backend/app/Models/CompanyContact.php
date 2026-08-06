@@ -80,13 +80,11 @@ class CompanyContact extends BaseModel {
         while (count($code) < 8) {
             array_unshift($code, '&nbsp;');
         }      // always 8 lines high
-        // spacing rows
         array_unshift($code, '&nbsp;');
         $code[] = '&nbsp;';
         return implode('<br />', $code);
     }
 
-    // forward to Contact, but use Company's language preference
     public function getGenderAttribute(): ?string {
         return $this->contact->gender;
     }

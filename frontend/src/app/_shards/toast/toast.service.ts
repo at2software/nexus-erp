@@ -1,7 +1,7 @@
 import { Toast, ToastItem, ToastOptions } from './toast';
-import { Injectable, TemplateRef, signal } from '@angular/core';
+import { TemplateRef, signal, Service } from '@angular/core';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ToastService {
     readonly toasts = signal<ToastItem[]>([]);
 

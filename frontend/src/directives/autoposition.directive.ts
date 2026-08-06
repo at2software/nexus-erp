@@ -1,4 +1,4 @@
-import { AfterViewInit, Directive, ElementRef, NgZone, inject, output, OutputEmitterRef, Renderer2 } from '@angular/core';
+import { AfterViewInit, DestroyRef, Directive, ElementRef, inject, output, OutputEmitterRef, Renderer2 } from '@angular/core';
 
 const OFFSET = {
     top: 10,
@@ -21,7 +21,7 @@ export class AutopositionDirective implements AfterViewInit {
 
     #el = inject(ElementRef);
     #re = inject(Renderer2);
-    #zone = inject(NgZone);
+    #destroyRef = inject(DestroyRef);
 
     static calculateResposition(el: ElementRef): [any, ECorrection] {
         const element = el.nativeElement;
@@ -40,28 +40,23 @@ export class AutopositionDirective implements AfterViewInit {
                 let targetLeft = parentDropdownRect ? parentDropdownRect.width - 5 : parentRect.width - 5;
                 let targetTop = parentRect.top - 5;
 
-                // Check right edge overflow
                 if (parentRect.right - 5 + rect.width + OFFSET.right > window.innerWidth) {
                     targetLeft = 5;
                     correction |= ECorrection.Right;
                 }
 
-                // Calculate available height
                 const availableHeight = window.innerHeight - OFFSET.top - OFFSET.bottom;
 
-                // If content doesn't fit, constrain height and enable scrolling
                 if (rect.height > availableHeight) {
                     maxHeight = availableHeight;
                     targetTop = OFFSET.top;
                     correction |= ECorrection.Top | ECorrection.Bottom;
                 } else {
-                    // Check bottom edge overflow
                     if (targetTop + rect.height + OFFSET.bottom > window.innerHeight) {
                         targetTop = window.innerHeight - (rect.height + OFFSET.bottom);
                         correction |= ECorrection.Bottom;
                     }
 
-                    // Check top edge overflow
                     if (targetTop < OFFSET.top) {
                         targetTop = OFFSET.top;
                         correction |= ECorrection.Top;
@@ -70,10 +65,8 @@ export class AutopositionDirective implements AfterViewInit {
                 return [{ top: targetTop - orig.top, left: targetLeft, maxHeight }, correction];
             }
         } else {
-            // Calculate available height
             const availableHeight = window.innerHeight - OFFSET.top - OFFSET.bottom;
 
-            // If content doesn't fit, constrain height and enable scrolling
             if (rect.height > availableHeight) {
                 maxHeight = availableHeight;
                 rect.top = OFFSET.top;
@@ -117,16 +110,16 @@ export class AutopositionDirective implements AfterViewInit {
     }
 
     ngAfterViewInit() {
-        this.#zone.runOutsideAngular(() => {
-            new MutationObserver(() => {
-                const target = this.#el.nativeElement;
-                if (target.classList.contains('show')) {
-                    AutopositionDirective.reposition(this.#el, this.#re, this.corrected);
-                } else {
-                    target.style.top = '0';
-                    target.style.left = '0';
-                }
-            }).observe(this.#el.nativeElement, { attributeFilter: ['class'], attributes: true });
+        const observer = new MutationObserver(() => {
+            const target = this.#el.nativeElement;
+            if (target.classList.contains('show')) {
+                AutopositionDirective.reposition(this.#el, this.#re, this.corrected);
+            } else {
+                target.style.top = '0';
+                target.style.left = '0';
+            }
         });
+        observer.observe(this.#el.nativeElement, { attributeFilter: ['class'], attributes: true });
+        this.#destroyRef.onDestroy(() => observer.disconnect());
     }
 }

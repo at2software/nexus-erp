@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class Precomputed implements CastsAttributes {
-    // provide matching precompution methods `protected function precomputeFooAttribute()` in models
     public function get(Model $model, string $key, mixed $value, array $attributes): mixed {
         $rawValue = $model->getRawOriginal($key);
 

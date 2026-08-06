@@ -1,11 +1,5 @@
 @use 'colors';
 
-// Quill's bundled quill.snow.css is a light-theme vendor stylesheet that, due to Sass
-// requiring `@use` before plain `@import`, always compiles AFTER these overrides and
-// matches several selectors at equal-or-higher specificity (e.g. `.ql-toolbar.ql-snow`,
-// `.ql-container.ql-snow`, `.ql-snow .ql-picker`). `!important` is used below on the
-// specific properties that collide with it, so dark-theme colors win regardless of
-// source order.
 .rte-toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -86,10 +80,6 @@
     }
 }
 
-// Quill's buildButtons() overwrites the innerHTML of recognized toolbar buttons
-// (bold/italic/underline/link/list/clean/blockquote/header) with its own SVG icons,
-// so our material-icon ligatures never render for them — the SVGs must be re-themed
-// directly via .ql-stroke/.ql-fill.
 .ql-snow .ql-stroke,
 .ql-snow .ql-stroke-miter {
     stroke: #eee !important;
@@ -115,4 +105,32 @@
 
 .ql-editor img {
     max-width: 100%;
+}
+
+.ql-editor.ql-rendered {
+    height: auto;
+    overflow-y: visible;
+    padding: 0;
+
+    ul, ol { margin: 0; padding-left: 1.5em; }
+    li { position: static; padding-left: 0; list-style-position: outside; }
+    ul > li { list-style-type: disc; }
+    ol > li { list-style-type: decimal; }
+
+    p:empty::before { content: '\00a0'; }
+
+    h1 { font-size: 2em; }
+    h2 { font-size: 1.5em; }
+    h3 { font-size: 1.17em; }
+    h4 { font-size: 1em; }
+    h5 { font-size: 0.83em; }
+    h6 { font-size: 0.67em; }
+
+    blockquote {
+        margin: 5px 0;
+        padding-left: 16px;
+        border-left: 4px solid var(--bs-border-color);
+    }
+
+    a { text-decoration: underline; }
 }

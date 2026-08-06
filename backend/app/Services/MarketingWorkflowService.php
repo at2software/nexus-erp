@@ -48,7 +48,6 @@ class MarketingWorkflowService {
             ];
         }
 
-        // Find initiative activities that were created from these workflow activities
         $initiativeActivityIds = MarketingInitiativeActivity::whereIn('marketing_workflow_id', function ($query) use ($activityIds) {
             $query->select('marketing_workflow_id')
                 ->from('marketing_activities')
@@ -56,7 +55,6 @@ class MarketingWorkflowService {
                 ->distinct();
         })
             ->whereIn('id', function ($query) use ($activityIds) {
-                // Match by comparing with the source workflow activities
                 $query->select('mia.id')
                     ->from('marketing_initiative_activities as mia')
                     ->join('marketing_activities as ma', function ($join) use ($activityIds) {
@@ -199,12 +197,8 @@ class MarketingWorkflowService {
         return $activity->load(['performanceMetrics', 'parentActivity', 'childActivities']);
     }
     public static function deleteWorkflowActivity(MarketingActivity $activity): void {
-        // Update child activities to remove parent reference
         MarketingActivity::where('parent_activity_id', $activity->id)
             ->update(['parent_activity_id' => $activity->parent_activity_id]);
-
-        // Note: We don't delete prospect activities or initiative activities
-        // because they are independent once created from the workflow template
 
         $activity->delete();
     }

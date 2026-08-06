@@ -1,6 +1,5 @@
-import { Serializable } from '../serializable';
-import { ProjectService } from './project.service';
-import { Model } from '@constants/type-discriminators';
+import { Serializable } from '@models/_core/serializable';
+import { Model } from '@constants/model/type-discriminators';
 
 @Model('FrameworkLatest')
 export class FrameworkLatest extends Serializable {
@@ -8,5 +7,4 @@ export class FrameworkLatest extends Serializable {
     latest_version: string = '';
 
     static API_PATH = (): string => 'frameworks';
-    SERVICE = ProjectService;
 }

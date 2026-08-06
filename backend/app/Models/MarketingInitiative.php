@@ -26,7 +26,6 @@ class MarketingInitiative extends BaseModel {
         ];
     }
 
-    // Self-referencing relationship
     public function parent(): BelongsTo {
         return $this->belongsTo(MarketingInitiative::class, 'parent_id');
     }
@@ -37,7 +36,6 @@ class MarketingInitiative extends BaseModel {
         return $this->children()->with('allChildren');
     }
 
-    // Channel relationships
     public function channels(): BelongsToMany {
         return $this->belongsToMany(LeadSource::class, 'marketing_initiative_channels', 'marketing_initiative_id', 'lead_source_id')
             ->withPivot(['is_primary', 'custom_settings'])
@@ -47,14 +45,12 @@ class MarketingInitiative extends BaseModel {
         return $this->channels()->wherePivot('is_primary', true);
     }
 
-    // Performance metrics (many-to-many)
     public function performanceMetrics(): BelongsToMany {
         return $this->belongsToMany(MarketingPerformanceMetric::class, 'marketing_initiative_metric')
             ->withPivot(['target_value'])
             ->withTimestamps();
     }
 
-    // Workflows (many-to-many)
     public function workflows(): BelongsToMany {
         return $this->belongsToMany(MarketingWorkflow::class, 'marketing_initiative_workflow')
             ->withPivot(['is_active'])
@@ -64,12 +60,10 @@ class MarketingInitiative extends BaseModel {
         return $this->workflows()->wherePivot('is_active', true);
     }
 
-    // Prospects
     public function prospects(): HasMany {
         return $this->hasMany(MarketingProspect::class);
     }
 
-    // Initiative Activities (copied from workflows)
     public function initiativeActivities(): HasMany {
         return $this->hasMany(MarketingInitiativeActivity::class, 'marketing_initiative_id');
     }
@@ -77,7 +71,6 @@ class MarketingInitiative extends BaseModel {
         return $this->initiativeActivities()->orderBy('day_offset');
     }
 
-    // User subscriptions (many-to-many)
     public function users(): BelongsToMany {
         return $this->belongsToMany(User::class, 'marketing_initiative_user')
             ->withPivot(['role', 'receives_notifications'])
@@ -90,7 +83,6 @@ class MarketingInitiative extends BaseModel {
         return $this->users()->wherePivot('role', 'member');
     }
 
-    // Scopes
     public function scopeActive($query) {
         return $query->where('status', 'active');
     }
@@ -98,15 +90,12 @@ class MarketingInitiative extends BaseModel {
         return $query->whereNull('parent_id');
     }
 
-    // Helper methods
     public function isActive(): bool {
         return $this->status === 'active';
     }
     public function getAllMetrics() {
-        // Get direct metrics with pivot data
         $metrics = $this->performanceMetrics()->withPivot(['target_value'])->get();
 
-        // Get metrics from workflow activities
         $workflowMetrics = MarketingPerformanceMetric::whereHas('marketingActivities', function ($query) {
             $query->whereHas('marketingWorkflow', function ($q) {
                 $q->whereHas('marketingInitiatives', function ($qi) {
@@ -115,10 +104,7 @@ class MarketingInitiative extends BaseModel {
             });
         })->get();
 
-        // Merge and calculate current_value for each metric (scoped to this initiative)
         return $metrics->merge($workflowMetrics)->unique('id')->map(function ($metric) {
-            // Find initiative activities that track this metric
-            // We need to find initiative activities that were copied from workflow activities linked to this metric
             $initiativeActivityIds = MarketingInitiativeActivity::where('marketing_initiative_id', $this->id)
                 ->whereIn('marketing_workflow_id', function ($query) use ($metric) {
                     $query->select('marketing_workflow_id')
@@ -131,12 +117,10 @@ class MarketingInitiative extends BaseModel {
                 })
                 ->pluck('id');
 
-            // Base query for prospect activities for this initiative's activities
             $baseQuery = MarketingProspectActivity::whereHas('marketingProspect', function ($q) {
                 $q->where('marketing_initiative_id', $this->id);
             })->whereIn('marketing_initiative_activity_id', $initiativeActivityIds);
 
-            // Calculate activity statistics
             $total     = (clone $baseQuery)->count();
             $completed = (clone $baseQuery)->where('status', 'completed')->count();
             $skipped   = (clone $baseQuery)->where('status', 'skipped')->count();

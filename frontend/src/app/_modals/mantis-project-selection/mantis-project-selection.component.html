@@ -16,7 +16,7 @@
                         </div>
                     }
                     @for (p of getMantisProjects(); track p.id) {
-                        <div class="card mb-2 project-card" [class.border-primary]="isSelected(p.id)" [class.selected]="isSelected(p.id)" (click)="selectProject(p.id)" tabindex="0" (keydown.enter)="selectProject(p.id)" style="cursor: pointer">
+                        <div class="card mb-2 project-card cursor-pointer" [class.border-primary]="isSelected(p.id)" [class.selected]="isSelected(p.id)" (click)="selectProject(p.id)" tabindex="0" (keydown.enter)="selectProject(p.id)">
                             <div class="card-body py-2 px-3">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div class="flex-grow-1">

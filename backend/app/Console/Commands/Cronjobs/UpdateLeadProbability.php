@@ -8,18 +8,6 @@ use App\ML\ProjectQuoteModel;
 use App\Models\Project;
 use Illuminate\Console\Command;
 
-/**
- * Refreshes projects.lead_probability for open (Prepared) budget-based quotes
- * from the ML quote-acceptance model (App\ML\ProjectQuoteModel) — replaces
- * the previous two-factor budget/age logistic-regression heuristic (see git
- * history for the old implementation), which the ML model beats decisively
- * on cross-validated accepted-F1 (0.808 vs a 0.690 baseline — see
- * backend/docs/ml/project-quote-acceptance-plan.md).
- *
- * Must run before cron:cashflow / stats cronjobs, which consume
- * projects.lead_probability (see routes/console.php ordering — Laravel's
- * scheduler runs same-time-due commands in registration order).
- */
 class UpdateLeadProbability extends Command {
     protected $signature   = 'cron:update-lead-probability';
     protected $description = 'Refresh projects.lead_probability for open (Prepared) budget-based quotes from the ML quote-acceptance model';
@@ -30,10 +18,6 @@ class UpdateLeadProbability extends Command {
             return 0;
         }
 
-        // Negative lead_probability is a manual "pin this down" override (see the
-        // raw, un-abs()'d use of lead_probability in WidgetController's cashflow
-        // sum) — those projects are deliberately excluded from auto-recompute,
-        // same exclusion the previous heuristic already applied.
         $projects = Project::whereBudgetBased()
             ->wherePrepared()
             ->where('lead_probability', '>=', 0)
@@ -45,8 +29,6 @@ class UpdateLeadProbability extends Command {
             return 0;
         }
 
-        // Batched: one eligible-pool load, one history pass, one model call —
-        // not N of each (see ProjectQuoteWhatIf for the same batching discipline).
         $pool    = ProjectQuoteDataset::eligibleProjects();
         $history = ProjectQuoteHistory::compute($pool, $projects);
         $rows    = $projects->map(fn (Project $p) => ProjectQuoteDataset::extractRow($p, $history[$p->id] ?? []))->values()->all();

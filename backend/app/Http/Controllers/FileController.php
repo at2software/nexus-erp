@@ -66,7 +66,6 @@ class FileController extends Controller {
 
         $uploadedFiles = $request->file('file', []);
 
-        // Validate uploaded files for PDF merging
         foreach ($uploadedFiles as $uploadedFile) {
             if ($uploadedFile && $uploadedFile->getMimeType() !== 'application/pdf') {
                 return response()->json(['error' => 'Only PDF files are allowed for travel expense attachments.'], 422);

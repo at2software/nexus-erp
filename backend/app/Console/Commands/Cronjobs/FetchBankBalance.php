@@ -106,9 +106,6 @@ class FetchBankBalance extends Command {
 
         $unpaid     = Invoice::whereNull('paid_at')->where('is_cancelled', 0)->get();
 
-        // Resolve the notification recipient via the Mattermost vault DEFAULT_USER_ID.
-        // ChatSendMessageJob then delivers through all configured chat plugins, so adding
-        // a second chat platform in the future requires no changes here.
         $defaultMmId = Vault::getCredentials('MATTERMOST')['MATTERMOST_DEFAULT_USER_ID'] ?? null;
         $notifyUser  = $defaultMmId ? User::find($defaultMmId) : null;
         if (! $notifyUser) {
@@ -124,7 +121,6 @@ class FetchBankBalance extends Command {
             $sender    = $tx->getName();
             $date      = $tx->getBookingDate()?->format('Y-m-d') ?? '?';
 
-            // 1. Extract invoice number from reference using PREFIX-NNNN-YY pattern
             $byName = $this->extractInvoiceRef($reference, $unpaid);
 
             if ($byName) {
@@ -158,7 +154,6 @@ class FetchBankBalance extends Command {
                 continue;
             }
 
-            // 2. Fallback: match by exact gross_remaining amount
             $byAmount = $unpaid->filter(fn (Invoice $inv) => abs($inv->gross_remaining - $amount) < 0.02);
 
             if ($byAmount->count() === 1) {
@@ -191,7 +186,6 @@ class FetchBankBalance extends Command {
                     user: $notifyUser,
                 );
             }
-            // 0 matches → ignore per spec
         }
 
         $this->info("Payment matching done: {$matched} paid, {$discrepancies} discrepancies.");
@@ -212,7 +206,6 @@ class FetchBankBalance extends Command {
             return null;
         }
 
-        // Allow any number of digits on both sides to handle mis-typed invoice names
         $pattern = '/'.preg_quote($prefix, '/').'\d+-\d+/i';
         if (! preg_match_all($pattern, $reference, $matches)) {
             return null;

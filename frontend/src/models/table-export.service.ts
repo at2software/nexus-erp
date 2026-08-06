@@ -1,10 +1,8 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 import { CdkTable } from '@angular/cdk/table';
 import { Dictionary } from '@constants/constants';
 
-@Injectable({
-    providedIn: 'root',
-})
+@Service()
 export class TableExportService {
     async exportAnyTableToCSV(table: HTMLTableElement | CdkTable<unknown>, filenamePrefix: string = '') {
         if (table instanceof HTMLTableElement) {
@@ -83,7 +81,6 @@ export class TableExportService {
             const rowData = columns.map((column) => {
                 let cell = row[column] === null || row[column] === undefined ? '' : row[column];
                 cell = cell instanceof Date ? cell.toLocaleString() : cell.toString();
-                //cell = cell.includes(separator) || cell.includes('"') || cell.includes('\n') ? cell.replace(/"/g, '""') : cell;
                 return cell;
             });
             csvContent += rowData.join(separator) + '\n';

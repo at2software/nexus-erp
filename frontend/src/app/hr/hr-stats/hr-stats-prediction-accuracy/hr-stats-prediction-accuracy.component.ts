@@ -1,13 +1,14 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
-import { StatsService } from '@models/stats-service';
+import { modelListResource } from '@models/http/model-resource';
+import { StatsService } from '@models/stats.service';
 import { GlobalService } from '@models/global.service';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { Color } from '@constants/Color';
 import { EChartsSimpleOptions, ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import type { EChartsOption, SeriesOption } from 'echarts';
-import { ChartAxisTooltipParam } from '@models/api-response';
+import { ChartAxisTooltipParamDto } from '@models/_core/api-response';
 
 interface PredictionAccuracyData {
     id: number;
@@ -41,30 +42,12 @@ export class HrStatsPredictionAccuracyComponent {
     #statsService = inject(StatsService);
     #global = inject(GlobalService);
 
-    users = signal<PredictionAccuracyData[]>([]);
-    chartOptions = signal<Record<number, EChartsOption>>({});
-    donutChartOptions = signal<Record<number, EChartsOption>>({});
-
-    constructor() {
-        this.#statsService.showPredictionAccuracy().subscribe((response: PredictionAccuracyData[]) => {
-            const sorted = response.sort((a, b) => {
-                const teamA = this.#global.team.findIndex((t) => t.id === a.id.toString());
-                const teamB = this.#global.team.findIndex((t) => t.id === b.id.toString());
-                return teamA - teamB;
-            });
-
-            const charts: Record<number, EChartsOption> = {};
-            const donuts: Record<number, EChartsOption> = {};
-            sorted.forEach((user) => {
-                charts[user.id] = this.#createChartOptions(user);
-                donuts[user.id] = this.#createDonutChartOptions(user);
-            });
-
-            this.users.set(sorted);
-            this.chartOptions.set(charts);
-            this.donutChartOptions.set(donuts);
-        });
-    }
+    readonly #predictionAccuracy = modelListResource<PredictionAccuracyData>(() => this.#statsService.showPredictionAccuracy());
+    readonly users = computed(() =>
+        [...this.#predictionAccuracy.value()].sort((a, b) => this.#global.team.findIndex((t) => t.id === a.id.toString()) - this.#global.team.findIndex((t) => t.id === b.id.toString())),
+    );
+    readonly chartOptions = computed(() => Object.fromEntries(this.users().map((user) => [user.id, this.#createChartOptions(user)])));
+    readonly donutChartOptions = computed(() => Object.fromEntries(this.users().map((user) => [user.id, this.#createDonutChartOptions(user)])));
 
     #createChartOptions(user: PredictionAccuracyData): EChartsOption {
         const months = user.monthly_accuracy.map((item) => item.month).sort();
@@ -86,7 +69,7 @@ export class HrStatsPredictionAccuracyComponent {
                 backgroundColor: 'transparent',
                 borderWidth: 0,
                 formatter: (rawParams: unknown) => {
-                    const params = rawParams as ChartAxisTooltipParam[];
+                    const params = rawParams as ChartAxisTooltipParamDto[];
                     const month = params[0].axisValue;
                     const monthData = user.monthly_accuracy.find((item) => item.month === month);
 
@@ -183,7 +166,6 @@ export class HrStatsPredictionAccuracyComponent {
     };
 
     #createDonutChartOptions(user: PredictionAccuracyData): EChartsOption {
-        // Calculate overall weighted average unfocused bias factor (matches backend MonthlyStats cronjob)
         let totalWeight = 0;
         let weightedSum = 0;
 
@@ -195,7 +177,6 @@ export class HrStatsPredictionAccuracyComponent {
 
         const overallAverage = totalWeight > 0 ? weightedSum / totalWeight : 1;
 
-        // Determine if over or under estimated
         const isOverEstimated = overallAverage < 1;
         const deviation = isOverEstimated ? (1 - overallAverage) * 100 : (overallAverage - 1) * 100;
         const maxDeviation = Math.max(50, deviation * 1.2); // Ensure at least 50% range

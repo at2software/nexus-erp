@@ -6,7 +6,6 @@ use App\Models\Project;
 
 class ProjectReportingService {
     public function build(?string $startDate, ?string $endDate) {
-        // Projects created in date range
         $createdQuery     = Project::whereBetween('created_at', [$startDate, $endDate]);
         $stateChangeQuery = Project::whereHas('states', fn ($q) => $q->whereBetween('project_project_state.created_at', [$startDate, $endDate]));
 

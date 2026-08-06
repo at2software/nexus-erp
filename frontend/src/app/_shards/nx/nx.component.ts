@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 
 // TODO: is this really useful or can we remove it?
 @Component({

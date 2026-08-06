@@ -1,9 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
 import { Nx } from '@app/nx/nx.directive';
-import { SentinelService } from '@models/sentinels/sentinel.service';
+import { modelListResource } from '@models/http/model-resource';
+import { SentinelService } from '@models/sentinel/sentinel.service';
 import { TabTasksBaseComponent } from '../tab-tasks-base.component';
-import { SentinelActiveGroup, SentinelActiveItem, SentinelLabelConfig } from '@models/api-response';
+import { SentinelActiveItemDto, SentinelLabelConfigDto } from '@models/_core/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -12,21 +12,20 @@ import { SentinelActiveGroup, SentinelActiveItem, SentinelLabelConfig } from '@m
     imports: [Nx],
 })
 export class TabTasksSentinelsComponent extends TabTasksBaseComponent {
-    response = signal<SentinelActiveGroup[]>([]);
-
     #sentinelService = inject(SentinelService);
 
-    override reload() {
-        this.#sentinelService
-            .indexActive()
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe((data) => {
-                const items = data || [];
-                this.response.set(items);
-                this.countChanged.emit(items.reduce((sum, s) => sum + (s.items?.length ?? 0), 0));
-            });
+    #response = modelListResource(this.ready, () => this.#sentinelService.indexActive());
+    response = this.#response.value;
+
+    constructor() {
+        super();
+        effect(() => this.countChanged.emit(this.response().reduce((sum, s) => sum + (s.items?.length ?? 0), 0)));
     }
 
-    primaryLabel = (s: SentinelLabelConfig, m: SentinelActiveItem) => m[s.primaryLabel];
-    secondaryLabel = (s: SentinelLabelConfig, m: SentinelActiveItem) => m[s.secondaryLabel];
+    override reload() {
+        this.#response.reload();
+    }
+
+    primaryLabel = (s: SentinelLabelConfigDto, m: SentinelActiveItemDto) => m[s.primaryLabel];
+    secondaryLabel = (s: SentinelLabelConfigDto, m: SentinelActiveItemDto) => m[s.secondaryLabel];
 }

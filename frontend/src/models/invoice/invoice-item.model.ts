@@ -1,34 +1,33 @@
+import type { NxAction } from '@models/_core/nx.actions';
 import { getInvoiceItemTypeRepeatColor, InvoiceItemType, InvoiceItemTypeRepeating } from '@enums/invoice-item.type';
 import { Dictionary } from '@constants/constants';
 import { InvoiceVatHandling } from '@enums/invoice.vat-handling';
-import { InvoiceItemService } from '@models/invoice/invoice-item.service';
 import { Product } from '../product/product.model';
-import { Serializable } from '../serializable';
+import { Serializable } from '@models/_core/serializable';
 import { getInvoiceItemActions } from './invoice-item.actions';
-import { NxGlobal, TBroadcast } from '@app/nx/nx.global';
+import { nx, TBroadcast } from '@models/_core/nx-bridge';
 import { Toast } from '@shards/toast/toast';
-import { deepMerge } from '@constants/deepMerge';
-import { deepCopy } from '@constants/deepClone';
+import { deepMerge } from '@constants/object/deepMerge';
+import { deepCopy } from '@constants/object/deepClone';
 import { Prediction } from '../prediction.model';
 import { Project } from '../project/project.model';
 import { Company } from '../company/company.model';
 import { Invoice } from './invoice.model';
 import { REPEATING_MULT } from '../expense/expense.model';
 import { map } from 'rxjs';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
-import { Type } from 'class-transformer';
-import { ModalBaseService } from '@app/_modals/modal-base-service';
-import { ModalEditInvoiceItemComponent } from '@app/_modals/modal-edit-invoice-item/modal-edit-invoice-item.component';
-import { Milestone } from '../milestones/milestone.model';
+import { Type } from '@models/_core/hydrate';
+import { MODAL } from '@models/_core/modal-registry';
+import { Milestone } from '../milestone/milestone.model';
 import { IHasMarker } from '@enums/marker';
-import { Model } from '@constants/type-discriminators';
+import { Model } from '@constants/model/type-discriminators';
 import { computed } from '@angular/core';
 import { IHasExtIssue, effectiveExtIssueOf } from '../ext-issue/ext-issue.interface';
 
 @Model('InvoiceItem')
 export class InvoiceItem extends Serializable implements IHasMarker, IHasExtIssue {
     static API_PATH = (): string => 'invoice_items';
-    SERVICE = InvoiceItemService;
+
+    override readonly getName = computed(() => { this.snapshot(); return this.text; });
 
     product_id?: string;
     project_id?: string;
@@ -95,12 +94,9 @@ export class InvoiceItem extends Serializable implements IHasMarker, IHasExtIssu
         return this.#calculatePersonDays(this.qty, this.unit_name);
     }
 
-    doubleClickAction: number = 0;
-    actions = getInvoiceItemActions(this);
+    protected override buildActions(): NxAction[] { return getInvoiceItemActions(this) }
 
     setParent = (_: Serializable): void => {
-        // patch({}) after the push bumps Serializable#state so signal-based template consumers
-        // (e.g. computed()s over parent.object().invoice_items) re-render under zoneless CD.
         if (_ instanceof Company) { this.update({ company_id: _.id, invoice_id: null, project_id: null }).subscribe(() => { _.invoice_items.push(this); _.patch({}); }); return; }
         if (_ instanceof Project) { this.update({ company_id: null, invoice_id: null, project_id: _.id }).subscribe(() => { _.invoice_items.push(this); _.patch({}); }); return; }
         if (_ instanceof Invoice) { this.update({ company_id: null, invoice_id: _.id, project_id: null }).subscribe(() => { _.invoice_items.push(this); _.patch({}); }); return; }
@@ -120,7 +116,6 @@ export class InvoiceItem extends Serializable implements IHasMarker, IHasExtIssu
 
     effectiveExtIssue = () => effectiveExtIssueOf(this);
 
-    getName = () => this.text;
     getRepeatString = () => InvoiceItemType[this.type];
     getYearlyPrice = (): number => {
         const type = this.type as InvoiceItemTypeRepeating;
@@ -128,7 +123,7 @@ export class InvoiceItem extends Serializable implements IHasMarker, IHasExtIssu
     };
     getRepeatColor = (): string => getInvoiceItemTypeRepeatColor(this.type);
     deletePrediction = () =>
-        NxGlobal.service.delete(`invoice_items/${this.id}/predict`).pipe(
+        nx().service.delete(`invoice_items/${this.id}/predict`).pipe(
             map(() => {
                 this.my_prediction = null;
                 Toast.success('Successfully deleted');
@@ -137,7 +132,7 @@ export class InvoiceItem extends Serializable implements IHasMarker, IHasExtIssu
         );
 
     getTemplate = (...args: unknown[]) => {
-        return deepMerge(InvoiceItem.fromJson(NxGlobal.payloadFor(deepCopy(this), InvoiceItem, ['product_id'])) as unknown as Dictionary, ...(args as Dictionary[]));
+        return deepMerge(InvoiceItem.fromJson(nx().payloadFor(deepCopy(this), InvoiceItem, ['product_id'])) as unknown as Dictionary, ...(args as Dictionary[]));
     };
     updateDynamicAttributes() {
         this.price_discounted = Math.round(this.price * (100 - this.discount)) * 0.01;
@@ -152,27 +147,25 @@ export class InvoiceItem extends Serializable implements IHasMarker, IHasExtIssu
         const editItem = InvoiceItem.fromJson(this.snapshot());
         switch (editItem.type) {
             case InvoiceItemType.Header: {
-                const inputModal = NxGlobal.getService<InputModalService>(InputModalService);
-                inputModal.open('@i18n.common.title').confirmed(({ text }) => {
+                nx().promptInput('@i18n.common.title').confirmed(({ text }) => {
                     editItem.text = text;
                     if (!this.isNonPersistantRecord) {
                         editItem?.update().subscribe(() => {
                             this.fromJson(editItem.snapshot());
-                            NxGlobal.broadcast({ type: TBroadcast.Update, data: this });
+                            nx().broadcast({ type: TBroadcast.Update, data: this });
                             success?.(editItem);
                         });
                     } else {
                         this.fromJson(editItem.snapshot());
-                        NxGlobal.broadcast({ type: TBroadcast.Update, data: this });
+                        nx().broadcast({ type: TBroadcast.Update, data: this });
                         success?.(editItem);
                     }
                 });
                 break;
             }
             default: {
-                // Use company from nxContext if available, otherwise fall back to this.company
                 const company = nxContext?.company || this.company;
-                ModalBaseService.open(ModalEditInvoiceItemComponent, editItem, company, 'Save')
+                nx().openModal(MODAL.editInvoiceItem, editItem, company, 'Save')
                     .then((result: unknown) => {
                         const _ = result as { item?: InvoiceItem } | undefined;
                         if (_ && _.item instanceof InvoiceItem) {
@@ -180,13 +173,13 @@ export class InvoiceItem extends Serializable implements IHasMarker, IHasExtIssu
                                 _.item.update().subscribe(() => {
                                     this.fromJson(_.item!.snapshot());
                                     this.updateDynamicAttributes();
-                                    NxGlobal.broadcast({ type: TBroadcast.Update, data: this });
+                                    nx().broadcast({ type: TBroadcast.Update, data: this });
                                     success?.(_);
                                 });
                             } else {
                                 this.fromJson(_.item!.snapshot());
                                 this.updateDynamicAttributes();
-                                NxGlobal.broadcast({ type: TBroadcast.Update, data: this });
+                                nx().broadcast({ type: TBroadcast.Update, data: this });
                                 success?.(_);
                             }
                         }
@@ -197,9 +190,6 @@ export class InvoiceItem extends Serializable implements IHasMarker, IHasExtIssu
     }
 
     applyProduct(product: Product, company?: Company): void {
-        // Clone via .snapshot() (plain JSON), not the live instance — the product's own template
-        // items can have their product_source eager-loaded back to this very product, and cloning
-        // the live object graph (getClone()/fromJson(instance)) would recurse into that cycle forever.
         if (!product.invoice_items.length) {
             this.product_source_id = product.id;
             this.product_source = Product.fromJson(product.snapshot());
@@ -211,11 +201,11 @@ export class InvoiceItem extends Serializable implements IHasMarker, IHasExtIssu
             if (company.isVatExcempt()) template.vat_rate = 0;
         }
         if (product.time_based > 0) {
-            template.price = parseFloat(NxGlobal.global.setting('INVOICE_HOURLY_WAGE'));
-            template.unit_name = NxGlobal.global.setting('INVOICE_HOUR_UNIT');
+            template.price = parseFloat(nx().global.setting('INVOICE_HOURLY_WAGE'));
+            template.unit_name = nx().global.setting('INVOICE_HOUR_UNIT');
             if (product.time_based == 8) {
-                template.price *= parseFloat(NxGlobal.global.setting('INVOICE_HPD'));
-                template.unit_name = NxGlobal.global.setting('INVOICE_DAY_UNIT');
+                template.price *= parseFloat(nx().global.setting('INVOICE_HPD'));
+                template.unit_name = nx().global.setting('INVOICE_DAY_UNIT');
             }
             template.price *= product.price_multiplier || 1;
             if (company) template.vat_rate = company.vatRate();
@@ -240,9 +230,6 @@ export class InvoiceItem extends Serializable implements IHasMarker, IHasExtIssu
     }
 
     /**
-     * Calculates the person days value for an invoice item based on its unit name
-     * Used for converting different time units to standardized person days calculation
-     *
      * @param qty - Quantity from the invoice item
      * @param unitName - Unit name from the invoice item (PT = "Personen-Tage" / person days)
      * @returns Person days value in standardized units
@@ -252,8 +239,8 @@ export class InvoiceItem extends Serializable implements IHasMarker, IHasExtIssu
 
         const normalizedUnit = unitName.toLowerCase();
 
-        const dayUnit = NxGlobal.global?.setting('INVOICE_DAY_UNIT') || 'DAYS';
-        const hourUnit = NxGlobal.global?.setting('INVOICE_HOUR_UNIT') || 'HOURS';
+        const dayUnit = nx().global?.setting('INVOICE_DAY_UNIT') || 'DAYS';
+        const hourUnit = nx().global?.setting('INVOICE_HOUR_UNIT') || 'HOURS';
         const dayUnits = ['PT', 'DAYS', 'TAGE', 'TAG', 'DAY', 'D', dayUnit].map((u) => u.toLowerCase());
         const hourUnits = ['HOURS', 'HRS', 'STD', 'STUNDEN', 'STUNDE', 'H', 'HOUR', hourUnit].map((u) => u.toLowerCase());
 

@@ -1,22 +1,22 @@
 import { Dictionary } from '@constants/constants';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
+import { modelListResource, modelResource } from '@models/http/model-resource';
 import { InvoiceItemService } from '@models/invoice/invoice-item.service';
 import { ProjectService } from '@models/project/project.service';
 import { InvoiceItem } from '@models/invoice/invoice-item.model';
-import { Product } from '@models/product/product.model';
 import { ProductService } from '@models/product/product.service';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
 import { GlobalService } from '@models/global.service';
 import { User } from '@models/user/user.model';
 import { Color } from '@constants/Color';
 import { moveInvoiceItems } from '@app/invoices/_shards/invoice-prepare/invoice-item.reorder.const';
 import { ProjectDetailGuard } from '@app/projects/project-details.guard';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
 import { ModalImportExtIssuesComponent, ExtIssueImportTracker } from '@app/_modals/modal-import-ext-issues/modal-import-ext-issues.component';
-import { PluginInstance } from '@models/http/plugin.instance';
-import { ITaskPlugin } from '@models/tasks/task.plugin.interface';
-import { Task } from '@models/tasks/task.model';
+import { PluginInstance } from '@models/http/plugins/plugin.instance';
+import { ITaskPlugin } from '@models/task/task.plugin.interface';
+import { Task } from '@models/task/task.model';
 import { DecimalPipe, PercentPipe } from '@angular/common';
 import { CdkTableModule } from '@angular/cdk/table';
 import { AutosaveDirective } from '@directives/autosave.directive';
@@ -32,7 +32,9 @@ import { CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
 import { PermissionsDirective } from '@directives/permissions.directive';
 import { SafePipe } from '@pipes/safe.pipe';
 import { MediaPreviewComponent } from '../project-media/media-preview/media-preview.component';
-import type { PredictionEntry } from '@models/api-response';
+import type { PredictionEntryDto } from '@models/_core/api-response';
+import { AvatarComponent } from '@shards/avatar/avatar.component';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 type DisplayFieldType = 'qty' | 'my_prediction';
 
@@ -41,7 +43,7 @@ type DisplayFieldType = 'qty' | 'my_prediction';
     selector: 'project-planning',
     templateUrl: './project-planning.component.html',
     styleUrls: ['./project-planning.component.scss'],
-    imports: [DecimalPipe, PercentPipe, CdkTableModule, AutosaveDirective, ToolbarComponent, MediaPreviewComponent, EmptyStateComponent, SpinnerComponent, ProjectInfoComponent, ChartProgressComponent, Nx, NComponent, NgbTooltipModule, CdkTableModule, CdkDropList, CdkDrag, PermissionsDirective, NgbDropdownModule, SafePipe],
+    imports: [StackedTableDirective, AvatarComponent, DecimalPipe, PercentPipe, CdkTableModule, AutosaveDirective, ToolbarComponent, MediaPreviewComponent, EmptyStateComponent, SpinnerComponent, ProjectInfoComponent, ChartProgressComponent, Nx, NComponent, NgbTooltipModule, CdkTableModule, CdkDropList, CdkDrag, PermissionsDirective, NgbDropdownModule, SafePipe],
 })
 export class ProjectPlanningComponent {
     #invoiceItemService = inject(InvoiceItemService);
@@ -55,48 +57,41 @@ export class ProjectPlanningComponent {
 
     displayField!: DisplayFieldType;
     project = this.parent.object();
-    predictions = signal<PredictionEntry[]>([]);
-    predictionTotal = signal(0);
-    product = signal<Product | undefined>(undefined);
     showPredictions = signal(false);
-    items = signal<InvoiceItem[]>([]);
-    loading = signal(true);
+
+    readonly #projectId = computed(() => this.parent.object()?.id || undefined);
+
+    readonly #items = modelListResource(this.#projectId, () => this.#invoiceItemService.indexEstimationItems(this.parent.object()));
+    readonly items = linkedSignal(this.#items.value);
+    readonly loading = this.#items.isLoading;
+
+    readonly #product = modelResource(
+        () => this.parent.object()?.product_id || undefined,
+        (productId) => this.#productService.show(productId),
+    );
+    readonly product = this.#product.value;
+
+    readonly #predictionStats = modelResource(this.#projectId, (id) => this.#projectService.predictionStats(id));
+    readonly predictionTotal = computed(() => this.#predictionStats.value()?.total ?? 0);
+    readonly predictions = computed<PredictionEntryDto[]>(() => {
+        const entries = [...(this.#predictionStats.value()?.predictions ?? [])];
+        entries.sort((_) => _.id);
+        entries.forEach((_) => (_.user = User.fromJson(_['user'])));
+        return entries;
+    });
 
     isRunning = computed(() => this.displayField == 'qty');
     sumForMy = computed(() => this.items().reduce((a, b) => a + (b.my_prediction ?? 0), 0));
     sumForQty = computed(() => this.items().reduce((a, b) => a + b.qty, 0));
 
-    loadItems = () =>
-        this.#invoiceItemService
-            .indexEstimationItems(this.project)
-            .subscribe((response) => { this.items.set(response); this.loading.set(false); });
+    loadItems = () => this.#items.reload();
 
     onItemResolved = () => this.items.update(arr => [...arr]);
-
-    constructor() {
-        effect(() => {
-            this.loadItems();
-            if (this.project.product_id) {
-                this.#productService.show(this.project.product_id!).subscribe((p: Product) => {
-                    this.product.set(p);
-                });
-            }
-            this.updatePredictions();
-        });
-    }
 
     predictionForUser = (p: InvoiceItem, u: User): number | undefined => p.predictions.find((_) => _.user_id == u.id)?.qty ?? undefined;
     sumFor = (u: User) => this.items().reduce((a, b) => a + (b.predictions.find((_) => _.user_id == u.id)?.qty ?? 0), 0);
 
-    updatePredictions = () => {
-        this.#projectService.predictionStats(this.project).subscribe((response) => {
-            this.predictionTotal.set(response.total);
-            const predictions: PredictionEntry[] = 'predictions' in response ? (response.predictions ?? []) : [];
-            predictions.sort((_) => _.id);
-            predictions.forEach((_) => (_.user = User.fromJson(_['user'])));
-            this.predictions.set(predictions);
-        });
-    };
+    updatePredictions = () => this.#predictionStats.reload();
 
     mean = (p: InvoiceItem) => (p.predictions.length ? p.predictions.reduce((a, b) => a + b.qty, 0) / p.predictions.length : 0);
     variance = (p: InvoiceItem) => {
@@ -194,12 +189,10 @@ export class ProjectPlanningComponent {
                 modifiers['product_id'] = null;
                 modifiers['invoice_item_predictions'] = null;
 
-                // Apply customer specific discount
                 const company = this.project.company;
                 if (company?.getParam('INVOICE_DISCOUNT')) {
                     modifiers['discount'] = parseFloat(company.getParam('INVOICE_DISCOUNT') ?? '0');
                 }
-                // Hourly/daily products always follow the customer's applicable VAT rate; manual-price products only get zeroed when the customer is VAT-exempt.
                 if (product.time_based > 0) {
                     if (company) modifiers['vat_rate'] = company.vatRate();
                 } else if (company?.isVatExcempt()) {

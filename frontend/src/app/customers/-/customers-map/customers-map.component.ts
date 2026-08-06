@@ -1,10 +1,11 @@
 import { Dictionary } from '@constants/constants';
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, effect, inject, viewChild } from '@angular/core';
 import { CompanyService } from '@models/company/company.service';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import * as L from 'leaflet';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
-import { CustomerLocation } from '@models/api-response';
+import { CustomerLocationDto } from '@models/_core/api-response';
+import { modelListResource } from '@models/http/model-resource';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,41 +22,26 @@ export class CustomersMapComponent {
 
     #map?: L.Map;
     #markers: L.Marker[] = [];
-    customers = signal<CustomerLocation[]>([]);
-    loading = signal(true);
+    #customers = modelListResource(() => this.#companyService.getWithCoordinates());
+    customers = this.#customers.value;
+    loading = this.#customers.isLoading;
 
     constructor() {
-        // standard leaflet/webpack workaround: `_getIconUrl` is a private internal method not in the public typings
         delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
         L.Icon.Default.mergeOptions({
             iconRetinaUrl: 'assets/leaflet/marker-icon-2x.png',
             iconUrl: 'assets/leaflet/marker-icon.png',
             shadowUrl: 'assets/leaflet/marker-shadow.png',
         });
-        this.#loadCustomers();
         afterNextRender(() => this.#initializeMap());
+        effect(() => {
+            this.customers();
+            if (this.#map) this.#addMarkersToMap();
+        });
         this.#destroyRef.onDestroy(() => this.#map?.remove());
     }
 
-    #loadCustomers(): void {
-        this.loading.set(true);
-        this.#companyService.getWithCoordinates().subscribe(
-            (response) => {
-                this.customers.set(response);
-                this.loading.set(false);
-                if (this.#map) {
-                    this.#addMarkersToMap();
-                }
-            },
-            (error) => {
-                console.error('Error loading customers:', error);
-                this.loading.set(false);
-            },
-        );
-    }
-
     #initializeMap(): void {
-        // Initialize map centered on Europe
         this.#map = L.map(this.mapContainer().nativeElement, {
             center: [50.0, 10.0], // Center of Europe
             zoom: 4,
@@ -64,12 +50,10 @@ export class CustomersMapComponent {
             attributionControl: false,
         });
 
-        // Add dark themed tile layer
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
             maxZoom: 18,
         }).addTo(this.#map);
 
-        // Add markers if customers are already loaded
         if (this.customers().length > 0) {
             this.#addMarkersToMap();
         }
@@ -78,15 +62,11 @@ export class CustomersMapComponent {
     #addMarkersToMap(): void {
         if (!this.#map) return;
 
-        // Clear existing markers
         this.#markers.forEach((marker) => marker.remove());
         this.#markers = [];
 
-        // Add markers for each customer
         this.customers().forEach((customer) => {
-            // Validate coordinates before creating marker
             if (customer.lat && customer.lng && !isNaN(customer.lat) && !isNaN(customer.lng) && isFinite(customer.lat) && isFinite(customer.lng)) {
-                // Create custom icon based on pin properties
                 const customIcon = this.#createCustomIcon(customer.pinSize, customer.pinColor);
 
                 const marker = L.marker([customer.lat, customer.lng], { icon: customIcon })
@@ -99,11 +79,7 @@ export class CustomersMapComponent {
                             </button>
                         </div>
                     `,
-                    )
-                    .on('click', () => {
-                        // Optional: navigate to customer detail
-                        // this.#router.navigate([customer.path]);
-                    });
+                    );
 
                 marker.addTo(this.#map!);
                 this.#markers.push(marker);
@@ -112,14 +88,13 @@ export class CustomersMapComponent {
             }
         });
 
-        // Fit map bounds to show all markers if there are any
         if (this.#markers.length > 0) {
             const group = new L.FeatureGroup(this.#markers);
             this.#map.fitBounds(group.getBounds().pad(0.1));
         }
     }
 
-    onMarkerClick(customer: CustomerLocation): void {
+    onMarkerClick(customer: CustomerLocationDto): void {
         window.open(customer.path, '_blank');
     }
 

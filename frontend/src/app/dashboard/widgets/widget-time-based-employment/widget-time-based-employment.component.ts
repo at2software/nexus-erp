@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { BaseWidgetComponent } from '../base.widget.component';
 import { WidgetService } from '@models/widget.service';
-import { environment } from 'src/environments/environment';
+import { environment } from '@environments/environment';
 import { WIDGET_SHARED } from '../widgets.shared';
 import { DecimalPipe } from '@angular/common';
+import { TimeBasedEmployeeDto } from '@models/_core/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -14,12 +15,10 @@ import { DecimalPipe } from '@angular/common';
 })
 export class WidgetTimeBasedEmploymentComponent extends BaseWidgetComponent {
     #widgetService = inject(WidgetService);
-    employees = signal<any[]>([]);
     readonly env = environment;
 
     defaultOptions = () => ({});
 
-    reload(): void {
-        this.#widgetService.indexTimeBasedEmployees().subscribe((_) => this.employees.set(_));
-    }
+    readonly #employees = this.optionsResource(() => this.#widgetService.indexTimeBasedEmployees());
+    readonly employees = computed<TimeBasedEmployeeDto[]>(() => this.#employees.value() ?? []);
 }

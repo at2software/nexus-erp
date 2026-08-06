@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Cache;
 abstract class PluginChatController extends PluginController {
     abstract protected function getToken(): string;
     public static function createInstance(): ?static {
-        // Default implementation - subclasses should override this
         try {
             return app(static::class);
         } catch (\Exception $e) {

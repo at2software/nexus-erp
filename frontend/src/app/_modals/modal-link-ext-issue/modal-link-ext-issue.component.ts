@@ -2,20 +2,15 @@ import { ChangeDetectionStrategy, Component, computed, signal, viewChild } from 
 import { FormsModule } from '@angular/forms';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { IssuePickerComponent } from '@shards/issue-picker/issue-picker.component';
-import { Task } from '@models/tasks/task.model';
+import { Task } from '@models/task/task.model';
+import { ExtIssueLinkResult } from '@models/_core/modal-results';
 
-/** Anything that can carry an external-issue link (Focus, InvoiceItem). */
 export interface ExtIssueLinkable {
     ext_issue_plugin_link_id?: string;
     ext_issue_id?: string;
     parent_id?: string;
     parent_type?: string;
     project_id?: string;
-}
-/** A truthy result so the interrupt isn't treated as "cancelled"; null fields mean "unlink". */
-export interface ExtIssueLinkResult {
-    ext_issue_plugin_link_id: string | null;
-    ext_issue_id: string | null;
 }
 
 @Component({
@@ -56,13 +51,10 @@ export class ModalLinkExtIssueComponent extends ModalBaseComponent<ExtIssueLinkR
         return !tracker || (tracker.instance.state !== 'no token' && tracker.instance.state !== 'connection fail');
     };
 
-    // Mirror the selection into the manual field so the user sees confirmation of what was
-    // picked, and so editing it afterwards still works as an override.
     onIssueSelected(task: Task): void {
         this.manualId.set(task.id);
     }
 
-    /** Clear and confirm — unlinks the issue from every selected item. */
     unlink(): void {
         this.selectedLinkId.set('');
         this.selectedIssueId.set('');

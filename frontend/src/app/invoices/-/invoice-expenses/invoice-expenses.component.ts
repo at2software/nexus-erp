@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
 import { ExpenseCategory } from '@models/expense/expense-category.model';
@@ -8,7 +8,9 @@ import { GlobalService } from '@models/global.service';
 import { ModalEditExpenseComponent } from '@app/_modals/modal-edit-expense/modal-edit-expense.component';
 import { Toast } from '@shards/toast/toast';
 import { InvoiceItemType } from '@enums/invoice-item.type';
-import { forkJoin, Observable } from 'rxjs';
+import { Dictionary } from '@constants/constants';
+import { forkJoin, Observable, tap } from 'rxjs';
+import { modelListResource } from '@models/http/model-resource';
 import { Nx } from '@app/nx/nx.directive';
 import { NComponent } from '@shards/n/n.component';
 import { MoneyPipe } from '@pipes/money.pipe';
@@ -22,12 +24,13 @@ import { ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
 import { ModalInputComponent } from '@app/_modals/modal-input/modal-input.component';
 import { NgbTooltip } from '@ng-bootstrap/ng-bootstrap';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'invoice-expenses',
     templateUrl: './invoice-expenses.component.html',
-    imports: [Nx, NComponent, MoneyPipe, DndDirective, EmptyStateComponent, ToolbarComponent, DatePipe, NgxEchartsDirective, NgbTooltip, SpinnerComponent],
+    imports: [StackedTableDirective, Nx, NComponent, MoneyPipe, DndDirective, EmptyStateComponent, ToolbarComponent, DatePipe, NgxEchartsDirective, NgbTooltip, SpinnerComponent],
 })
 export class InvoiceExpensesComponent {
 
@@ -35,10 +38,19 @@ export class InvoiceExpensesComponent {
     #global = inject(GlobalService);
     #modalService = inject(ModalBaseService);
 
-    isLoaded = signal(false);
-    expenses = signal<Expense[]>([]);
-    categories = signal<ExpenseCategory[]>([]);
-    sum = signal(0);
+    readonly #categoriesResource = modelListResource(() => this.#expenseService.indexCategories().pipe(tap((cats) => cats.forEach((_) => (_.var.visible = true)))));
+    categories = linkedSignal(this.#categoriesResource.value);
+
+    readonly #categoryNames = computed<Dictionary<string>>(() => this.categories().reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {}));
+
+    readonly #expensesResource = modelListResource(
+        () => (this.#categoriesResource.hasValue() ? Object.entries(this.#categoryNames()).flat().join('|') : undefined),
+        () => this.#expenseService.index().pipe(tap((data) => data.forEach((_) => _.addCategoryChangeAction(this.#categoryNames(), _.actions.length - 1)))),
+    );
+    expenses = linkedSignal(this.#expensesResource.value);
+
+    isLoaded = computed(() => this.#expensesResource.hasValue());
+    sum = linkedSignal(() => this.#expensesResource.value().reduce((a, b) => a + b.yearlyPrice, 0));
     selectionSum = signal(0);
     selectionExpenses = signal<Expense[]>([]);
     lopsHeaders = signal<string[] | undefined>(undefined);
@@ -71,11 +83,6 @@ export class InvoiceExpensesComponent {
     readonly #lopsCostColumn = 8;
 
     constructor() {
-        this.#expenseService.indexCategories().subscribe((cat) => {
-            cat.forEach((_) => (_.var.visible = true));
-            this.categories.set(cat);
-            this.reload();
-        });
         this.#global
             .onSelectionIn(() => this.expenses(), 'yearlyPrice')
             .pipe(takeUntilDestroyed())
@@ -95,15 +102,7 @@ export class InvoiceExpensesComponent {
             });
     }
 
-    reload() {
-        this.#expenseService.index().subscribe((data) => {
-            this.isLoaded.set(true);
-            this.sum.set(data.reduce((a, b) => a + b.yearlyPrice, 0));
-            const categoryMap = this.categories().reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {});
-            data.forEach((_) => _.addCategoryChangeAction(categoryMap, _.actions.length - 1));
-            this.expenses.set(data);
-        });
-    }
+    reload = () => this.#expensesResource.reload();
 
     onNewExpense = () => this.#modalService.open(ModalEditExpenseComponent, undefined);
     onNewExpenseCategory() {

@@ -11,9 +11,10 @@ export class MoneyPipe implements PipeTransform {
     #country = () => this.global.setting('SYS_COUNTRY') ?? '';
     #symbol = () => this.global.setting('SYS_CURRENCY') ?? '';
 
-    transform(value: any): string {
+    transform(value: number | null | undefined): string {
+        const amount = value ?? NaN;
         if (!this.global?.loaded()) {
-            return Intl.NumberFormat('en-UK', { style: 'currency', currency: 'EUR' }).format(value);
+            return Intl.NumberFormat('en-UK', { style: 'currency', currency: 'EUR' }).format(amount);
         }
         let locale = this.#language() + '-' + this.#country();
         let symbol = this.#symbol();
@@ -23,6 +24,6 @@ export class MoneyPipe implements PipeTransform {
         if (symbol == '') {
             symbol = 'EUR';
         }
-        return Intl.NumberFormat(locale, { style: 'currency', currency: symbol }).format(value);
+        return Intl.NumberFormat(locale, { style: 'currency', currency: symbol }).format(amount);
     }
 }

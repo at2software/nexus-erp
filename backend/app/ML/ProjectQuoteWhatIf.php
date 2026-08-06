@@ -20,19 +20,10 @@ use Illuminate\Support\Collection;
  * from a small, fixed per-feature template set.
  */
 class ProjectQuoteWhatIf {
-    /** Minimum probability delta (0-1 scale) for a variation to be worth surfacing. */
     private const MIN_DELTA = 0.02;
 
-    /** Cap on how many suggestions are returned, best delta first. */
     private const MAX_SUGGESTIONS = 4;
 
-    /**
-     * Representative PROJECT_PREFIX override length (median among the ~470
-     * projects that currently have one, per `ml:train-project-quote-acceptance`
-     * data at the time this was written) — the perturbation target used when a
-     * quote has no custom prefix at all ("write a real introduction" only makes
-     * sense as a suggestion if we test a realistic length, not an arbitrary one).
-     */
     private const REPRESENTATIVE_PREFIX_LENGTH = 628.0;
 
     /**
@@ -67,9 +58,6 @@ class ProjectQuoteWhatIf {
             ];
         })->filter(fn (array $c) => $c['delta'] >= self::MIN_DELTA);
 
-        // Keep only the single best-performing variation per feature, so one
-        // feature with several candidate deltas (e.g. item_count +1/+2/-1)
-        // can't crowd the other features out of the top MAX_SUGGESTIONS.
         return $candidates
             ->groupBy('feature')
             ->map(fn (Collection $group) => $group->sortByDesc('delta')->first())
@@ -80,9 +68,6 @@ class ProjectQuoteWhatIf {
     }
 
     /**
-     * Candidate perturbations of the actionable features, each tried with all
-     * other features held at their baseline value.
-     *
      * @return array<int, array{feature: string, from: float, to: float}>
      */
     private static function variations(array $row): array {

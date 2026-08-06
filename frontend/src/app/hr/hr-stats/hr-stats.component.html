@@ -2,7 +2,7 @@
 
 <div class="container-fluid">
     <div class="row d-flex align-items-stretch">
-        <div class="col-3 d-flex">
+        <div class="col-12 col-md-3 d-flex">
             <div class="card w-100">
                 <div class="card-header">
                     <i class="me-2">group</i>
@@ -11,7 +11,7 @@
                 <div class="card-body p-0">
                     <div class="team-list">
                         @for (user of _team; track user.id) {
-                            <div class="team-member d-flex align-items-center p-3 border-bottom">
+                            <div class="team-member d-flex align-items-center p-3 border-bottom" [nx]="user">
                                 <div class="avatar me-3">
                                     <avatar [object]="user"></avatar>
                                 </div>
@@ -25,7 +25,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-9 d-flex">
+        <div class="col-12 col-md-9 d-flex">
             <div class="card w-100">
                 <div class="card-header hstack gap-2">
                     @for (item of statsItems; track item.route) {

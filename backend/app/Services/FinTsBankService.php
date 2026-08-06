@@ -2,11 +2,6 @@
 
 namespace App\Services;
 
-/**
- * Maps German bank codes (BLZ) to their FinTS/HBCI server URL and display name.
- * Canonical source: https://www.fints.org/banken (requires registration for full list)
- * URLs verified against public FinTS client implementations and bank documentation.
- */
 class FinTsBankService {
     private static array $MAP = [
 

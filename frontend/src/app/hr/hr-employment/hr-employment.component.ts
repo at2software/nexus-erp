@@ -1,16 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal, TemplateRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, TemplateRef } from '@angular/core';
 import { tracked } from '@constants/tracked';
-import { User } from '@models/user/user.model';
-import { dayjs } from '@constants/dates';
+import { modelResource } from '@models/http/model-resource';
+import { dayjs } from '@constants/date/dates';
 import { UserService } from '@models/user/user.service';
 import { GlobalService } from '@models/global.service';
-import { environment } from 'src/environments/environment';
+import { environment } from '@environments/environment';
 import { REFLECTION } from '@constants/constants';
 import { NgbDatepickerModule, NgbDateStruct, NgbModal, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
 import { ModalNewUserService } from '@app/_modals/modal-new-user/modal-new-user.component';
 import { ModalNewEmploymentComponent } from './modal-new-employment.component';
 import { UserEmployment } from '@models/user/user-employment.model';
+import { map } from 'rxjs';
 import { HrTeamService } from '../hr-team/hr-team.service';
 import { SmartLinkDirective } from '@directives/smart-link.directive';
 import { DatePipe, DecimalPipe } from '@angular/common';
@@ -21,8 +22,8 @@ import { AvatarComponent } from '@shards/avatar/avatar.component';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { UlCompactComponent } from '@shards/ul-compact/ul-compact.component';
-import { Serializable } from '@models/serializable';
-import { TbeRow } from '@models/api-response';
+import { Serializable } from '@models/_core/serializable';
+import { TbeRowDto } from '@models/_core/api-response';
 
 interface TBlocks {
     paid: [number, string][];
@@ -35,8 +36,40 @@ interface TBlocks {
 }
 const newTBlocks = (month: string): TBlocks => ({ paid: [], vacation: [], worked: [], excluded: [], month: month, delta: 0, lastDelta: 0 });
 
-// A reflected project/company model with the time-based-employment extras the backend attaches.
 type TbeProjectRow = Serializable & { path: string; duration: number };
+
+const sumOf = (_: [number, string][]) => _.map((_) => _[0]).sum();
+
+function buildTBlocks(rows: TbeRowDto[]): { months: TBlocks[]; min: number; max: number } {
+    const blocks: Record<string, TBlocks> = {};
+    for (const _ of rows) {
+        if (!(_.month in blocks)) blocks[_.month] = newTBlocks(_.month);
+        if (_.type === 0) {
+            blocks[_.month].worked.push([_.duration, 'actual work time']);
+            blocks[_.month].excluded.push([_.excluded, 'excluded projects']);
+        } else if (_.type === 1) {
+            blocks[_.month].paid.push([_.raw, 'paid time']);
+            blocks[_.month].vacation.push([_.vacation, _.description]);
+        }
+    }
+    let delta = 0;
+    let min = 0;
+    let max = 0;
+    const step = (change: number) => {
+        delta += change;
+        max = Math.max(delta, max);
+        min = Math.min(delta, min);
+    };
+    const months = Object.values(blocks);
+    for (const block of months) {
+        block.lastDelta = delta;
+        step(-sumOf(block.paid));
+        step(sumOf(block.vacation));
+        step(sumOf(block.worked));
+        block.delta = delta;
+    }
+    return { months, min, max };
+}
 
 @Component({
     selector: 'hr-employment',
@@ -53,14 +86,18 @@ export class HrEmploymentComponent {
     #modal = inject(ModalBaseService);
     #newUserModal = inject(ModalNewUserService);
 
-    protected readonly _user = signal<User | null>(null);
+    readonly user = tracked(this.#parent.user);
 
-    readonly user = tracked(this._user);
-    projects = signal<TbeProjectRow[]>([]);
-    employments = signal<UserEmployment[]>([]);
-    tblocks = signal<Record<string, TBlocks>>({});
-    roles = signal<string[]>([]);
-    remOutput = signal(0);
+    readonly #info = modelResource(
+        () => this.#parent.userId(),
+        (userId) => this.#userService.showTimeBasedEmploymentInfo(userId).pipe(map((_) => ({ ..._, employments: _.employments.map((e) => UserEmployment.fromJson(e)) }))),
+    );
+    readonly projects = computed(() => this.#info.value()?.tbe_projects?.map((_) => REFLECTION<TbeProjectRow>(_)) ?? []);
+    readonly employments = computed(() => this.#info.value()?.employments ?? []);
+    readonly roles = computed(() => this.#info.value()?.roles.map((_) => _.name) ?? []);
+    readonly #tbe = computed(() => buildTBlocks(this.#info.value()?.tbe_table ?? []));
+
+    readonly remOutput = linkedSignal(() => this.#remainder());
 
     env = environment;
     remInput = 0;
@@ -68,73 +105,20 @@ export class HrEmploymentComponent {
     addTbeAmount = 0;
     readonly factor = (1 / 160) * 8 * (20 / 12);
 
-    #maxDelta = 0;
-    #minDelta = 0;
-    #tbe_table: TbeRow[] = [];
-
     readonly isAdmin = computed(() => this.#global.user?.hasRole('admin') ?? false);
-    get minDelta() { return this.#minDelta; }
+    get minDelta() { return this.#tbe().min; }
 
-    constructor() {
-        this.#parent.onUserChange.subscribe((user) => {
-            this._user.set(user);
-            this.projects.set([]);
-            this.#tbe_table = [];
-            this.reload();
-        });
-    }
+    reload = () => this.#info.reload();
 
-    reload() {
-        const user = this.user();
-        if (!user) return;
-        this.#userService.showTimeBasedEmploymentInfo(user).subscribe((data) => {
-            this.projects.set(data.tbe_projects?.map((project) => REFLECTION<TbeProjectRow>(project)) ?? []);
-            this.#tbe_table = data.tbe_table ?? [];
-            this.employments.set(data.employments.map((_) => UserEmployment.fromJson(_)));
-            this.roles.set(data.roles.map((_) => _.name));
-
-            const blocks: Record<string, TBlocks> = {};
-            for (const _ of this.#tbe_table) {
-                if (!(_.month in blocks)) blocks[_.month] = newTBlocks(_.month);
-                if (_.type === 0) {
-                    blocks[_.month].worked.push([_.duration, 'actual work time']);
-                    blocks[_.month].excluded.push([_.excluded, 'excluded projects']);
-                } else if (_.type === 1) {
-                    blocks[_.month].paid.push([_.raw, 'paid time']);
-                    blocks[_.month].vacation.push([_.vacation, _.description]);
-                }
-            }
-            this.#maxDelta = 0;
-            this.#minDelta = 0;
-            let delta = 0;
-            for (const key of Object.keys(blocks)) {
-                blocks[key].lastDelta = delta;
-                delta = this.#updateDeltas(delta, -this.getSum(blocks[key].paid));
-                delta = this.#updateDeltas(delta, this.getSum(blocks[key].vacation));
-                delta = this.#updateDeltas(delta, this.getSum(blocks[key].worked));
-                blocks[key].delta = delta;
-            }
-            this.tblocks.set(blocks);
-            if (user.active_employment?.is_time_based) this.updateRem();
-        });
-    }
-
-    getTbeMonths = () => Object.values(this.tblocks());
-    getMax = () => this.#maxDelta - this.#minDelta;
+    getTbeMonths = () => this.#tbe().months;
+    getMax = () => this.#tbe().max - this.#tbe().min;
     getPerc = (_: number) => (80 * _) / this.getMax();
-    getSum = (_: [number, string][]) => _.map((_) => _[0]).sum();
+    getSum = sumOf;
     hasTimebasedEmployment = () => this.user()?.active_employment?.is_time_based ?? false;
 
-    #updateDeltas = (d: number, change: number) => {
-        d += change;
-        this.#maxDelta = Math.max(d, this.#maxDelta);
-        this.#minDelta = Math.min(d, this.#minDelta);
-        return d;
-    };
+    updateRem = () => this.remOutput.set(this.#remainder());
 
-    updateRem() {
-        this.remOutput.set((this.remInput + this.getTbeMonths().last()!.delta) / (1 - this.factor));
-    }
+    #remainder = () => (this.remInput + (this.getTbeMonths().last()?.delta ?? 0)) / (1 - this.factor);
 
     open(content: TemplateRef<unknown>) {
         this.#modalService.open(content, { ariaLabelledBy: 'modal-basic-title' });

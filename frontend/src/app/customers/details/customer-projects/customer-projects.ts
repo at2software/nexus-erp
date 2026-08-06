@@ -1,8 +1,8 @@
-import { ChangeDetectionStrategy, Component, afterNextRender, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, untracked, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { ProjectService } from '@models/project/project.service';
 import { Project } from '@models/project/project.model';
-import { dayjsMax } from '@constants/dates';
+import { dayjsMax } from '@constants/date/dates';
 import { ProjectStateFilterComponent } from '@app/projects/_shards/project-state-filter/project-state-filter.component';
 import { CustomerDetailGuard } from '@app/customers/customers.details.guard';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
@@ -18,6 +18,8 @@ import { MoneyShortPipe } from '@pipes/mshort.pipe';
 import { PermissionsDirective } from '@directives/permissions.directive';
 import { HotkeyDirective } from '@directives/hotkey.directive';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragPreview } from '@angular/cdk/drag-drop';
+import { modelListResource } from '@models/http/model-resource';
+import { Dictionary } from '@constants/constants';
 
 @Component({
     selector: 'customer-projects',
@@ -31,33 +33,31 @@ export class CustomerProjects {
     #parent = inject(CustomerDetailGuard);
     #router = inject(Router);
 
-    stateFilter = viewChild.required(ProjectStateFilterComponent);
-
-    projects = signal<Project[]>([]);
-    coParticipatedProjects = signal<Project[]>([]);
+    stateFilter = viewChild(ProjectStateFilterComponent);
 
     #collapsedIds = signal(new Set<string>());
     hoveredProjectId = signal<string | null>(null);
-    allDropListIds: string[] = [];
     getLevelArray = (level: number) => Array.from({length: level}, (_, i) => i);
 
-    constructor() {
-        afterNextRender(() => this.reload());
-    }
+    #reloadTick = signal(0);
+    #params = computed<{ tick: number; companyId: string; filters: Dictionary } | undefined>(
+        () => {
+            const filter = this.stateFilter();
+            const companyId = this.#parent.object()?.id;
+            if (!filter || !companyId) return undefined;
+            return { tick: this.#reloadTick(), companyId, filters: { ...filter.getFilters(), withParents: true } };
+        },
+        { equal: (a, b) => JSON.stringify(a) === JSON.stringify(b) },
+    );
 
-    reload() {
-        const filters = { ...this.stateFilter().getFilters() };
-        const object = this.#parent.object();
-        filters.withParents = true;
-        this.#projectService.indexForCompany(object, filters).subscribe((data: Project[]) => {
-            this.projects.set(this.#buildProjectTree(data));
-            this.allDropListIds = [];
-            this.#collectIds(this.projects());
-        });
-        this.#projectService.indexCoParticipatedProjects(object, filters).subscribe((data: Project[]) => {
-            this.coParticipatedProjects.set(this.#buildProjectTree(data));
-        });
-    }
+    #projects = modelListResource(this.#params, ({ filters }) => this.#projectService.indexForCompany(untracked(this.#parent.object), filters));
+    #coParticipated = modelListResource(this.#params, ({ filters }) => this.#projectService.indexCoParticipatedProjects(untracked(this.#parent.object), filters));
+
+    projects = computed(() => this.#buildProjectTree(this.#projects.value()));
+    coParticipatedProjects = computed(() => this.#buildProjectTree(this.#coParticipated.value()));
+    #allDropListIds = computed(() => this.#collectIds(this.projects()));
+
+    reload = () => this.#reloadTick.update((_) => _ + 1);
 
     #buildProjectTree(data: Project[]): Project[] {
         data.forEach((_: Project) => { _.var.subprojects = []; _.var.total = 0; _.var.has_circular_dependency = false; });
@@ -88,14 +88,11 @@ export class CustomerProjects {
         return result.sort((a: Project, b: Project) => b.var.latest.diff(a.var.latest, 'seconds'));
     }
 
-    #collectIds(items: Project[]) {
-        items.forEach((item) => {
-            this.allDropListIds.push('drop-' + item.id);
-            if (item.var.subprojects?.length) this.#collectIds(item.var.subprojects);
-        });
+    #collectIds(items: Project[]): string[] {
+        return items.flatMap((item) => ['drop-' + item.id, ...(item.var.subprojects?.length ? this.#collectIds(item.var.subprojects) : [])]);
     }
 
-    getConnectedDropLists = () => this.allDropListIds;
+    getConnectedDropLists = () => this.#allDropListIds();
     onDragStarted = () => document.body.classList.add('project-dragging');
     onDragEnded = () => { document.body.classList.remove('project-dragging'); this.hoveredProjectId.set(null); };
     isCollapsed = (project: Project) => this.#collapsedIds().has(project.id);
@@ -118,7 +115,7 @@ export class CustomerProjects {
     #makeSubproject(draggedProject: Project, targetProject: Project) {
         if (this.#wouldCreateCircularDependency(draggedProject.id, targetProject.id)) return;
         if (draggedProject.project_id === targetProject.id) return;
-        this.#projectService.update(draggedProject.id, { project_id: targetProject.id }).subscribe(() => this.reload());
+        draggedProject.update({ project_id: targetProject.id }).subscribe(() => this.reload());
     }
 
     #wouldCreateCircularDependency(projectId: string, newParentId: string): boolean {

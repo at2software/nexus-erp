@@ -3,6 +3,8 @@
 return [
     // Info block
     'project'         => 'Project',
+    'quote_number'    => 'Quote no.',
+    'valid_until'     => 'Valid until',
     'contact_person'  => 'Contact',
     'phone'           => 'Phone',
     'email'           => 'Email',
@@ -38,7 +40,14 @@ return [
     'yearly_recurring'    => 'Yearly recurring',
 
     // Page counter
-    'page' => 'Page',
+    'page'    => 'Page',
+    'page_of' => 'of',
+
+    // Acceptance block
+    'acceptance_title' => 'Acceptance of quote',
+    'acceptance_hint'  => 'By signing you place the order on the terms stated above.',
+    'place_date'       => 'Place, date',
+    'signature'        => 'Signature / stamp',
 
     // Document titles
     'quote'         => 'Quote',

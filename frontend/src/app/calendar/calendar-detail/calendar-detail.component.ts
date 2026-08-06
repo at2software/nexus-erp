@@ -1,18 +1,21 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, NgZone, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, linkedSignal, signal, untracked, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { fromEvent } from 'rxjs';
+import { modelListResource } from '@models/http/model-resource';
 import { NgbModal, NgbModalRef, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { CalendarEntry } from '@models/vcalendar/calendar-entry.model';
 import { RecurrenceType, VCalendarEvent, Weekday } from '@models/vcalendar/vcalendar-event.model';
 import { VCalendarService } from '@models/vcalendar/vcalendar.service';
 import { ConfirmationService } from '@app/_modals/modal-confirm/confirmation.service';
-import { NxGlobal, TBroadcast } from '@app/nx/nx.global';
+import { NxStatic, TBroadcast } from '@app/nx/nx.static';
 import { CalendarEntryModalComponent } from '../calendar-entry-modal/calendar-entry-modal.component';
 import { HeaderComponent } from '@app/app/header/header.component';
 import { HeaderLinkItemComponent } from '@app/app/header/header-link-item/header-link-item.component';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { FormsModule } from '@angular/forms';
 import { Nx } from '@app/nx/nx.directive';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
+import { RouterLink } from '@angular/router';
 
 interface EventSpan {
     calendarEntry: CalendarEntry;
@@ -26,7 +29,7 @@ interface EventSpan {
     selector: 'calendar-detail',
     templateUrl: './calendar-detail.component.html',
     styleUrls: ['./calendar-detail.component.scss'],
-    imports: [HeaderComponent, HeaderLinkItemComponent, ToolbarComponent, FormsModule, NgbTooltipModule, Nx],
+    imports: [StackedTableDirective, HeaderComponent, HeaderLinkItemComponent, ToolbarComponent, FormsModule, NgbTooltipModule, Nx, RouterLink],
 })
 export class CalendarDetailComponent {
     private readonly popupButton = viewChild<ElementRef>('popupButton');
@@ -56,38 +59,43 @@ export class CalendarDetailComponent {
     );
     hoveredEventId = signal('');
 
-    calendarEntries = signal<CalendarEntry[]>([]);
     calendarEntriesByDate = new Map<string, CalendarEntry[]>();
     #vCalendarService = inject(VCalendarService);
+
+    readonly #entries = modelListResource(() => this.#vCalendarService.getCalendar());
+    calendarEntries = linkedSignal<CalendarEntry[]>(() =>
+        this.#entries.value().map((entry) => {
+            entry.vcalendar_event = VCalendarEvent.extractEventData(entry.vcalendar);
+            return entry;
+        }),
+    );
 
     confirmation = inject(ConfirmationService);
 
     constructor() {
         const destroyRef = inject(DestroyRef);
-        inject(NgZone).runOutsideAngular(() => {
-            fromEvent<MouseEvent>(document, 'click')
-                .pipe(takeUntilDestroyed(destroyRef))
-                .subscribe((event) => {
-                    const popup = this.popup();
-                    const btn = this.popupButton();
-                    if (this.isPopupOpen() && popup && btn && !popup.nativeElement.contains(event.target) && !btn.nativeElement.contains(event.target)) {
-                        this.isPopupOpen.set(false);
-                    }
-                });
-        });
+        fromEvent<MouseEvent>(document, 'click')
+            .pipe(takeUntilDestroyed(destroyRef))
+            .subscribe((event) => {
+                const popup = this.popup();
+                const btn = this.popupButton();
+                if (this.isPopupOpen() && popup && btn && !popup.nativeElement.contains(event.target) && !btn.nativeElement.contains(event.target)) {
+                    this.isPopupOpen.set(false);
+                }
+            });
 
         this.generateLocalizedDaysAndMonths();
-        NxGlobal.broadcast$.pipe(takeUntilDestroyed()).subscribe(({ type, data }) => {
+        NxStatic.broadcast$.pipe(takeUntilDestroyed()).subscribe(({ type, data }) => {
             if (type === TBroadcast.Delete && data instanceof CalendarEntry) {
                 this.calendarEntries.update((entries) => entries.filter((e) => e.id !== data.id));
-                this.groupEventsByDate();
-                this.setCalendarEntriesPerDate();
             }
         });
-        this.#vCalendarService.getCalendar().subscribe((_) => {
-            this.parseVCalendarEvents(_);
-            this.groupEventsByDate();
-            this.setCalendarEntriesPerDate();
+        effect(() => {
+            this.calendarEntries();
+            untracked(() => {
+                this.groupEventsByDate();
+                this.setCalendarEntriesPerDate();
+            });
         });
         this.generateYearRange();
         this.updateCalendarLayout();
@@ -182,14 +190,6 @@ export class CalendarDetailComponent {
     isToday = (date: Date): boolean => date.toDateString() === new Date().toDateString();
     isThisYear = (year: number): boolean => year === new Date().getFullYear();
     isThisMonth = (month: number): boolean => month === new Date().getMonth();
-
-    parseVCalendarEvents(calendarEntries: CalendarEntry[]): void {
-        const parsed = calendarEntries.map((calendarEntry) => {
-            calendarEntry.vcalendar_event = VCalendarEvent.extractEventData(calendarEntry.vcalendar);
-            return calendarEntry;
-        });
-        this.calendarEntries.update((entries) => [...entries, ...parsed]);
-    }
 
     groupEventsByDate(): void {
         this.calendarEntriesByDate.clear();
@@ -347,7 +347,6 @@ export class CalendarDetailComponent {
     calculateEventSpans() {
         const calendarEvents = this.calendarEvents();
         const eventSpans = this.calendar().map((week, weekIndex) => {
-            // Collect all unique events for this week
             const weekEvents = new Map<string, { entry: CalendarEntry; days: number[] }>();
 
             week.forEach((day, dayIndex) => {
@@ -361,7 +360,6 @@ export class CalendarDetailComponent {
                 });
             });
 
-            // Convert to spans and assign rows
             const spans: EventSpan[] = [];
             weekEvents.forEach(({ entry, days }) => {
                 const sortedDays = days.sort((a, b) => a - b);
@@ -373,7 +371,6 @@ export class CalendarDetailComponent {
                 });
             });
 
-            // Sort spans by start day, then by event start time
             spans.sort((a, b) => {
                 if (a.startDay !== b.startDay) {
                     return a.startDay - b.startDay;
@@ -383,13 +380,11 @@ export class CalendarDetailComponent {
                 return timeA.getTime() - timeB.getTime();
             });
 
-            // Assign rows using a greedy algorithm
             const rowOccupancy: { start: number; end: number }[] = [];
 
             spans.forEach((span) => {
                 let assignedRow = 0;
 
-                // Find the first row that doesn't conflict
                 while (true) {
                     const conflict = rowOccupancy[assignedRow] && !(span.startDay > rowOccupancy[assignedRow].end || span.endDay < rowOccupancy[assignedRow].start);
 
@@ -420,7 +415,6 @@ export class CalendarDetailComponent {
         const marginTop = 16; // mt-3 margin
         let totalHeight = headerHeight + marginTop;
 
-        // Add heights of all previous weeks
         const weekEventCounts = this.weekEventCounts();
         for (let i = 0; i < weekIndex; i++) {
             const baseHeight = 80;
@@ -499,10 +493,8 @@ export class CalendarDetailComponent {
     open(modalRef: NgbModalRef) {
         modalRef.result.then((calendarEntry) => {
             if (calendarEntry.vcalendar == undefined) {
-                this.#vCalendarService.deleteEvent(calendarEntry).subscribe((_) => {
+                this.#vCalendarService.deleteEvent(calendarEntry).subscribe(() => {
                     this.calendarEntries.update((entries) => entries.filter((entry) => entry.id !== calendarEntry.id));
-                    this.groupEventsByDate();
-                    this.setCalendarEntriesPerDate();
                 });
             } else {
                 calendarEntry.save().subscribe((updatedCalendarEntry: CalendarEntry) => {
@@ -515,8 +507,6 @@ export class CalendarDetailComponent {
                         }
                         return [...entries, updatedCalendarEntry];
                     });
-                    this.groupEventsByDate();
-                    this.setCalendarEntriesPerDate();
                 });
             }
         });

@@ -1,4 +1,4 @@
-import { NxAction } from '@app/nx/nx.actions';
+import { NxAction } from '@models/_core/nx.actions';
 import { Encryption } from './encryption.model';
 
 export function getEncryptisingleActionResolveds(self: Encryption): NxAction[] {

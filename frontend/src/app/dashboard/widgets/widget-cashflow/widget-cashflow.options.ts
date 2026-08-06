@@ -12,7 +12,6 @@ export const CASHFLOW_CHART_TOTAL: [string, string, string, string][] = [
     [$localize`:@@i18n.common.timeBasedProjects:time based projects`, 'cyan', 'CASHFLOW_PROJECTS_TIMEBASED', 'schedule'],
     [$localize`:@@i18n.common.projects:projects`, 'cyan', 'CASHFLOW_PROJECTS', 'work'],
     [$localize`:@@i18n.common.customerSupport:customer support`, 'cyan', 'CASHFLOW_CUSTOMER_SUPPORT', 'support_agent'],
-    //[$localize`:@@i18n.dynamic.CASHFLOW_COMPANIES_TIMEBASED:time based customer support`, 'cyan', 'CASHFLOW_COMPANIES_TIMEBASED', 'schedule'],
     [$localize`:@@i18n.common.acquisitions:acquisitions`, 'indigo', 'CASHFLOW_PROJECTS_ACQUISITIONS', 'trending_up'],
     [$localize`:@@i18n.dynamic.CASHFLOW_PROJECTS_LINREG:Time based regression`, 'purple', 'CASHFLOW_PROJECTS_LINREG', 'show_chart'],
     [$localize`:@@i18n.dynamic.CASHFLOW_ANNUAL_EXPENSES:annual Expenses`, 'red', 'CASHFLOW_ANNUAL_EXPENSES', 'money_off'],

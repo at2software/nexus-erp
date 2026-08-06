@@ -5,15 +5,6 @@ namespace App\Http\Controllers;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
-/**
- * Read/write access to the shared PDF letterhead template used by all generated
- * documents (invoices, quotes, project documents). The template is the on-disk
- * HTML skeleton in public/pdf/template.html plus its stylesheet public/pdf/styles.css.
- *
- * Edits are written straight back to those files (DomPDF reads them directly at
- * generation time). Before the first write each file is snapshotted to a sibling
- * `*.original` so the factory default can always be restored.
- */
 class PdfTemplateController extends Controller {
     private const FILES = [
         'html' => 'pdf/template.html',
@@ -59,11 +50,6 @@ class PdfTemplateController extends Controller {
         return ['success' => true, 'logoUrl' => asset(self::LOGO).'?t='.time()];
     }
 
-    /**
-     * Renders the actual DomPDF output for an unsaved draft so the editor can show
-     * ground-truth fidelity. Tokens are filled with fixed dummy data; the draft CSS
-     * is inlined so it overrides the on-disk stylesheet without touching it.
-     */
     public function preview(Request $r) {
         $html = $r->input('html') ?: $this->read(self::FILES['html']);
         $css  = $r->input('css', '');

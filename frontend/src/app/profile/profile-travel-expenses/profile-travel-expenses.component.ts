@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject, signal, viewChild, Type } from '@angular/core';
-import { NxGlobal } from '@app/nx/nx.global';
-import { dayjs } from '@constants/dates';
-import { dateToMoment, momentToDate } from '@constants/momentToDate';
+import { NxStatic } from '@app/nx/nx.static';
+import { dayjs } from '@constants/date/dates';
+import { dateToMoment, momentToDate } from '@constants/date/momentToDate';
 import { DndDirective } from '@directives/dnd.directive';
 import { FileService } from '@models/file/file.service';
 import { TRAVEL_ALLOWANCE_DATA, getTravelAllowanceByCountry, getAvailableCountries } from './travel-allowance-data';
-import { TravelAllowanceRates } from '@models/api-response';
+import { TravelAllowanceRatesDto } from '@models/_core/api-response';
 
 import { FormsModule } from '@angular/forms';
 import { NgbDatepickerModule, NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
@@ -43,7 +43,7 @@ class TExpense {
     type: number;
     name: string;
     value: number = 0;
-    suffix: string = NxGlobal.global.currencySymbol();
+    suffix: string = NxStatic.global.currencySymbol();
     sum: number = 0;
     constructor(type: number) {
         this.type = type;
@@ -93,7 +93,7 @@ export class ProfileTravelExpensesComponent {
     types           : TExpenseType[] = ExpenseType;
 
     availableCountries: string[] = getAvailableCountries();
-    travelAllowanceData: TravelAllowanceRates[] = TRAVEL_ALLOWANCE_DATA;
+    travelAllowanceData: TravelAllowanceRatesDto[] = TRAVEL_ALLOWANCE_DATA;
 
     twoDayTrip      = signal(false);
     withSleep       = signal(false);

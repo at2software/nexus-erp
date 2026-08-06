@@ -7,11 +7,11 @@ import { ActivityService } from '@activity/activity.service';
 import { WidgetFactory, TAWidget } from '@dashboard/availableWidgets';
 import { NgComponentOutlet } from '@angular/common';
 import { CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
-import { NxGlobal } from '@app/nx/nx.global';
+import { NxStatic } from '@app/nx/nx.static';
 import { GlobalService } from '@models/global.service';
 import { ActivatedRoute } from '@angular/router';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { DashboardWidgetConfig } from '@models/api-response';
+import { DashboardWidgetConfigDto } from '@models/_core/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,12 +35,12 @@ export class TabWidgetsComponent {
     readonly isUsedWidget = (widgetKey: string) => this.#usedWidgetKeys.has(widgetKey);
 
     constructor() {
-        NxGlobal.dashboardEditMode$.pipe(takeUntilDestroyed()).subscribe(isEditing => {
+        NxStatic.dashboardEditMode$.pipe(takeUntilDestroyed()).subscribe(isEditing => {
             this.isEditMode.set(isEditing);
             const tab = this.tab();
             if (isEditing) {
                 this.#usedWidgetKeys.clear();
-                this.#global.dashboards?.[this.#currentDashboard()]?.cols.forEach((col: DashboardWidgetConfig[]) =>
+                this.#global.dashboards?.[this.#currentDashboard()]?.cols.forEach((col: DashboardWidgetConfigDto[]) =>
                     col.forEach((widget) => this.#usedWidgetKeys.add(widget.widget))
                 );
                 this.allWidgets.set(WidgetFactory.availableWidgets());

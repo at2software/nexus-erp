@@ -1,4 +1,4 @@
-import { NxAction, NxActionType } from "@app/nx/nx.actions";
+import { NxAction, NxActionType } from "@models/_core/nx.actions";
 import { GitlabAuditProject } from "./gitlab-audit-project.model";
 
 export const GitlabAuditProjectActions = (that:GitlabAuditProject):NxAction[] => [

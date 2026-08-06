@@ -9,9 +9,7 @@
         <ul class="list-group">
             @for (_ of _requests; track _.id) {
                 <li class="list-group-item d-flex align-items-center">
-                    <div class="avatar mt-1 d-flex me-3">
-                        <img class="avatar-img" src="{{ _.user.icon }}" alt="User avatar" />
-                    </div>
+                    <avatar [object]="_.user" class="mt-1 me-3"></avatar>
                     <div class="flex-fill">
                         <div>
                             {{ _.model?.getName() || _.targetClass() }}

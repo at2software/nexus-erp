@@ -23,7 +23,6 @@ trait ParamDataTrait {
                 ->select('p.key', 't.value')
                 ->where($poly);
 
-            // Build the whereRaw condition properly
             $bindings   = [];
             $conditions = [];
 
@@ -51,7 +50,6 @@ trait ParamDataTrait {
             )", $bindings)->get();
             return $results;
         } catch (\Exception $e) {
-            // Fallback to empty collection if query fails
             return collect([]);
         }
     }
@@ -113,7 +111,6 @@ class ParamBuilder extends BaseBuilder {
     public function index($poly): Builder {
         $table = $this->getModel()->getTable();
 
-        // Subquery to get the latest IDs per param_id
         $latestIdsQuery = DB::table($table)
             ->selectRaw('MAX(id) as latest_id')
             ->where($poly)

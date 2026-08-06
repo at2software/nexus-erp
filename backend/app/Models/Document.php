@@ -12,11 +12,11 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 class Document extends BaseModel {
     use HasFactory;
 
-    public static function getPdfTemplate($title = '', $omit = []) {
+    public static function getPdfTemplate($title = '', $omit = [], ?string $footerContext = null) {
         $template = file_get_contents(public_path('pdf/template.html'));
         $template = str_replace('[documentTitle]', $title, $template);
+        $template = str_replace('[footerContext]', $footerContext ?? $title, $template);
 
-        // Fill company identity from settings params
         $name     = Param::get('ME_NAME')->value ?? '';
         $email    = Param::get('ME_EMAIL')->value ?? '';
         $phone    = Param::get('ME_PHONE')->value ?? '';
@@ -66,7 +66,10 @@ class Document extends BaseModel {
         return $template;
     }
     public static function pdfBlockRow($key, $value) {
-        return '<div style="display:block; width:100%; margin:0; padding:0;"><div style="float:right;display:inline-block;">'.$value.'</div><div style="display:inline-block; font-weight: bold;">'.$key.'</div></div>';
+        return '<table style="width:100%;border-collapse:collapse;margin:0;padding:0;"><tr>'
+            .'<td style="font-weight:bold;white-space:nowrap;vertical-align:top;padding:0 4px 0 0;">'.$key.'</td>'
+            .'<td style="text-align:right;vertical-align:top;padding:0;">'.$value.'</td>'
+            .'</tr></table>';
     }
     public static function personalized($template, CompanyContact|Company|null $contact, $headers = [], $withContactInfo = true, ?Project $project = null) {
         $company      = $contact instanceof Company ? $contact : ($contact?->company ?? null);
@@ -90,6 +93,7 @@ class Document extends BaseModel {
         }
         $template = str_replace('[headerInfo]', implode('<br>', $headers), $template);
         $template = str_replace('[pageLabel]', __('pdf.page', [], $lang), $template);
+        $template = str_replace('[pageOfLabel]', __('pdf.page_of', [], $lang), $template);
         return $template;
     }
     public static function replaceInvoiceInformation($template, Invoice $invoice) {
@@ -98,16 +102,22 @@ class Document extends BaseModel {
         return $template;
     }
     private static function getPaymentDuration(?Project $project, CompanyContact|Company|null $contact): string {
-        // Cascade: project -> customer company -> global default
-        // Payment duration is stored on Company, not CompanyContact — always resolve to Company.
-        if ($project && $projectDuration = $project->param('INVOICE_PAYMENT_DURATION')->value) {
-            return $projectDuration;
+        return self::cascadingParam('INVOICE_PAYMENT_DURATION', $project, '14');
+    }
+    public static function getQuoteValidity(?Project $project): string {
+        return self::cascadingParam('QUOTE_VALIDITY_DURATION', $project, '30');
+    }
+    // Cascade: project -> customer company -> global default. Durations are stored on
+    // Company, not CompanyContact — always resolve to Company.
+    private static function cascadingParam(string $key, ?Project $project, string $default): string {
+        if ($project && $projectValue = $project->param($key)->value) {
+            return $projectValue;
         }
         $company = $project?->company;
-        if ($company && $customerDuration = $company->param('INVOICE_PAYMENT_DURATION')->value) {
-            return $customerDuration;
+        if ($company && $customerValue = $company->param($key)->value) {
+            return $customerValue;
         }
-        return Param::get('INVOICE_PAYMENT_DURATION')->value ?? '14';
+        return Param::get($key)->value ?? $default;
     }
     public static function personalizationArray(CompanyContact|Company|null $contact = null, ?Project $project = null) {
         $replaces = [];
@@ -135,7 +145,14 @@ class Document extends BaseModel {
         return $replaces;
     }
     public static function renderPdf(string $template): string {
-        return Pdf::loadHTML($template)->output();
+        $pdf    = Pdf::loadHTML($template);
+        $output = $pdf->output();
+
+        if (! str_contains($template, '[pageCount]')) {
+            return $output;
+        }
+        $pages = $pdf->getDomPDF()->getCanvas()->get_page_count();
+        return Pdf::loadHTML(str_replace('[pageCount]', (string)$pages, $template))->output();
     }
     public static function getBase64QrCode($text) {
         return 'data:image/png;base64, '.base64_encode(QrCode::size(500)->format('png')->generate($text));

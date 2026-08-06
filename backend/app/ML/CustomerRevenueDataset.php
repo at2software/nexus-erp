@@ -20,7 +20,6 @@ use Illuminate\Support\Collection;
  * groups CV folds by `company_id` to avoid leaking a company across folds.
  */
 class CustomerRevenueDataset {
-    /** Feature names, in extraction order. */
     public const FEATURES = [
         'trailing_6m_revenue',
         'trailing_12m_revenue',
@@ -49,17 +48,11 @@ class CustomerRevenueDataset {
      */
     public const LABEL = 'revenue_next_12m';
 
-    /** How many months of future invoices define the label window. */
     public const LABEL_WINDOW_MONTHS = 12;
 
-    /** Minimum pre-cutoff history (in the company's own invoices) for a snapshot to be usable. */
     public const MIN_PRIOR_INVOICES = 2;
 
     /**
-     * Eligible companies: active, not the own (ME_ID) company, with at least
-     * MIN_PRIOR_INVOICES non-cancelled invoices (otherwise no snapshot could
-     * ever have enough pre-cutoff history).
-     *
      * @return Collection<int, Company>
      */
     public static function eligibleCompanies(): Collection {
@@ -70,10 +63,6 @@ class CustomerRevenueDataset {
     }
 
     /**
-     * All valid snapshot rows for one company: one row per candidate cutoff
-     * that has both enough pre-cutoff history AND a full post-cutoff label
-     * window still present in the data (so the label isn't truncated).
-     *
      * @return array<int, array<string, mixed>>
      */
     public static function extractRowsForCompany(Company $company): array {
@@ -91,9 +80,6 @@ class CustomerRevenueDataset {
                 continue;
             }
 
-            // The label window must be FULLY present in the data, i.e. cutoff + 12mo
-            // must not be after the company's last known invoice date — otherwise the
-            // label would be an artificially-low partial sum (censored), not a true 12m total.
             if ($cutoff->copy()->addMonths(self::LABEL_WINDOW_MONTHS)->gt($lastInvoiceAt)) {
                 continue;
             }
@@ -117,8 +103,6 @@ class CustomerRevenueDataset {
         $trailing12m = $before->filter(fn ($i) => Carbon::parse($i->created_at)->gt($cutoff->copy()->subMonths(12)));
         $trailing24m = $before->filter(fn ($i) => Carbon::parse($i->created_at)->gt($cutoff->copy()->subMonths(24)));
 
-        // "Prior year" (months 13-24 before cutoff) vs trailing 12m — a growth/decline
-        // signal the persistence baseline can't see (it only ever looks at trailing 12m).
         $trailing12mRevenue = CustomerSnapshots::sumNet($trailing12m);
         $prior12to24Revenue = CustomerSnapshots::sumNet($trailing24m) - $trailing12mRevenue;
         $revenueGrowthRatio = $prior12to24Revenue > 0 ? $trailing12mRevenue / $prior12to24Revenue : null;
@@ -145,9 +129,6 @@ class CustomerRevenueDataset {
             'invoice_count_to_date'           => $before->count(),
             'invoice_count_trailing_12m'      => $trailing12m->count(),
             'avg_invoice_net_lifetime'        => $before->count() > 0 ? CustomerSnapshots::sumNet($before) / $before->count() : 0.0,
-            // Carbon's diffInDays($other) returns $other - $this (signed) — first/last
-            // invoice dates are BEFORE the cutoff, so the call order must put the cutoff
-            // second or this silently returns negative "tenure"/"days since" values.
             'tenure_days'                     => $firstInvoiceAt->diffInDays($cutoff),
             'days_since_last_invoice'         => $lastBeforeAt->diffInDays($cutoff),
             'distinct_product_count_to_date'  => $productIds->count(),
@@ -157,8 +138,6 @@ class CustomerRevenueDataset {
     }
 
     /**
-     * extractRowsForCompany() across a whole collection of eligible companies.
-     *
      * @param Collection<int, Company> $companies
      * @return Collection<int, array<string, mixed>>
      */
@@ -170,7 +149,6 @@ class CustomerRevenueDataset {
         return collect($rows);
     }
 
-    /** Right-skewed revenue → log-transform for the regression target (and the trailing-revenue features would benefit too, but kept raw for baseline comparability). */
     public static function logLabel(float $revenue): float {
         return log(max(0.0, $revenue) + 1);
     }

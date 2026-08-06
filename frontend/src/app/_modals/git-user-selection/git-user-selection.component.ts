@@ -1,7 +1,7 @@
 ﻿import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { GitLabPlugin } from '@models/http/plugin.gitlab';
+import { GitLabPlugin } from '@models/http/plugins/plugin.gitlab';
 import { User } from '@models/user/user.model';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 

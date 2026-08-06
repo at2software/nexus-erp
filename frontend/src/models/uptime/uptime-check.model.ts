@@ -1,12 +1,10 @@
-import { Serializable } from '../serializable';
-import { UptimeMonitorService } from './uptime-monitor.service';
-import { Model } from '@constants/type-discriminators';
+import { Serializable } from '@models/_core/serializable';
+import { Model } from '@constants/model/type-discriminators';
 
 @Model('UptimeCheck')
 export class UptimeCheck extends Serializable {
     static API_PATH = (): string => 'uptime_checks';
 
-    SERVICE = UptimeMonitorService;
     uptime_monitor_id!: string;
     checked_at!: string;
     status!: 'up' | 'down' | 'degraded';

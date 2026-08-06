@@ -7,30 +7,20 @@ import { notifyHttpError, saveBlobResponse } from './file-download';
 
 export type T_METHOD = 'get' | 'delete' | 'put' | 'post' | 'patch';
 
-/** Converts one raw JSON item into its typed representation. */
 export type Deserializer<T = unknown> = (json: unknown) => T;
 
-/**
- * A fully resolved request. `query` is appended to the URL, `body` is sent as
- * the request body, and `deserialize` (if given) is applied to each item of the
- * response: to every element of an array response, to every element of a
- * paginated `{ data: [...] }` envelope, or to a single object response.
- */
 export interface RequestSpec {
     method: T_METHOD;
     url: string;
     query?: unknown;
     body?: unknown;
     deserialize?: Deserializer;
+    collection?: boolean;
 }
 
 const MUTATING: ReadonlySet<T_METHOD> = new Set<T_METHOD>(['put', 'post', 'patch', 'delete']);
 const LAST_MODIFIED_LIMIT = 200;
 
-/**
- * Bounded LRU map for last-modified headers, scoped to the current page lifetime.
- * Replaces the previously unbounded sessionStorage usage.
- */
 class LruMap<K, V> extends Map<K, V> {
     constructor(private readonly limit: number) {
         super();
@@ -54,35 +44,23 @@ class LruMap<K, V> extends Map<K, V> {
     }
 }
 
-/**
- * HTTP transport layer: URL/query building, conditional requests via
- * If-Modified-Since, mutation notifications, error toasts and response
- * deserialization. Typed resource access lives in `NexusHttpService`;
- * file downloads in `file-download.ts`.
- *
- * For all verbs, `params` is the query string on get/delete and the request
- * body on put/post/patch. A per-item mapping arrow function may be passed as
- * third argument (used by the plugin clients, e.g. `this.get(url, {}, this.toTask)`).
- */
 export abstract class HttpWrapper {
     _baseUrl: string = '';
     _http!: HttpClient;
 
-    /** Per-process cache; bounded to avoid memory leaks. */
     static readonly #lastModified = new LruMap<string, string>(LAST_MODIFIED_LIMIT);
 
     baseUrl = (): string => this._baseUrl;
     http = (): HttpClient => this._http;
 
-    get<T=unknown>(url: string, params?: Dictionary, ...args: Deserializer[]): Observable<T> { return this.request({ method: 'get', url, query: params, deserialize: mapperOf(args) }); }
-    aget<T = unknown>(url: string, params?: Dictionary, ...args: Deserializer[]): Observable<T[]> { return this.request({ method: 'get', url, query: params, deserialize: mapperOf(args) }); }
-    delete<T=unknown>(url: string, params?: Dictionary, ...args: Deserializer[]): Observable<T> { return this.request({ method: 'delete', url, query: params, deserialize: mapperOf(args) }); }
-    put<T=unknown>(url: string, params?: Dictionary, ...args: Deserializer[]): Observable<T> { return this.request({ method: 'put', url, body: params, deserialize: mapperOf(args) }); }
-    post<T=unknown>(url: string, params?: Dictionary, ...args: Deserializer[]): Observable<T> { return this.request({ method: 'post', url, body: params, deserialize: mapperOf(args) }); }
-    patch<T=unknown>(url: string, params?: Dictionary, ...args: Deserializer[]): Observable<T> { return this.request({ method: 'patch', url, body: params, deserialize: mapperOf(args) }); }
+    get<T=unknown>(url: string, params?: Dictionary, ...args: Deserializer<T>[]): Observable<T> { return this.request({ method: 'get', url, query: params, deserialize: mapperOf(args) }); }
+    aget<T = unknown>(url: string, params?: Dictionary, ...args: Deserializer<T>[]): Observable<T[]> { return this.request({ method: 'get', url, query: params, deserialize: mapperOf(args), collection: true }); }
+    delete<T=unknown>(url: string, params?: Dictionary, ...args: Deserializer<T>[]): Observable<T> { return this.request({ method: 'delete', url, query: params, deserialize: mapperOf(args) }); }
+    put<T=unknown>(url: string, params?: Dictionary, ...args: Deserializer<T>[]): Observable<T> { return this.request({ method: 'put', url, body: params, deserialize: mapperOf(args) }); }
+    post<T=unknown>(url: string, params?: Dictionary, ...args: Deserializer<T>[]): Observable<T> { return this.request({ method: 'post', url, body: params, deserialize: mapperOf(args) }); }
+    patch<T=unknown>(url: string, params?: Dictionary, ...args: Deserializer<T>[]): Observable<T> { return this.request({ method: 'patch', url, body: params, deserialize: mapperOf(args) }); }
     upload<T=unknown>(url: string, data: FormData): Observable<T> { return this.request({ method: 'post', url, body: data }); }
 
-    /** Follows an absolute pagination URL (e.g. Laravel's `next_page_url`). */
     next = <T>(url: string): Observable<T> => this.request<T>({ method: 'get', url });
 
     protected request = <T = unknown>(spec: RequestSpec): Observable<T> => {
@@ -99,7 +77,10 @@ export abstract class HttpWrapper {
             .pipe(
                 tap((response) => this.#rememberLastModified(response, finalUrl)),
                 tap(() => this.#notifyMutation(spec.method, spec.url)),
-                map((response) => deserializeBody(response.body, spec.deserialize) as T),
+                map((response) => {
+                    const body = deserializeBody(response.body, spec.deserialize);
+                    return (spec.collection ? unwrapCollection(body) : body) as T;
+                }),
                 catchError((err) => {
                     notifyHttpError(err);
                     return throwError(() => err);
@@ -157,9 +138,14 @@ export abstract class HttpWrapper {
     }
 }
 
-/** Plugin clients pass per-item mapping arrow functions as third verb argument. */
 const mapperOf = (args: Deserializer[]): Deserializer | undefined =>
     args.length && typeof args[0] === 'function' && !args[0].prototype ? (item: unknown) => args[0](item) : undefined;
+
+const unwrapCollection = (body: unknown): unknown => {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return body;
+    const data = (body as Dictionary<unknown>)['data'];
+    return Array.isArray(data) ? data : body;
+};
 
 const deserializeBody = (result: unknown, deserialize?: Deserializer): unknown => {
     if (!result || !deserialize) return result;

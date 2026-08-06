@@ -7,12 +7,10 @@ use App\Services\WorkingTimeService;
 
 class TeamMonitorController extends Controller {
     public function index() {
-        // Force fresh database query with no caching
         $users = User::whereHas('activeEmployments')
             ->with(['current_focus', 'vacations', 'activeVacations', 'active_sick_notes'])
             ->get()
             ->each(function ($user) {
-                // Force refresh of computed attributes by clearing cache
                 $user->unsetRelation('current_focus');
                 $user->unsetRelation('activeVacations');
                 $user->unsetRelation('active_sick_notes');
@@ -21,7 +19,6 @@ class TeamMonitorController extends Controller {
             ->append(['availability_status', 'is_sick', 'is_on_vacation']);
 
         foreach ($users as &$user) {
-            // Use User model method for focus display data
             $focusData          = $user->getFocusDisplayData();
             $user->focus_name   = $focusData['focus_name'];
             $user->focus_color  = $focusData['focus_color'];

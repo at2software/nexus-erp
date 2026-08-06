@@ -1,10 +1,10 @@
-﻿import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+﻿import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { BaseWidgetComponent } from '../base.widget.component';
 import { UptimeMonitor } from '@models/uptime/uptime-monitor.model';
 import { UptimeMonitorService } from '@models/uptime/uptime-monitor.service';
 import { WIDGET_SHARED } from '../widgets.shared';
 import { EChartsRangeAreaOptions } from '@charts/echarts-presets';
-import { dayjs } from '@constants/dates';
+import { dayjs } from '@constants/date/dates';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -14,28 +14,13 @@ import { dayjs } from '@constants/dates';
     imports: [...WIDGET_SHARED],
 })
 export class WidgetUptimeMonitorsComponent extends BaseWidgetComponent {
-    monitors = signal<UptimeMonitor[]>([]);
-    chartOptions = signal<any>({});
     #service = inject(UptimeMonitorService);
 
-    reload() {
-        this.#service.index().subscribe({
-            next: (monitors) => {
-                this.monitors.set(monitors);
-                this.#calculateStats();
-            },
-            error: (err) => console.error('Failed to load monitors:', err),
-        });
-    }
+    readonly #monitors = this.optionsResource(() => this.#service.index());
+    readonly monitors = computed<UptimeMonitor[]>(() => this.#monitors.value() ?? []);
+    override value = this.headline(this.#monitors, () => Math.round((this.monitors().filter((m) => m.last_status === 'up').length / (this.monitors().length || 1)) * 100));
 
-    #calculateStats() {
-        const monitors = this.monitors();
-        const upCount = monitors.filter((m) => m.last_status === 'up').length;
-        this.value.set(Math.round((upCount / (monitors.length || 1)) * 100));
-        this.#initChartOptions();
-    }
-
-    #initChartOptions() {
+    readonly chartOptions = computed<any>(() => {
         const now = dayjs();
         const last30Days = Array.from({ length: 30 }, (_, i) => ({
             date: now.subtract(29 - i, 'days').format('YYYY-MM-DD'),
@@ -50,7 +35,7 @@ export class WidgetUptimeMonitorsComponent extends BaseWidgetComponent {
             });
         });
 
-        this.chartOptions.set({
+        return {
             ...EChartsRangeAreaOptions,
             chart: { height: 120 },
             series: [{
@@ -61,6 +46,6 @@ export class WidgetUptimeMonitorsComponent extends BaseWidgetComponent {
                 lineStyle: { width: 2, color: '#28a745' },
                 areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(40, 167, 69, 0.3)' }, { offset: 1, color: 'rgba(40, 167, 69, 0.05)' }] } },
             }],
-        });
-    }
+        };
+    });
 }

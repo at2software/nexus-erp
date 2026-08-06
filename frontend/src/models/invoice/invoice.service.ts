@@ -1,25 +1,27 @@
-import { Injectable } from '@angular/core';
+import { Dictionary } from '@constants/constants';
+import { Service } from '@angular/core';
 import { map } from 'rxjs';
 import { PdfCreationType } from '@enums/PdfCreationType';
 import { Invoice } from '@models/invoice/invoice.model';
 import { NexusHttpService } from '../http/http.nexus';
 import { Expense } from '@models/expense/expense.model';
-import { CustomerStatsResponse, LiquidityResponse, TimeValuePoint } from '@models/api-response';
+import { CustomerStatsDto, LiquidityDto, TimeValuePointDto } from '@models/_core/api-response';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class InvoiceService extends NexusHttpService<Invoice> {
     public apiPath = 'invoices';
+    indexPaginated = (filters?: Dictionary) => this.paginate(this.apiPath, filters);
     override readonly model = Invoice;
 
     showLastPayments = () => this.aget('invoices/last-payments');
     cancel = (invoice: Invoice) => this.post(`invoices/${invoice.id}/cancel`);
 
     makePdf = (path: string, type: PdfCreationType = PdfCreationType.Preview) => this.get(path + '/pdf', { type: type });
-    showCashFlow = () => this.aget('invoices/cashflow', {}, Expense);
+    showCashFlow = () => this.paginate('invoices/cashflow', {}, Expense);
 
     getCurrentNumber = () => this.get('invoices/current_no', {}, Object).pipe(map((r) => r.value));
-    getCustomerStats = () => this.get<CustomerStatsResponse>('companies/stats');
+    getCustomerStats = () => this.get<CustomerStatsDto>('companies/stats');
     getMonthlyRevenueRanges = () => this.get('invoices/monthly-revenue-ranges', {}, Object);
-    getMonthlySpiralRevenue = () => this.aget<TimeValuePoint>('invoices/monthly-spiral-revenue');
-    getLiquidity = () => this.get<LiquidityResponse>('invoices/liquidity');
+    getMonthlySpiralRevenue = () => this.aget<TimeValuePointDto>('invoices/monthly-spiral-revenue');
+    getLiquidity = () => this.get<LiquidityDto>('invoices/liquidity');
 }

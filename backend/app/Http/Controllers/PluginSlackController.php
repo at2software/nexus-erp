@@ -115,15 +115,12 @@ class PluginSlackController extends PluginChatController {
         return config('services.slack.'.strtolower($key)) ?: null;
     }
     public function updatePosition(string $position, string $userId): void {
-        // Slack doesn't have a direct position concept, could be implemented via profile fields
-        // For now, we'll leave this as a no-op
     }
     public function updateStatus(string $status, string $userId): void {
         $payload = ['user' => $userId, 'status_text' => $status];
         $this->post('users.profile.set', $payload);
     }
     public function deletePost(string $id): void {
-        // Slack requires channel + ts to delete; without channel context, skip silently
     }
     public function getChannelPosts(string $channelId, int $page = 0, int $perPage = 200): array {
         return [];

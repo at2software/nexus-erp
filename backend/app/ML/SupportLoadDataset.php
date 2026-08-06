@@ -39,7 +39,6 @@ use Illuminate\Support\Collection;
  * where the LABEL signal actually lives.
  */
 class SupportLoadDataset {
-    /** Feature names, in extraction order. */
     public const FEATURES = [
         'trailing_3m_support_hours',
         'trailing_6m_support_hours',
@@ -55,22 +54,12 @@ class SupportLoadDataset {
 
     public const LABEL = 'support_hours_next_window';
 
-    /**
-     * How many months of future support foci define the label window — "next
-     * quarter", matching the customer-dashboard/support-widget UI copy. The
-     * baseline (persistence) predictor uses the SAME window length trailing,
-     * so baseline vs label is an apples-to-apples comparison.
-     */
     public const WINDOW_MONTHS = 3;
 
     /** Minimum pre-cutoff support foci for a snapshot to be usable (mirrors CustomerRevenueDataset::MIN_PRIOR_INVOICES). */
     public const MIN_PRIOR_SUPPORT_FOCI = 2;
 
     /**
-     * Eligible companies: active, not the own (ME_ID) company, with at least
-     * MIN_PRIOR_SUPPORT_FOCI support foci (otherwise no snapshot could ever
-     * have enough pre-cutoff history).
-     *
      * @return Collection<int, Company>
      */
     public static function eligibleCompanies(): Collection {
@@ -81,10 +70,6 @@ class SupportLoadDataset {
     }
 
     /**
-     * All valid snapshot rows for one company: one row per candidate cutoff
-     * that has both enough pre-cutoff support-focus history AND a full
-     * post-cutoff label window still present in the data (uncensored).
-     *
      * @return array<int, array<string, mixed>>
      */
     public static function extractRowsForCompany(Company $company): array {
@@ -105,10 +90,6 @@ class SupportLoadDataset {
                 continue;
             }
 
-            // The label window must be FULLY present in the data — otherwise the
-            // label would be an artificially-low partial sum (censored), not a
-            // true next-WINDOW_MONTHS total. Same guard as CustomerRevenueDataset.
-            // addMonthsNoOverflow, not addMonths — see fociInWindow()'s docblock.
             if ($cutoff->copy()->addMonthsNoOverflow(self::WINDOW_MONTHS)->gt($lastFocusAt)) {
                 continue;
             }
@@ -130,9 +111,6 @@ class SupportLoadDataset {
         $before      = CustomerSnapshots::fociBefore($foci, $cutoff);
         $labelWindow = CustomerSnapshots::fociInWindow($foci, $cutoff, self::WINDOW_MONTHS);
 
-        // subMonthsNoOverflow, not subMonths — cutoffs are always end-of-month, and plain
-        // subMonths on a day-31 cutoff overflows PAST a shorter target month (e.g. Mar 31
-        // minus 1 month lands on Mar 3, not Feb 28) instead of clamping to its last day.
         $trailing3m  = $before->filter(fn ($f) => Carbon::parse($f->started_at)->gt($cutoff->copy()->subMonthsNoOverflow(3)));
         $trailing6m  = $before->filter(fn ($f) => Carbon::parse($f->started_at)->gt($cutoff->copy()->subMonthsNoOverflow(6)));
         $trailing12m = $before->filter(fn ($f) => Carbon::parse($f->started_at)->gt($cutoff->copy()->subMonthsNoOverflow(12)));
@@ -142,9 +120,6 @@ class SupportLoadDataset {
 
         $firstFocusAt   = Carbon::parse($foci->first()->started_at);
         $firstInvoiceAt = $invoices->isNotEmpty() ? Carbon::parse($invoices->first()->created_at) : null;
-        // Tenure = customer relationship start, not just "support relationship" start —
-        // the earlier of the first invoice and the first support focus, consistent with
-        // CustomerRevenueDataset's invoice-only tenure_days for customers who also buy.
         $tenureStart = ($firstInvoiceAt && $firstInvoiceAt->lt($firstFocusAt)) ? $firstInvoiceAt : $firstFocusAt;
 
         $lastBeforeFocusAt = Carbon::parse($before->last()->started_at);
@@ -156,19 +131,11 @@ class SupportLoadDataset {
             'trailing_6m_support_hours'          => CustomerSnapshots::sumDuration($trailing6m),
             'trailing_12m_support_hours'         => CustomerSnapshots::sumDuration($trailing12m),
             'lifetime_support_hours'             => CustomerSnapshots::sumDuration($before),
-            // "Distinct tickets", not raw time-entry count: multiple foci logged against the
-            // SAME invoice_item_id are one ticket; entries not yet linked to an item (still
-            // unbilled/uncategorized) each count as their own ticket.
             'support_ticket_count_trailing_12m'  => $trailing12m->map(fn ($f) => $f->invoice_item_id ?? "focus_{$f->id}")->unique()->count(),
             'active_project_count_at_cutoff'     => self::activeProjectCountAtCutoff($projects, $cutoff),
             'trailing_12m_revenue'               => CustomerSnapshots::sumNet($invoicesTrailing12m),
-            // Carbon's diffInDays($other) returns $other - $this (signed) — tenureStart/
-            // lastBeforeFocusAt are BEFORE the cutoff, so the call order must put the cutoff
-            // second or this silently returns negative values (see CustomerRevenueDataset).
             'tenure_days'                        => $tenureStart->diffInDays($cutoff),
             'days_since_last_support'            => $lastBeforeFocusAt->diffInDays($cutoff),
-            // accepts_support is a live company flag, not historized — this reads its CURRENT
-            // value regardless of cutoff (a known limitation, documented in support-load-plan.md).
             'accepts_support'                    => $company->accepts_support ? 1.0 : 0.0,
             self::LABEL                          => CustomerSnapshots::sumDuration($labelWindow),
         ];
@@ -194,8 +161,6 @@ class SupportLoadDataset {
     }
 
     /**
-     * extractRowsForCompany() across a whole collection of eligible companies.
-     *
      * @param Collection<int, Company> $companies
      * @return Collection<int, array<string, mixed>>
      */
@@ -207,7 +172,6 @@ class SupportLoadDataset {
         return collect($rows);
     }
 
-    /** Right-skewed support hours → log-transform for the regression target. */
     public static function logLabel(float $hours): float {
         return log(max(0.0, $hours) + 1);
     }

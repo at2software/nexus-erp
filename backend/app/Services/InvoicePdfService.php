@@ -102,7 +102,7 @@ class InvoicePdfService {
     ): string {
         $headers = [];
         if ($project) {
-            $headers[] = Document::pdfBlockRow('Projekt', $project->name);
+            $headers[] = Document::pdfBlockRow(__('pdf.project', [], $company->getLanguage()), $project->name);
             if ($project->po_number) {
                 $headers[] = Document::pdfBlockRow('', $project->po_number);
             }
@@ -119,8 +119,6 @@ class InvoicePdfService {
         $pdf       = Pdf::loadHTML($template);
         $pdfString = $pdf->stream()->getContent();
 
-        // A draft is a non-binding preview: never embed a ZUGFeRD e-invoice (it would
-        // carry the next real invoice number as if it were issued).
         if ($draft) {
             return $pdfString;
         }

@@ -5,11 +5,10 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin, map, switchMap } from 'rxjs';
 import { GlobalService } from '@models/global.service';
 import { CompanyService } from '@models/company/company.service';
-import { ParamService } from '@models/param.service';
+import { Param } from '@models/param/param.model';
 import { UserService } from '@models/user/user.service';
 import { RoleService } from '@models/user/role.service';
 import { typeahead } from '@constants/constants';
-import { NxGlobal } from '@app/nx/nx.global';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
 import { User } from '@models/user/user.model';
 import { Company } from '@models/company/company.model';
@@ -32,33 +31,27 @@ interface AddedUser {
 export class OnboardingWizardComponent {
     global = inject(GlobalService);
     #companyService = inject(CompanyService);
-    #paramService = inject(ParamService);
     #userService = inject(UserService);
     #roleService = inject(RoleService);
     #cdr = inject(ChangeDetectorRef);
 
     #adminRoleId: number | null = null;
 
-    // visibility
     visible = signal(false);
     completed = signal(false);
 
-    // step: 0=company, 1=localization, 2=team, 3=success
     step = signal(0);
     loading = signal(false);
 
     needsCompany = signal(false);
     needsLocalization = signal(false);
 
-    // company step
     companyName = '';
 
-    // localization step
     language = '';
     country = '';
     currency = '';
 
-    // team step
     newUserName = signal('');
     newUserEmail = signal('');
     newUserPassword = signal('');
@@ -71,7 +64,7 @@ export class OnboardingWizardComponent {
     currencies: { key: string; name: string }[] = [];
 
     constructor() {
-        Promise.all([import('src/constants/iso0639-1'), import('src/constants/iso3166'), import('src/constants/iso4217')]).then(([lang, country, currency]) => {
+        Promise.all([import('@constants/iso/iso0639-1'), import('@constants/iso/iso3166'), import('@constants/iso/iso4217')]).then(([lang, country, currency]) => {
             this.languages = typeahead(lang.LANGUAGE_CODES, 'alpha2', 'English');
             this.countries = typeahead(country.COUNTRY_CODES, 'alpha-2', 'name');
             this.currencies = typeahead(currency.CURRENCY_CODES, 'AlphabeticCode', 'Currency');
@@ -130,11 +123,11 @@ export class OnboardingWizardComponent {
         this.loading.set(true);
         this.#companyService
             .create(this.companyName.trim())
-            .pipe(switchMap((company: Company) => this.#paramService.update('params/ME_ID', { value: company.id }).pipe(map(() => company))))
+            .pipe(switchMap((company: Company) => Param.write('params/ME_ID', company.id).pipe(map(() => company))))
             .subscribe({
                 next: (company: Company) => {
                     this.global.settings['ME_ID'] = company.id;
-                    NxGlobal.ME_ID = company.id;
+                    this.global.me_id = company.id;
                     this.loading.set(false);
                     this.language = this.global.setting('SYS_LANGUAGE') || '';
                     this.country = this.global.setting('SYS_COUNTRY') || '';
@@ -150,7 +143,7 @@ export class OnboardingWizardComponent {
     saveLocalization() {
         if (!this.language || !this.country || !this.currency || this.loading()) return;
         this.loading.set(true);
-        forkJoin([this.#paramService.update('params/SYS_LANGUAGE', { value: this.language }), this.#paramService.update('params/SYS_COUNTRY', { value: this.country }), this.#paramService.update('params/SYS_CURRENCY', { value: this.currency })]).subscribe({
+        forkJoin([Param.write('params/SYS_LANGUAGE', this.language), Param.write('params/SYS_COUNTRY', this.country), Param.write('params/SYS_CURRENCY', this.currency)]).subscribe({
             next: () => {
                 this.global.settings['SYS_LANGUAGE'] = this.language;
                 this.global.settings['SYS_COUNTRY'] = this.country;

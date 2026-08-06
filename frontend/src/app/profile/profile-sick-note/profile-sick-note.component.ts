@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormField, form, required, schema, submit } from '@angular/forms/signals';
 import { NgbDateAdapter } from '@ng-bootstrap/ng-bootstrap';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { DaterangepickerDirective, NgxDaterangepickerMd } from 'ngx-daterangepicker-material';
@@ -10,34 +10,49 @@ import { VacationService } from '@models/vacation/vacation.service';
 
 type TimePeriod = NonNullable<DaterangepickerDirective['value']>;
 
+interface SickNoteForm {
+    period: TimePeriod | null;
+    hasESickNote: boolean;
+}
+
+const EMPTY_SICK_NOTE: SickNoteForm = { period: null, hasESickNote: false };
+
+const sickNoteSchema = schema<SickNoteForm>((sickNote) => {
+    required(sickNote.period, { message: $localize`:@@i18n.profile.sickPeriodRequired:please pick the period you were sick` });
+});
+
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'profile-sick-note',
     templateUrl: './profile-sick-note.component.html',
     providers: [{ provide: NgbDateAdapter, useClass: NgbDateCarbonAdapter }],
-    imports: [EmptyStateComponent, FormsModule, NgxDaterangepickerMd],
+    imports: [EmptyStateComponent, FormField, NgxDaterangepickerMd],
 })
 export class ProfileSickNoteComponent {
-    sickPeriod: TimePeriod | null = null;
-    hasESickNote = signal(false);
-    formHasBeenSent = signal(false);
-
     global = inject(GlobalService);
     #vacationService = inject(VacationService);
 
+    #model = signal<SickNoteForm>({ ...EMPTY_SICK_NOTE });
+    readonly sickNote = form(this.#model, sickNoteSchema);
+
+    formHasBeenSent = signal(false);
+
     onSendSickNote() {
-        const payload = Vacation.fromJson({
-            started_at: this.sickPeriod?.startDate?.format?.('YYYY-MM-DD') ?? this.sickPeriod?.startDate,
-            ended_at: this.sickPeriod?.endDate?.format?.('YYYY-MM-DD') ?? this.sickPeriod?.endDate,
-            state: Vacation.STATE_SICK,
-            comment: this.hasESickNote() ? $localize`:@@i18n.profile.eSickNote:electronic sick note` : $localize`:@@i18n.profile.pSickNote:printed sick note`,
+        void submit(this.sickNote, async (field) => {
+            const { period, hasESickNote } = field().value();
+            const payload = Vacation.fromJson({
+                started_at: period?.startDate?.format?.('YYYY-MM-DD') ?? period?.startDate,
+                ended_at: period?.endDate?.format?.('YYYY-MM-DD') ?? period?.endDate,
+                state: Vacation.STATE_SICK,
+                comment: hasESickNote ? $localize`:@@i18n.profile.eSickNote:electronic sick note` : $localize`:@@i18n.profile.pSickNote:printed sick note`,
+            });
+            this.formHasBeenSent.set(true);
+            this.#vacationService.storeSickNote(payload).subscribe();
         });
-        this.formHasBeenSent.set(true);
-        this.#vacationService.storeSickNote(payload).subscribe();
     }
+
     onResetForm() {
-        this.sickPeriod = null;
-        this.hasESickNote.set(false);
+        this.sickNote().reset({ ...EMPTY_SICK_NOTE });
         this.formHasBeenSent.set(false);
     }
 }

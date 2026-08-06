@@ -40,9 +40,9 @@
             @if (_connections.length) {
             <network-chart class="card chart" [root]="_myCompany" [data]="_connections" [focus]="_myCompany" (nodeSelected)="onNodeSelected($event)"></network-chart>
             } @if (_selectedCompany) {
-            <div class="card mt-3" (click)="navigateToCompany()" tabindex="0" (keydown.enter)="navigateToCompany()" style="cursor: pointer">
+            <div class="card mt-3 cursor-pointer" (click)="navigateToCompany()" tabindex="0" (keydown.enter)="navigateToCompany()">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <img [src]="_selectedCompany.icon" [alt]="_selectedCompany.getName()" style="width: 48px; height: 48px; object-fit: contain" />
+                    <img [src]="_selectedCompany.getAvatar()" [alt]="_selectedCompany.getName()" style="width: 48px; height: 48px; object-fit: contain" />
                     <div class="flex-fill text-truncate">{{_selectedCompany.getName()}}</div>
                     <i class="text-primary">chevron_right</i>
                 </div>

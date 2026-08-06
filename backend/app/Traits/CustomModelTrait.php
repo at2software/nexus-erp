@@ -16,8 +16,6 @@ trait CustomModelTrait {
     use HasParams;
 
     /**
-     * Summary of toPoly
-     *
      * @param mixed $key name of the polymorphic column ({key}_id and {key}_type)
      * @return array search array for polymorphic relations
      */
@@ -62,12 +60,6 @@ trait CustomModelTrait {
     }
 
     // ********** CRUD Role Access *********** //
-    /**
-     * Centralized role-based CRUD access map.
-     * 'admin' always has full access and is handled separately.
-     * Models not listed use the 'standard' default rules.
-     * Delete is always admin-only unless explicitly listed per-model.
-     */
     private static array $modelRoleAccess = [
         // === PROJECTS ===
         'Project'                => ['create' => ['project_manager'], 'read' => ['user', 'project_manager'], 'update' => ['project_manager'], 'delete' => []],
@@ -132,10 +124,6 @@ trait CustomModelTrait {
         'delete' => [],
     ];
 
-    /**
-     * applies values to model from Json request body but does NOT save automatically
-     * also checks for virtual colums that must not be written
-     */
     public function apply(Request $request, array $ignore = []) {
         $obj = $this->applyObject($request->all(), $ignore);
         foreach ($this->getMutators() as $_) {
@@ -154,7 +142,6 @@ trait CustomModelTrait {
             if (is_array($value) || is_object($value)) {
                 continue;
             }
-            // Honour $fillable when the model declares it
             if (count($fillable) && ! in_array($key, $fillable) && ! in_array($key, $this->getMutators())) {
                 continue;
             }
@@ -181,9 +168,6 @@ trait CustomModelTrait {
         return $this;
     }
 
-    /**
-     * applies Request data, saves and returns the updated model
-     */
     public function applyAndSave(Request $request, array $ignore = []) {
         $this->apply($request, $ignore);
         $this->save();

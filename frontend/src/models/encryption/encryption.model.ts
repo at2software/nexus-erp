@@ -1,35 +1,35 @@
-import { NxAction } from '@app/nx/nx.actions';
+import { NxAction } from '@models/_core/nx.actions';
 import { Dictionary } from '@constants/constants';
-import { Serializable } from '../serializable';
-import { NexusHttpService } from '@models/http/http.nexus';
+import { Serializable } from '@models/_core/serializable';
 import * as forge from 'node-forge';
-import { NxGlobal } from '@app/nx/nx.global';
+import { nx } from '@models/_core/nx-bridge';
 import { getEncryptisingleActionResolveds } from './encryption.actions';
-import { Model } from '@constants/type-discriminators';
+import { Model } from '@constants/model/type-discriminators';
 
 @Model('Encryption')
 export class Encryption extends Serializable {
     static API_PATH = (): string => 'encryptions';
-    SERVICE = NexusHttpService<any>;
 
     key: string = '';
     my_id?: string;
 
-    /** Encrypted string or plain object stored from the API / direct assignment. */
     #encryptedValue: string | Dictionary<unknown> | undefined;
-    /** Returns the decrypted value on demand — no lifecycle hook needed. */
      
+    // TODO(#614): the decrypted shape is EncryptionValueDto, but this getter also returns
+    // undefined and ~89 call sites assume it never does. Typing it honestly is its own change.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     get value(): any {
-        if (!this.#encryptedValue || !NxGlobal.global.user?.keyPair) return undefined;
+        const user = nx().global.user;
+        if (!this.#encryptedValue || !user?.keyPair) return undefined;
         try {
-            return JSON.parse(NxGlobal.global.user.keyPair.privateKey.decrypt(this.#encryptedValue as string));
+            return JSON.parse(user.keyPair.privateKey.decrypt(this.#encryptedValue as string));
         } catch {
             return undefined;
         }
     }
     set value(v: string | Dictionary<unknown>) { this.#encryptedValue = v; }
 
-    actions: NxAction[] = getEncryptisingleActionResolveds(this);
+    protected override buildActions(): NxAction[] { return getEncryptisingleActionResolveds(this) }
 
     getMyIdKey = () => 'MY_' + this.key + '_' + this.value.url.replace(/(^https?:\/\/|\/|\\)/i, '');
 
@@ -38,17 +38,16 @@ export class Encryption extends Serializable {
         return this;
     }
 
-    // ************** parent overrides **************
     override dirtyFields(): Dictionary {
         const changes = super.dirtyFields();
-        if ('value' in changes && NxGlobal.global.user!.keyPair) {
-            changes['value'] = NxGlobal.global.user!.keyPair.publicKey.encrypt(JSON.stringify(changes['value']));
+        const user = nx().global.user;
+        if ('value' in changes && user?.keyPair) {
+            changes['value'] = user.keyPair.publicKey.encrypt(JSON.stringify(changes['value']));
         }
         return changes;
     }
     protected updateMyself = (x: Dictionary) => this.loadJson(x);
 
-    // New RSA encryption - async with callback for non-blocking generation
     static createRsaKeypair = (): Promise<forge.pki.rsa.KeyPair> => {
         return new Promise((resolve, reject) => {
             forge.pki.rsa.generateKeyPair({ bits: 4096, workers: -1 }, (err, keypair) => {

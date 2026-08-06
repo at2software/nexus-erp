@@ -14,11 +14,11 @@
                         <div class="form-label" i18n="@@i18n.marketing.selectInitiative">select initiative</div>
                         <select class="form-select" [ngModel]="selectedInitiativeId()" (ngModelChange)="selectedInitiativeId.set($event)">
                             <option value="" i18n="@@i18n.common.pleaseSelect">please select...</option>
-                            @for (initiative of initiatives; track initiative.id) {
+                            @for (initiative of initiatives(); track initiative.id) {
                                 <option [value]="initiative.id">{{ initiative.name }}</option>
                             }
                         </select>
-                        @if (initiatives.length === 0) {
+                        @if (initiatives().length === 0) {
                             <div class="form-text text-muted" i18n="@@i18n.marketing.noActiveInitiatives">no active initiatives available</div>
                         }
                     </div>
@@ -32,7 +32,7 @@
                                 <div class="list-group">
                                     @for (contact of contacts; track contact.id) {
                                         <button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-2" [class.active]="selectedContactIds().has(contact.id)" (click)="toggleContact(contact.id)">
-                                            <avatar [object]="contact" size="32"></avatar>
+                                            <avatar [object]="contact" size="md"></avatar>
                                             <span class="flex-fill text-truncate">{{ contact.getName() }}</span>
                                             @if (selectedContactIds().has(contact.id)) {
                                                 <i class="text-primary">check</i>

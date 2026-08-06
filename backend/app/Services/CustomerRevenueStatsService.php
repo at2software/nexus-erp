@@ -27,7 +27,6 @@ class CustomerRevenueStatsService {
 
         $typeValues = array_map(fn ($e) => $e->value, InvoiceItemType::Total);
 
-        // Single batch query for ALL invoice items across all companies — lightweight stdClass rows
         $allItems = DB::table('invoice_items')
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
             ->whereIn('invoices.company_id', $companyIds)
@@ -43,22 +42,18 @@ class CustomerRevenueStatsService {
             )
             ->get();
 
-        // Extract product source IDs before grouping to avoid a flatten pass later
         $allProductSourceIds = $allItems->pluck('product_source_id')->filter()->unique()->values();
         $allItemsByCompany   = $allItems->groupBy('company_id');
         unset($allItems); // free memory
 
-        // Load all product groups once and build an in-memory root-group map (group_id → root group)
         $allGroups    = ProductGroup::query()->select('id', 'product_group_id', 'name', 'color')->get()->keyBy('id');
         $rootGroupMap = [];
         foreach ($allGroups as $groupId => $group) {
             $rootGroupMap[(int)$groupId] = self::resolveRootGroup((int)$groupId, $allGroups);
         }
 
-        // Load product → group mapping for all referenced products in one query
         $productGroupIdBySourceId = DB::table('products')->whereIn('id', $allProductSourceIds)->pluck('product_group_id', 'id');
 
-        // Batch aggregates with GROUP BY instead of per-company correlated subqueries
         $projectCountByCompany  = DB::table('projects')->whereIn('company_id', $companyIds)->groupBy('company_id')
             ->selectRaw('company_id, COUNT(*) as cnt')->pluck('cnt', 'company_id');
         $lastInvoiceAtByCompany = DB::table('invoices')->whereIn('company_id', $companyIds)->groupBy('company_id')
@@ -88,7 +83,6 @@ class CustomerRevenueStatsService {
                 );
             }
 
-            // Skip company if the single requested axis is null
             if ($xAxis && $xValues[$xAxis] === null) {
                 continue;
             }
@@ -105,7 +99,6 @@ class CustomerRevenueStatsService {
                 'initial_group_color' => $revenue['initial_group_color'],
             ];
 
-            // Single axis: flat "x" key. All axes: keyed object.
             $point['x'] = $xAxis ? $xValues[$xAxis] : $xValues;
 
             $points[] = $point;
@@ -117,9 +110,6 @@ class CustomerRevenueStatsService {
         ];
     }
 
-    /**
-     * Walk up the group hierarchy using the pre-loaded $allGroups map to avoid lazy-loading queries.
-     */
     private static function resolveRootGroup(int $groupId, Collection $allGroups): ?object {
         $current = $allGroups->get($groupId);
         if (! $current) {
@@ -143,15 +133,12 @@ class CustomerRevenueStatsService {
         array $rootGroupMap,
         $productGroupIdBySourceId,
     ): array {
-        // Find the initial project IDs from the first invoice
         $initialProjectIds = $earliestInvoice->invoiceItems
             ->whereNotNull('project_id')
             ->pluck('project_id')
             ->unique()
             ->values();
 
-        // Fallback: if first invoice items have no project_id (e.g. prepayments),
-        // use the company's earliest project(s) created up to 3 months after first invoice
         if ($initialProjectIds->isEmpty() && $earliestInvoice->created_at) {
             $initialProjectIds = $company->projects()
                 ->where('created_at', '<=', $earliestInvoice->created_at->copy()->addMonths(3))
@@ -160,7 +147,6 @@ class CustomerRevenueStatsService {
                 ->pluck('id');
         }
 
-        // "New" cutoff: only count initial project items invoiced within 12 months of first invoice
         $newCutoff    = $earliestInvoice->created_at->copy()->addMonths(12);
         $newCutoffStr = $newCutoff->format('Y-m-d H:i:s'); // string for comparison with stdClass rows
 
@@ -169,9 +155,7 @@ class CustomerRevenueStatsService {
 
         foreach ($companyItems as $item) {
             $isNew = $item->created_at <= $newCutoffStr && (
-                // Item belongs to one of the initial projects
                 ($initialProjectIds->isNotEmpty() && $initialProjectIds->contains($item->project_id))
-                // Or item has no project (e.g. prepayments) and is within the new-customer window
                 || $item->project_id === null
             );
 
@@ -182,7 +166,6 @@ class CustomerRevenueStatsService {
             }
         }
 
-        // Determine the initial root product group from first invoice items using the pre-loaded maps
         $initialRootGroup = null;
         foreach ($earliestInvoice->invoiceItems as $item) {
             if (! $item->product_source_id) {
@@ -253,8 +236,6 @@ class CustomerRevenueStatsService {
 
         $distinctGroups = $rootGroupIds->count();
 
-        // ratio: 0 = pure upselling (1 group), approaching 1 = more cross-selling
-        // Formula: (distinctGroups - 1) / distinctGroups — 0 for 1 group, 0.5 for 2, 0.67 for 3, etc.
         return $distinctGroups > 0
             ? round(($distinctGroups - 1) / $distinctGroups, 4)
             : null;

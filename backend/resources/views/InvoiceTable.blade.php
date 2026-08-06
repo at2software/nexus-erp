@@ -21,7 +21,7 @@
                     <td class="text-end align-top">{{ $item->sPosition }}</td>
                     <td class="text-start align-top">{!! $item->text !!}</td>
                     <td class="text-end align-top nowrap">{{ $item->eprice }}</td>
-                    <td class="text-end align-top nowrap">{{ $item->qty }} {{ $item->unit_name }}</td>
+                    <td class="text-end align-top nowrap">{{ $item->eqty }} {{ $item->unit_name }}</td>
                     <td class="text-end align-top nowrap font-dejavu">{{$item->ehandling}}</td>
                     <td class="text-center align-top nowrap"></td>
                     <td class="text-end align-top nowrap">{{ $item->etotal }}</td>
@@ -34,7 +34,7 @@
                     <td class="text-end align-top">({{ $item->sPosition }})</td>
                     <td class="text-start align-top">{!! $item->text !!}</td>
                     <td class="text-end align-top nowrap">{{ $item->eprice }}</td>
-                    <td class="text-end align-top nowrap">{{ $item->qty }} {{ $item->unit_name }}</td>
+                    <td class="text-end align-top nowrap">{{ $item->eqty }} {{ $item->unit_name }}</td>
                     <td class="text-end align-top nowrap font-dejavu">{{$item->ehandling}}</td>
                     <td class="text-center align-top nowrap"></td>
                     <td class="text-end align-top nowrap">({{ $item->etotal }})</td>

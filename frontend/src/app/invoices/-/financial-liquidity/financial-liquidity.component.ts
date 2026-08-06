@@ -9,11 +9,13 @@ import { ECHARTS_DEFAULT_TOOLTIP_OPTIONS } from '@app/_charts/echarts-presets';
 import type { EChartsOption } from 'echarts';
 import { Color } from '@constants/Color';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { LiquidityEvent, LiquidityResponse } from '@models/api-response';
+import { LiquidityEventDto } from '@models/_core/api-response';
+import { modelResource } from '@models/http/model-resource';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 interface DayGroup {
     date: string;
-    events: LiquidityEvent[];
+    events: LiquidityEventDto[];
     totalAmount: number;
     balanceAfter: number;
 }
@@ -34,20 +36,22 @@ const TYPE_CONFIG: Dictionary<{ label: string; badge: string }> = {
     templateUrl: './financial-liquidity.component.html',
     styleUrls: ['./financial-liquidity.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [NgxEchartsDirective, MoneyPipe, DatePipe, NgClass, NgbTooltipModule],
+    imports: [StackedTableDirective, NgxEchartsDirective, MoneyPipe, DatePipe, NgClass, NgbTooltipModule],
 })
 export class FinancialLiquidityComponent {
     readonly #invoiceService = inject(InvoiceService);
 
-    isLoading      = signal(true);
-    balance        = signal(0);
-    events         = signal<LiquidityEvent[]>([]);
-    chartOptions   = signal<EChartsOption>({});
+    readonly #liquidity = modelResource(() => this.#invoiceService.getLiquidity());
+
+    isLoading      = this.#liquidity.isLoading;
+    balance        = computed(() => this.#liquidity.value()?.balance ?? 0);
+    events         = computed(() => this.#liquidity.value()?.events ?? []);
+    chartOptions   = computed<EChartsOption>(() => this.#buildChartOptions(this.balance(), this.events()));
+    zeroDate       = computed(() => this.#findZeroDate(this.events()));
     expandedDates  = signal(new Set<string>());
-    zeroDate       = signal<{ date: string; daysUntil: number } | null>(null);
 
     readonly groupedEvents = computed<DayGroup[]>(() => {
-        const map = new Map<string, LiquidityEvent[]>();
+        const map = new Map<string, LiquidityEventDto[]>();
         for (const e of this.events()) {
             if (!map.has(e.date)) map.set(e.date, []);
             map.get(e.date)!.push(e);
@@ -60,20 +64,7 @@ export class FinancialLiquidityComponent {
         }));
     });
 
-    constructor() {
-        this.#invoiceService.getLiquidity().subscribe({
-            next: (data: LiquidityResponse) => {
-                this.balance.set(data.balance);
-                this.events.set(data.events ?? []);
-                this.chartOptions.set(this.#buildChartOptions(data.balance, data.events ?? []));
-                this.zeroDate.set(this.#findZeroDate(data.events ?? []));
-                this.isLoading.set(false);
-            },
-            error: () => this.isLoading.set(false),
-        });
-    }
-
-    #findZeroDate(events: LiquidityEvent[]): { date: string; daysUntil: number } | null {
+    #findZeroDate(events: LiquidityEventDto[]): { date: string; daysUntil: number } | null {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         for (const e of events) {
@@ -100,7 +91,7 @@ export class FinancialLiquidityComponent {
     typeBadge  = (type: string) => TYPE_CONFIG[type]?.badge ?? 'text-bg-primary';
     isInflow   = (amount: number) => amount > 0;
 
-    eventTooltip = (event: LiquidityEvent): string => {
+    eventTooltip = (event: LiquidityEventDto): string => {
         const fmt = (d: string) => new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
         switch (event.type) {
             case 'expense':
@@ -115,13 +106,13 @@ export class FinancialLiquidityComponent {
                 return '';
         }
     };
-    typeGroups = (events: LiquidityEvent[]) => {
+    typeGroups = (events: LiquidityEventDto[]) => {
         const map = new Map<string, number>();
         for (const e of events) map.set(e.type, (map.get(e.type) ?? 0) + 1);
         return Array.from(map.entries()).map(([type, count]) => ({ type, count }));
     };
 
-    #buildChartOptions(startBalance: number, events: LiquidityEvent[]): EChartsOption {
+    #buildChartOptions(startBalance: number, events: LiquidityEventDto[]): EChartsOption {
         const primaryColor = Color.fromVar('primary').toHexString();
         const dangerColor  = Color.fromVar('danger').toHexString();
 

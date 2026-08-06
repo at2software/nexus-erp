@@ -70,7 +70,6 @@ class HandelsRegister {
             return null;
         }
 
-        // Step 1: GET welcome page to establish session
         $r1 = $this->client->get('https://www.handelsregister.de/rp_web/welcome.xhtml');
         if ($r1->getStatusCode() !== 200) {
             Log::warning('HandelsRegister: Failed to load welcome page.');
@@ -81,7 +80,6 @@ class HandelsRegister {
         preg_match('/name="javax.faces.ViewState".*?value="([^"]+)"/', $body1, $vsMatch);
         $welcomeViewState = $vsMatch[1] ?? '';
 
-        // Step 2: Navigate to search page via JSF form POST
         $r2 = $this->client->post('https://www.handelsregister.de/rp_web/welcome.xhtml', [
             'form_params' => [
                 'naviForm'                  => 'naviForm',
@@ -102,7 +100,6 @@ class HandelsRegister {
             return null;
         }
 
-        // Step 3: POST search
         $searchUrl = 'https://www.handelsregister.de'.$formAction;
         $r3        = $this->client->post($searchUrl, [
             'form_params' => [
@@ -124,7 +121,6 @@ class HandelsRegister {
         ]);
         $body3 = (string)$r3->getBody();
 
-        // Step 4: Follow redirect to results page
         if (preg_match('/redirect url="([^"]+)"/', $body3, $redirectMatch)) {
             $resultsUrl = 'https://www.handelsregister.de'.$redirectMatch[1];
             $r4         = $this->client->get($resultsUrl);

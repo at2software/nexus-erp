@@ -1,14 +1,12 @@
-import { NxAction } from '@app/nx/nx.actions';
-import { Serializable } from '../serializable';
+import { NxAction } from '@models/_core/nx.actions';
+import { Serializable } from '@models/_core/serializable';
 import { Company } from './company.model';
-import { CompanyService } from './company.service';
-import { Type } from 'class-transformer';
+import { Type } from '@models/_core/hydrate';
 import { getConnectisingleActionResolveds } from './connection.actions';
-import { Model } from '@constants/type-discriminators';
+import { Model } from '@constants/model/type-discriminators';
 
 @Model('Connection')
 export class Connection extends Serializable {
-    SERVICE = CompanyService;
 
     net: number = 0;
     projects_count: number = 0;
@@ -18,8 +16,7 @@ export class Connection extends Serializable {
     @Type(()=>Company) company1!: Company;
     @Type(()=>Company) company2!: Company;
 
-    doubleClickAction: number = 0;
-    actions: NxAction[] = getConnectisingleActionResolveds(this);
+    protected override buildActions(): NxAction[] { return getConnectisingleActionResolveds(this) }
 
     static API_PATH = (): string => 'connections';
 

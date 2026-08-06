@@ -1,7 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Service } from '@angular/core';
 import { NgbDateAdapter, NgbDateStruct } from '@ng-bootstrap/ng-bootstrap';
 
-@Injectable()
+@Service({ autoProvided: false })
 export class NgbDateCarbonAdapter extends NgbDateAdapter<string> {
     readonly DELIMITER = '-';
 

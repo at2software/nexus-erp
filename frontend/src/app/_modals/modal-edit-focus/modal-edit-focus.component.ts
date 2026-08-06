@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal, viewChild
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { Focus } from '@models/focus/focus.model';
 import { SearchInputComponent } from '@shards/search-input/search-input.component';
-import { dayjs } from '@constants/dates';
+import { dayjs } from '@constants/date/dates';
 import { FormsModule } from '@angular/forms';
 import { ModalBaseComponent } from '@app/_modals/modal-base.component';
 import { Dictionary } from '@constants/constants';

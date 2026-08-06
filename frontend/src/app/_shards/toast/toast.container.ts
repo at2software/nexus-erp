@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, TemplateRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, TemplateRef } from '@angular/core';
 import { ToastService } from './toast.service';
 import { ToastItem } from './toast';
 import { NgbToastModule } from '@ng-bootstrap/ng-bootstrap';
@@ -14,8 +14,13 @@ import { SafePipe } from '@pipes/safe.pipe';
     imports: [NgbToastModule, NgTemplateOutlet, SafePipe],
 })
 export class ToastsContainer {
-    constructor(public toastService: ToastService) {}
+    readonly toastService = inject(ToastService);
+
     asTemplate(toast: ToastItem): TemplateRef<unknown> | null {
         return toast.textOrTpl instanceof TemplateRef ? toast.textOrTpl : null;
+    }
+
+    asText(toast: ToastItem): string {
+        return toast.textOrTpl instanceof TemplateRef ? '' : toast.textOrTpl;
     }
 }

@@ -31,14 +31,17 @@ export class HeaderComponent implements AfterViewInit {
     constructor() {
         this.#destroyRef.onDestroy(() => this.#toolbarService.unregister());
 
-        fromEvent(document.querySelector('.app-scroll')!, 'scroll')
-            .pipe(
-                debounceTime(50),
-                map((e) => (e.target as Element).scrollTop > 0),
-                distinctUntilChanged(),
-                takeUntilDestroyed(),
-            )
-            .subscribe((scrolled) => this.isScrolled.set(scrolled));
+        const scrollContainer = document.querySelector('.app-scroll');
+        if (scrollContainer) {
+            fromEvent(scrollContainer, 'scroll')
+                .pipe(
+                    debounceTime(50),
+                    map((e) => (e.target as Element).scrollTop > 0),
+                    distinctUntilChanged(),
+                    takeUntilDestroyed(),
+                )
+                .subscribe((scrolled) => this.isScrolled.set(scrolled));
+        }
     }
 
     ngAfterViewInit(): void {

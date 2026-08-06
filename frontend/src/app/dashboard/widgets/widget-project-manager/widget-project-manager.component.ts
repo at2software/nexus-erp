@@ -1,11 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Project } from '@models/project/project.model';
 import { BaseWidgetComponent, WidgetOptions } from '../base.widget.component';
 import { WIDGET_SHARED } from '../widgets.shared';
 import { PermissionsDirective } from '@directives/permissions.directive';
 import { WidgetService } from '@models/widget.service';
 import { forkJoin } from 'rxjs';
-import { ParamChartSeries } from '@models/api-response';
+import { ParamChartSeriesDto } from '@models/_core/api-response';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -15,8 +15,6 @@ import { ParamChartSeries } from '@models/api-response';
     imports: [...WIDGET_SHARED, PermissionsDirective],
 })
 export class WidgetProjectManagerComponent extends BaseWidgetComponent {
-    data = signal<Project[]>([]);
-    chartData = signal<ParamChartSeries[]>([]);
     #widgetService = inject(WidgetService);
 
     defaultOptions = () => ({
@@ -25,38 +23,32 @@ export class WidgetProjectManagerComponent extends BaseWidgetComponent {
         ...WidgetOptions.chartOnly,
     });
 
-    reload(): void {
-        const chartOptions = { ...this.getOptionsURI() };
-        delete chartOptions['max-items'];
-        if (this.hasInvoicesModule()) chartOptions['withChart'] = '1';
-
-        forkJoin({
-            acquisitions: this.#widgetService.indexCashflow('PROJECTS_ACQUISITIONS', chartOptions, Project),
-            projects: this.#widgetService.indexCashflow('PROJECTS', chartOptions, Project),
-        }).subscribe((responses) => {
-            const acquisitions = responses.acquisitions.objects.map((p) => { p.var.projectType = 'acquisition'; return p; });
-            const projects = responses.projects.objects.map((p) => { p.var.projectType = 'running'; return p; });
-
-            this.data.set([...acquisitions, ...projects].sort((a, b) => {
-                const aValue = a.var.projectType === 'acquisition' ? a.net : a.net_remaining;
-                const bValue = b.var.projectType === 'acquisition' ? b.net : b.net_remaining;
-                return bValue - aValue;
-            }));
-
-            this.value.set(
-                acquisitions.reduce((a, b) => a + (b.net ?? 0), 0) +
-                projects.reduce((a, b) => a + (b.net_remaining ?? 0), 0)
-            );
-
-            if (responses.projects.history && responses.acquisitions.history) {
-                this.chartData.set([[responses.projects.history].flat()[0], [responses.acquisitions.history].flat()[0]] as ParamChartSeries[]);
-            }
+    readonly #cashflow = this.optionsResource((options) => {
+        const query = { ...options };
+        delete query['max-items'];
+        if (this.hasInvoicesModule()) query['withChart'] = '1';
+        return forkJoin({
+            acquisitions: this.#widgetService.indexCashflow('PROJECTS_ACQUISITIONS', query, Project),
+            projects: this.#widgetService.indexCashflow('PROJECTS', query, Project),
         });
-    }
+    });
+
+    readonly #acquisitions = computed<Project[]>(() => (this.#cashflow.value()?.acquisitions.objects ?? []).map((p) => { p.var.projectType = 'acquisition'; return p; }));
+    readonly #projects = computed<Project[]>(() => (this.#cashflow.value()?.projects.objects ?? []).map((p) => { p.var.projectType = 'running'; return p; }));
+
+    readonly data = computed<Project[]>(() =>
+        [...this.#acquisitions(), ...this.#projects()].sort((a, b) => this.getDisplayValue(b) - this.getDisplayValue(a)),
+    );
+    readonly chartData = computed<ParamChartSeriesDto[]>(() => {
+        const response = this.#cashflow.value();
+        if (!response?.projects.history || !response.acquisitions.history) return [];
+        return [[response.projects.history].flat()[0], [response.acquisitions.history].flat()[0]];
+    });
+    override value = this.headline(this.#cashflow, () => this.#acquisitions().reduce((a, b) => a + (b.net ?? 0), 0) + this.#projects().reduce((a, b) => a + (b.net_remaining ?? 0), 0));
 
     getProbabilityTooltip = (project: Project) =>
         $localize`:@@i18n.common.probability:probability` + ': ' + ((project.lead_probability || 0) * 100).toFixed(1) + '%';
 
-    isCompact = (project: Project) => !project.badge();
+    isCompact = (project: Project) => !project.getBadge();
     getDisplayValue = (project: Project) => project.var.projectType === 'acquisition' ? project.net : project.net_remaining;
 }

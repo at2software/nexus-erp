@@ -1,10 +1,27 @@
 <toolbar>
     <toolbar-locale-selector [locale]="previewLocale()" (localeChange)="previewLocale.set($event)"></toolbar-locale-selector>
 </toolbar>
+<div class="card mb-3">
+    <div class="card-header" i18n="@@i18n.project.quoteNumber">quote number</div>
+    <div class="card-body">
+        <input-settings-group id="QUOTE_NO_PREFIX" i18n="@@i18n.common.prefix">prefix</input-settings-group>
+        <input-settings-group id="QUOTE_NO_SUFFIX" i18n="@@i18n.common.suffix">suffix</input-settings-group>
+        <input-settings-group id="QUOTE_NO_DIGITS" i18n="@@i18n.common.numberOfDigits">number of digits</input-settings-group>
+        <input-settings-group id="QUOTE_NO_CURRENT" i18n="@@i18n.common.currentNumber">current number</input-settings-group>
+        <input-settings-group id="QUOTE_VALIDITY_DURATION" [suffix]="days()" i18n="@@i18n.project.quoteValidFor">quote valid for</input-settings-group>
+    </div>
+</div>
+<div class="text-muted small fw-semibold mb-1" i18n="@@i18n.project.quoteIntroText">intro text — salutation and opening, above the price table</div>
 <div class="card mb-3 p-3" #PROJECT_PREFIX>
     <text-param-editor #prefixEditor key="params/PROJECT_PREFIX" [previewLocale]="previewLocale()"></text-param-editor>
 </div>
+<div class="text-muted small fw-semibold mb-1" i18n="@@i18n.project.quotePriceTable">price table — generated from the project items</div>
 <div class="card mb-3" #TABLE></div>
+<div class="text-muted small fw-semibold mb-1" i18n="@@i18n.project.quoteClosingText">closing text — below the price table, including the signature; the acceptance block follows automatically</div>
 <div class="card mb-3 p-3" #PROJECT_SUFFIX>
     <text-param-editor #suffixEditor key="params/PROJECT_SUFFIX" [previewLocale]="previewLocale()"></text-param-editor>
+</div>
+<div class="text-muted small fw-semibold mb-1" i18n="@@i18n.project.quoteLegalText">terms &amp; conditions — annexed on its own page, small type, two columns</div>
+<div class="card mb-3 p-3" #PROJECT_LEGAL>
+    <text-param-editor #legalEditor key="params/PROJECT_LEGAL" [previewLocale]="previewLocale()"></text-param-editor>
 </div>

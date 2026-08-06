@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
 import { GlobalService } from '@models/global.service';
 import { tracked } from '@constants/tracked';
-import { environment } from 'src/environments/environment';
+import { environment } from '@environments/environment';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { VcardComponent } from '@app/customers/_shards/vcard/vcard.component';
 

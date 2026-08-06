@@ -9,22 +9,15 @@ use Illuminate\Console\Command;
 
 class DetectFrameworks extends Command {
     /**
-     * The name and signature of the console command.
-     *
      * @var string
      */
     protected $signature = 'git:detect-frameworks {--fresh : Force update all plugin links} {--only= : Only update specific framework (e.g., ios, android)}';
 
     /**
-     * The console command description.
-     *
      * @var string
      */
     protected $description = 'Detect frameworks and versions for all git plugin links';
 
-    /**
-     * Execute the console command.
-     */
     public function handle() {
         $gitController = app(PluginGitController::class);
 
@@ -36,7 +29,6 @@ class DetectFrameworks extends Command {
         $query = PluginLink::where('type', 'git');
 
         if ($onlyFramework = $this->option('only')) {
-            // Filter by specific framework
             $frameworkId = Framework::where('name', $onlyFramework)->value('id');
             if (! $frameworkId) {
                 $this->error("Framework '{$onlyFramework}' not found in database.");
@@ -54,7 +46,6 @@ class DetectFrameworks extends Command {
             return 0;
         }
 
-        // Group by URL to avoid checking the same repository multiple times
         $groupedLinks = $gitLinks->groupBy('url');
 
         $this->info("Found {$gitLinks->count()} git plugin links ({$groupedLinks->count()} unique repositories). Starting framework detection...");
@@ -81,7 +72,6 @@ class DetectFrameworks extends Command {
 
                 $frameworkId = $frameworks[$frameworkName];
 
-                // Update all plugin links with the same URL
                 foreach ($links as $link) {
                     $link->update([
                         'framework_id'      => $frameworkId,

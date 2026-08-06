@@ -35,9 +35,9 @@ export class InvoiceItemRowComponent {
 
     annotationMode = computed(() => this.annotationType() as 'invoice' | 'quote' | 'support');
 
-    onQuickQtyChange(value: string) {
+    onQuickQtyChange(value: unknown) {
         const item = this.trackedItem();
-        item.qty = parseFloat(value);
+        item.qty = parseFloat(String(value));
         item.updateDynamicAttributes();
     }
 

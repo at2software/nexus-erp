@@ -8,7 +8,7 @@ export const PROJECTS_ROUTES: Routes = [
         loadComponent: () => import('./-/projects-nav.component').then((m) => m.ProjectsNavComponent),
         children: [
             { path: '', loadComponent: () => import('./-/projects-dashboard/projects-dashboard.component').then((m) => m.ProjectsDashboardComponent), data: { nav: { title: $localize`:@@i18n.common.projects:projects` } } },
-            { path: 'stats', loadComponent: () => import('./-/projects-stats/projects-stats.component').then((m) => m.ProjectsStatsComponent), data: { nav: { title: $localize`:@@i18n.common.statistics:statistics` }, roles: 'admin' } },
+            { path: 'stats', loadComponent: () => import('./-/projects-stats/projects-stats.component').then((m) => m.ProjectsStatsComponent), data: { nav: { title: $localize`:@@i18n.common.statistics:statistics`, roles: 'admin' } } },
             { path: 'reporting', loadComponent: () => import('./-/projects-reporting/projects-reporting.component').then((m) => m.ProjectsReportingComponent), data: { nav: { title: $localize`:@@i18n.projects.reporting:reporting`, roles: 'invoicing' } } },
             { path: 'milestones', loadComponent: () => import('./-/projects-milestones/projects-milestones.component').then((m) => m.ProjectsMilestonesOverviewComponent), data: { nav: { title: $localize`:@@i18n.common.milestones:milestones` } } },
             { path: 'debriefing', loadComponent: () => import('./-/projects-debriefing/projects-debriefing.component').then((m) => m.ProjectsDebriefingComponent), data: { nav: { title: $localize`:@@i18n.debrief.title:debriefing` } } },

@@ -14,7 +14,6 @@ class CompatiblePermissionMiddleware extends PermissionMiddleware {
         if (Auth::user()?->hasAnyPermission($permissions)) {
             return $next($request);
         } else {
-            // If the user does not have any of the required permissions, throw an UnauthorizedException
             throw UnauthorizedException::forPermissions($permissions);
         }
     }

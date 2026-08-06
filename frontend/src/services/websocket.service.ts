@@ -1,15 +1,15 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
-import { environment } from 'src/environments/environment';
+import { environment } from '@environments/environment';
 import { AuthenticationService } from '@models/auth.service';
 import { GlobalService } from '@models/global.service';
 
 declare global {
     interface Window {
-        Pusher: any;
-        Echo: any;
+        Pusher: unknown;
+        Echo: unknown;
     }
 }
 
@@ -53,12 +53,12 @@ export interface SharingStatus {
     visible?: boolean;
 }
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class WebSocketService {
     #auth = inject(AuthenticationService);
     #global = inject(GlobalService);
 
-    echo: Echo<any> | null = null;
+    echo: Echo<'reverb'> | null = null;
     connected$ = new BehaviorSubject<boolean>(false);
     reconnected$ = new Subject<void>();
     #wasConnected = false;
@@ -71,7 +71,8 @@ export class WebSocketService {
 
     constructor() {
         window.Pusher = Pusher;
-        this.#global.init.subscribe(() => this.connect());
+        this.#global.initialized$.subscribe((ready) => (ready ? this.connect() : this.disconnect()));
+        window.addEventListener('pagehide', () => this.disconnect());
     }
 
     async connect() {
@@ -80,9 +81,12 @@ export class WebSocketService {
         const token = this.#auth.apiToken || this.#getCookie('api_token') || localStorage.getItem('token') || (await this.#getKeycloakToken());
         const reverbKey = AuthenticationService.sysinfo?.reverb_key || environment.reverbKey;
 
-        const useTLS = environment.production ? window.location.protocol === 'https:' : environment.reverbScheme === 'https';
-        const host = environment.production ? window.location.hostname : environment.reverbHost;
-        const port = environment.production ? parseInt(window.location.port) || (useTLS ? 443 : 80) : environment.reverbPort;
+        if (!token) console.error('[live] no auth token - presence channel auth will be rejected');
+        if (!reverbKey) console.error('[live] no reverb key - check sysinfo.reverb_key');
+
+        const useTLS = window.location.protocol === 'https:';
+        const host = window.location.hostname;
+        const port = parseInt(window.location.port) || (useTLS ? 443 : 80);
 
         this.echo = new Echo({
             broadcaster: 'reverb',
@@ -92,7 +96,7 @@ export class WebSocketService {
             wsPort: port,
             wssPort: port,
             forceTLS: useTLS,
-            enabledTransports: useTLS ? ['wss'] : ['ws'],
+            enabledTransports: ['ws'],
             authEndpoint: environment.envApi + 'broadcasting/auth',
             auth: {
                 headers: { Authorization: `Bearer ${token}` },
@@ -100,8 +104,6 @@ export class WebSocketService {
         });
 
         this.echo.connector.pusher.connection.bind('connected', () => {
-            // pusher-js handles retry/backoff on its own for 'unavailable'/'failed' states;
-            // forcing a disconnect() here used to tear down the socket entirely instead of letting it recover.
             if (this.#wasConnected) this.reconnected$.next();
             this.#wasConnected = true;
             this.connected$.next(true);
@@ -111,11 +113,18 @@ export class WebSocketService {
             this.connected$.next(false);
         });
 
+        this.echo.connector.pusher.connection.bind('error', (err: unknown) => console.error('[live] socket error', err));
+        this.echo.connector.pusher.connection.bind('unavailable', () => console.warn('[live] socket unavailable'));
+        this.echo.connector.pusher.connection.bind('failed', () => console.error('[live] socket failed - no usable transport'));
+
         this.#listenToLiveSharingChannel();
     }
 
     #listenToLiveSharingChannel() {
         const channel = this.echo?.join('live-sharing');
+
+        channel?.error((err: unknown) => console.error('[live] live-sharing auth rejected - broadcasting/auth said no', err));
+
         channel?.listen('.sharing.toggled', (data: SharingStatus) => {
             this.sharingToggled$.next(data);
         });

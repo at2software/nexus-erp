@@ -1,10 +1,10 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Service } from '@angular/core';
 import { DetailGuard } from '@guards/detail.guard';
 import { User } from '@models/user/user.model';
 import { UserService } from '@models/user/user.service';
 import { HrTeamService } from './hr-team/hr-team.service';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class HrDetailGuard extends DetailGuard<User> {
     service = inject(UserService);
     srv = inject(HrTeamService);

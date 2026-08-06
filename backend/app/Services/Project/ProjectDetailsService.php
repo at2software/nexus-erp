@@ -36,12 +36,10 @@ class ProjectDetailsService {
             ->get()
         );
 
-        // Add other_company to each connectionProject for easy access to participating company employees
         $project->connectionProjects->each(function ($cp) use ($project) {
             $cp->setAttribute('other_company', $cp->connection->getOtherCompany($project->company_id));
         });
 
-        // Load available connections for adding participants
         $connections = Connection::where('company1_id', $project->company_id)
             ->orWhere('company2_id', $project->company_id)
             ->with(['company1', 'company2'])
@@ -59,7 +57,6 @@ class ProjectDetailsService {
         $project->setAttribute('available_connections', $availableConnections);
         $project->companysActiveProjects->each(fn ($_) => $_->append('state'));
 
-        // Add milestone state counts
         $milestoneStateCounts = $project->milestones()
             ->selectRaw('state, COUNT(*) as count')
             ->groupBy('state')
@@ -67,7 +64,6 @@ class ProjectDetailsService {
             ->toArray();
 
         $project->setAttribute('no_invoice_focus', $project->foci()->whereNull('invoice_item_id')->sum('duration'));
-        // Ensure all states are represented (default to 0)
         $project->setAttribute('milestone_state_counts', [
             'todo'        => $milestoneStateCounts[0] ?? 0,
             'in_progress' => $milestoneStateCounts[1] ?? 0,
@@ -105,7 +101,6 @@ class ProjectDetailsService {
         $project->company->setAttribute('avg_payment_days', $avgPaymentDays !== null ? (int)round($avgPaymentDays) : null);
 
         if ($project->is_time_based) {
-            // Optimized query - move filter to database level
             $d = InvoiceItem::whereProjectId($project->id)
                 ->whereHas('invoice', fn ($q) => $q->where('created_at', '>', now()->subYear()))
                 ->sum('net');

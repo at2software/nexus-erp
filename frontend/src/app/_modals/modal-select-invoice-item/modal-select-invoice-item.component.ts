@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { modelListResource } from '@models/http/model-resource';
 import { DecimalPipe } from '@angular/common';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { InvoiceItemService } from '@models/invoice/invoice-item.service';
@@ -21,23 +22,12 @@ const TYPE_LABELS: Record<number, string> = {
     templateUrl: './modal-select-invoice-item.component.html',
 })
 export class ModalSelectInvoiceItemComponent {
-    items = signal<InvoiceItem[]>([]);
-    loading = signal(true);
-
     activeModal = inject(NgbActiveModal);
     #service = inject(InvoiceItemService);
 
-    constructor() {
-        this.#service.indexStandingOrders().subscribe({
-            next: (items: InvoiceItem[]) => {
-                this.items.set(items);
-                this.loading.set(false);
-            },
-            error: () => {
-                this.loading.set(false);
-            },
-        });
-    }
+    readonly #items = modelListResource(() => this.#service.indexStandingOrders());
+    items = this.#items.value;
+    loading = this.#items.isLoading;
 
     typeLabel(type: number) {
         return TYPE_LABELS[type] ?? '';

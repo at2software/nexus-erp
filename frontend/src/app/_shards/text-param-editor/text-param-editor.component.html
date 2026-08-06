@@ -6,6 +6,7 @@
 @let _showModalLocalizationControls = showModalLocalizationControls();
 @let _isLocalized = isLocalized();
 @let _selectedLocaleKey = selectedLocaleKey();
+@let _selectedLocaleLabel = selectedLocaleLabel();
 @let _availableLocales = availableLocales();
 @let _loadingImages = loadingImages();
 @let _images = images();
@@ -44,7 +45,7 @@
         @if (_param) {
             @for (seg of contentSegments(); track $index) {
                 @if (seg.type === 'html') {
-                    <div [innerHTML]="seg.content | safe: 'html'"></div>
+                    <div class="ql-editor ql-rendered" [innerHTML]="seg.content | safe: 'html'"></div>
                 }
                 @if (seg.type === 'payment-plan') {
                     @if (_object) {
@@ -89,6 +90,7 @@
             <span class="ql-formats">
                 <button class="ql-link" type="button"><i>link</i></button>
                 <button class="ql-clean" type="button"><i>format_clear</i></button>
+                <button type="button" title="Insert current date" i18n-title="@@i18n.common.insertCurrentDate" (mousedown)="$event.preventDefault(); insertCurrentDate()"><i>today</i></button>
             </span>
             <span class="ql-formats">
                 @if (_showModalLocalizationControls && !_isLocalized) {
@@ -97,14 +99,20 @@
                     </button>
                 }
                 @if (_showModalLocalizationControls && _isLocalized) {
-                    <select class="form-select form-select-sm" style="width: auto; height: 32px; display: inline-block; vertical-align: middle" [ngModel]="_selectedLocaleKey" (ngModelChange)="onLocaleChange($event)">
-                        @for (variant of _availableLocales; track variant.language + variant.formality) {
-                            <option [value]="variant.language + '-' + variant.formality">
-                                {{ variant.label }}
-                            </option>
-                        }
-                        <option value="remove" i18n="@@i18n.common.removeLocalization">remove localization</option>
-                    </select>
+                    <span ngbDropdown class="d-inline-block">
+                        <button type="button" class="dropdown-toggle-simple locale-toggle" ngbDropdownToggle title="localize" i18n-title="@@i18n.common.localize">
+                            <i class="text-success">translate</i>
+                            <span class="locale-toggle-label">{{ _selectedLocaleLabel }}</span>
+                        </button>
+                        <div ngbDropdownMenu>
+                            @for (variant of _availableLocales; track variant.language + variant.formality) {
+                                <button type="button" ngbDropdownItem [class.active]="variant.language + '-' + variant.formality === _selectedLocaleKey" (click)="onLocaleChange(variant.language + '-' + variant.formality)">
+                                    {{ variant.label }}
+                                </button>
+                            }
+                            <button type="button" ngbDropdownItem (click)="onLocaleChange('remove')" i18n="@@i18n.common.removeLocalization">remove localization</button>
+                        </div>
+                    </span>
                 }
                 <button type="button" title="Insert Image from Marketing Assets" (click)="openImageSelection()">
                     <i>collections</i>

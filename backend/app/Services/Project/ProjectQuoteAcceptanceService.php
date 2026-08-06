@@ -17,7 +17,6 @@ use App\Models\ProjectState;
  * needle" suggestions from ProjectQuoteWhatIf.
  */
 class ProjectQuoteAcceptanceService {
-    /** Null if no model has been trained yet (ml:train-project-quote-acceptance never ran). */
     public function build(Project $project): ?array {
         if (! ProjectQuoteModel::load()) {
             return null;

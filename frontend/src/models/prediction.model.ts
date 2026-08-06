@@ -1,11 +1,9 @@
-import { Model } from '@constants/type-discriminators';
-import { Serializable } from './serializable';
-import { InvoiceItemService } from '@models/invoice/invoice-item.service';
+import { Model } from '@constants/model/type-discriminators';
+import { Serializable } from '@models/_core/serializable';
 
 @Model('Prediction')
 export class Prediction extends Serializable {
     static API_PATH = (): string => 'invoice_items';
-    SERVICE = InvoiceItemService;
 
     qty: number = 0;
     user_id: string = '';

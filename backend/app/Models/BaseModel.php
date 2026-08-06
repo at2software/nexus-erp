@@ -37,8 +37,6 @@ class BaseModel extends Model {
             SentinelTriggerService::handleModelBasedTrigger(SentinelTriggerType::OnDeleted, $model);
         });
 
-        // Live-sync: every model save/delete broadcasts itself generically (class+id+event) -
-        // wasRecentlyCreated distinguishes 'created' from 'updated' on the shared saved hook.
         static::saved(function ($model) {
             LiveSyncBroadcaster::dispatchFor($model, $model->wasRecentlyCreated ? 'created' : 'updated');
         });

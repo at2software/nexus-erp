@@ -1,15 +1,9 @@
 import { Dictionary } from '@constants/constants';
 import { Type } from '@angular/core';
-import { deepCopy } from '@constants/deepClone';
-import { Serializable } from '@models/serializable';
+import { deepCopy } from '@constants/object/deepClone';
+import { Serializable } from '@models/_core/serializable';
 import { ModalBaseComponent } from './modal-base.component';
 
-/**
- * Abstract class of a modal popup that allows editing of any serializable item
- * Changes should be mapped directly via [(ngModel)] to the item
- * Modal will be triggered via ModalBaseService.open([ModalComponent], item)
- * @argument item can either be of type T or `undefined` - undefined creating a new record on save instead of updating
- */
 export abstract class ModalEditComponent<T extends Serializable> extends ModalBaseComponent<{ item: T }> {
     item!: T;
     #originalItem!: T;

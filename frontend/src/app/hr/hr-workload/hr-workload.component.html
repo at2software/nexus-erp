@@ -84,7 +84,7 @@
         </div>
 
         @for (p of getWeekly(); track $index) {
-            <div class="visu-recurring-project {{ stripesForSub(p) ? 'bg-unpaid' : '' }}" [routerLink]="p.ngLink()" ngbTooltip="{{ p?.getName() }}" placement="bottom" [style.backgroundColor]="colorForSub(p)" [style.height.%]="(100 * p.pivot!.hours_weekly) / _data!.hpw"></div>
+            <div class="visu-recurring-project {{ stripesForSub(p) ? 'bg-unpaid' : '' }}" [routerLink]="p.frontendUrl()" ngbTooltip="{{ p?.getName() }}" placement="bottom" [style.backgroundColor]="colorForSub(p)" [style.height.%]="(100 * p.pivot!.hours_weekly) / _data!.hpw"></div>
         }
 
         @for (_ of _data!.timeline_leaves; track $index) {

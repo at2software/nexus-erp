@@ -2,18 +2,17 @@ import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, input
 import { DecimalPipe } from '@angular/common';
 import { NgbPopover, NgbPopoverModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { CdkDropList, CdkDragDrop } from '@angular/cdk/drag-drop';
-import { dayjs } from '@constants/dates';
+import { dayjs } from '@constants/date/dates';
 import { Color } from '@constants/Color';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
-import { Milestone } from '@models/milestones/milestone.model';
-import { MilestoneState } from '@models/milestones/milestone-state.enum';
-import { DailyWorkload, DailyWorkloadElement, WorkloadData } from '@models/api-response';
+import { Milestone } from '@models/milestone/milestone.model';
+import { MilestoneState } from '@models/milestone/milestone-state.enum';
+import { DailyWorkloadDto, DailyWorkloadElementDto, WorkloadDataDto } from '@models/_core/api-response';
 import { Nx } from '@app/nx/nx.directive';
 
-/** A milestone segment placed inside a single week row (spanning whole-day columns). */
 export interface MilestoneBar {
     milestone: Milestone;
-    startCol: number; // 0..6 — first day column the bar occupies in this week
+    startCol: number; // 0..6 - first day column the bar occupies in this week
     span: number; // number of day columns the bar covers within this week
     lane: number; // vertical stacking lane to avoid overlap
     color: string;
@@ -24,19 +23,17 @@ export interface MilestoneBar {
 export interface WeekRow {
     weekNumber: number;
     monthLabel?: string;
-    days: (DailyWorkload | null)[];
+    days: (DailyWorkloadDto | null)[];
     bars: MilestoneBar[];
     laneCount: number;
     distinctProjectCount: number;
 }
 
-/** A backlog chip dropped onto a day. */
 export interface CapacityCalendarDrop {
     date: string;
     item: unknown;
 }
 
-/** A scheduled bar moved or resized — host persists it. */
 export interface MilestoneReschedule {
     milestone: Milestone;
     started_at: string;
@@ -53,14 +50,12 @@ interface DragState {
     originDue: ReturnType<typeof dayjs>;
     pointerStartX: number;
     colWidth: number;
-    /** Top offset (in viewport px) of each .week-row, captured at drag start; used to resolve weekDelta from clientY. */
     rowTops: number[];
     startRowIndex: number;
 }
 
 const OVERFLOW_CAP_PERCENT = 150;
 
-/** Capacity-stack month calendar: each day cell shows its load; scheduled milestones overlay as draggable/resizable spanning bars. */
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
     selector: 'capacity-calendar',
@@ -71,8 +66,7 @@ const OVERFLOW_CAP_PERCENT = 150;
 export class CapacityCalendarComponent {
     #elementRef = inject(ElementRef<HTMLElement>);
 
-    workloadData = input.required<WorkloadData>();
-    /** Scheduled milestones (started_at + due_at set) rendered as spanning bars. */
+    workloadData = input.required<WorkloadDataDto>();
     milestones = input<Milestone[]>([]);
 
     itemDropped = output<CapacityCalendarDrop>();
@@ -82,40 +76,37 @@ export class CapacityCalendarComponent {
 
     readonly dayLabels = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
-    /** Live drag offset so bars track the pointer before the change is persisted. */
     #drag = signal<DragState | null>(null);
 
     readonly weeks = computed<WeekRow[]>(() => this.#buildWeeks(this.workloadData(), this.milestones(), this.#drag()));
 
-    /** Overdue milestones whose due date falls before the visible range — they'd otherwise never render as bars. */
     readonly overdueMilestones = computed<Milestone[]>(() => {
         const startDate = dayjs(this.workloadData().start_date);
         return this.milestones().filter((m) => m.due_at && dayjs(m.due_at).isBefore(startDate, 'day') && this.isMilestoneOverdue(m));
     });
 
-    dropListId = (day: DailyWorkload): string => `capacity-day-${day.date}`;
+    dropListId = (day: DailyWorkloadDto): string => `capacity-day-${day.date}`;
 
-    onDrop(day: DailyWorkload, event: CdkDragDrop<DailyWorkload>): void {
+    onDrop(day: DailyWorkloadDto, event: CdkDragDrop<DailyWorkloadDto>): void {
         this.itemDropped.emit({ date: day.date, item: event.item.data });
     }
 
-    fillHeight = (day: DailyWorkload): string => {
+    fillHeight = (day: DailyWorkloadDto): string => {
         if (day.available_hours <= 0) return '0%';
         const ratio = Math.min(day.total_hours / day.available_hours, OVERFLOW_CAP_PERCENT / 100);
         return `${ratio * 100}%`;
     };
 
-    isOverflowing = (day: DailyWorkload): boolean => day.total_percent > 100;
+    isOverflowing = (day: DailyWorkloadDto): boolean => day.total_percent > 100;
 
-    isToday = (day: DailyWorkload | null): boolean => day?.date === dayjs().format('YYYY-MM-DD');
-    dayNumber = (day: DailyWorkload): number => dayjs(day.date).date();
-    fragmentationDots = (day: DailyWorkload): number[] => Array.from({ length: Math.min(day.distinct_project_count, 5) });
+    isToday = (day: DailyWorkloadDto | null): boolean => day?.date === dayjs().format('YYYY-MM-DD');
+    dayNumber = (day: DailyWorkloadDto): number => dayjs(day.date).date();
+    fragmentationDots = (day: DailyWorkloadDto): number[] => Array.from({ length: Math.min(day.distinct_project_count, 5) });
 
     barLeft = (bar: MilestoneBar): string => `${(bar.startCol / 7) * 100}%`;
     barWidth = (bar: MilestoneBar): string => `${(bar.span / 7) * 100}%`;
 
     isMilestoneDone = (milestone: Milestone): boolean => milestone.state === MilestoneState.DONE;
-    /** Unfinished and past its due date. */
     isMilestoneOverdue = (milestone: Milestone): boolean => !this.isMilestoneDone(milestone) && !!milestone.due_at && dayjs().isAfter(milestone.due_at, 'day');
     /** Still TODO although the planned start date has already passed. */
     isMilestoneLateStart = (milestone: Milestone): boolean =>
@@ -134,16 +125,15 @@ export class CapacityCalendarComponent {
     dueDateLabel = (milestone: Milestone): string => dayjs(milestone.due_at).format('MMM D');
 
     trackByWeek = (_index: number, week: WeekRow): number => week.weekNumber;
-    trackByElement = (_index: number, element: DailyWorkloadElement): string => `${element.type}-${element.id}`;
+    trackByElement = (_index: number, element: DailyWorkloadElementDto): string => `${element.type}-${element.id}`;
     trackByBar = (_index: number, bar: MilestoneBar): string => bar.milestone.id;
 
-    onAddClick(day: DailyWorkload, popover: NgbPopover): void {
+    onAddClick(day: DailyWorkloadDto, popover: NgbPopover): void {
         popover.close();
         this.addMilestoneForDay.emit(day.date);
     }
 
     onBarClick(bar: MilestoneBar, event: MouseEvent): void {
-        // A real drag suppresses the click (set in onPointerUp); a plain click opens the editor.
         if (this.#suppressClick) {
             this.#suppressClick = false;
             return;
@@ -151,8 +141,6 @@ export class CapacityCalendarComponent {
         event.stopPropagation();
         this.editMilestone.emit(bar.milestone);
     }
-
-    // ---- Pointer-driven move/resize (whole-day snapping; avoids CDK reflow of the grid) ----
 
     #suppressClick = false;
 
@@ -190,7 +178,6 @@ export class CapacityCalendarComponent {
         if (dayDelta !== drag.dayDelta || weekDelta !== drag.weekDelta) this.#drag.set({ ...drag, dayDelta, weekDelta });
     }
 
-    /** Index of the last row whose top is at or above clientY — i.e. the row the pointer currently sits in/below. */
     #rowIndexAt(rowTops: number[], clientY: number): number {
         let index = 0;
         for (let i = 0; i < rowTops.length; i++) {
@@ -224,8 +211,8 @@ export class CapacityCalendarComponent {
         this.milestoneRescheduled.emit({ milestone, started_at: start.format('YYYY-MM-DD'), due_at: due.format('YYYY-MM-DD') });
     }
 
-    #buildWeeks(data: WorkloadData, milestones: Milestone[], drag: DragState | null): WeekRow[] {
-        const workloadMap = new Map<string, DailyWorkload>();
+    #buildWeeks(data: WorkloadDataDto, milestones: Milestone[], drag: DragState | null): WeekRow[] {
+        const workloadMap = new Map<string, DailyWorkloadDto>();
         data.daily_workload.forEach((day) => workloadMap.set(day.date, day));
 
         const startDate = dayjs(data.start_date);
@@ -239,7 +226,7 @@ export class CapacityCalendarComponent {
         while (currentWeekStart.isSameOrBefore(endDate)) {
             const weekStart = currentWeekStart;
             const weekEnd = weekStart.add(6, 'days');
-            const weekDays: (DailyWorkload | null)[] = [];
+            const weekDays: (DailyWorkloadDto | null)[] = [];
             const weekNumber = weekStart.isoWeek();
             const weekProjectIds = new Set<string>();
             let monthLabel: string | undefined;
@@ -269,7 +256,6 @@ export class CapacityCalendarComponent {
         return weeks;
     }
 
-    /** Returns the milestone with start/due shifted by the active drag, so bars follow the pointer live. */
     #withDragApplied(milestone: Milestone, drag: DragState | null): { milestone: Milestone; start: ReturnType<typeof dayjs>; due: ReturnType<typeof dayjs> } {
         let start = dayjs(milestone.started_at);
         let due = dayjs(milestone.due_at);
@@ -306,7 +292,6 @@ export class CapacityCalendarComponent {
             })
             .sort((a, b) => a.startCol - b.startCol || b.span - a.span);
 
-        // Greedy lane packing: place each segment in the first lane whose last bar has ended.
         const laneEnds: number[] = [];
         return segments.map((seg) => {
             let lane = laneEnds.findIndex((end) => end < seg.startCol);

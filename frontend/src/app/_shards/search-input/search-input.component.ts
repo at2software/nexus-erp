@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, afterNextRender, Component, computed, ElementRef, inject, input, model, output, signal, viewChild } from '@angular/core';
 import { SearchService } from '@models/search.service';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { Dictionary, REFLECTION } from '@constants/constants';
 import { FormsModule } from '@angular/forms';
 import { ScrollbarComponent } from '@app/app/scrollbar/scrollbar.component';
@@ -18,9 +18,6 @@ import { CompanyContact } from '@models/company/company-contact.model';
     imports: [FormsModule, ScrollbarComponent, NgbTooltipModule, SafePipe],
 })
 export class SearchInputComponent {
-    // The emitted item is always a Serializable; its concrete class is whatever `only` resolves
-    // to at runtime (Company, Product, ...). Consumers narrow it themselves, typically via
-    // item.assert(SomeClass).
     readonly itemSelected = output<Serializable>();
 
     protected readonly Project = Project; 

@@ -1,17 +1,17 @@
-import { CommentService } from './comment.service';
-import { Serializable } from './../serializable';
+import { Serializable } from '@models/_core/serializable';
 import { User } from './../user/user.model';
-import { NxAction } from '@app/nx/nx.actions';
-import { NxGlobal } from '@app/nx/nx.global';
-import { Type } from 'class-transformer';
+import { NxAction } from '@models/_core/nx.actions';
+import { nx } from '@models/_core/nx-bridge';
+import { Type } from '@models/_core/hydrate';
 import { getCommentActions } from './comment.actions';
-import { Model, TypeFromClass } from '@constants/type-discriminators';
+import { Model, TypeFromClass } from '@constants/model/type-discriminators';
 import { computed } from '@angular/core';
 
 @Model('Comment')
 export class Comment extends Serializable {
     static API_PATH = (): string => 'comments';
-    SERVICE = CommentService;
+
+    override readonly getName = computed(() => { this.snapshot(); return this.user?.getName() ?? ''; });
 
     text: string = '';
     type: string = '';
@@ -25,17 +25,14 @@ export class Comment extends Serializable {
     @Type(()=>User) user!: User;
     @TypeFromClass() parent: any;
 
-    css = computed(() => (['grey', 'info', 'danger', 'warning'][this.snapshot().type as any] ?? 'white') as string);
-    isMyUser = computed(() => NxGlobal.global.user?.id === this.snapshot().user_id);
+    css = computed(() => (['grey', 'info', 'danger', 'warning'][this.snapshot().type as number] ?? 'white') as string);
+    isMyUser = computed(() => nx().global.user?.id === this.snapshot().user_id);
     formattedText = computed(() => this.#formattedText(this.snapshot().text));
-    doubleClickAction: number = 0;
-    actions: NxAction[] = getCommentActions(this);
-    getIcon = computed(() => (['chat', 'info', 'dangerous', 'warning'][this.snapshot().type as any] ?? 'white') as string);
+    protected override buildActions(): NxAction[] { return getCommentActions(this) }
+    getIcon = computed(() => (['chat', 'info', 'dangerous', 'warning'][this.snapshot().type as number] ?? 'white') as string);
 
     #formattedText = (text: string) => {
         let _ = text;
-        // Only replace URLs that are not already inside an <a> tag
-        // Use negative lookbehind to check if URL is not preceded by href="
         _ = _.replace(/(?<!href=["'])((http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-]))/g, '<a href="$1" class="text-primary" target="_blank" title="$1"><i>link</i></a>');
         return _;
     };

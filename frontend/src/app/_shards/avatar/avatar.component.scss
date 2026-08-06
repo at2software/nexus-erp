@@ -4,10 +4,10 @@ img {
 }
 
 :host {
-    width: 26px;
-    height: 26px;
     display: block;
     position: relative;
+    width: fit-content;
+    line-height: 0;
 }
 
 .warning-badge {
@@ -50,7 +50,6 @@ img {
     z-index: -1;
 }
 
-// Multi-line tooltip support
 ::ng-deep .badge-tooltip-multiline .tooltip-inner {
     white-space: pre-line;
     text-align: left;

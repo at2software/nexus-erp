@@ -26,7 +26,6 @@ class ForecastService {
 
         $this->info('Linear Regression Forecast Analysis - '.$evaluationDate->format('Y-m-d'));
 
-        // Collect data for the last 5 years from evaluation date
         $endDate   = $evaluationDate->copy()->subYear();
         $startDate = $endDate->copy()->subYears(5);
 
@@ -41,23 +40,19 @@ class ForecastService {
             $current->addMonth();
         }
 
-        // Perform linear regression analysis
         $this->performLinearRegression($trainingData, $shouldStore, $evaluationDate);
 
         return 0;
     }
     private function collectMonthData(Carbon $month, ?Carbon $evaluationDate = null): ?array {
-        // Get dependent variable y: Invoice net sum for the 12 months after this month
         $futureStart = $month->copy()->addMonth();
         $futureEnd   = $futureStart->copy()->addMonths(11)->endOfMonth();
 
         $dependentVariable = Invoice::whereBetween('created_at', [$futureStart, $futureEnd])
             ->sum('net');
 
-        // Use evaluation date if provided, otherwise use current time
         $currentTime = $evaluationDate ?: Carbon::now();
 
-        // Skip if no future data available relative to evaluation date
         if ($futureEnd->gt($currentTime)) {
             return null;
         }
@@ -67,20 +62,13 @@ class ForecastService {
             'dependent_y' => $dependentVariable,
         ];
 
-        // Seasonal features removed per user request
-
-        // Add lagged revenue values as predictors
         $data['revenue_lag_3']  = $this->getRevenueForMonth($month->copy()->subMonths(3));
         $data['revenue_lag_6']  = $this->getRevenueForMonth($month->copy()->subMonths(6));
         $data['revenue_lag_12'] = $this->getRevenueForMonth($month->copy()->subMonths(12));
 
-        // Add customer-specific revenue data (INVOICE_REVENUE_12M)
         $customerRevenueData = $this->getCustomerRevenueData($month);
         $data                = array_merge($data, $customerRevenueData);
 
-        // Customer revenue data collected successfully
-
-        // Get independent variables for each parameter key
         foreach (self::PARAM_KEYS as $key) {
             $paramId = Param::where('key', $key)->value('id');
             if (! $paramId) {
@@ -89,7 +77,6 @@ class ForecastService {
 
             $baseValue = $this->getParamFor($paramId, $month);
 
-            // Get absolute and delta values for 24 months lookback
             $absoluteValues = [];
             $deltaValues    = [];
 
@@ -104,7 +91,6 @@ class ForecastService {
             $data["{$key}_abs"]   = $absoluteValues;
             $data["{$key}_delta"] = $deltaValues;
 
-            // Calculate moving averages
             $data["{$key}_ma_3"]  = $this->calculateMovingAverage($paramId, $month, 3);
             $data["{$key}_ma_6"]  = $this->calculateMovingAverage($paramId, $month, 6);
             $data["{$key}_ma_12"] = $this->calculateMovingAverage($paramId, $month, 12);
@@ -145,14 +131,12 @@ class ForecastService {
     private function getCustomerRevenueData(Carbon $month): array {
         $data = [];
 
-        // Get customer revenue aggregations for current month
         $currentStats                    = $this->getCustomerRevenueStats($month);
         $data['customer_revenue_sum']    = $currentStats['sum'];
         $data['customer_revenue_avg']    = $currentStats['avg'];
         $data['customer_revenue_count']  = $currentStats['count'];
         $data['customer_revenue_median'] = $currentStats['median'];
 
-        // Get historical customer revenue data for 12 months lookback
         $historicalValues = [];
         for ($i = 1; $i <= 12; $i++) {
             $lookbackMonth      = $month->copy()->subMonths($i);
@@ -160,7 +144,6 @@ class ForecastService {
             $historicalValues[] = $stats['sum'];
         }
 
-        // Calculate moving averages for customer revenue
         if (count($historicalValues) >= 3) {
             $data['customer_revenue_ma_3'] = array_sum(array_slice($historicalValues, 0, 3)) / 3;
         }
@@ -171,7 +154,6 @@ class ForecastService {
             $data['customer_revenue_ma_12'] = array_sum($historicalValues) / 12;
         }
 
-        // Calculate deltas from 3, 6, 12 months ago
         if (isset($historicalValues[2])) {
             $data['customer_revenue_delta_3'] = $currentStats['sum'] - $historicalValues[2];
         }
@@ -182,7 +164,6 @@ class ForecastService {
             $data['customer_revenue_delta_12'] = $currentStats['sum'] - $historicalValues[11];
         }
 
-        // Growth rates
         if (isset($historicalValues[2]) && $historicalValues[2] > 0) {
             $data['customer_revenue_growth_3m'] = ($currentStats['sum'] - $historicalValues[2]) / $historicalValues[2];
         }
@@ -192,10 +173,8 @@ class ForecastService {
         return $data;
     }
     private function getCustomerRevenueStats(Carbon $month): array {
-        // Get customer revenue data from parameters
         $paramExists = Param::where('id', 3)->exists();
         if (! $paramExists) {
-            // Try to find the correct param
             $invoiceRevenueParam = Param::where('key', 'INVOICE_REVENUE_12M')->first();
             if ($invoiceRevenueParam) {
                 $paramId = $invoiceRevenueParam->id;
@@ -209,7 +188,6 @@ class ForecastService {
         $monthStart = $month->copy()->startOfMonth();
         $monthEnd   = $month->copy()->endOfMonth();
 
-        // Get INVOICE_REVENUE_12M data for all companies for this month
         $revenues = FloatParam::where('param_id', $paramId)
             ->whereParentType(Company::class)
             ->whereBetween('created_at', [$monthStart, $monthEnd])
@@ -219,8 +197,6 @@ class ForecastService {
             })
             ->values()
             ->toArray();
-
-        // Customer revenue values collected
 
         if (empty($revenues)) {
             return [
@@ -236,7 +212,6 @@ class ForecastService {
         $sum   = array_sum($revenues);
         $avg   = $sum / $count;
 
-        // Calculate median
         if ($count % 2 === 0) {
             $median = ($revenues[$count / 2 - 1] + $revenues[$count / 2]) / 2;
         } else {
@@ -255,7 +230,6 @@ class ForecastService {
             return;
         }
 
-        // Debug: Check if customer revenue features exist in training data
         if (! empty($trainingData)) {
             $sampleData       = $trainingData[0];
             $customerFeatures = array_filter(array_keys($sampleData), fn ($key) => strpos($key, 'customer_revenue') !== false);
@@ -265,10 +239,8 @@ class ForecastService {
             }
         }
 
-        // Analyze individual feature correlations
         $this->analyzeFeatureCorrelations($trainingData);
 
-        // Prepare feature combinations to test
         $featureCombinations = $this->generateFeatureCombinations();
 
         $bestR2           = -1;
@@ -292,11 +264,9 @@ class ForecastService {
             }
 
             if ($result) {
-                // Calculate diversity score
                 $diversityScore = $this->calculateDiversityScore($features);
                 $adjustedScore  = $result['r2'] + ($diversityScore * 0.02); // Small bonus for diversity
 
-                // Prefer models with better diversity if R² is close (within 2%)
                 $shouldUpdate = false;
                 if ($result['r2'] > $bestR2) {
                     $shouldUpdate = true;
@@ -311,7 +281,6 @@ class ForecastService {
                 }
             }
 
-            // Keep track of top 5 results
             if ($result && $result['r2'] > 0.3) {
                 $topResults[] = [
                     'features'     => $features,
@@ -321,7 +290,6 @@ class ForecastService {
             }
         }
 
-        // Show top customer feature performances
         $customerResults = array_filter($topResults, fn ($r) => ! empty(array_filter($r['features'], fn ($f) => strpos($f, 'customer_revenue') !== false)));
         usort($customerResults, fn ($a, $b) => $b['r2'] <=> $a['r2']);
         $topCustomerResults = array_slice($customerResults, 0, 3);
@@ -332,35 +300,25 @@ class ForecastService {
         } else {
         }
 
-        // Sort top results by R²
         usort($topResults, fn ($a, $b) => $b['r2'] <=> $a['r2']);
         $topResults = array_slice($topResults, 0, 5);
 
-        // Output results
         $this->outputEnhancedResults($bestFeatures, $bestCoefficients, $bestR2, $topResults, count($trainingData));
 
-        // Generate prediction for next 12 months
         $forecast = $this->generateForecast($bestFeatures, $bestCoefficients, $trainingData, $bestR2);
 
-        // Store results in parameters if requested
         if ($shouldStore && $forecast) {
             $this->storeResults($bestFeatures, $bestCoefficients, $bestR2, $forecast, $evaluationDate);
         }
 
-        // Generate company-level forecasts for active customers
         if ($shouldStore) {
             $this->generateCompanyForecasts($evaluationDate);
         }
     }
 
-    /**
-     * Run analysis and return results without output (for use by seeders)
-     */
     public function runAnalysis(?Carbon $evaluationDate = null, bool $shouldStore = true): ?array {
-        // Parse evaluation date
         $evaluationDate = $evaluationDate ?: Carbon::now();
 
-        // Collect data for the last 5 years from evaluation date
         $endDate   = $evaluationDate->copy()->subYear();
         $startDate = $endDate->copy()->subYears(5);
 
@@ -379,7 +337,6 @@ class ForecastService {
             return null; // Not enough training data
         }
 
-        // Perform analysis (similar to handle method but without output)
         $featureCombinations = $this->generateFeatureCombinations();
 
         $bestR2           = -1;
@@ -411,10 +368,8 @@ class ForecastService {
             return null;
         }
 
-        // Generate forecast
         $forecast = $this->generateForecast($bestFeatures, $bestCoefficients, $trainingData, $bestR2);
 
-        // Store results if requested
         if ($shouldStore && $forecast) {
             $this->storeResults($bestFeatures, $bestCoefficients, $bestR2, $forecast, $evaluationDate);
         }
@@ -430,7 +385,6 @@ class ForecastService {
     private function generateFeatureCombinations(): array {
         $combinations = [];
 
-        // Define feature groups by source type
         $featureGroups = [
             'cashflow_acquisitions' => [],
             'cashflow_timebased'    => [],
@@ -440,11 +394,9 @@ class ForecastService {
             'seasonal'              => [],
         ];
 
-        // Populate feature groups
         foreach (self::PARAM_KEYS as $key) {
             $groupKey = strtolower(str_replace('CASHFLOW_', 'cashflow_', $key));
 
-            // Add various representations of each parameter
             $featureGroups[$groupKey][] = "{$key}_ma_3";
             $featureGroups[$groupKey][] = "{$key}_ma_6";
             $featureGroups[$groupKey][] = "{$key}_ma_12";
@@ -455,7 +407,6 @@ class ForecastService {
             }
         }
 
-        // Customer revenue features
         $featureGroups['customer_revenue'] = [
             'customer_revenue_sum', 'customer_revenue_avg', 'customer_revenue_count',
             'customer_revenue_ma_3', 'customer_revenue_ma_6', 'customer_revenue_ma_12',
@@ -463,19 +414,14 @@ class ForecastService {
             'customer_revenue_growth_3m', 'customer_revenue_growth_6m',
         ];
 
-        // Historical revenue features
         $featureGroups['historical_revenue'] = [
             'revenue_lag_3', 'revenue_lag_6', 'revenue_lag_12',
         ];
 
-        // Seasonal features removed per user request
-
-        // Generate diversified combinations (one feature from each source)
         $this->generateDiversifiedCombinations($combinations, $featureGroups);
         return $combinations;
     }
     private function generateDiversifiedCombinations(array &$combinations, array $featureGroups) {
-        // Filter out empty groups
         $featureGroups = array_filter($featureGroups, fn ($group) => ! empty($group));
         $groupNames    = array_keys($featureGroups);
 
@@ -484,7 +430,6 @@ class ForecastService {
             return;
         }
 
-        // Generate 2-feature combinations (one from each of 2 different sources)
         for ($i = 0; $i < count($groupNames); $i++) {
             for ($j = $i + 1; $j < count($groupNames); $j++) {
                 $group1 = $featureGroups[$groupNames[$i]];
@@ -494,7 +439,6 @@ class ForecastService {
                     continue;
                 }
 
-                // Take best representatives from each group
                 foreach (array_slice($group1, 0, 3) as $feature1) {
                     foreach (array_slice($group2, 0, 3) as $feature2) {
                         $combinations[] = [$feature1, $feature2];
@@ -503,7 +447,6 @@ class ForecastService {
             }
         }
 
-        // Generate 3-feature combinations (one from each of 3 different sources)
         if (count($groupNames) >= 3) {
             for ($i = 0; $i < count($groupNames); $i++) {
                 for ($j = $i + 1; $j < count($groupNames); $j++) {
@@ -516,7 +459,6 @@ class ForecastService {
                             continue;
                         }
 
-                        // Take best representative from each group
                         foreach (array_slice($group1, 0, 2) as $feature1) {
                             foreach (array_slice($group2, 0, 2) as $feature2) {
                                 foreach (array_slice($group3, 0, 2) as $feature3) {
@@ -529,7 +471,6 @@ class ForecastService {
             }
         }
 
-        // Generate 4-feature combinations for better models
         if (count($groupNames) >= 4) {
             $priorityGroups = array_intersect(['customer_revenue', 'historical_revenue', 'seasonal'], $groupNames);
 
@@ -569,7 +510,6 @@ class ForecastService {
             return null;
         }
 
-        // Prepare X matrix and y vector
         $X = [];
         $y = [];
 
@@ -602,7 +542,6 @@ class ForecastService {
             return null;
         }
 
-        // Calculate R²
         $r2 = $this->calculateR2($X, $y, $coefficients);
         return [
             'coefficients' => $coefficients,
@@ -611,12 +550,10 @@ class ForecastService {
         ];
     }
     private function extractFeatureValue(array $point, string $feature): ?float {
-        // Handle direct features (seasonal, lagged revenue, moving averages)
         if (isset($point[$feature])) {
             return (float)$point[$feature];
         }
 
-        // Parse indexed features like "CASHFLOW_PROJECTS_abs_5" or "CASHFLOW_PROJECTS_delta_10"
         if (strpos($feature, '_abs_') !== false || strpos($feature, '_delta_') !== false) {
             $parts = explode('_', $feature);
             $index = (int)array_pop($parts);
@@ -629,17 +566,12 @@ class ForecastService {
         return null;
     }
     private function selectTopFeatures(): array {
-        // Define potential features for correlation analysis
         $features = [];
 
-        // Seasonal features removed per user request
-
-        // Add lagged revenue features
         $features[] = 'revenue_lag_3';
         $features[] = 'revenue_lag_6';
         $features[] = 'revenue_lag_12';
 
-        // Add customer revenue features
         $features[] = 'customer_revenue_sum';
         $features[] = 'customer_revenue_avg';
         $features[] = 'customer_revenue_count';
@@ -653,14 +585,12 @@ class ForecastService {
         $features[] = 'customer_revenue_growth_3m';
         $features[] = 'customer_revenue_growth_6m';
 
-        // Add moving average features
         foreach (self::PARAM_KEYS as $key) {
             $features[] = "{$key}_ma_3";
             $features[] = "{$key}_ma_6";
             $features[] = "{$key}_ma_12";
         }
 
-        // Add top performing short-term features
         foreach (self::PARAM_KEYS as $key) {
             for ($i = 0; $i < 3; $i++) {
                 $features[] = "{$key}_abs_{$i}";
@@ -695,15 +625,12 @@ class ForecastService {
             $Xty[$i] = $sum;
         }
 
-        // Solve using Gaussian elimination
         return $this->gaussianElimination($XtX, $Xty);
     }
     private function gaussianElimination(array $A, array $b): ?array {
         $n = count($A);
 
-        // Forward elimination
         for ($i = 0; $i < $n; $i++) {
-            // Find pivot
             $maxRow = $i;
             for ($k = $i + 1; $k < $n; $k++) {
                 if (abs($A[$k][$i]) > abs($A[$maxRow][$i])) {
@@ -711,18 +638,15 @@ class ForecastService {
                 }
             }
 
-            // Swap rows
             if ($maxRow != $i) {
                 [$A[$i], $A[$maxRow]] = [$A[$maxRow], $A[$i]];
                 [$b[$i], $b[$maxRow]] = [$b[$maxRow], $b[$i]];
             }
 
-            // Check for singular matrix
             if (abs($A[$i][$i]) < 1e-10) {
                 return null;
             }
 
-            // Eliminate column
             for ($k = $i + 1; $k < $n; $k++) {
                 $factor = $A[$k][$i] / $A[$i][$i];
                 for ($j = $i; $j < $n; $j++) {
@@ -732,7 +656,6 @@ class ForecastService {
             }
         }
 
-        // Back substitution
         $x = array_fill(0, $n, 0);
         for ($i = $n - 1; $i >= 0; $i--) {
             $x[$i] = $b[$i];
@@ -751,7 +674,6 @@ class ForecastService {
         $ssTot = 0; // Total sum of squares
 
         for ($i = 0; $i < $n; $i++) {
-            // Predicted value
             $predicted = 0;
             for ($j = 0; $j < count($coefficients); $j++) {
                 $predicted += $coefficients[$j] * $X[$i][$j];
@@ -805,7 +727,6 @@ class ForecastService {
             }
         }
 
-        // Sort by correlation strength
         arsort($correlations);
 
         $this->info('Top 10 individual feature correlations:');
@@ -858,7 +779,6 @@ class ForecastService {
         $this->info('\n=== LINEAR REGRESSION FORECAST RESULTS ===');
         $this->info('R²: '.number_format($bestR2, 4)." ({$dataPoints} data points, ".number_format($bestR2 * 100, 1).'% variance explained)');
 
-        // Performance assessment
         if ($bestR2 > 0.7) {
             $this->info('Model Performance: STRONG');
         } elseif ($bestR2 > 0.5) {
@@ -947,7 +867,6 @@ class ForecastService {
             $this->info('   - Analyze for outliers or structural breaks');
         }
 
-        // Feature-specific recommendations
         $hasSeasonality     = false; // Seasonal features removed
         $hasTrends          = ! empty(array_filter($features, fn ($f) => strpos($f, '_ma_') !== false));
         $hasLagged          = ! empty(array_filter($features, fn ($f) => strpos($f, 'revenue_lag') !== false));
@@ -958,7 +877,6 @@ class ForecastService {
         $this->info('   Historical revenue: '.($hasLagged ? 'Included' : 'Missing'));
         $this->info('   Customer revenue data: '.($hasCustomerRevenue ? 'Included' : 'Missing'));
 
-        // Diversification analysis (without seasonal features)
         $featureTypes = [];
         if ($hasTrends) {
             $featureTypes[] = 'trends';
@@ -995,7 +913,6 @@ class ForecastService {
 
         $this->info($formula);
 
-        // Also show with variable names
         $this->info("\nWhere:");
         $this->info('  C (base factor) = '.number_format($coefficients[0], 2));
         for ($i = 0; $i < count($features); $i++) {
@@ -1008,12 +925,10 @@ class ForecastService {
         $this->info("\n=== 12-MONTH FORECAST ===");
 
         try {
-            // Find the most recent month with complete data
             $currentMonth = Carbon::now()->subYear();
             $currentData  = null;
             $attempts     = 0;
 
-            // Try to find data going back up to 6 months
             while (! $currentData && $attempts < 6) {
                 $testMonth   = $currentMonth->copy()->subMonths($attempts);
                 $currentData = $this->collectMonthData($testMonth);
@@ -1032,7 +947,6 @@ class ForecastService {
                 return null;
             }
 
-            // Calculate prediction using the model
             $prediction = $coefficients[0]; // Base factor C
 
             for ($i = 0; $i < count($features); $i++) {
@@ -1048,7 +962,6 @@ class ForecastService {
 
             $this->info('Predicted 12-month revenue: €'.number_format($prediction, 0));
 
-            // Calculate statistical confidence intervals
             $confidenceIntervals = $this->calculateConfidenceIntervals($prediction, $features, $coefficients, $trainingData, $r2);
 
             $this->info(sprintf('95%% confidence: €%s - €%s',
@@ -1056,7 +969,6 @@ class ForecastService {
                 number_format($confidenceIntervals['ci_95_upper'], 0)
             ));
 
-            // Return forecast data for storage
             return [
                 'prediction'           => $prediction,
                 'confidence_intervals' => $confidenceIntervals,
@@ -1074,17 +986,13 @@ class ForecastService {
         $p = count($features) + 1; // +1 for intercept
 
         if ($n <= $p) {
-            // Not enough data points for reliable confidence intervals
             $standardError = abs($prediction) * (1 - $r2) * 0.5; // Rough estimate
         } else {
-            // Calculate residual standard error
             $actualValues = array_column($trainingData, 'dependent_y');
             $meanActual   = array_sum($actualValues) / count($actualValues);
 
-            // Calculate sum of squared errors (approximate)
             $sumSquaredErrors = 0;
             foreach ($trainingData as $dataPoint) {
-                // Calculate predicted value for this training point
                 $predicted = $coefficients[0];
                 for ($i = 0; $i < count($features); $i++) {
                     $featureValue = $this->extractFeatureValue($dataPoint, $features[$i]);
@@ -1104,7 +1012,6 @@ class ForecastService {
             $standardError = $residualStandardError * sqrt(1 + (1 / $n));
         }
 
-        // T-distribution critical values (approximation)
         $degreesOfFreedom = max(1, $n - $p);
         $t_68             = $this->getTCriticalValue(0.32, $degreesOfFreedom); // 68% CI (1 - 0.68 = 0.32)
         $t_95             = $this->getTCriticalValue(0.05, $degreesOfFreedom); // 95% CI (1 - 0.95 = 0.05)
@@ -1120,11 +1027,8 @@ class ForecastService {
         ];
     }
     private function getTCriticalValue(float $alpha, int $df): float {
-        // Approximation of t-distribution critical values
-        // For production use, you'd want a proper statistical library
 
         if ($df >= 30) {
-            // Use normal distribution approximation for large samples
             if ($alpha <= 0.01) {
                 return 2.576;
             } // 99% CI
@@ -1135,7 +1039,6 @@ class ForecastService {
                 return 1.000;
             } // 68% CI
         } else {
-            // Simplified t-distribution values for small samples
             if ($alpha <= 0.01) {
                 if ($df <= 5) {
                     return 4.032;
@@ -1201,7 +1104,6 @@ class ForecastService {
         $diversityCount = count($sourceTypes);
         $featureCount   = count($features);
 
-        // Score: number of different sources + bonus for 3+ features
         $score = $diversityCount;
         if ($featureCount >= 3) {
             $score += 0.5; // Bonus for having 3+ features
@@ -1215,7 +1117,6 @@ class ForecastService {
         }
 
         try {
-            // Generate formula string
             $formula = 'predicted_revenue = '.number_format($coefficients[0], 2);
             for ($i = 0; $i < count($features); $i++) {
                 $coeff    = $coefficients[$i + 1];
@@ -1224,7 +1125,6 @@ class ForecastService {
                 $formula .= $sign.number_format($absCoeff, 6).' * ['.$features[$i].']';
             }
 
-            // Add feature details to formula
             $formulaDetails = $formula."\n\nFeatures:\n";
             $formulaDetails .= 'Base factor (C): '.number_format($coefficients[0], 2)."\n";
             for ($i = 0; $i < count($features); $i++) {
@@ -1241,10 +1141,8 @@ class ForecastService {
             $generatedTime = $evaluationDate ?: Carbon::now();
             $formulaDetails .= "\nGenerated: ".$generatedTime->format('Y-m-d H:i:s');
 
-            // Store formula in TextParam
             $this->storeParam('STATS_LINREG_FORMULA', $formulaDetails, $evaluationDate);
 
-            // Store essential forecast parameters
             $ci = $forecast['confidence_intervals'];
             $this->storeParam('STATS_LINREG_FORECAST_12M', $forecast['prediction'], $evaluationDate);
             $this->storeParam('STATS_LINREG_STANDARD_ERROR', $ci['standard_error'], $evaluationDate);
@@ -1268,7 +1166,6 @@ class ForecastService {
             return;
         }
 
-        // Active companies: had INVOICE_REVENUE_12M > 0 stored in last 12 months
         $activeCompanyIds = FloatParam::where('param_id', $revenueParam->id)
             ->where('parent_type', Company::class)
             ->whereNotNull('parent_id')
@@ -1299,7 +1196,6 @@ class ForecastService {
         }
     }
     private function forecastCompanyRevenue(Company $company, Carbon $evaluationDate): ?float {
-        // Load all company invoices once for efficient in-memory aggregation
         $allInvoices = Invoice::where('company_id', $company->id)
             ->whereBetween('created_at', [
                 $evaluationDate->copy()->subYears(8),
@@ -1307,7 +1203,6 @@ class ForecastService {
             ])
             ->get(['created_at', 'net']);
 
-        // Rolling 12M revenue sum ending at a given date
         $rev12M = function (Carbon $asOf) use ($allInvoices): float {
             $from = $asOf->copy()->subYear();
             $to   = $asOf->copy();
@@ -1316,7 +1211,6 @@ class ForecastService {
                 ->sum('net');
         };
 
-        // Build training data: each month from 5 years ago to 1 year ago
         $endDate      = $evaluationDate->copy()->subYear();
         $startDate    = $endDate->copy()->subYears(5);
         $trainingData = [];
@@ -1349,7 +1243,6 @@ class ForecastService {
             return null;
         }
 
-        // Predict using current-period lag features
         $coefficients = $result['coefficients'];
         $prediction   = $coefficients[0]
             + $coefficients[1] * $rev12M($evaluationDate->copy()->subMonths(3))

@@ -1,5 +1,5 @@
 <div class="row">
-    <div class="col-3">
+    <div class="col-12 col-md-3">
         <div class="card sticky-side">
             <div class="card-header hstack gap-2">
                 <i>verified</i>
@@ -11,7 +11,7 @@
             </div>
             <ul class="list-group list-group-flush">
                 @for (latest of latestFrameworks(); track latest.id) {
-                    <li class="list-group-item" [class.active]="selectedFrameworks().has(latest.name)" [style.opacity]="selectedFrameworks().size > 0 && !selectedFrameworks().has(latest.name) ? '0.4' : '1'" style="cursor: pointer" (click)="toggleFrameworkFilter(latest.name)" tabindex="0" (keydown.enter)="toggleFrameworkFilter(latest.name)">
+                    <li class="list-group-item cursor-pointer" [class.active]="selectedFrameworks().has(latest.name)" [style.opacity]="selectedFrameworks().size > 0 && !selectedFrameworks().has(latest.name) ? '0.4' : '1'" (click)="toggleFrameworkFilter(latest.name)" tabindex="0" (keydown.enter)="toggleFrameworkFilter(latest.name)">
                         <div class="hstack gap-2 justify-content-between align-items-center mb-1">
                             @if (frameworkIcon(latest.name); as icon) {
                                 <img [src]="icon" [alt]="latest.name" style="width: 18px; height: 18px" />
@@ -33,9 +33,9 @@
             </ul>
         </div>
     </div>
-    <div class="col-9">
+    <div class="col-12 col-md-9">
         <div class="card mb-3">
-            <table class="table table-hover mb-0">
+            <table stackedTable class="table table-hover mb-0">
                 <thead>
                     <tr>
                         <th></th>
@@ -71,7 +71,7 @@
                                 </span>
                             </td>
                             <td class="text-end" style="width: 32px">
-                                <i style="cursor: pointer" tabindex="0" (click)="toggleExpanded(framework.url, $event)" (keydown.enter)="toggleExpanded(framework.url, $event)">
+                                <i class="cursor-pointer" tabindex="0" (click)="toggleExpanded(framework.url, $event)" (keydown.enter)="toggleExpanded(framework.url, $event)">
                                     {{ expandedFrameworks.has(framework.url) ? 'expand_less' : 'expand_more' }}
                                 </i>
                             </td>

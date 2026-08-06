@@ -21,7 +21,6 @@ class RevenueStatisticsService {
         ];
     }
 
-    // Latest INVOICE_REVENUE_12M (rolling 12-month revenue) snapshot per month of the current year.
     private static function getRevenue12MByMonth($since) {
         return Param::get('INVOICE_REVENUE_12M')->history()
             ?->whereBetween('created_at', [$since, now()])

@@ -65,7 +65,6 @@ class TimetrackerController extends Controller {
         return null;
     }
     public function store(StoreRequest $request) {
-        // deprecated. not used anymore? TBD: shut down
 
         $payload = [];
         if (request()->has('invoice_item_id')) {
@@ -176,7 +175,6 @@ class TimetrackerController extends Controller {
         if ($user->current_focus_id != $poly['current_focus_id'] || $user->current_focus_type != $poly['current_focus_type']) {
             request()->user()->update($poly);
 
-            // Encapsulate plugin logic to prevent failures from breaking focus updates
             try {
                 foreach (PluginController::getPluginControllers(PluginChatController::class) as $chatController) {
                     if ($userId = $chatController->getIdFor(request()->user())) {
@@ -188,7 +186,6 @@ class TimetrackerController extends Controller {
                     }
                 }
             } catch (\Exception $e) {
-                // Log the plugin error but don't let it break the focus update
                 Log::warning('Plugin chat controller error during focus update', [
                     'error'   => $e->getMessage(),
                     'user_id' => request()->user()->id,
@@ -213,7 +210,6 @@ class TimetrackerController extends Controller {
             request()->user()->save();
         }
 
-        // Encapsulate plugin logic to prevent failures from breaking status updates
         try {
             foreach (PluginController::getPluginControllers(PluginChatController::class) as $chatController) {
                 if ($userId = $chatController->getIdFor(request()->user())) {
@@ -221,7 +217,6 @@ class TimetrackerController extends Controller {
                 }
             }
         } catch (\Exception $e) {
-            // Log the plugin error but don't let it break the status update
             Log::warning('Plugin chat controller error during status update', [
                 'error'   => $e->getMessage(),
                 'user_id' => request()->user()->id,

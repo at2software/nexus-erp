@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
 import { EChartsSimpleOptions } from '../echarts-presets';
 import { NgxEchartsDirective } from 'ngx-echarts';
-import { deepMerge } from '@constants/deepMerge';
+import { deepMerge } from '@constants/object/deepMerge';
 import { GlobalService } from '@models/global.service';
 import { Color } from '@constants/Color';
 import type { EChartsOption } from 'echarts';

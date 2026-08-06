@@ -1,22 +1,22 @@
-import { Serializable } from '@models/serializable';
+import type { NxAction } from '@models/_core/nx.actions';
+import { Serializable } from '@models/_core/serializable';
 import { DebriefService } from './debrief.service';
 import { DebriefProblemCategory } from './debrief-problem-category.model';
 import { DebriefSolution } from './debrief-solution.model';
 import { User } from '@models/user/user.model';
 import { signal, computed } from '@angular/core';
-import { Type } from 'class-transformer';
+import { Type } from '@models/_core/hydrate';
 import { map } from 'rxjs';
-import { NxGlobal, TBroadcast } from '@app/nx/nx.global';
-import { Model } from '@constants/type-discriminators';
+import { nx, TBroadcast } from '@models/_core/nx-bridge';
+import { Model } from '@constants/model/type-discriminators';
 import { DebriefProblemsActions } from './debrief-problem.actions';
 
 @Model('DebriefProblem')
 export class DebriefProblem extends Serializable {
     static override API_PATH = (): string => 'debriefs/problems';
     static DB_TABLE_NAME = (): string => 'debrief_problems';
-    override SERVICE = DebriefService;
 
-    actions = DebriefProblemsActions(this);
+    protected override buildActions(): NxAction[] { return DebriefProblemsActions(this) }
 
     title: string = '';
     description?: string;
@@ -29,7 +29,6 @@ export class DebriefProblem extends Serializable {
     category_name?: string;
     category_color?: string;
 
-    // Raw pivot data from Laravel
     pivot?: { severity?: string; context_notes?: string };
 
     context_notes = computed(() => this.snapshot()['pivot']?.context_notes ?? '');
@@ -40,19 +39,17 @@ export class DebriefProblem extends Serializable {
 
     override afterDeserialize(json: unknown): void {
         super.afterDeserialize(json);
-        // severity usually arrives nested under the debrief-problem pivot; a few stats
-        // endpoints (e.g. category breakdown) flatten it to a top-level field instead.
         const pivotSeverity = (json as { pivot?: { severity?: string } })?.pivot?.severity;
         if (!this.severity && pivotSeverity) this.severity = pivotSeverity as DebriefProblem['severity'];
     }
 
     override delete() {
         if (this.debrief_project_debrief_id()) {
-            return NxGlobal.getService(DebriefService)
+            return nx().getService(DebriefService)
                 .detachProblem(this.debrief_project_debrief_id(), this.id)
                 .pipe(
                     map(() => {
-                        NxGlobal.broadcast({ type: TBroadcast.Delete, data: this });
+                        nx().broadcast({ type: TBroadcast.Delete, data: this });
                         return this;
                     }),
                 );

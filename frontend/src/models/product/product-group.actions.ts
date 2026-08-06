@@ -1,7 +1,7 @@
-import { NxAction } from '@app/nx/nx.actions';
+import { NxAction } from '@models/_core/nx.actions';
 import { ProductGroup } from './product-group.model';
-import { NxGlobal } from '@app/nx/nx.global';
+import { nx } from '@models/_core/nx-bridge';
 
 export function getProductGroupActions(self: ProductGroup): NxAction[] {
-    return [{ title: $localize`:@@i18n.common.open:open`, action: () => self.navigateTo(self.frontendUrl()) }, { title: $localize`:@@i18n.common.setDeprecated:set deprecated`, on: () => self.is_active, group: true, action: () => self.put('deprecate') }, { title: $localize`:@@i18n.products.setActive:setActive`, on: () => !self.is_active, group: true, action: () => self.put('activate') }, NxGlobal.deleteAction(self, $localize`:@@i18n.products.reallyDeleteThisProductGroup:really delete this product group?`, { roles: 'product_manager' })];
+    return [{ title: $localize`:@@i18n.common.open:open`, doubleClick: true, action: () => self.navigateTo(self.frontendUrl()) }, { title: $localize`:@@i18n.common.setDeprecated:set deprecated`, on: () => self.is_active, group: true, action: () => self.put('deprecate') }, { title: $localize`:@@i18n.products.setActive:setActive`, on: () => !self.is_active, group: true, action: () => self.put('activate') }, nx().deleteAction(self, $localize`:@@i18n.products.reallyDeleteThisProductGroup:really delete this product group?`, { roles: 'product_manager' })];
 }

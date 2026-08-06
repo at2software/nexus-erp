@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Invoice } from '@models/invoice/invoice.model';
-import { dayjs } from '@constants/dates';
+import { dayjs } from '@constants/date/dates';
 import { Color } from '@constants/Color';
 import { InvoiceDetailChartOptions } from './invoice-detail-chart-options';
 import { ModalBaseService } from '@app/_modals/modal-base-service';

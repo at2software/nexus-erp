@@ -15,6 +15,7 @@ class Assignment extends BaseModel {
     use HasTasksTrait;
 
     const FLAG_MAIN_CONTACT = 1 << 0; // Binary flag: 1 (for main contact used in quotes/invoices)
+    const FLAG_CO_ASSIGNEE = 1 << 1;
 
     protected $fillable = ['role_id', 'parent_id', 'parent_type', 'assignee_id', 'assignee_type', 'hours_planned', 'hours_weekly', 'flags'];
     protected $appends  = ['avg_hpd'];

@@ -12,6 +12,7 @@ app-activity {
 }
 
 app-root {
+    --app-content-width: calc(100vw - #{$m-modules} - #{$m-activity});
     position: fixed;
     bottom: -5px;
     left: $m-modules;
@@ -20,17 +21,31 @@ app-root {
     padding-top: 5px;
     overflow: visible;
 
-    // Mobile: Remove left margin since navigation is hidden/overlay
     @media (max-width: 768px) {
-        margin-left: 0;
+        --app-content-width: 100vw;
+        left: 0;
     }
+}
+
+.container-app {
+    --bs-gutter-x: 1.5rem;
+    --bs-gutter-y: 0;
+    width: 100%;
+    max-width: $container-app;
+    padding-left: calc(var(--bs-gutter-x) * 0.5);
+    padding-right: calc(var(--bs-gutter-x) * 0.5);
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .app-scroll {
     height: 100%;
     overflow: auto;
 
-    // macOS style thin scrollbar
+    @media (max-width: 768px) {
+        padding-bottom: $mobile-burger-clearance;
+    }
+
     &::-webkit-scrollbar {
         width: 2px;
     }
@@ -45,12 +60,16 @@ app-root {
         }
     }
 
-    // Firefox
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }
 body.activity-collapsed app-root {
+    --app-content-width: calc(100vw - #{$m-modules});
     right: 0;
+
+    @media (max-width: 768px) {
+        --app-content-width: 100vw;
+    }
 }
 
 /**** MAIN CHANGES ****/
@@ -141,16 +160,14 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .container-full {
-    $w: calc(100vw - $m-modules - $m-activity);
+    $w: var(--app-content-width);
     display: block;
-    margin-left: calc(-1 * var(--bs-gutter-x, 0.75rem));
-    margin-right: calc(-1 * var(--bs-gutter-x, 0.75rem));
     width: $w;
     position: relative;
     left: 50%;
     right: 50%;
-    margin-left: calc(-0.5 * $w);
-    margin-right: calc(-0.5 * $w);
+    margin-left: calc(-0.5 * #{$w});
+    margin-right: calc(-0.5 * #{$w});
 }
 
 .bg-striped::before {
@@ -180,7 +197,6 @@ ngb-tooltip-window {
 .marker {
     position: relative;
 
-    // Shared marker styles
     &::after, & > td:last-child::after, & > th:last-child::after {
         content: '';
         position: absolute;
@@ -192,10 +208,8 @@ ngb-tooltip-window {
         background: no-repeat center / contain;
     }
 
-    // Non-table elements
     &:not(tr)::after { top: -2px; }
 
-    // Table rows: use last cell to avoid layout issues
     &::after { display: none; }
     &:not(tr)::after { display: block; }
     & > td:last-child, & > th:last-child {
@@ -306,6 +320,7 @@ ngb-tooltip-window {
     gap: 0.25rem;
     .btn {
         @extend .btn-plain;
+        i, n { color: inherit; }
     }
     i, n { color: #666; }
 }
@@ -463,7 +478,6 @@ nx-dropdown.dropstart > .dropdown-menu {
     transform: translateX(-100%) translateZ(0) !important;
 }
 
-// Appearance only; positioning + z-index live in _dropdown.scss
 .dropdown-menu {
     border: 2px solid rgba(0, 0, 0, 0.3) !important;
     background-color: rgba(colors.$bg-darker, 0.95) !important;
@@ -535,8 +549,6 @@ table {
         }
     }
 
-    // Footer-less tables: the last body row is the table's bottom edge, so drop
-    // the overshooting border and round it like sticky-footer would.
     &:not(:has(tfoot tr)) tbody tr:last-child {
         th, td {
             border-bottom: 0;
@@ -546,6 +558,52 @@ table {
         }
         th:last-child, td:last-child {
             border-bottom-right-radius: $border-radius;
+        }
+    }
+}
+
+@media (max-width: 768px) {
+    table.stacked-table {
+        display: block;
+
+        colgroup, thead { display: none; }
+        tbody { display: block; }
+
+        tbody > tr {
+            display: block;
+            padding: 0.25rem 0;
+            border-bottom: 1px var(--bs-border-color) solid;
+        }
+
+        tbody > tr > td {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            width: auto !important;
+            min-width: 0 !important;
+            max-width: none !important;
+            text-align: left !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            padding: 0.125rem 1rem;
+            white-space: normal;
+            overflow: visible;
+
+            &::before {
+                content: attr(data-label);
+                flex: 0 0 auto;
+                color: #999;
+                text-transform: capitalize;
+            }
+
+            &:not([data-label])::before {
+                content: none;
+            }
+
+            &:empty {
+                display: none;
+            }
         }
     }
 }

@@ -3,7 +3,7 @@
     <button type="button" class="btn btn-primary me-3" (click)="store()" ngbTooltip="Ctrl+Space" placement="bottom" hotkey="CTRL+ALT+N"><i>add</i><span i18n="@@i18n.common.sentinel">sentinel</span></button>
 </toolbar>
 <div class="row">
-    <div class="col-3">
+    <div class="col-12 col-md-3">
         <div class="card">
             <div class="card-header" i18n="@@i18n.common.sentinels">sentinels</div>
             @if (_sentinels.length === 0) {
@@ -20,7 +20,7 @@
             </ul>
         </div>
     </div>
-    <div class="col-9">
+    <div class="col-12 col-md-9">
         <router-outlet></router-outlet>
     </div>
 </div>

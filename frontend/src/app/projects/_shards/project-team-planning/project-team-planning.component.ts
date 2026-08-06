@@ -14,11 +14,11 @@ import { IHasAssignees } from '@interfaces/hasAssignees.interface';
 import { tracked } from '@constants/tracked';
 import { Company } from '@models/company/company.model';
 import { NgbDropdownModule, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
-import { PluginInstance } from '@models/http/plugin.instance';
-import { MantisPlugin } from '@models/http/plugin.mantis';
-import { GitLabPlugin } from '@models/http/plugin.gitlab';
-import { MattermostPlugin } from '@models/http/plugin.mattermost';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
+import { PluginInstance } from '@models/http/plugins/plugin.instance';
+import { MantisPlugin } from '@models/http/plugins/plugin.mantis';
+import { GitLabPlugin } from '@models/http/plugins/plugin.gitlab';
+import { MattermostPlugin } from '@models/http/plugins/plugin.mattermost';
 import { AvatarComponent } from '@shards/avatar/avatar.component';
 
 @Component({

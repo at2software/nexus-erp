@@ -1,16 +1,16 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { ConfirmationService } from '@app/_modals/modal-confirm/confirmation.service';
-import { InputModalService } from '@app/_modals/modal-input/modal-input.component';
-import { PluginInstanceFactory } from '@models/http/plugin.instance.factory';
-import { MantisPlugin } from '@models/http/plugin.mantis';
-import { IAIPlugin } from '@models/http/ai.plugin.interface';
-import { AiModel } from '@models/api-response';
-import { PluginInstance } from '@models/http/plugin.instance';
+import { InputModalService } from '@app/_modals/modal-input/modal-input.service';
+import { PluginInstanceFactory } from '@models/http/plugins/plugin.instance.factory';
+import { MantisPlugin } from '@models/http/plugins/plugin.mantis';
+import { IAIPlugin } from '@models/http/plugins/ai.plugin.interface';
+import { AiModelDto } from '@models/_core/api-response';
+import { PluginInstance } from '@models/http/plugins/plugin.instance';
 import { Encryption } from '@models/encryption/encryption.model';
 import { FormsModule } from '@angular/forms';
 import { SpinnerComponent } from '@shards/spinner/spinner.component';
-import { PluginEntry } from '@models/api-response';
+import { PluginEntryDto } from '@models/_core/api-response';
 
 @Component({
     selector: 'plugin-config-modal',
@@ -25,14 +25,13 @@ export class PluginConfigModalComponent {
     #confirmationService = inject(ConfirmationService);
     #inputModalService = inject(InputModalService);
 
-    plugin!: PluginEntry;
+    plugin!: PluginEntryDto;
     isNewPlugin = signal(false);
-    availableModels = signal<AiModel[]>([]);
+    availableModels = signal<AiModelDto[]>([]);
     isLoadingModels = signal(false);
     isTestingConnection = signal(false);
 
     constructor() {
-        // plugin is set by NgbModal before change detection, so we handle init lazily via a setter pattern
         Promise.resolve().then(() => this.#init());
     }
 
@@ -177,7 +176,6 @@ export class PluginConfigModalComponent {
                 if (mantisPlugin.state === 'connected') {
                     clearTimeout(timeout);
                     this.isTestingConnection.set(false);
-                    /* isTestingConnection signal triggers re-render */
                 } else if (mantisPlugin.state === 'connection fail') {
                     clearTimeout(timeout);
                     this.isTestingConnection.set(false);
@@ -191,7 +189,6 @@ export class PluginConfigModalComponent {
                 next: () => {
                     clearTimeout(timeout);
                     this.isTestingConnection.set(false);
-                    /* isTestingConnection signal triggers re-render */
                 },
             });
         } catch {

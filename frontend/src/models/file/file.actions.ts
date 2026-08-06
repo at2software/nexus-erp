@@ -1,16 +1,15 @@
-import { NxAction } from '@app/nx/nx.actions';
+import { NxAction } from '@models/_core/nx.actions';
 import { File } from './file.model';
-import { NxGlobal } from '@app/nx/nx.global';
+import { nx } from '@models/_core/nx-bridge';
 import { FileService } from './file.service';
-import { ModalBaseService } from '@app/_modals/modal-base-service';
-import { ModalFilePreviewComponent } from '@app/_modals/modal-file-preview/modal-file-preview.component';
+import { MODAL } from '@models/_core/modal-registry';
 
 const isPreviewable = (file: File): boolean => file.mime === 'application/pdf' || !!file.mime?.startsWith('image/');
 
 export function getFileActions(self: File): NxAction[] {
     return [
-        { title: $localize`:@@i18n.common.preview:preview`, action: () => ModalBaseService.open(ModalFilePreviewComponent, self), on: () => isPreviewable(self) },
-        { title: $localize`:@@i18n.common.download:download`, action: () => (NxGlobal.getService(FileService)! as FileService).download(self), group: true },
-        NxGlobal.deleteAction(self, $localize`:@@i18n.invoices.reallyDeleteThisFile:really delete this file?`, { roles: 'admin' }),
+        { title: $localize`:@@i18n.common.preview:preview`, doubleClick: true, action: () => nx().openModal(MODAL.filePreview, self), on: () => isPreviewable(self) },
+        { title: $localize`:@@i18n.common.download:download`, action: () => (nx().getService(FileService)! as FileService).download(self), group: true },
+        nx().deleteAction(self, $localize`:@@i18n.invoices.reallyDeleteThisFile:really delete this file?`, { roles: 'admin' }),
     ];
 }

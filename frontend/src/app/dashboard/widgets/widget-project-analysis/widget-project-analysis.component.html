@@ -13,7 +13,7 @@
         @if (runningProjects().length) {
             <ul revealList class="list-group">
                 @for (p of runningProjects(); track p.id) {
-                    <li class="list-group-item d-flex align-items-center gap-2 cursor-pointer" (click)="selectProject(p)" (keyup.enter)="selectProject(p)" tabindex="0">
+                    <li class="list-group-item d-flex align-items-center gap-2 cursor-pointer" [nx]="p" (click)="selectProject(p)" (keyup.enter)="selectProject(p)" tabindex="0">
                         <span class="flex-fill text-truncate">{{ p.name }}</span>
                         <i class="text-muted">chevron_right</i>
                     </li>

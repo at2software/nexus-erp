@@ -38,7 +38,6 @@ use Rubix\ML\Transformers\ZScaleStandardizer;
 class ProjectQuoteModel {
     private const MODEL_PATH = 'ml/project_quote_acceptance.rbx';
 
-    /** The positive class label. */
     public const ACCEPTED = 1;
 
     /** @return array<string, callable(): Learner> */
@@ -71,7 +70,6 @@ class ProjectQuoteModel {
         ];
     }
 
-    /** Rubix classifier labels must be strings. */
     public static function label(array $row): string {
         return (string)$row[ProjectQuoteDataset::LABEL];
     }
@@ -113,8 +111,6 @@ class ProjectQuoteModel {
                 array_push($testRows, ...$rowsByCompany[$companyId]);
             }
 
-            // Global majority class of the TRAINING fold only, used as the
-            // baseline's fallback for companies with no prior decided quotes.
             $trainAcceptedRate = count($trainRows) > 0
                 ? count(array_filter($trainRows, fn ($row) => $row[ProjectQuoteDataset::LABEL] === self::ACCEPTED)) / count($trainRows)
                 : 0.5;
@@ -159,9 +155,6 @@ class ProjectQuoteModel {
     }
 
     /**
-     * Accuracy / F1 / MCC plus manually-computed precision & recall for the
-     * accepted (positive) class.
-     *
      * @param string[] $predictions
      * @param string[] $actual
      * @return array<string, float>
@@ -194,7 +187,6 @@ class ProjectQuoteModel {
         ];
     }
 
-    /** Train the given estimator on the full dataset and persist it to disk. */
     public static function train(array $rows, Learner $estimator): PersistentModel {
         $samples = array_map(fn ($row) => self::toSample($row), $rows);
         $labels  = array_map(fn ($row) => self::label($row), $rows);
@@ -219,17 +211,11 @@ class ProjectQuoteModel {
         return PersistentModel::load(new Filesystem($path));
     }
 
-    /** Predicted probability [0,1] that an arbitrary feature row is "accepted". Null if no trained model. */
     public static function probaForRow(array $row): ?float {
         return self::probaForRows([$row])[0] ?? null;
     }
 
     /**
-     * Predicted probabilities [0,1] for a BATCH of feature rows, in the same
-     * order, loading the persisted model only once — used by ProjectQuoteWhatIf
-     * to score many perturbed rows per request without repeated deserialization.
-     * Empty array if no trained model.
-     *
      * @param list<array<string, mixed>> $rows
      * @return list<float>
      */
@@ -243,7 +229,6 @@ class ProjectQuoteModel {
         return array_map(fn ($proba) => (float)($proba[(string)self::ACCEPTED] ?? 0.0), $probas);
     }
 
-    /** Predicted probability [0,1] that the project's quote will be accepted, from its CURRENT live features. */
     public static function predict(Project $project): ?float {
         $history = ProjectQuoteHistory::compute(ProjectQuoteDataset::eligibleProjects(), collect([$project]));
         $row     = ProjectQuoteDataset::extractRow($project, $history[$project->id] ?? []);

@@ -1,5 +1,5 @@
-import { VcardAddress } from './VcardAddress';
-import { VcardRow } from './VcardRow';
+import { VcardAddress } from './vcard-address';
+import { VcardRow } from './vcard-row';
 
 export class Vcard {
     rows: VcardRow[];
@@ -26,7 +26,6 @@ export class Vcard {
         const a: VcardRow[] = [];
         vcard.split('\n').forEach((x: string) => {
             const v = VcardRow.fromString(x);
-            //console.log('Parsed vCard line:', { line: x, parsed: v });
             if (v) {
                 if (v.key == 'FN') this.#trackFN = a.length;
                 if (v.key == 'ORG') this.#trackORG = a.length;

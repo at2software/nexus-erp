@@ -31,7 +31,7 @@
             @let board = global.dashboards[currentDashboard()];
             <div class="row" cdkDropListGroup data-tour="dashboard-zone">
                 @for (i of [0, 1, 2, 3]; track i) {
-                    <div cdkDropList [id]="'col-' + i" [cdkDropListConnectedTo]="['col-0', 'col-1', 'col-2', 'col-3', 'widget-list']" class="col-12 col-md-3" [cdkDropListData]="board.cols[i]" (cdkDropListDropped)="drop($event)" [cdkDropListDisabled]="!_is_editing" [class.cursor-move]="_is_editing">
+                    <div cdkDropList [id]="'col-' + i" [cdkDropListConnectedTo]="['col-0', 'col-1', 'col-2', 'col-3', 'widget-list']" class="col-12 col-md-6 col-xl-3" [cdkDropListData]="board.cols[i]" (cdkDropListDropped)="drop($event)" [cdkDropListDisabled]="!_is_editing" [class.cursor-move]="_is_editing">
                         @if (i === 0) {
                             <widget-superadmin-warning></widget-superadmin-warning>
                         }

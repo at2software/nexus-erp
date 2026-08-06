@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, Injectable, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, Service, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { HotkeyDirective } from '@directives/hotkey.directive';
@@ -31,7 +31,7 @@ export class ModalNewUserComponent {
     };
 }
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ModalNewUserService {
     #modalService = inject(NgbModal);
 

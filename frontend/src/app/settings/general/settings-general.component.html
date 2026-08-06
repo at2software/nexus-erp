@@ -21,7 +21,6 @@
                         <div class="card-body">
                             <input-settings-group id="SYS_LANGUAGE" [typeahead]="cLanguage()">
                                 <span i18n="@@i18n.settings.systemLanguageIso">system language (ISO&nbsp;639-1)</span>
-                                <span class="notranslate"> 639-1)</span>
                             </input-settings-group>
                             <input-settings-group id="SYS_COUNTRY" [typeahead]="cCountry()">
                                 <span i18n="@@i18n.settings.countryIso">country (ISO&nbsp;3166)</span>
@@ -71,7 +70,7 @@
                         <div class="card-body">
                             <div class="input-group mb-2">
                                 <span class="input-group-text col-3" i18n="@@i18n.settings.myCompany">my company</span>
-                                <search-input class="col-9" only="Company" (itemSelected)="onCompanyChanged($event)" [query]="_me?.getName() ?? ''"></search-input>
+                                <search-input class="col-12 col-md-9" only="Company" (itemSelected)="onCompanyChanged($event)" [query]="_me?.getName() ?? ''"></search-input>
                             </div>
                             @if (_me) {
                                 <input-settings-group class="mb-2" id="ME_COMPANY_OWNERS" i18n="@@i18n.common.companyOwners">company owners</input-settings-group>

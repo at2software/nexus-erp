@@ -11,7 +11,6 @@ class LeadSource extends BaseModel {
 
     protected $fillable = ['name'];
 
-    // Marketing automation relationships
     public function marketingInitiatives(): BelongsToMany {
         return $this->belongsToMany(MarketingInitiative::class, 'marketing_initiative_channels', 'lead_source_id', 'marketing_initiative_id')
             ->withPivot(['is_primary', 'custom_settings'])
@@ -21,7 +20,6 @@ class LeadSource extends BaseModel {
         return $this->hasMany(MarketingProspect::class);
     }
 
-    // Helper methods
     public function getActiveInitiatives() {
         return $this->marketingInitiatives()
             ->where('status', 'active')
@@ -38,7 +36,6 @@ class LeadSource extends BaseModel {
             ->toArray();
     }
     public function supportsFirefoxAddon(): bool {
-        // Define which channels support Firefox addon integration
         $supportedChannels = ['linkedin', 'xing', 'facebook', 'twitter'];
         return in_array(strtolower($this->name), $supportedChannels);
     }

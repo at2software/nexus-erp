@@ -27,7 +27,6 @@ class MarketingProspectActivity extends BaseModel {
         ];
     }
 
-    // Relationships
     public function marketingProspect(): BelongsTo {
         return $this->belongsTo(MarketingProspect::class, 'marketing_prospect_id');
     }
@@ -35,12 +34,10 @@ class MarketingProspectActivity extends BaseModel {
         return $this->belongsTo(MarketingInitiativeActivity::class, 'marketing_initiative_activity_id');
     }
 
-    // Legacy support - keep for backwards compatibility with frontend
     public function marketingActivity(): BelongsTo {
         return $this->marketingInitiativeActivity();
     }
 
-    // Scopes
     public function scopePending($query) {
         return $query->where('status', 'pending');
     }
@@ -63,7 +60,6 @@ class MarketingProspectActivity extends BaseModel {
         return $query->whereHas('marketingActivity', fn ($q) => $q->where('activity_type', $type));
     }
 
-    // Helper methods
     public function getStatusLabel(): string {
         return match ($this->status) {
             'pending'   => 'Pending',
@@ -116,10 +112,6 @@ class MarketingProspectActivity extends BaseModel {
         return $this->update(['scheduled_at' => $newDate]);
     }
 
-    /**
-     * Shift all succeeding pending activities for the same prospect
-     * based on how early/late this activity was completed.
-     */
     public function shiftSucceedingActivities(): void {
         $now        = now();
         $daysOffset = $now->startOfDay()->diffInDays($this->scheduled_at->startOfDay());
@@ -160,7 +152,6 @@ class MarketingProspectActivity extends BaseModel {
             return null;
         }
 
-        // Generate appropriate LinkedIn action URLs based on activity type
         return match ($this->marketingActivity->activity_type) {
             'connection_request' => $prospect->linkedin_url,
             'send_message'       => $prospect->linkedin_url.'/overlay/contact-info/',

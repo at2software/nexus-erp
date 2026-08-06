@@ -1,6 +1,6 @@
 import { afterNextRender, ChangeDetectionStrategy, Component, inject, Injector, input, signal, TemplateRef } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { Serializable } from '@models/serializable';
+import { Serializable } from '@models/_core/serializable';
 import { DEFAULT_RTE_CONFIG } from '../text-param-editor/default-rte-config';
 import { EmptyStateComponent } from '@shards/empty-state/empty-state.component';
 import { QuillEditorComponent, QuillModules } from 'ngx-quill';
@@ -8,6 +8,7 @@ import type Quill from 'quill';
 import { FormsModule } from '@angular/forms';
 import { SafePipe } from '@pipes/safe.pipe';
 import { HotkeyDirective } from '@directives/hotkey.directive';
+import { insertCurrentDate } from '@constants/quill';
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,10 +37,6 @@ export class RteComponent {
     #injector = inject(Injector);
     #quill?: Quill;
 
-    // Quill registers its own (high-frequency) keystroke/selection listeners during construction.
-    // Deferring its creation into afterNextRender() — which Angular always runs outside the zone —
-    // keeps those listeners out of zone.js, so typing doesn't trigger a full-app change detection
-    // tick on every keystroke.
     readonly editorReady = signal(false);
 
     open(content: TemplateRef<unknown>) {
@@ -63,11 +60,6 @@ export class RteComponent {
     }
 
     insertCurrentDate() {
-        if (!this.#quill) return;
-        const d = new Date();
-        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        const range = this.#quill.getSelection() ?? { index: this.#quill.getLength(), length: 0 };
-        this.#quill.insertText(range.index, dateStr, 'user');
-        this.#quill.setSelection(range.index + dateStr.length, 0);
+        if (this.#quill) insertCurrentDate(this.#quill);
     }
 }

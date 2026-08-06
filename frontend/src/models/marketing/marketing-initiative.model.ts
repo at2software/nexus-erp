@@ -1,19 +1,17 @@
-import { Serializable } from '../serializable';
-import { MarketingService } from './marketing.service';
-import { NxActionType } from '@app/nx/nx.actions';
-import { Type } from 'class-transformer';
+import { Serializable } from '@models/_core/serializable';
+import { NxAction, NxActionType } from '@models/_core/nx.actions';
+import { Type } from '@models/_core/hydrate';
 import { MarketingPerformanceMetric, TPivot } from './marketing-performance-metrics.model';
 import { MarketingWorkflow } from './marketing-workflow.model';
 import { MarketingInitiativeActivity } from './marketing-initiative-activity.model';
 import { User } from '@models/user/user.model';
-import { Model } from '@constants/type-discriminators';
+import { Model } from '@constants/model/type-discriminators';
 
 @Model('MarketingInitiative')
 export class MarketingInitiative extends Serializable {
     static API_PATH = (): string => 'marketing/initiatives';
     static DB_TABLE_NAME = (): string => 'marketing_initiatives';
     
-    SERVICE = MarketingService;
 
     name!: string;
     description?: string;
@@ -33,46 +31,48 @@ export class MarketingInitiative extends Serializable {
     @Type(()=>User) users?: User[];
     @Type(()=>MarketingInitiative) children?: MarketingInitiative[];
 
-    doubleClickAction = 0;
-    actions = [
-        {
-            title: $localize`:@@i18n.common.open:open`,
-            action: () => this.navigateTo(`/marketing/initiatives`),
-        },
-        {
-            title: 'Change state to...',
-            group: true,
-            children: [
-                {
-                    title: 'Active',
-                    on: () => this.status !== 'active',
-                    action: () => {
-                        this.update({ status: 'active' }).subscribe();
+    protected override buildActions(): NxAction[] {
+        return [
+            {
+                title: $localize`:@@i18n.common.open:open`,
+                doubleClick: true,
+                action: () => this.navigateTo(`/marketing/initiatives`),
+            },
+            {
+                title: 'Change state to...',
+                group: true,
+                children: [
+                    {
+                        title: 'Active',
+                        on: () => this.status !== 'active',
+                        action: () => {
+                            this.update({ status: 'active' }).subscribe();
+                        },
                     },
-                },
-                {
-                    title: 'Paused',
-                    on: () => this.status !== 'paused',
-                    action: () => {
-                        this.update({ status: 'paused' }).subscribe();
+                    {
+                        title: 'Paused',
+                        on: () => this.status !== 'paused',
+                        action: () => {
+                            this.update({ status: 'paused' }).subscribe();
+                        },
                     },
-                },
-                {
-                    title: 'Completed',
-                    on: () => this.status !== 'completed',
-                    action: () => {
-                        this.update({ status: 'completed' }).subscribe();
+                    {
+                        title: 'Completed',
+                        on: () => this.status !== 'completed',
+                        action: () => {
+                            this.update({ status: 'completed' }).subscribe();
+                        },
                     },
-                },
-            ],
-        },
-        {
-            title: $localize`:@@i18n.common.delete:delete`,
-            group: true,
-            type: NxActionType.Destructive,
-            action: () => this.modalConfirm().then(() => this.httpService.delete(`marketing/initiatives/${this.id}`).subscribe()),
-            hotkey: 'DEL',
-            roles: 'marketing',
-        },
-    ];
+                ],
+            },
+            {
+                title: $localize`:@@i18n.common.delete:delete`,
+                group: true,
+                type: NxActionType.Destructive,
+                action: () => this.modalConfirm().then(() => this.httpService.delete(`marketing/initiatives/${this.id}`).subscribe()),
+                hotkey: 'DEL',
+                roles: 'marketing',
+            },
+        ];
+    }
 }

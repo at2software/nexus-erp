@@ -14,9 +14,6 @@ use Sabre\DAV;
 use Sabre\DAVACL;
 
 class CardDAVController extends Controller {
-    /**
-     * Create a CardDAV response with the correct headers.
-     */
     public function createResponseWithCorrectHeader(Request $request): Response {
         $response = new Response;
         if (! $request->isMethod('GET')) {
@@ -29,52 +26,35 @@ class CardDAVController extends Controller {
         return $response;
     }
 
-    /**
-     * Handle CardDAV requests.
-     */
     public function handleCardDAV(Request $request): Response {
         $routeName = $request->route()->getName();
         $this->startCardDAVServer($routeName);
         return $this->createResponseWithCorrectHeader($request);
     }
 
-    /**
-     * Start the CardDAV server.
-     */
     public function startCardDAVServer(string $rootUri): void {
         $pdo = DB::connection()->getPdo();
         $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         $server = $this->createCardDAVServer($pdo);
         $server->setBaseUri($rootUri);
-        // Auth plugin
         $authBackend = new OwnPDOBasicAuthBackend($pdo);
         $authPlugin  = new DAV\Auth\Plugin($authBackend);
         $server->addPlugin($authPlugin);
-        // ACL plugin
         $aclPlugin = new DAVACL\Plugin;
         $server->addPlugin($aclPlugin);
-        // And off we go!
         $server->start();
     }
 
-    /**
-     * Create and configure the CardDAV server instance.
-     */
     public function createCardDAVServer($pdo): DAV\Server {
-        // Backends
         $principalBackend   = new OwnPrincipalBackend($pdo);
         $addressBookBackend = new OwnCardDAVBackend($pdo);
-        // Directory tree
         $tree = [
             new DAVACL\PrincipalCollection($principalBackend),
             new OwnAddressBookRoot($principalBackend, $addressBookBackend),
         ];
-        // The object tree needs in turn to be passed to the server class
         $server = new DAV\Server($tree);
-        // CardDAV plugin
         $carddavPlugin = new CardDAV\Plugin;
         $server->addPlugin($carddavPlugin);
-        // Sync plugin
         $syncPlugin = new DAV\Sync\Plugin;
         $server->addPlugin($syncPlugin);
 

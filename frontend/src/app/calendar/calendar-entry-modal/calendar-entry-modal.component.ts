@@ -2,7 +2,7 @@ import { afterNextRender, ChangeDetectionStrategy, Component, inject, signal } f
 import { NgbActiveModal, NgbDatepickerModule, NgbDateStruct } from '@ng-bootstrap/ng-bootstrap';
 import { CalendarEntry } from '@models/vcalendar/calendar-entry.model';
 import { RecurrenceType, VCalendarEvent } from '@models/vcalendar/vcalendar-event.model';
-import { dayjs } from '@constants/dates';
+import { dayjs } from '@constants/date/dates';
 import { ConfirmationService } from '@app/_modals/modal-confirm/confirmation.service';
 
 import { FormsModule } from '@angular/forms';
@@ -22,6 +22,7 @@ export class CalendarEntryModalComponent {
     daysOfWeekLong: string[] = [];
     monthNames: string[] = [];
 
+    readonly activeModal = inject(NgbActiveModal);
     confirmation = inject(ConfirmationService);
 
     calendarEntry?: CalendarEntry;
@@ -41,7 +42,7 @@ export class CalendarEntryModalComponent {
     editedStartTimeTemp: { hour: number; minute: number } = { hour: 10, minute: 0 };
     editedEndTime: { hour: number; minute: number } = { hour: 10, minute: 0 };
 
-    constructor(public activeModal: NgbActiveModal) {
+    constructor() {
         this.generateLocalizedDaysAndMonths();
         afterNextRender(() => this.#initializeEntry());
     }

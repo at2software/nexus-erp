@@ -152,7 +152,6 @@ class CustomerIntervalModel {
         return $result;
     }
 
-    /** Train the given estimator on the full dataset and persist it to disk. */
     public static function train(array $rows, Learner $estimator): PersistentModel {
         $samples = array_map(fn ($row) => self::toSample($row), $rows);
         $labels  = array_map(fn ($row) => CustomerIntervalDataset::logLabel($row[CustomerIntervalDataset::LABEL]), $rows);
@@ -177,12 +176,6 @@ class CustomerIntervalModel {
         return PersistentModel::load(new Filesystem($path));
     }
 
-    /**
-     * Predicted interval (days) until the company's next purchase, from
-     * features known today (today acting as the cutoff). Returns null if no
-     * trained model is persisted yet, or the company doesn't have enough
-     * purchase history to compute features at all.
-     */
     public static function predictIntervalDays(Company $company): ?float {
         $model = self::load();
         if (! $model) {
@@ -206,10 +199,6 @@ class CustomerIntervalModel {
         return max(0.0, exp($logPrediction) - 1);
     }
 
-    /**
-     * Predicted next-purchase date (today + predicted interval), and null if
-     * unpredictable. Convenience wrapper used by RefreshCustomerPredictions.
-     */
     public static function predictNextPurchaseAt(Company $company): ?Carbon {
         $days = self::predictIntervalDays($company);
         if ($days === null) {

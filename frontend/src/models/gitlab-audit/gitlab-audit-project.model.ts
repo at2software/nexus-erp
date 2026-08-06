@@ -1,9 +1,8 @@
-import { Serializable } from '../serializable';
-import { NxAction } from '@app/nx/nx.actions';
-import { GitlabAuditService } from './gitlab-audit.service';
+import { Serializable } from '@models/_core/serializable';
+import { NxAction } from '@models/_core/nx.actions';
 import { GitlabSchedule } from './gitlab-schedule.model';
-import { Model } from '@constants/type-discriminators';
-import { Type } from 'class-transformer';
+import { Model } from '@constants/model/type-discriminators';
+import { Type } from '@models/_core/hydrate';
 import { Company } from '@models/company/company.model';
 import { GitlabAuditProjectActions } from './gitlab-audit-project.actions';
 
@@ -11,7 +10,6 @@ import { GitlabAuditProjectActions } from './gitlab-audit-project.actions';
 export class GitlabAuditProject extends Serializable {
     static API_PATH = () => 'gitlab-audit';
     static DB_TABLE_NAME = () => 'gitlab_audit_projects';
-    SERVICE = GitlabAuditService;
 
     gitlab_url!: string;
     namespace_with_path!: string;
@@ -25,5 +23,5 @@ export class GitlabAuditProject extends Serializable {
 
     @Type(() => Company) company?: Company;
 
-    actions: NxAction[] = GitlabAuditProjectActions(this);
+    protected override buildActions(): NxAction[] { return GitlabAuditProjectActions(this) }
 }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { forkJoin } from 'rxjs';
@@ -7,14 +7,15 @@ import { Nx } from '@app/nx/nx.directive';
 import { NComponent } from '@shards/n/n.component';
 import { ToolbarComponent } from '@app/app/toolbar/toolbar.component';
 import { ExpenseService } from '@models/expense/expense.service';
+import { modelListResource } from '@models/http/model-resource';
 import { ExpenseCategory } from '@models/expense/expense-category.model';
 import { Expense } from '@models/expense/expense.model';
 import { ModalEditExpenseComponent } from '@app/_modals/modal-edit-expense/modal-edit-expense.component';
 import { ModalAssignExpenseComponent } from '@app/_modals/modal-assign-expense/modal-assign-expense.component';
 import { ModalBaseService } from '@app/_modals/modal-base-service';
 import { Toast } from '@shards/toast/toast';
-import { NxAction } from '@app/nx/nx.actions';
-import { INxContextMenu } from '@app/nx/nx.contextmenu.interface';
+import { NxAction } from '@models/_core/nx.actions';
+import { INxContextMenu } from '@models/_core/nx.contextmenu.interface';
 import { NxService } from '@app/nx/nx.service';
 import { AutosaveDirective } from "@directives/autosave.directive";
 import { NgxEchartsDirective } from 'ngx-echarts';
@@ -23,6 +24,7 @@ import { Color } from '@constants/Color';
 import { ECHARTS_DONUT_ITEM_STYLE } from '@charts/echarts-presets';
 import { GlobalService } from '@models/global.service';
 import { NgbDropdownModule, NgbModal, NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
+import { StackedTableDirective } from '@directives/stacked-table.directive';
 
 interface TBankTx extends INxContextMenu {
     date: string;
@@ -32,7 +34,6 @@ interface TBankTx extends INxContextMenu {
     key: string;
 }
 
-// Matched transactions are rendered as plain rows (no [nx] directive), so they don't need INxContextMenu.
 interface TMatchedTx {
     date: string;
     amount: number;
@@ -66,7 +67,7 @@ function longestCommonSubstring(strings: string[]): string {
     templateUrl: './invoices-bank-balance.component.html',
     styleUrl: './invoices-bank-balance.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [FormsModule, Nx, NComponent, ToolbarComponent, AutosaveDirective, NgxEchartsDirective, NgbTooltipModule, NgbDropdownModule],
+    imports: [StackedTableDirective, FormsModule, Nx, NComponent, ToolbarComponent, AutosaveDirective, NgxEchartsDirective, NgbTooltipModule, NgbDropdownModule],
 })
 export class InvoicesBankBalanceComponent {
     #expenseService = inject(ExpenseService);
@@ -78,8 +79,11 @@ export class InvoicesBankBalanceComponent {
     isLoading = signal(false);
     matched = signal<TMatchedItem[]>([]);
     unmatched = signal<TBankTx[]>([]);
-    allExpenses = signal<Expense[]>([]);
-    categories = signal<ExpenseCategory[]>([]);
+    categories = modelListResource(() => this.#expenseService.indexCategories()).value;
+
+    readonly #allExpenses = modelListResource(() => this.#expenseService.index());
+    allExpenses = linkedSignal(this.#allExpenses.value);
+
     selectedCategoryIds = signal<Set<string>>(new Set());
     selectedTxs = signal<TBankTx[]>([]);
 
@@ -89,9 +93,6 @@ export class InvoicesBankBalanceComponent {
     hideSingleDebitors = signal(false);
 
     constructor() {
-        this.#expenseService.indexCategories().subscribe(cats => this.categories.set(cats));
-        this.#expenseService.index().subscribe(expenses => this.allExpenses.set(expenses));
-
         this.#global.onSelectionIn(() => this.unmatched())
             .pipe(takeUntilDestroyed())
             .subscribe(([items]) => this.selectedTxs.set(items as TBankTx[]));
@@ -161,7 +162,7 @@ export class InvoicesBankBalanceComponent {
 
     readonly expensesWithPattern = computed<Expense[]>(() => this.allExpenses().filter(e => !!e.matching_string));
 
-    categoryFor = (exp: Expense) => this.categories().find(c => String(c.id) === String(exp.category_id));
+    categoryFor = (exp: Expense): ExpenseCategory | undefined => this.categories().find(c => String(c.id) === String(exp.category_id));
 
     isCatSelected = (id: string) => this.selectedCategoryIds().has(String(id));
     isPatternCatSelected = (id: string) => this.selectedPatternCategoryIds().has(String(id));
@@ -217,7 +218,6 @@ export class InvoicesBankBalanceComponent {
                         ...tx,
                         key: `u|${tx.date}|${tx.amount}|${i}`,
                         actions: this.#makeTxActions(),
-                        doubleClickAction: 0,
                         class: 'BankTx',
                         track_id: i,
                     })),
@@ -233,6 +233,7 @@ export class InvoicesBankBalanceComponent {
         return [
             {
                 title: $localize`:@@i18n.invoices.createNewExpense:create new expense`,
+                doubleClick: true,
                 group: true,
                 action: () => this.createExpenseFromNxSelection(),
             },

@@ -7,9 +7,6 @@ use App\Models\Project;
 use App\Models\ProjectState;
 use Illuminate\Http\Request;
 
-/**
- * For unspecific requests that can return multiple object types
- */
 class NexusController extends Controller {
     public function attention(Request $request) {
         $fnStr = function ($fs, $o) {
@@ -29,14 +26,12 @@ class NexusController extends Controller {
         };
 
         $return = [];
-        // add overdue invoices
         $fnMerge($return, Invoice::where('due_at', '<', now())->where('paid_at', null),
             function ($x) {
                 return $x->name;
             },
             'Overdue invoice'
         );
-        // add overdue projects
         $fnMerge($return, Project::where('due_at', '<', now())->whereState('progress', ProjectState::Running),
             function ($x) {
                 return $x->name;
@@ -77,8 +72,6 @@ class NexusController extends Controller {
     }
 
     /**
-     * helper function to die a stacktrace
-     *
      * @throws \Exception
      */
     public static function dieDebugBacktrace($title = 'backtrace') {
